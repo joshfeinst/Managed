@@ -48,12 +48,13 @@ Walk **WASD/arrows** · talk/use/advance **E / Space / Enter** · choices
 
 ## The numbers are refereed, not guessed
 
-- **F4** runs a 22-invariant self-test in-game: map reachability audits, NPC
+- **F4** runs a 30-invariant self-test in-game: map reachability audits, NPC
   schedule clashes, content lints (every ticket resolvable, every dialogue
   exits, every fill token resolves), seeded-RNG determinism (same posting →
   identical day, twice), stream isolation (100 stray NPC rolls cannot reshape
   the queue), a zero-`Math.random` tripwire across a simulated day, save
-  roundtrip identity, and a full simulated day that must reach the review.
+  roundtrip identity, a full simulated day that must reach the review, and
+  regressions for every bug two adversarial review rounds have found.
 - `tools/verify.js` runs that suite headlessly:
   `npm i playwright && node tools/verify.js "$(pwd)/index.html"`.
 - `tools/playtest.js` plays whole careers with three bot personas through the
@@ -62,10 +63,20 @@ Walk **WASD/arrows** · talk/use/advance **E / Space / Enter** · choices
   paying 1/10th of what a player pays, which invalidated every target).
   Current numbers, all green:
   - **diligent** (skill .8): T1 by day ~5, ~6% breach rate, reaches T2, burns
-    out around day 52 — the arc.
+    out around day 27 — the arc.
   - **slacker**: fired by day 2.
-  - **overcaffeinated**: same skill, burns out ~day 35. Sleep debt is real;
-    coffee is a loan.
+  - **overcaffeinated**: same skill, two days shorter. Sleep debt is real;
+    coffee is a loan, and a cup you never metabolise is still charged at 5pm.
+- `tools/marathon.js` drives the **real** frame loop and real input path (not
+  the day-bot) through whole careers with a scripted player, watching for
+  faults, frozen states, modal traps and occupancy corruption — the failures a
+  headless day-sim structurally cannot see:
+  `node tools/marathon.js "$(pwd)/index.html"`.
+
+Balance constants live in one `BURN` record (daily entropy, evening
+threshold and rate, sleep debt, unmetabolised-crash cost) that both `endDay`
+and its self-tests read, so retuning can never silently drift away from the
+invariants guarding it.
 
 ## Roadmap
 

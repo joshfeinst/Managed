@@ -698,13 +698,13 @@ const ROLES = [
     gates:{ nextAt:{perf:.62, days:3}, firedBelow:.15, cert:null },
     queue:{ ratePerHr:1.4, slaScale:1.0 }, deskAnchor:'TERMINAL' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
-    gates:{ nextAt:{perf:.68, days:4}, firedBelow:.22, cert:null },
+    gates:{ nextAt:{perf:.64, days:4}, firedBelow:.22, cert:null },
     queue:{ ratePerHr:1.9, slaScale:.92 }, deskAnchor:'TERMINAL' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
-    gates:{ nextAt:{perf:.7, days:4}, firedBelow:.25, cert:null },
+    gates:{ nextAt:{perf:.66, days:4}, firedBelow:.25, cert:null },
     queue:{ ratePerHr:2.3, slaScale:.86 }, deskAnchor:'TERMINAL' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
-    gates:{ nextAt:{perf:.72, days:5}, firedBelow:.28, cert:null },
+    gates:{ nextAt:{perf:.68, days:5}, firedBelow:.28, cert:null },
     queue:{ ratePerHr:2.5, slaScale:.8 }, deskAnchor:'TERMINAL' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
     gates:{ nextAt:{perf:.72, days:5}, firedBelow:.3, cert:null },
@@ -860,7 +860,7 @@ const DIALOGUE = {
   'g.resolve':{ who:'sys', t:['Resolved. CSAT survey sent — it will be ignored until it is a 1-star.'] },
 
   /* per-ticket scenes */
-  't.cof.a':  { who:'derek', t:['Intern. Coffee. Black. The 9:15 standup is in {mtg}... minutes. Go.'] },
+  't.cof.a':  { who:'derek', t:['Intern. Coffee. Black. The {mtg} starts in nine minutes. Go.'] },
   't.cof.b':  { who:'sys', t:['The machine gurgles like a dying NAS. A paper cup of something coffee-adjacent is produced.'] },
   't.cof.c':  { who:'derek', t:['...Acceptable. One day I will teach you the ways of the espresso shot. Not today.'] },
   't.jam.a':  { who:'client', t:['{client} here — the printer will not stop printing {doc}. It\'s at copy 240. We tried {excuse}.'] },
@@ -1264,33 +1264,56 @@ function npcUpdate(e, dt, clockMin){
     if (R('npc') < dt*.25) e.dir = ['down','left','right','up'][Ri('npc',4)];
     return;
   }
+  /* Someone standing in the only doorway means A* returns NULL, not a short
+     path. That has to count as a blocked tick — treated as an empty path it
+     froze waitT, so the recovery below could never fire and a full failed
+     search ran every frame forever. */
+  if (e.goalX !== goal[0] || e.goalY !== goal[1]){ e.waitT = 0; e.pathCd = 0; e.parked = null; }
   if (!e.path || !e.path.length || e.goalX !== goal[0] || e.goalY !== goal[1]){
-    e.path = astar(e.tx, e.ty, goal[0], goal[1], e.waitT > 1) || [];
-    e.pi = 0; e.goalX = goal[0]; e.goalY = goal[1];
+    if ((e.pathCd || 0) > 0){ e.pathCd -= dt; e.waitT += dt; }
+    else {
+      const p = astar(e.tx, e.ty, goal[0], goal[1], e.waitT > 1);
+      e.goalX = goal[0]; e.goalY = goal[1]; e.pi = 0;
+      if (!p || !p.length){
+        e.path = null; e.waitT += dt; e.pathCd = .5;   // back off; don't re-search every frame
+        npcStuck(e, goal, dt);
+        return;
+      }
+      e.path = p;
+    }
   }
-  if (e.pi >= e.path.length){ e.path = null; return; }
+  if (!e.path || e.pi >= e.path.length){ e.path = null; return; }
   const [nx, ny] = e.path[e.pi];
   const moved = tryStep(e, nx - e.tx, ny - e.ty);
-  if (moved){ e.pi++; e.waitT = 0; }
+  if (moved){ e.pi++; e.waitT = 0; e.pathCd = 0; }
   else {
     e.waitT += dt;
     if (e.waitT > 1.2){ e.path = null; }        // re-path, now around bodies
-    if (e.waitT > 10){
-      /* fallback of last resort — land on the goal or its nearest free side */
-      let land = null;
-      if (!entAt(goal[0], goal[1]) && !solidAt(goal[0], goal[1])) land = goal;
-      else for (const [dx,dy] of [[0,1],[0,-1],[-1,0],[1,0]]){
-        const nx2 = goal[0]+dx, ny2 = goal[1]+dy;
-        if (!solidAt(nx2,ny2) && !entAt(nx2,ny2)){ land = [nx2,ny2]; break; }
-      }
-      if (land){
-        occ.delete(okey(e.tx,e.ty));
-        e.x = e.tx = land[0]; e.y = e.ty = land[1]; e.t = 1;
-        occ.add(okey(e.tx,e.ty));
-        e.teleports++;
-      }
-      e.waitT = 0;
-    }
+    npcStuck(e, goal, dt);
+  }
+}
+/* Ten seconds of getting nowhere. If we are already next to where we were
+   headed, the leg is close enough — park, and stop trying, or a player parked
+   on a desk tile makes its owner hop back and forth across it forever. */
+function npcStuck(e, goal, dt){
+  if (e.waitT <= 10) return;
+  e.waitT = 0;
+  if (Math.abs(e.tx - goal[0]) + Math.abs(e.ty - goal[1]) <= 1){
+    e.parked = goal[0] + ',' + goal[1];
+    e.waitT = -1e6;                              // satisfied: no more attempts this leg
+    return;
+  }
+  let land = null;
+  if (!entAt(goal[0], goal[1]) && !solidAt(goal[0], goal[1])) land = goal;
+  else for (const [dx,dy] of [[0,1],[0,-1],[-1,0],[1,0]]){
+    const nx2 = goal[0]+dx, ny2 = goal[1]+dy;
+    if (!solidAt(nx2,ny2) && !entAt(nx2,ny2)){ land = [nx2,ny2]; break; }
+  }
+  if (land){
+    occ.delete(okey(e.tx,e.ty));
+    e.x = e.tx = land[0]; e.y = e.ty = land[1]; e.t = 1;
+    occ.add(okey(e.tx,e.ty));
+    e.teleports++;
   }
 }
 
@@ -1380,6 +1403,12 @@ function talkTarget(){
    S5 SIM — the day machine. Fixed timestep; the clock is the antagonist.
    ========================================================================== */
 const G = { state:'boot', screenId:'s-boot', textSpeed:1, faults:0, tests:null, showTests:false };
+/* Burnout arithmetic, in one place: a flat daily entropy (even a perfect run
+   ends eventually), the cost of a bad evening above a threshold, the sleep
+   debt of cups past the second, and what an unmetabolised crash costs at
+   17:00. The self-tests assert endDay against THESE, so retuning can never
+   silently drift from the invariants that guard it. */
+const BURN = { entropy:1.1, thresh:55, rate:.35, sleepDebt:2.2, freeCups:2, crashStress:8 };
 const DAY_MIN = 480;                       // 9:00 -> 17:00, 1 game-minute per real second
 let run = null;
 let meta = { certs:[], rep:0, conn:0, runsPlayed:0, best:{ days:0, rung:0 } };
@@ -1442,6 +1471,7 @@ function rollDay(){
 function fill(s, fills){ return s.replace(/\{(\w+)\}/g, (_,t) => fills[t] !== undefined ? fills[t] : '{'+t+'}'); }
 
 function startCommute(){
+  run.phase = 'work';
   run.clock = 0; run.queue = []; run.active = null; run.marker = null;
   run.scores = []; run.breaches = 0; run.resolved = 0; run.aces = 0;
   run.coffee = 0; run.crashes = []; run.satOn = {}; run.pendingEvents = [];
@@ -1657,24 +1687,48 @@ function closeModalToWork(){
   document.getElementById('dlg').style.display = 'none';
   clearInput();
 }
+/* The ticket rows are updated IN PLACE. Rebuilding the list every 0.3s tore
+   the row out from under a pointer that was mid-click — mousedown landed on a
+   node that no longer existed at mouseup, so the click never fired and the
+   panel just silently ignored you. Rows are rebuilt only when the set of
+   tickets actually changes; otherwise only the SLA text and selection move. */
+let tixRows = new Map(), tixKey = '';
 function renderQueue(){
   const list = document.getElementById('tix-list');
-  list.innerHTML = '';
+  const sel = (G.modal && G.modal.kind === 'tix') ? G.modal.sel : -1;
   if (!run.queue.length){
-    list.innerHTML = '<div class="empty">Queue zero. Do not say it out loud — the phones can hear you.</div>';
+    if (tixKey !== 'empty'){
+      tixKey = 'empty'; tixRows.clear();
+      list.innerHTML = '<div class="empty">Queue zero. Do not say it out loud — the phones can hear you.</div>';
+    }
     return;
   }
-  const sel = (G.modal && G.modal.kind === 'tix') ? G.modal.sel : -1;
+  const key = run.queue.map(t => t.uid + ':' + (t.si > 0 ? 1 : 0)).join(',');
+  if (key !== tixKey){
+    tixKey = key; tixRows.clear(); list.innerHTML = '';
+    run.queue.forEach(t => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<span class="id">#' + (10000 + t.uid) + '</span>' +
+        '<span class="ttl">' + t.title + (t.si > 0 ? ' <span style="color:var(--corp)">(in progress)</span>' : '') + '</span>' +
+        '<span class="sla"></span>';
+      row.onclick = () => {
+        const at = run.queue.indexOf(t);
+        if (at >= 0 && G.modal) G.modal.sel = at;
+        startTicket(t);
+      };
+      tixRows.set(t.uid, row);
+      list.appendChild(row);
+    });
+  }
   run.queue.forEach((t, i) => {
-    const row = document.createElement('div');
-    row.className = 'row' + (i === sel ? ' sel' : '');
+    const row = tixRows.get(t.uid);
+    if (!row) return;
     const left = Math.round(t.deadline - run.clock);
-    const cls = left < 5 ? 'bad' : left < 12 ? 'warn' : '';
-    row.innerHTML = '<span class="id">#' + (10000 + t.uid) + '</span>' +
-      '<span class="ttl">' + t.title + (t.si > 0 ? ' <span style="color:var(--corp)">(in progress)</span>' : '') + '</span>' +
-      '<span class="sla ' + cls + '">' + (left <= 0 ? 'BREACHING' : left + 'm') + '</span>';
-    row.onclick = () => { G.modal.sel = i; startTicket(t); };
-    list.appendChild(row);
+    const sla = row.querySelector('.sla');
+    sla.textContent = left <= 0 ? 'BREACHING' : left + 'm';
+    sla.className = 'sla ' + (left < 5 ? 'bad' : left < 12 ? 'warn' : '');
+    row.classList.toggle('sel', i === sel);
   });
 }
 function startTicket(t){
@@ -1740,6 +1794,9 @@ function resolveTicket(t){
 function endDay(){
   if (G.modal) closeModalToWork();
   document.getElementById('hud').style.display = 'none';
+  /* crashes still pending at 17:00 come due tonight — a 4:45pm cup was free
+     otherwise, since the day ends before its crash ever lands */
+  if (run.crashes.length) run.stress = clamp(run.stress + run.crashes.length * BURN.crashStress, 0, 100);
   /* anything still open rolls into the void; unworked queue counts against you */
   for (const t of run.queue){ run.scores.push(0); run.breaches++; }
   run.queue = [];
@@ -1749,8 +1806,8 @@ function endDay(){
   const eod = run.stress;
   /* burnout = the bad evenings, plus plain career entropy: even a perfect run
      ends eventually — promotion outraces it or it wins. That's the roguelite. */
-  run.burnout = clamp(run.burnout + 2.0 + Math.max(0, eod - 55) * .35
-                      + Math.max(0, run.coffee - 2) * 1.5, 0, 100);   // sleep debt: cups 3+ are borrowed
+  run.burnout = clamp(run.burnout + BURN.entropy + Math.max(0, eod - BURN.thresh) * BURN.rate
+                      + Math.max(0, run.coffee - BURN.freeCups) * BURN.sleepDebt, 0, 100);
   /* the weekend, technically — every fifth day the body claws a little back */
   const weekend = run.day % 5 === 0;
   run.stress = Math.round(run.stress * (weekend ? .3 : .55));
@@ -1771,6 +1828,10 @@ function endDay(){
   G.state = 'review';
   show('s-review');
   run.day++;
+  /* this day is scored and banked. A save written here must resume into the
+     NEXT day, never back through endDay — that re-pushed perfHist, re-charged
+     burnout and re-advanced the gate streaks, repeatably, from one played day. */
+  run.phase = 'review';
   saveGame();
 }
 function perfName(p){
@@ -1853,6 +1914,7 @@ function serializeRun(){
     rep:run.rep, uid:run.uid, scores:run.scores, breaches:run.breaches,
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
+    phase:run.phase || 'work', activeUid: run.active ? run.active.uid : null,
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
     queue: queue.map(t => ({ uid:t.uid, id:t.id, title:t.title, fills:t.fills, at:t.at,
       deadline:t.deadline, sla:t.sla, stress:t.stress, si:t.si, bonus:t.bonus,
@@ -1881,8 +1943,12 @@ function resumeRun(s){
     queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
     pendingEvents:[], pendingScenes:r.pendingScenes || [], scores:r.scores,
     breaches:r.breaches, resolved:r.resolved,
-    aces:r.aces, daysAtTop:r.daysAtTop, satOn:r.satOn || {}, promoted:r.promoted };
+    aces:r.aces, daysAtTop:r.daysAtTop, satOn:r.satOn || {}, promoted:r.promoted,
+    phase:r.phase || 'work' };
   if (!run.plan){ startCommute(); return; }
+  /* the day in this save was already scored at its review screen: go on to the
+     next day rather than through endDay a second time */
+  if (run.phase === 'review'){ startCommute(); return; }
   /* saved past closing time (a modal held the clock past 17:00, then a blur
      autosave): score the day now rather than silently discarding it */
   if (run.clock >= DAY_MIN){ loadMap('office1'); endDay(); return; }
@@ -1892,7 +1958,10 @@ function resumeRun(s){
   spawnPeople(run.clock, (r.px !== null && r.px !== undefined) ? [r.px, r.py] : null);
   G.state = 'work'; show(null); clearInput();
   document.getElementById('hud').style.display = 'flex';
-  if (run.active !== null) run.active = null;
+  /* pick the interrupted ticket back up where it was, rather than stranding it
+     mid-chain in the queue with its SLA burning */
+  run.active = r.activeUid ? (run.queue.find(t => t.uid === r.activeUid) || null) : null;
+  if (run.active) advanceStep();
 }
 </script>
 
@@ -2013,6 +2082,8 @@ function dlgTick(dt){
 let tixRepaint = 0;
 function tixTick(dt){
   const m = G.modal;
+  /* tickets breach out from under the cursor: keep the selection in range */
+  m.sel = clamp(m.sel, 0, Math.max(0, run.queue.length - 1));
   tixRepaint -= dt;
   if (press.up && m.sel > 0){ m.sel--; tixRepaint = 0; sfx('blip'); }
   if (press.down && m.sel < run.queue.length - 1){ m.sel++; tixRepaint = 0; sfx('blip'); }
@@ -2026,6 +2097,18 @@ function tixTick(dt){
    sets state.score (0..1) and state.finished. Layout draws from the `game`
    stream; the outcome is entirely the player's inputs. */
 let MG = null;
+/* What an abandoned minigame was worth when it was walked away from. Charged
+   on pause so a retry averages against it instead of replacing it. */
+function abandonScore(g){
+  if (!g) return 0;
+  if (g.kind === 'cable'){
+    const done = g.linked.filter(x => x >= 0).length;
+    return clamp(1 - g.mistakes*.18, 0, 1) * (done / g.n);
+  }
+  if (g.kind === 'pw') return g.items.length ? g.right / g.items.length : 0;
+  if (g.kind === 'jargon') return g.rounds.length ? g.right / g.rounds.length : 0;
+  return 0;
+}
 function openGame(id, diff, onDone){
   G.state = 'modal'; G.modal = { kind:'game' };
   let d = diff + (meta.certs.includes('aplus') ? -1 : 0);
@@ -2270,7 +2353,7 @@ function screenForState(){
     case 'review':  return 's-review';
     case 'over':    return 's-over';
     case 'pause':   return 's-pause';
-    case 'menu':    return G.screenId || 's-title';
+    case 'menu':    return G.testReturn || G.screenId || 's-title';
     default:        return null;
   }
 }
@@ -2345,12 +2428,16 @@ function act(a){
 }
 function pauseGame(){
   if (G.modal){
-    /* an interrupted modal must not orphan its work: a ticket step re-opens
-       on resume, and an event scene with choices replays instead of vanishing
-       with its options unpicked */
+    /* an interrupted modal must not orphan its work. Decide from the MODAL,
+       not from run.active: an event scene (no onDone) is queued to replay even
+       while a ticket is active, and an abandoned minigame is scored as played
+       so F4/alt-tab cannot re-roll a bad board for free. */
     if (run){
-      if (run.active) run.resumePending = true;
-      else if (dlg && dlg.scene && dlg.opts) (run.pendingScenes = run.pendingScenes || []).push(dlg.scene);
+      if (dlg && dlg.scene && !dlg.onDone) (run.pendingScenes = run.pendingScenes || []).push(dlg.scene);
+      if (run.active){
+        if (G.modal.kind === 'game' && MG) run.active.gameScores.push(abandonScore(MG));
+        run.resumePending = true;
+      }
     }
     closeModalToWork();
   }
@@ -2383,6 +2470,12 @@ document.addEventListener('click', e => {
 });
 function onKey(e){
   audioInit();
+  /* the seed box is a real text field: M must type an M, not mute the music,
+     and Escape must dismiss autofill, not abandon the screen */
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)){
+    if (e.code !== 'F4') return;
+  }
   if (e.code === 'F4'){
     e.preventDefault();
     if (G.showTests){
@@ -2393,6 +2486,7 @@ function onKey(e){
     /* never leave a live sim (or an open modal) running under the report */
     if (G.state === 'work' || G.state === 'modal') pauseGame();
     const sim = (G.state === 'title' || G.state === 'over' || G.state === 'menu');
+    G.testReturn = G.screenId;          // show(null) below clears it otherwise
     selfTest(sim);
     G.showTests = true; show(null);
     return;
@@ -2642,7 +2736,58 @@ function selfTest(runSim){
     ok('save: future versions are detected, not crashed on', mig === 'ok', mig);
 
     /* burnout arithmetic */
-    ok('burnout math: stress 80 evening adds 10.5', Math.abs(Math.max(0, 80-50)*.35 - 10.5) < 1e-9);
+    /* assert against the IMPLEMENTATION, not against two literals: the old
+       form compared 30*.35 to 10.5 and could never fail, and it named the
+       wrong threshold besides */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.stress = 80; run.coffee = 0; run.day = 1; run.crashes = [];
+      const b0 = run.burnout;
+      endDay();
+      const want = BURN.entropy + Math.max(0, 80 - BURN.thresh) * BURN.rate;
+      ok('burnout math: an 80-stress evening costs ' + want.toFixed(2) + ' burnout',
+         run && Math.abs((run.burnout - b0) - want) < 1e-9,
+         run ? 'got ' + (run.burnout - b0).toFixed(2) : 'career ended');
+    }
+    /* a coffee still pending at 17:00 is charged, not forgiven */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.stress = 40; run.coffee = 1; run.day = 1; run.crashes = [DAY_MIN + 30];
+      const b0 = run.burnout;
+      endDay();
+      const want = BURN.entropy + Math.max(0, (40 + BURN.crashStress) - BURN.thresh) * BURN.rate;
+      ok('coffee: a crash that never landed is still paid for',
+         run && Math.abs((run.burnout - b0) - want) < 1e-9,
+         run ? 'got ' + (run.burnout - b0).toFixed(2) : 'career ended');
+    }
+    /* a scored day must never be scored twice by save/resume */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.scores = [.7]; run.stress = 30; run.clock = DAY_MIN + 1;
+      endDay();
+      const daysAfter = run.perfHist.length, dayNo = run.day;
+      const snap = serializeRun();
+      resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(snap)) });
+      ok('save: a reviewed day is never re-scored on resume',
+         run && run.perfHist.length === daysAfter && run.day === dayNo,
+         run ? 'perfHist ' + run.perfHist.length + ' day ' + run.day : 'career ended');
+    }
+    /* an abandoned minigame is scored as played, so pausing cannot re-roll it */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const t = { uid:900, id:'printer-jam', title:'t', fills:{}, at:0, deadline:99,
+                  sla:40, stress:5, si:0, bonus:0, gameScores:[], from:null };
+      run.queue.push(t); run.active = t;
+      openGame('cable', 2, () => {});
+      MG.mistakes = 3;
+      const before = t.gameScores.length;
+      pauseGame();
+      ok('minigame: walking out of a game still scores the attempt',
+         t.gameScores.length === before + 1 && t.gameScores[0] < 1,
+         'scores ' + JSON.stringify(t.gameScores));
+      run.active = null; run.queue = []; G.state = 'work'; run.resumePending = false;
+    }
 
     /* NPC day: schedules complete without the teleport fallback */
     rngInit('JOB-TEST');
