@@ -57,12 +57,15 @@ Walk **WASD/arrows** · talk/use/advance **E / Space / Enter** · choices
 - `tools/verify.js` runs that suite headlessly:
   `npm i playwright && node tools/verify.js "$(pwd)/index.html"`.
 - `tools/playtest.js` plays whole careers with three bot personas through the
-  game's own headless day-bot. Current tuning targets, all green:
-  - **diligent** (skill .8): T1 by day ~4, ~6% breach rate, burns out around
-    day 17 after reaching T2 — the arc.
+  game's own headless day-bot, priced at honest human time costs (reading a
+  line ~3s, a minigame ~12s — an adversarial review caught the bot originally
+  paying 1/10th of what a player pays, which invalidated every target).
+  Current numbers, all green:
+  - **diligent** (skill .8): T1 by day ~5, ~6% breach rate, reaches T2, burns
+    out around day 52 — the arc.
   - **slacker**: fired by day 2.
-  - **overcaffeinated**: same skill, three days shorter career. Coffee is a
-    loan.
+  - **overcaffeinated**: same skill, burns out ~day 35. Sleep debt is real;
+    coffee is a loan.
 
 ## Roadmap
 

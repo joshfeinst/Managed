@@ -696,34 +696,34 @@ function bakePortrait(look){
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
     gates:{ nextAt:{perf:.62, days:3}, firedBelow:.15, cert:null },
-    queue:{ ratePerHr:2.2, slaScale:1.0 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:1.4, slaScale:1.0 }, deskAnchor:'TERMINAL' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
     gates:{ nextAt:{perf:.68, days:4}, firedBelow:.22, cert:null },
-    queue:{ ratePerHr:3.0, slaScale:.92 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:1.9, slaScale:.92 }, deskAnchor:'TERMINAL' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
     gates:{ nextAt:{perf:.7, days:4}, firedBelow:.25, cert:null },
-    queue:{ ratePerHr:3.4, slaScale:.86 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.3, slaScale:.86 }, deskAnchor:'TERMINAL' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
     gates:{ nextAt:{perf:.72, days:5}, firedBelow:.28, cert:null },
-    queue:{ ratePerHr:3.6, slaScale:.8 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.5, slaScale:.8 }, deskAnchor:'TERMINAL' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
     gates:{ nextAt:{perf:.72, days:5}, firedBelow:.3, cert:null },
-    queue:{ ratePerHr:3.2, slaScale:.85 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.2, slaScale:.85 }, deskAnchor:'TERMINAL' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
     gates:{ nextAt:{perf:.72, days:5}, firedBelow:.3, cert:null },
-    queue:{ ratePerHr:3.0, slaScale:.9 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.0, slaScale:.9 }, deskAnchor:'TERMINAL' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
     gates:{ nextAt:{perf:.74, days:5}, firedBelow:.32, cert:null },
-    queue:{ ratePerHr:2.8, slaScale:.9 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:1.9, slaScale:.9 }, deskAnchor:'TERMINAL' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
     gates:{ nextAt:{perf:.76, days:6}, firedBelow:.34, cert:null },
-    queue:{ ratePerHr:2.6, slaScale:.85 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:1.7, slaScale:.85 }, deskAnchor:'TERMINAL' },
   { id:'vcio',   title:'vCIO',          pay:135000,
     gates:{ nextAt:{perf:.78, days:6}, firedBelow:.36, cert:null },
-    queue:{ ratePerHr:2.4, slaScale:.85 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:1.5, slaScale:.85 }, deskAnchor:'TERMINAL' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
     gates:{ nextAt:null, retireAfterDays:5, firedBelow:.38, cert:null },
-    queue:{ ratePerHr:2.2, slaScale:.9 }, deskAnchor:'TERMINAL' }
+    queue:{ ratePerHr:1.4, slaScale:.9 }, deskAnchor:'TERMINAL' }
 ];
 
 /* Shared fill pools — every {token} in a ticket title/line resolves from here
@@ -940,67 +940,67 @@ const DIALOGUE = {
    sla in game-minutes (scaled by role slaScale). weight biases the draw.
    from: npc originator (else a client from FILLS is stamped on). */
 const TICKETS = {
-  'coffee-derek': { tiers:[0,0], weight:3, sla:14, stress:4, from:'derek',
+  'coffee-derek': { tiers:[0,0], weight:3, sla:30, stress:4, from:'derek',
     title:'Coffee for DEREK before the {mtg}',
     steps:[{say:'t.cof.a'},{goto:'COFFEE'},{say:'t.cof.b'},{goto:'n1'},{say:'t.cof.c'}] },
-  'printer-jam': { tiers:[0,2], weight:3, sla:18, stress:8,
+  'printer-jam': { tiers:[0,2], weight:3, sla:40, stress:8,
     title:'{client}: printer is printing {doc} forever',
     steps:[{say:'t.jam.a'},{goto:'PRINTER'},{game:'cable',diff:1},{say:'t.jam.b'},{choice:'t.jam.c'}] },
-  'mouse-batteries': { tiers:[0,1], weight:3, sla:16, stress:3,
+  'mouse-batteries': { tiers:[0,1], weight:3, sla:34, stress:3,
     title:'{user}\'s mouse is "broken"',
     steps:[{say:'t.mouse.a'},{choice:'t.mouse.b'}] },
-  'monitor-input': { tiers:[0,1], weight:3, sla:12, stress:6,
+  'monitor-input': { tiers:[0,1], weight:3, sla:26, stress:6,
     title:'{client}: monitor shows NO SIGNAL, business halted',
     steps:[{say:'t.mon.a'},{choice:'t.mon.b'}] },
-  'cable-bin': { tiers:[0,0], weight:2, sla:30, stress:3, from:'brenda',
+  'cable-bin': { tiers:[0,0], weight:2, sla:65, stress:3, from:'brenda',
     title:'Untangle the supply-closet cable bin',
     steps:[{say:'t.tangle.a'},{goto:'SHELF'},{game:'cable',diff:1},{say:'t.tangle.b'}] },
-  'password-reset': { tiers:[0,2], weight:4, sla:14, stress:4,
+  'password-reset': { tiers:[0,2], weight:4, sla:30, stress:4,
     title:'{user} is locked out (attempt 3 of 3)',
     steps:[{say:'t.pw.a'},{game:'pw',diff:1},{choice:'t.pw.b'}] },
-  'label-printer': { tiers:[0,1], weight:2, sla:20, stress:5,
+  'label-printer': { tiers:[0,1], weight:2, sla:44, stress:5,
     title:'{client}: label printer speaks only wingdings',
     steps:[{say:'t.label.a'},{game:'jargon',diff:1}] },
-  'shadow-raj': { tiers:[0,0], weight:2, sla:25, stress:2, from:'raj',
+  'shadow-raj': { tiers:[0,0], weight:2, sla:55, stress:2, from:'raj',
     title:'Shadow RAJ on a live T1 call',
     steps:[{goto:'n2'},{say:'t.shadow.a'},{game:'jargon',diff:1},{say:'t.shadow.b'}] },
-  'asset-tags': { tiers:[0,0], weight:2, sla:35, stress:2, from:'linda',
+  'asset-tags': { tiers:[0,0], weight:2, sla:75, stress:2, from:'linda',
     title:'Asset-tag 14 new laptops',
     steps:[{goto:'SHELF'},{say:'t.tags.a'}] },
-  'fax-machine': { tiers:[0,2], weight:2, sla:16, stress:7,
+  'fax-machine': { tiers:[0,2], weight:2, sla:36, stress:7,
     title:'{client}: THE FAX MACHINE (yes, still)',
     steps:[{say:'t.fax.a'},{game:'cable',diff:2},{say:'t.fax.b'}] },
-  'ceo-kid': { tiers:[0,1], weight:1, sla:30, stress:6,
+  'ceo-kid': { tiers:[0,1], weight:1, sla:65, stress:6,
     title:'CEO\'s kid\'s laptop: 47 toolbars',
     steps:[{choice:'t.kid.a'},{game:'pw',diff:2}] },
-  'crm-update': { tiers:[0,1], weight:2, sla:40, stress:5, from:'linda',
+  'crm-update': { tiers:[0,1], weight:2, sla:85, stress:5, from:'linda',
     title:'Update the CRM ("all of it")',
     steps:[{choice:'t.crm.a'}] },
-  'donut-run': { tiers:[0,0], weight:2, sla:12, stress:3, from:'brenda',
+  'donut-run': { tiers:[0,0], weight:2, sla:26, stress:3, from:'brenda',
     title:'Donuts before the client tour',
     steps:[{say:'t.donut.a'},{goto:'VEND'},{say:'t.donut.b'},{goto:'n6'}] },
-  'water-cooler': { tiers:[0,1], weight:2, sla:22, stress:3,
+  'water-cooler': { tiers:[0,1], weight:2, sla:48, stress:3,
     title:'The water cooler is making The Noise',
     steps:[{goto:'COOLER'},{say:'t.cool.a'},{game:'cable',diff:1},{say:'t.cool.b'}] },
-  'quick-question': { tiers:[0,2], weight:3, sla:15, stress:5,
+  'quick-question': { tiers:[0,2], weight:3, sla:33, stress:5,
     title:'{user} has a "quick question"',
     steps:[{choice:'t.quick.a'}] },
-  'conference-tv': { tiers:[0,2], weight:2, sla:10, stress:9, from:'mackenzie',
+  'conference-tv': { tiers:[0,2], weight:2, sla:24, stress:9, from:'mackenzie',
     title:'Conference TV won\'t mirror — demo in 5',
     steps:[{say:'t.tv.a'},{goto:'CONF'},{game:'cable',diff:2},{say:'t.tv.b'}] },
-  'spam-filter': { tiers:[0,2], weight:2, sla:24, stress:5,
+  'spam-filter': { tiers:[0,2], weight:2, sla:52, stress:5,
     title:'{client}: spam filter has chosen chaos',
     steps:[{say:'t.spam.a'},{game:'jargon',diff:2}] },
-  'server-shelf': { tiers:[0,0], weight:2, sla:20, stress:3, from:'derek',
+  'server-shelf': { tiers:[0,0], weight:2, sla:44, stress:3, from:'derek',
     title:'Restock the server-room shelf (touch NOTHING)',
     steps:[{say:'t.shelf.a'},{goto:'SERVERS'},{say:'t.shelf.b'}] },
-  'onboard-newhire': { tiers:[0,1], weight:2, sla:28, stress:6, from:'linda',
+  'onboard-newhire': { tiers:[0,1], weight:2, sla:60, stress:6, from:'linda',
     title:'New hire Monday; nothing is provisioned',
     steps:[{say:'t.onb.a'},{game:'pw',diff:2}] },
-  'thermostat': { tiers:[0,1], weight:2, sla:26, stress:4,
+  'thermostat': { tiers:[0,1], weight:2, sla:56, stress:4,
     title:'Floor is 61°F; accounting is mutinous',
     steps:[{say:'t.therm.a'},{goto:'n6'},{choice:'t.therm.b'}] },
-  'arcade-dark': { tiers:[0,1], weight:1, sla:30, stress:2,
+  'arcade-dark': { tiers:[0,1], weight:1, sla:65, stress:2,
     title:'Break-room arcade is dark; morale -3%',
     steps:[{say:'t.arc.a'},{goto:'ARCADE'},{game:'cable',diff:1},{say:'t.arc.b'}] }
 };
@@ -1195,18 +1195,31 @@ function astar(sx, sy, gx, gy, avoidOcc){
 const npcs = {};          // id -> ent (+ .id, .rel, .sched)
 let player = null;
 
-function spawnPeople(){
+function spawnPeople(min, playerPos){
+  min = min || 0;
   for (const k of Object.keys(npcs)) delete npcs[k];
   occ.clear();
-  player = makeEnt(W2.spawn[0], W2.spawn[1], {skin:1, hair:0, shirt:'#c9c0ad', pants:'#3a3f47'});
+  /* the player claims their cell first; a saved position that's now occupied
+     or solid falls back to the office entrance rather than sharing a cell */
+  let pp = playerPos && !solidAt(playerPos[0], playerPos[1]) ? playerPos : W2.spawn;
+  player = makeEnt(pp[0], pp[1], {skin:1, hair:0, shirt:'#c9c0ad', pants:'#3a3f47'});
   occ.add(okey(player.tx, player.ty));
   for (const id in NPCS){
     const N = NPCS[id];
-    const a = schedAnchor(N, 0);
+    let a = schedAnchor(N, min);
     if (!a) continue;
+    /* never spawn two bodies into one cell — take the nearest free neighbour */
+    if (entAt(a[0], a[1]) || solidAt(a[0], a[1])){
+      let found = null;
+      for (const [dx,dy] of [[0,1],[0,-1],[-1,0],[1,0],[1,1],[-1,-1],[1,-1],[-1,1]]){
+        if (!solidAt(a[0]+dx, a[1]+dy) && !entAt(a[0]+dx, a[1]+dy)){ found = [a[0]+dx, a[1]+dy]; break; }
+      }
+      if (!found) continue;
+      a = found;
+    }
     const e = makeEnt(a[0], a[1], N.look);
     e.id = id; e.portrait = bakePortrait(N.look);
-    e.hidden = !!N.visitor && !schedActive(N, 0);
+    e.hidden = !!N.visitor && !schedActive(N, min);
     npcs[id] = e;
     if (!e.hidden) occ.add(okey(e.tx, e.ty));
   }
@@ -1228,7 +1241,18 @@ function npcUpdate(e, dt, clockMin){
   const N = NPCS[e.id];
   if (N.visitor){
     const on = schedActive(N, clockMin);
-    if (on && e.hidden){ e.hidden = false; occ.add(okey(e.tx,e.ty)); }
+    if (on && e.hidden){
+      /* materialise only into an empty cell — else wait a tick or sidestep */
+      if (!entAt(e.tx, e.ty)){ e.hidden = false; occ.add(okey(e.tx,e.ty)); }
+      else {
+        for (const [dx,dy] of [[0,1],[0,-1],[-1,0],[1,0]]){
+          if (!solidAt(e.tx+dx, e.ty+dy) && !entAt(e.tx+dx, e.ty+dy)){
+            e.x = e.tx = e.tx+dx; e.y = e.ty = e.ty+dy; e.t = 1;
+            e.hidden = false; occ.add(okey(e.tx,e.ty)); break;
+          }
+        }
+      }
+    }
   }
   if (e.hidden) return;
   entUpdate(e, dt, 4.2);
@@ -1365,7 +1389,7 @@ function runInit(seed){
   rngInit(seed);
   run = { seed, day:1, rung:0, clock:0, perfHist:[], gateStreak:0, firedStreak:0,
           stress:20, coffee:0, crashes:[], burnout:0, rep:meta.certs.length ? 1 : 0,
-          queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[],
+          queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[], pendingScenes:[],
           scores:[], breaches:0, resolved:0, aces:0, daysAtTop:0, satOn:{}, promoted:false };
   for (const p in PERKS) if (metaHasPerk(p)) run.rep += PERKS[p].fx.rep || 0;
 }
@@ -1418,10 +1442,17 @@ function rollDay(){
 function fill(s, fills){ return s.replace(/\{(\w+)\}/g, (_,t) => fills[t] !== undefined ? fills[t] : '{'+t+'}'); }
 
 function startCommute(){
-  rollDay();
   run.clock = 0; run.queue = []; run.active = null; run.marker = null;
   run.scores = []; run.breaches = 0; run.resolved = 0; run.aces = 0;
   run.coffee = 0; run.crashes = []; run.satOn = {}; run.pendingEvents = [];
+  rollDay();
+  presentCommute();
+}
+/* The commute screen for the CURRENT plan — never re-rolls. resumeRun lands
+   here so a save made at this screen shows the same day it saved, not a fresh
+   pull from the already-advanced world stream (that broke seeded determinism
+   and allowed queue-fishing by quit/continue). */
+function presentCommute(){
   G.state = 'commute';
   const role = ROLES[run.rung];
   document.getElementById('r-eyebrow').textContent = 'day ' + run.day + ' — ' + fmtDate(run.day);
@@ -1473,12 +1504,15 @@ function sim(dt){
   crashTick();
   if (G.state === 'work'){
     eventsTick();
-    run.stress = Math.max(0, run.stress - dt*0.02*(1 - run.queue.length*0.12));
-    playerMove(dt);
-    for (const id in npcs) npcUpdate(npcs[id], dt, run.clock);
-    camUpdate(dt);
-    workInput();
-    gotoCheck();
+    /* an event just seized the frame: nothing below may clobber its scene */
+    if (G.state === 'work'){
+      run.stress = clamp(run.stress - dt*0.02*(1 - run.queue.length*0.12), 0, 100);
+      playerMove(dt);
+      for (const id in npcs) npcUpdate(npcs[id], dt, run.clock);
+      camUpdate(dt);
+      workInput();
+      if (G.state === 'work') gotoCheck();   // workInput may have opened a modal
+    }
   } else modalTick(dt);
   if (run.clock >= DAY_MIN && G.state === 'work') endDay();
   for (const k in press) press[k] = false;
@@ -1499,10 +1533,14 @@ function arrivalsTick(){
 }
 function eventsTick(){
   const P2 = run.plan;
-  while (run.pendingEvents.length){ openEvent(run.pendingEvents.shift()); return; }
-  while (P2.ei < P2.events.length && run.clock >= P2.events[P2.ei].at){
+  /* scenes interrupted by a pause replay first (their fx already applied) */
+  if (run.pendingScenes && run.pendingScenes.length){
+    openDlg(run.pendingScenes.shift(), {}, null); return;
+  }
+  if (run.pendingEvents.length){ openEvent(run.pendingEvents.shift()); return; }
+  if (P2.ei < P2.events.length && run.clock >= P2.events[P2.ei].at){
     const e = P2.events[P2.ei++];
-    openEvent(e.id); return;
+    openEvent(e.id);
   }
 }
 function openEvent(id){
@@ -1593,6 +1631,10 @@ function interact(act){
 }
 function gotoCheck(){
   if (!run.marker || !run.active) return;
+  /* the marker must belong to the active ticket's CURRENT step — anything
+     else is a stale arrow and gets cleaned up, never acted on */
+  const st = TICKETS[run.active.id].steps[run.active.si];
+  if (!st || !st.goto){ run.marker = null; return; }
   const [mx,my] = run.marker;
   if (Math.abs(player.tx - mx) + Math.abs(player.ty - my) <= 1){
     run.marker = null;
@@ -1610,6 +1652,7 @@ function openQueue(){
 }
 function closeModalToWork(){
   G.modal = null; G.state = 'work';
+  dlg = null; MG = null;
   document.getElementById('tix').style.display = 'none';
   document.getElementById('dlg').style.display = 'none';
   clearInput();
@@ -1621,9 +1664,10 @@ function renderQueue(){
     list.innerHTML = '<div class="empty">Queue zero. Do not say it out loud — the phones can hear you.</div>';
     return;
   }
+  const sel = (G.modal && G.modal.kind === 'tix') ? G.modal.sel : -1;
   run.queue.forEach((t, i) => {
     const row = document.createElement('div');
-    row.className = 'row' + (i === G.modal.sel ? ' sel' : '');
+    row.className = 'row' + (i === sel ? ' sel' : '');
     const left = Math.round(t.deadline - run.clock);
     const cls = left < 5 ? 'bad' : left < 12 ? 'warn' : '';
     row.innerHTML = '<span class="id">#' + (10000 + t.uid) + '</span>' +
@@ -1634,9 +1678,16 @@ function renderQueue(){
   });
 }
 function startTicket(t){
+  /* a stale row can outlive its ticket by up to one repaint: a breached
+     ticket must not be resurrected into a second score */
+  if (!run.queue.includes(t)){
+    renderQueue();
+    toast('THAT ONE ALREADY BREACHED. IT KNOWS WHAT IT DID.', 'red', 2400);
+    return;
+  }
   run.active = t;
+  run.marker = null;                 // a previous ticket's GO TO must not linger
   document.getElementById('tix').style.display = 'none';
-  if (t.si === 0 && !t.from){ /* client tickets announce themselves */ }
   advanceStep();
 }
 /* Drives the active ticket through its steps. Modal steps re-enter here on
@@ -1661,7 +1712,14 @@ function advanceStep(){
 }
 function resolveTicket(t){
   const i = run.queue.indexOf(t);
-  if (i >= 0) run.queue.splice(i,1);
+  if (i < 0){
+    /* it breached (and was scored) while being worked on the side — never
+       score the same ticket twice */
+    run.active = null; run.marker = null;
+    if (G.modal) closeModalToWork();
+    return;
+  }
+  run.queue.splice(i,1);
   const r = clamp((t.deadline - run.clock) / t.sla, 0, 1);
   const gameAvg = t.gameScores.length
     ? t.gameScores.reduce((a,b)=>a+b,0) / t.gameScores.length : .75;
@@ -1689,11 +1747,14 @@ function endDay(){
     ? run.scores.reduce((a,b)=>a+b,0) / run.scores.length : .5;
   run.perfHist.push(dayPerf);
   const eod = run.stress;
-  run.burnout = clamp(run.burnout + Math.max(0, eod - 55) * .35, 0, 100);
+  /* burnout = the bad evenings, plus plain career entropy: even a perfect run
+     ends eventually — promotion outraces it or it wins. That's the roguelite. */
+  run.burnout = clamp(run.burnout + 2.0 + Math.max(0, eod - 55) * .35
+                      + Math.max(0, run.coffee - 2) * 1.5, 0, 100);   // sleep debt: cups 3+ are borrowed
   /* the weekend, technically — every fifth day the body claws a little back */
   const weekend = run.day % 5 === 0;
   run.stress = Math.round(run.stress * (weekend ? .3 : .55));
-  if (weekend) run.burnout = Math.max(0, run.burnout - 6);
+  if (weekend) run.burnout = Math.max(0, run.burnout - 4);
   const role = ROLES[run.rung];
   /* gates */
   let promo = false, fired = false;
@@ -1791,7 +1852,7 @@ function serializeRun(){
     stress:run.stress, coffee:run.coffee, crashes:run.crashes, burnout:run.burnout,
     rep:run.rep, uid:run.uid, scores:run.scores, breaches:run.breaches,
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
-    satOn:run.satOn, promoted:run.promoted,
+    satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
     queue: queue.map(t => ({ uid:t.uid, id:t.id, title:t.title, fills:t.fills, at:t.at,
       deadline:t.deadline, sla:t.sla, stress:t.stress, si:t.si, bonus:t.bonus,
@@ -1818,18 +1879,20 @@ function resumeRun(s){
     gateStreak:r.gateStreak, firedStreak:r.firedStreak, stress:r.stress,
     coffee:r.coffee, crashes:r.crashes, burnout:r.burnout, rep:r.rep,
     queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
-    pendingEvents:[], scores:r.scores, breaches:r.breaches, resolved:r.resolved,
+    pendingEvents:[], pendingScenes:r.pendingScenes || [], scores:r.scores,
+    breaches:r.breaches, resolved:r.resolved,
     aces:r.aces, daysAtTop:r.daysAtTop, satOn:r.satOn || {}, promoted:r.promoted };
-  if (!run.plan || run.clock <= 0.001 || run.clock >= DAY_MIN){ startCommute(); return; }
+  if (!run.plan){ startCommute(); return; }
+  /* saved past closing time (a modal held the clock past 17:00, then a blur
+     autosave): score the day now rather than silently discarding it */
+  if (run.clock >= DAY_MIN){ loadMap('office1'); endDay(); return; }
+  /* saved at the commute screen: present the SAVED plan, don't re-roll */
+  if (run.clock <= 0.001){ presentCommute(); return; }
   loadMap('office1');
-  spawnPeople();
-  if (r.px !== null && !solidAt(r.px, r.py)){
-    occ.delete(okey(player.tx, player.ty));
-    player.x = player.tx = r.px; player.y = player.ty = r.py; player.t = 1;
-    occ.add(okey(player.tx, player.ty));
-  }
+  spawnPeople(run.clock, (r.px !== null && r.px !== undefined) ? [r.px, r.py] : null);
   G.state = 'work'; show(null); clearInput();
   document.getElementById('hud').style.display = 'flex';
+  if (run.active !== null) run.active = null;
 }
 </script>
 
@@ -1880,7 +1943,8 @@ function openDlg(nodeId, fills, onDone, custom, ticket){
   const opts = (!custom && node.opts)
     ? node.opts.map(o => ({ t: fill(o.t, fills || {}), fx: o.fx || {} })) : null;
   const [who, role] = whoOf(node || {}, fills || {}, custom);
-  dlg = { lines, li:0, reveal:0, opts, onDone, ticket, done:false };
+  dlg = { lines, li:0, reveal:0, opts, onDone, ticket, scene:nodeId, done:false };
+  document.getElementById('tix').style.display = 'none';   // never stack over the queue panel
   document.getElementById('d-name').textContent = who;
   document.getElementById('d-role').textContent = role;
   document.getElementById('d-opts').innerHTML = '';
@@ -2198,6 +2262,18 @@ function show(id){
   G.screenId = id;
   for (const s of SCREENS){ const el = document.getElementById(s); if (el) el.hidden = (s !== id); }
 }
+function screenForState(){
+  switch (G.state){
+    case 'title':   return 's-title';
+    case 'setup':   return 's-setup';
+    case 'commute':
+    case 'review':  return 's-review';
+    case 'over':    return 's-over';
+    case 'pause':   return 's-pause';
+    case 'menu':    return G.screenId || 's-title';
+    default:        return null;
+  }
+}
 function toTitle(){
   G.state = 'title';
   document.getElementById('hud').style.display = 'none';
@@ -2214,6 +2290,7 @@ function toTitle(){
 }
 function actSetup(){
   G.state = 'setup';
+  G.abandonArmed = false;
   const box = document.getElementById('seedbox');
   if (!box.value) box.value = 'JOB-' + (1000 + (Math.random()*9000|0));
   /* one-time cert shop row */
@@ -2237,6 +2314,14 @@ function act(a){
     case 'newrun': actSetup(); break;
     case 'reroll': document.getElementById('seedbox').value = 'JOB-' + (1000 + (Math.random()*9000|0)); break;
     case 'start': {
+      const s = loadGame();
+      if (s && s !== 'future' && s.run && !G.abandonArmed){
+        G.abandonArmed = true;
+        toast('A CAREER IS IN PROGRESS. ACCEPT AGAIN TO ABANDON IT.', 'red', 3800);
+        sfx('err');
+        break;
+      }
+      G.abandonArmed = false;
       const v = (document.getElementById('seedbox').value || 'JOB-1337').trim().toUpperCase().slice(0,18);
       newRun(v || 'JOB-1337');
       break;
@@ -2259,7 +2344,16 @@ function act(a){
   }
 }
 function pauseGame(){
-  if (G.modal) closeModalToWork();
+  if (G.modal){
+    /* an interrupted modal must not orphan its work: a ticket step re-opens
+       on resume, and an event scene with choices replays instead of vanishing
+       with its options unpicked */
+    if (run){
+      if (run.active) run.resumePending = true;
+      else if (dlg && dlg.scene && dlg.opts) (run.pendingScenes = run.pendingScenes || []).push(dlg.scene);
+    }
+    closeModalToWork();
+  }
   if (G.state !== 'work') return;
   G.state = 'pause';
   document.getElementById('hud').style.display = 'none';
@@ -2277,6 +2371,10 @@ function resumeWork(){
   if (G.state !== 'pause') return;
   G.state = 'work'; show(null); clearInput(); view.focus();
   document.getElementById('hud').style.display = 'flex';
+  if (run && run.resumePending && run.active){
+    run.resumePending = false;
+    advanceStep();                       // re-open the interrupted step
+  } else if (run) run.resumePending = false;
 }
 document.addEventListener('click', e => {
   audioInit();
@@ -2287,9 +2385,14 @@ function onKey(e){
   audioInit();
   if (e.code === 'F4'){
     e.preventDefault();
-    if (G.showTests){ G.showTests = false; show(G.testReturn); return; }
+    if (G.showTests){
+      G.showTests = false;
+      show(screenForState());          // the CURRENT state's screen — never a stale one
+      return;
+    }
+    /* never leave a live sim (or an open modal) running under the report */
+    if (G.state === 'work' || G.state === 'modal') pauseGame();
     const sim = (G.state === 'title' || G.state === 'over' || G.state === 'menu');
-    G.testReturn = G.screenId;
     selfTest(sim);
     G.showTests = true; show(null);
     return;
@@ -2330,8 +2433,12 @@ function simDay(skill, policy){
     pos = a.slice();
   };
   G.state = 'work';
-  let guard = 0;
+  let guard = 0, lastC = run.clock;
   while (run.clock < DAY_MIN && guard++ < 500){
+    /* the same passive drift real play applies, over however much clock the
+       previous iteration consumed — the bot and the player age identically */
+    const el = run.clock - lastC; lastC = run.clock;
+    if (el > 0) run.stress = clamp(run.stress - el*0.02*(1 - run.queue.length*0.12), 0, 100);
     arrivalsTick(); crashTick(); slaTick();
     const P2 = run.plan;
     while (P2.ei < P2.events.length && run.clock >= P2.events[P2.ei].at){
@@ -2358,16 +2465,20 @@ function simDay(skill, policy){
     let sg = 0;
     while (t.si < steps.length && sg++ < 20){
       const st = steps[t.si];
+      /* REALISTIC time costs — a review caught the bot pricing minigames at
+         1.2 minutes while a human pays 8-20 of real clock, which made every
+         bot-validated SLA target unreachable in real play. Reading a line is
+         ~3s, a choice ~2s of dithering, a minigame ~12s. */
       if (st.goto){ walkTo(anchorPos(st.goto)); }
-      else if (st.say){ run.clock += DIALOGUE[st.say].t.length * .35; }
+      else if (st.say){ run.clock += DIALOGUE[st.say].t.length * 3; }
       else if (st.choice){
-        run.clock += .5;
+        run.clock += 2;
         const node = DIALOGUE[st.choice];
         const o = node.opts ? node.opts[policy.pick || 0] || node.opts[0] : null;
         if (o) applyFx(o.fx, t);
       }
       else if (st.game){
-        run.clock += 1.2;
+        run.clock += 12;
         const jitter = run.coffee >= 3 ? .08 : 0;     // mirrors the real jitters penalty
         t.gameScores.push(clamp(skill - jitter + Rr('game', -.08, .08), 0, 1));
       }
@@ -2542,6 +2653,59 @@ function selfTest(runSim){
     }
     const tps = Object.values(npcs).reduce((a,e)=>a+e.teleports,0);
     ok('NPCs walk their whole day (no teleport fallback)', tps === 0, tps + ' teleports');
+
+    /* a save written at the commute screen resumes to the SAME day */
+    QUIET = true;
+    rngInit('JOB-TEST'); runInit('JOB-TEST'); startCommute();
+    const cPlan = JSON.stringify(run.plan.arrivals);
+    const cSave = serializeRun();
+    resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(cSave)) });
+    ok('save: a commute-screen save never re-rolls the day',
+       JSON.stringify(run.plan.arrivals) === cPlan);
+
+    /* a save written past closing time scores the day instead of erasing it */
+    rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+    run.clock = DAY_MIN + 1; run.scores = [.7, .4];
+    const lateSave = serializeRun();
+    resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(lateSave)) });
+    ok('save: a past-17:00 save still gets its review',
+       run === null || run.perfHist.length === 1,
+       run ? 'perfHist ' + run.perfHist.length : 'career ended');
+
+    /* a stale GO TO marker can never advance a non-goto step */
+    rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+    loadMap('office1'); spawnPeople();
+    run.queue.push({ uid:801, id:'mouse-batteries', title:'t', fills:{user:'x'}, at:0,
+      deadline:run.clock+40, sla:40, stress:3, si:0, bonus:0, gameScores:[], from:null });
+    run.active = run.queue[0];
+    run.marker = [player.tx + 1, player.ty];        // someone else's arrow, right next to us
+    gotoCheck();
+    ok('goto: a stale marker is cleaned up, never acted on',
+       run.marker === null && run.active.si === 0);
+    run.active = null; run.queue = [];
+
+    /* a ticket that breached while its row was stale cannot be double-scored */
+    const ghost = { uid:802, id:'password-reset', title:'t', fills:{}, at:0,
+      deadline:1, sla:10, stress:3, si:0, bonus:0, gameScores:[], from:null };
+    const sc0 = run.scores.length;
+    startTicket(ghost);                              // not in the queue: must refuse
+    ok('queue: a breached row cannot be resurrected',
+       run.active === null && run.scores.length === sc0);
+
+    /* resuming onto an NPC's cell never shares the cell */
+    loadMap('office1');
+    spawnPeople(0, W2.anchors.n6 ? W2.anchors.n6.slice() : null);   // Brenda's spot
+    {
+      const cells = new Set();
+      let shared = false;
+      const bodies = [player, ...Object.values(npcs).filter(e2 => !e2.hidden)];
+      for (const b of bodies){
+        const k = okey(b.tx, b.ty);
+        if (cells.has(k)) shared = true;
+        cells.add(k);
+      }
+      ok('spawn: no two bodies ever share a cell', !shared);
+    }
 
     /* restore the player's world */
     const snap = JSON.parse(saved.json);
