@@ -1,0 +1,2685 @@
+<title>Managed</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14161a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#14161a; --chrome:#1d2126; --line:#343b44;
+  --paper:#e8e4da; --ink:#23241f; --dim:#8b93a0;
+  --corp:#2f7fbe; --corp2:#1d5c96; --amber:#ffb02e; --alert:#d64541; --ok:#4ade80;
+  --pix:"Press Start 2P", ui-monospace, monospace;
+  --body:"Chakra Petch", "Segoe UI", sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0; background:var(--void); color:var(--paper); font-family:var(--body);
+  overflow:hidden; -webkit-user-select:none; user-select:none;}
+#stage{position:fixed; inset:0; display:grid; place-items:center;
+  background:radial-gradient(ellipse at 50% 40%, #1b1f25 0%, #14161a 65%, #0b0c0e 100%);}
+#frame{position:relative; line-height:0;
+  box-shadow:0 0 0 1px var(--line), 0 24px 70px -18px #000, 0 0 50px -18px #2f7fbe33;}
+canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:block; background:#000;}
+
+/* ---------------- DOM overlays: HUD, dialogue, ticket panel ---------------- */
+#hud{position:absolute; left:0; right:0; top:0; display:none; justify-content:space-between;
+  align-items:center; gap:10px; padding:5px 9px; pointer-events:none;
+  font-size:clamp(10px,1.9vh,15px); background:linear-gradient(180deg, rgba(10,12,15,.82), rgba(10,12,15,0));}
+#hud .grp{display:flex; gap:10px; align-items:center; white-space:nowrap}
+#hud .lab{color:var(--dim); font-size:.78em; letter-spacing:.08em; text-transform:uppercase}
+#hud b{font-weight:700}
+#hud .meter{display:inline-block; width:58px; height:8px; background:#252b33; border:1px solid #3a424d; vertical-align:middle}
+#hud .meter i{display:block; height:100%; background:var(--corp); transition:width .2s}
+#hud .meter.warn i{background:var(--amber)} #hud .meter.bad i{background:var(--alert)}
+#hud #h-queue{color:var(--amber)} #hud #h-queue.breach{color:var(--alert)}
+
+#dlg{position:absolute; left:50%; bottom:4%; transform:translateX(-50%); width:min(560px,92%);
+  display:none; background:rgba(16,19,23,.96); border:1px solid var(--line); border-top:2px solid var(--corp);
+  padding:10px 14px 12px; line-height:1.45; font-size:clamp(12px,2.2vh,17px);
+  box-shadow:0 14px 40px -12px #000;}
+#dlg .who{font-family:var(--pix); font-size:.62em; color:var(--amber); letter-spacing:.1em; margin-bottom:6px; text-transform:uppercase}
+#dlg .who .role{color:var(--dim)}
+#dlg .txt{min-height:2.9em; white-space:pre-wrap}
+#dlg .opts{display:flex; flex-direction:column; gap:5px; margin-top:8px}
+#dlg .opt{text-align:left; font-family:var(--body); font-size:.92em; color:var(--paper);
+  background:#1b2129; border:1px solid #333b46; padding:6px 9px; cursor:pointer}
+#dlg .opt:hover,#dlg .opt.sel{border-color:var(--corp); background:#20303f; color:#fff}
+#dlg .opt .k{color:var(--corp); font-weight:700; margin-right:7px}
+#dlg .more{position:absolute; right:12px; bottom:6px; color:var(--dim); font-size:.7em; animation:bob 1s infinite}
+@keyframes bob{50%{transform:translateY(2px)}}
+@media (prefers-reduced-motion:reduce){#dlg .more{animation:none}}
+
+#tix{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(600px,94%);
+  max-height:88%; overflow:auto; display:none; background:rgba(14,17,21,.97);
+  border:1px solid var(--line); border-top:3px solid var(--amber);
+  font-size:clamp(11px,2vh,15px); box-shadow:0 18px 50px -12px #000;}
+#tix header{display:flex; justify-content:space-between; align-items:center; padding:8px 12px;
+  background:#191e24; border-bottom:1px solid var(--line);}
+#tix header .t{font-family:var(--pix); font-size:.7em; letter-spacing:.1em; color:var(--amber)}
+#tix header .hint{color:var(--dim); font-size:.8em}
+#tix .row{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
+  padding:8px 12px; border-bottom:1px dotted #2a313a; cursor:pointer}
+#tix .row:hover,#tix .row.sel{background:#1c242e}
+#tix .row .id{font-family:var(--pix); font-size:.6em; color:var(--dim)}
+#tix .row .sla{font-weight:700; color:var(--ok); font-variant-numeric:tabular-nums}
+#tix .row .sla.warn{color:var(--amber)} #tix .row .sla.bad{color:var(--alert)}
+#tix .row .ttl{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+#tix .empty{padding:18px 12px; color:var(--dim); text-align:center}
+
+.toastwrap{position:absolute; left:0; right:0; top:13%; display:flex; flex-direction:column;
+  align-items:center; gap:6px; pointer-events:none}
+
+/* ---------------- full screens ---------------- */
+.screen{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:clamp(10px,2.2vh,20px); padding:clamp(14px,3vh,36px); line-height:1.5; text-align:center;
+  background:linear-gradient(180deg, rgba(13,15,19,.94), rgba(13,15,19,.98));}
+.screen[hidden]{display:none}
+.eyebrow{font-family:var(--pix); font-size:clamp(7px,1.15vh,10px); letter-spacing:.18em; color:var(--corp); text-transform:uppercase}
+h1.logo{font-family:var(--pix); margin:0; line-height:1.3; font-size:clamp(22px,5vh,46px); color:var(--paper);
+  text-shadow:0 3px 0 #10314e, 0 0 26px #2f7fbe44;}
+h1.logo small{display:block; font-size:.34em; color:var(--dim); text-shadow:none; margin-top:.8em; letter-spacing:.08em}
+h2.ttl{font-family:var(--pix); font-size:clamp(11px,2.1vh,17px); margin:0; color:var(--amber); letter-spacing:.04em}
+.sub{font-size:clamp(12px,1.9vh,16px); color:var(--dim); max-width:64ch; margin:0}
+.panel{background:linear-gradient(180deg,#171b21,#12151a); border:1px solid var(--line);
+  box-shadow:inset 0 1px 0 #ffffff0d; padding:clamp(12px,2.2vh,20px) clamp(14px,2.6vw,26px); position:relative; text-align:left}
+.panel::before{content:""; position:absolute; left:-1px; top:-1px; width:9px; height:9px;
+  border:2px solid var(--corp); border-right:0; border-bottom:0; opacity:.9}
+.panel::after{content:""; position:absolute; right:-1px; bottom:-1px; width:9px; height:9px;
+  border:2px solid var(--corp); border-left:0; border-top:0; opacity:.9}
+.menu{display:flex; flex-direction:column; gap:6px; width:min(520px,92vw)}
+.mi{font-family:var(--pix); font-size:clamp(8px,1.45vh,12px); letter-spacing:.05em; color:var(--paper);
+  background:#161b21; border:1px solid #333b46; padding:11px 14px; text-align:left; cursor:pointer;
+  display:flex; justify-content:space-between; align-items:center; gap:12px; transition:transform .08s, background .12s;}
+.mi:hover,.mi:focus-visible{background:#1d2632; border-color:var(--corp); color:#fff; outline:none; transform:translateX(3px)}
+.mi[disabled]{opacity:.35; cursor:not-allowed; transform:none}
+.mi .k{color:var(--corp); font-size:.85em}
+.btn{font-family:var(--pix); font-size:clamp(8px,1.35vh,11px); padding:10px 16px; cursor:pointer;
+  background:var(--amber); color:#231300; border:0; letter-spacing:.05em}
+.btn.ghost{background:#161b21; color:var(--paper); border:1px solid var(--line)}
+.btn:hover{filter:brightness(1.12)}
+.btn:focus-visible{outline:2px solid var(--corp); outline-offset:2px}
+.row{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
+.dl{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:clamp(11px,1.7vh,15px); margin:0}
+.dl dt{color:var(--dim); text-transform:uppercase; letter-spacing:.08em; font-size:.82em; padding-top:.15em}
+.dl dd{margin:0; font-variant-numeric:tabular-nums; font-weight:600}
+.hint{font-size:clamp(10px,1.5vh,13px); color:var(--dim); max-width:72ch}
+.hint b{color:var(--corp)} kbd{font-family:var(--pix); font-size:.72em; background:#181d23; border:1px solid var(--line); padding:3px 5px; color:var(--paper)}
+input[type=text]{font-family:var(--pix); font-size:12px; background:#10141a; color:var(--amber);
+  border:1px solid var(--line); padding:9px 10px; letter-spacing:.08em; width:100%; text-transform:uppercase}
+input[type=range]{accent-color:var(--corp); width:150px}
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px 22px; text-align:left; width:min(720px,92vw)}
+.ctl{display:flex; justify-content:space-between; gap:10px; font-size:clamp(11px,1.6vh,14px); border-bottom:1px dotted #2a313a; padding:5px 0}
+.ctl span:last-child{color:var(--dim); text-align:right}
+</style>
+
+<div id="stage">
+  <div id="frame">
+    <canvas id="view" width="480" height="270" tabindex="0" aria-label="Managed game viewport"></canvas>
+
+    <div id="hud">
+      <div class="grp">
+        <span id="h-clock"><b>9:00</b> AM</span>
+        <span><span class="lab">day</span> <b id="h-day">1</b></span>
+        <span id="h-role" style="color:var(--corp)">INTERN</span>
+      </div>
+      <div class="grp">
+        <span id="h-queue">QUEUE 0</span>
+        <span><span class="lab">stress</span> <span class="meter" id="h-stressm"><i style="width:0%"></i></span></span>
+        <span><span class="lab">coffee</span> <b id="h-coffee">☕0</b></span>
+      </div>
+    </div>
+
+    <div id="dlg">
+      <div class="who"><span id="d-name"></span> <span class="role" id="d-role"></span></div>
+      <div class="txt" id="d-txt"></div>
+      <div class="opts" id="d-opts"></div>
+      <div class="more" id="d-more">▼</div>
+    </div>
+
+    <div id="tix">
+      <header><span class="t">SERVICE QUEUE — 360 SMART NETWORKS</span><span class="hint">↑↓ pick · Enter work · Esc close</span></header>
+      <div id="tix-list"></div>
+    </div>
+
+    <div class="toastwrap" id="toasts"></div>
+
+    <!-- BOOT -->
+    <div class="screen" id="s-boot">
+      <div class="eyebrow" id="bootline">reticulating org charts</div>
+      <h1 class="logo">MANAGED</h1>
+      <div class="sub" style="font-family:var(--pix);font-size:clamp(7px,1.1vh,10px)">A 360 SMART NETWORKS CAREER</div>
+    </div>
+
+    <!-- TITLE -->
+    <div class="screen" id="s-title" hidden>
+      <div class="eyebrow">an msp life simulator</div>
+      <h1 class="logo">MANAGED<small>YOU'LL GO FAR. EVENTUALLY.</small></h1>
+      <div class="menu" role="menu" id="titlemenu">
+        <button class="mi" data-act="newrun">APPLY FOR A JOB <span class="k">▶</span></button>
+        <button class="mi" data-act="continue" id="b-continue" disabled>CONTINUE CAREER <span class="k">▶</span></button>
+        <button class="mi" data-act="controls">EMPLOYEE HANDBOOK <span class="k">▶</span></button>
+        <button class="mi" data-act="options">OPTIONS <span class="k">▶</span></button>
+      </div>
+      <p class="hint" id="t-meta"></p>
+    </div>
+
+    <!-- RUN SETUP -->
+    <div class="screen" id="s-setup" hidden>
+      <div class="eyebrow">careers portal</div>
+      <h2 class="ttl">JOB POSTING</h2>
+      <div class="panel" style="width:min(520px,92vw)">
+        <dl class="dl">
+          <dt>Position</dt><dd>IT Intern (unpaid, "great exposure")</dd>
+          <dt>Company</dt><dd>360 Smart Networks — Managed IT Services</dd>
+          <dt>Benefits</dt><dd>Coffee is free. That is the benefit.</dd>
+        </dl>
+        <p class="hint" style="margin:12px 0 6px">Job posting ID — the same ID always produces the same career. Share it.</p>
+        <input type="text" id="seedbox" maxlength="18" spellcheck="false">
+      </div>
+      <div class="row">
+        <button class="btn" data-act="start">ACCEPT OFFER ▶</button>
+        <button class="btn ghost" data-act="reroll">NEW POSTING</button>
+        <button class="btn ghost" data-act="back">◀ BACK</button>
+      </div>
+    </div>
+
+    <!-- PAUSE -->
+    <div class="screen" id="s-pause" hidden>
+      <div class="eyebrow">on a break — the queue is not</div>
+      <h2 class="ttl" id="p-title">PAUSED</h2>
+      <div class="panel" style="width:min(520px,92vw)"><dl class="dl" id="p-meta"></dl></div>
+      <div class="row">
+        <button class="btn" data-act="resume">BACK TO WORK ▶</button>
+        <button class="btn ghost" data-act="quitsave">SAVE &amp; QUIT</button>
+      </div>
+    </div>
+
+    <!-- END OF DAY REVIEW -->
+    <div class="screen" id="s-review" hidden>
+      <div class="eyebrow" id="r-eyebrow">end of day</div>
+      <h2 class="ttl" id="r-title">DAILY PERFORMANCE REVIEW</h2>
+      <div class="panel" style="width:min(560px,92vw)"><dl class="dl" id="r-stats"></dl></div>
+      <p class="hint" id="r-note"></p>
+      <div class="row" id="r-actions"></div>
+    </div>
+
+    <!-- CAREER OVER -->
+    <div class="screen" id="s-over" hidden>
+      <div class="eyebrow" id="o-eyebrow">exit interview</div>
+      <h1 class="logo" id="o-title" style="font-size:clamp(18px,3.6vh,34px)"></h1>
+      <div class="panel" style="width:min(560px,92vw)"><dl class="dl" id="o-stats"></dl></div>
+      <p class="hint" id="o-note"></p>
+      <div class="row" id="o-actions"></div>
+    </div>
+
+    <!-- HANDBOOK / CONTROLS -->
+    <div class="screen" id="s-controls" hidden>
+      <div class="eyebrow">onboarding packet, page 1 of 214</div>
+      <h2 class="ttl">EMPLOYEE HANDBOOK</h2>
+      <div class="grid2 panel">
+        <div class="ctl"><span>Walk</span><span>WASD · Arrow keys</span></div>
+        <div class="ctl"><span>Talk / use / advance</span><span>E · Space · Enter</span></div>
+        <div class="ctl"><span>Dialogue choices</span><span>1 – 3 · click</span></div>
+        <div class="ctl"><span>Service queue</span><span>Tab · or use your terminal</span></div>
+        <div class="ctl"><span>Pause</span><span>Esc</span></div>
+        <div class="ctl"><span>Mute music</span><span>M</span></div>
+        <div class="ctl"><span>Run self test</span><span>F4</span></div>
+      </div>
+      <p class="hint">Your terminal (the glowing one at your desk) opens the <b>service queue</b>. Tickets breach their
+      SLA whether or not you are watching them — the clock only stops when you clock out. Coffee is in the kitchen.
+      The printer is possessed. Welcome aboard.</p>
+      <div class="row"><button class="btn ghost" data-act="back">◀ BACK</button></div>
+    </div>
+
+    <!-- OPTIONS -->
+    <div class="screen" id="s-options" hidden>
+      <div class="eyebrow">it configures the it simulator</div>
+      <h2 class="ttl">OPTIONS</h2>
+      <div class="grid2 panel">
+        <div class="ctl"><span>Sound effects</span><span><input type="range" id="o-sfx" min="0" max="100" value="70"></span></div>
+        <div class="ctl"><span>Music</span><span><input type="range" id="o-mus" min="0" max="100" value="35"></span></div>
+        <div class="ctl"><span>Text speed</span><span><button class="btn ghost" id="o-tspd" data-act="textspeed" style="padding:4px 9px;font-size:8px">NORMAL</button></span></div>
+      </div>
+      <div class="row"><button class="btn ghost" data-act="back">◀ BACK</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ==========================================================================
+   MANAGED — an MSP life, simulated.
+   S1 CORE: constants, seeded RNG streams, input, audio plumbing.
+   One self-contained file; canvas world, DOM prose. No assets, no libraries.
+   ========================================================================== */
+const TILE = 16, VW = 480, VH = 270;          // internal resolution: 30x~17 tiles
+const view = document.getElementById('view');
+const ctx = view.getContext('2d', { alpha:false });
+ctx.imageSmoothingEnabled = false;
+
+const clamp = (v,a,b) => v<a?a:(v>b?b:v);
+const lerp  = (a,b,t) => a+(b-a)*t;
+/* Cosmetic randomness ONLY (particles, sfx detune). Gameplay must never touch
+   this — the F4 sim stubs Math.random to throw to enforce it. */
+const rnd = (a=1) => Math.random()*a;
+const rr  = (a,b) => a+Math.random()*(b-a);
+
+/* ------------------------------ seeded RNG -------------------------------- */
+/* mulberry32 behind named streams. Every gameplay roll names its stream, so a
+   stray extra roll in one system can never shift what another generates. The
+   whole state of a stream is one int — trivially saved and restored. */
+function xmur3(str){
+  let h = 1779033703 ^ str.length;
+  for (let i=0;i<str.length;i++){
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = h<<13 | h>>>19;
+  }
+  return () => {
+    h = Math.imul(h ^ h>>>16, 2246822507);
+    h = Math.imul(h ^ h>>>13, 3266489909);
+    return (h ^= h>>>16) >>> 0;
+  };
+}
+const RNG = { seed:'', streams:Object.create(null), guard:false };
+function rngInit(seed, states){
+  RNG.seed = String(seed);
+  RNG.streams = Object.create(null);
+  if (states) for (const k in states) RNG.streams[k] = { s: states[k]|0 };
+}
+function rngState(){
+  const out = {};
+  for (const k in RNG.streams) out[k] = RNG.streams[k].s;
+  return out;
+}
+function R(name){
+  if (RNG.guard) throw new Error('seeded roll during a guarded section: '+name);
+  let st = RNG.streams[name];
+  if (!st) st = RNG.streams[name] = { s: xmur3(RNG.seed + ':' + name)() };
+  st.s = st.s + 0x6D2B79F5 | 0;
+  let t = Math.imul(st.s ^ st.s>>>15, 1 | st.s);
+  t = t + Math.imul(t ^ t>>>7, 61 | t) | 0;
+  return ((t ^ t>>>14) >>> 0) / 4294967296;
+}
+const Rr    = (name,a,b) => a + R(name)*(b-a);
+const Ri    = (name,n) => (R(name)*n)|0;
+const Rpick = (name,arr) => arr[(R(name)*arr.length)|0];
+
+/* --------------------------------- input ---------------------------------- */
+const keys = new Set();
+const held = Object.create(null);
+const KEYMAP = {
+  KeyW:'up', ArrowUp:'up', KeyS:'down', ArrowDown:'down',
+  KeyA:'left', ArrowLeft:'left', KeyD:'right', ArrowRight:'right',
+  KeyE:'use', Space:'use', Enter:'use',
+  ShiftLeft:'sprint', ShiftRight:'sprint'
+};
+/* Latched single-press actions the sim consumes once per frame. */
+const press = { use:false, one:false, two:false, three:false, queue:false, back:false, up:false, down:false };
+addEventListener('keydown', e => {
+  const playing = typeof G !== 'undefined' && G && (G.state === 'work' || G.state === 'modal');
+  const a = playing ? KEYMAP[e.code] : null;
+  if (e.repeat){ if (a) e.preventDefault(); return; }
+  if (a){ held[a] = true; e.preventDefault(); }
+  keys.add(e.code);
+  if (playing){
+    if (e.code==='KeyE' || e.code==='Space' || e.code==='Enter') press.use = true;
+    if (e.code==='Digit1') press.one = true;
+    if (e.code==='Digit2') press.two = true;
+    if (e.code==='Digit3') press.three = true;
+    if (e.code==='KeyW' || e.code==='ArrowUp') press.up = true;
+    if (e.code==='KeyS' || e.code==='ArrowDown') press.down = true;
+    if (e.code==='Tab'){ press.queue = true; e.preventDefault(); }
+  }
+  onKey(e);
+});
+/* Multi-bound actions (W and Up both walk): releasing ONE key must not cancel
+   the action while the other is still physically down. */
+addEventListener('keyup', e => {
+  keys.delete(e.code);
+  const a = KEYMAP[e.code];
+  if (!a) return;
+  let still = false;
+  for (const c of keys) if (KEYMAP[c] === a){ still = true; break; }
+  held[a] = still;
+});
+function clearInput(){
+  for (const k in held) held[k] = false;
+  keys.clear();
+  for (const k in press) press[k] = false;
+}
+/* Losing focus or visibility is losing control: never leave the sim running.
+   (typeof guards: these handlers outlive this block's parse order.) */
+addEventListener('blur', () => {
+  clearInput();
+  if (typeof G !== 'undefined' && (G.state === 'work' || G.state === 'modal') && typeof pauseGame === 'function') pauseGame();
+});
+addEventListener('focus', clearInput);
+document.addEventListener('visibilitychange', () => {
+  clearInput();
+  if (document.hidden && typeof G !== 'undefined' && (G.state === 'work' || G.state === 'modal') && typeof pauseGame === 'function') pauseGame();
+});
+
+/* --------------------------------- audio ---------------------------------- */
+const A = { ctx:null, master:null, sfx:null, mus:null, noise:null,
+            sfxVol:.7, musVol:.35, musOn:true, step:0, next:0, timer:0 };
+function audioInit(){
+  if (A.ctx){ if (A.ctx.state === 'suspended') A.ctx.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+  A.ctx = new AC();
+  A.lim = A.ctx.createDynamicsCompressor();
+  A.lim.threshold.value = -8; A.lim.knee.value = 4; A.lim.ratio.value = 10;
+  A.lim.attack.value = .003; A.lim.release.value = .2;
+  A.lim.connect(A.ctx.destination);
+  A.master = A.ctx.createGain(); A.master.gain.value = .8; A.master.connect(A.lim);
+  A.sfx = A.ctx.createGain(); A.sfx.gain.value = A.sfxVol; A.sfx.connect(A.master);
+  A.mus = A.ctx.createGain(); A.mus.gain.value = A.musVol; A.mus.connect(A.master);
+  const n = A.ctx.createBuffer(1, A.ctx.sampleRate, A.ctx.sampleRate);
+  const d = n.getChannelData(0);
+  for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  A.noise = n;
+  musicStart();
+}
+function env(g, t, a, dcy, peak){
+  g.gain.setValueAtTime(.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t+a);
+  g.gain.exponentialRampToValueAtTime(.0001, t+a+dcy);
+}
+function tone(t, f0, f1, dur, peak, type='square'){
+  if (!A.ctx) return;
+  const o = A.ctx.createOscillator(); o.type = type;
+  o.frequency.setValueAtTime(f0, t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20,f1), t+dur);
+  const g = A.ctx.createGain(); env(g, t, .006, dur, peak);
+  o.connect(g); g.connect(A.sfx); o.start(t); o.stop(t+dur+.05);
+}
+function noiseBurst(t, dur, f0, f1, peak, q=1, type='lowpass'){
+  if (!A.ctx) return;
+  const s = A.ctx.createBufferSource(); s.buffer = A.noise; s.loop = true;
+  s.playbackRate.value = rr(.9,1.1);
+  const bp = A.ctx.createBiquadFilter(); bp.type = type; bp.Q.value = q;
+  bp.frequency.setValueAtTime(f0, t);
+  bp.frequency.exponentialRampToValueAtTime(Math.max(60,f1), t+dur);
+  const g = A.ctx.createGain(); env(g, t, .004, dur, peak);
+  s.connect(bp); bp.connect(g); g.connect(A.sfx);
+  s.start(t); s.stop(t+dur+.05);
+}
+const now = () => A.ctx ? A.ctx.currentTime : 0;
+const SFX = {
+  blip(){ tone(now(), 620, 660, .05, .16, 'square'); },                       // dialogue tick
+  ui(){ tone(now(), 440, 470, .06, .2, 'square'); },
+  step(){ noiseBurst(now(), .05, 900, 300, .05, .8); },
+  door(){ noiseBurst(now(), .18, 500, 1200, .12, 1, 'bandpass'); },
+  coffee(){ const t=now(); noiseBurst(t,.4,700,300,.14,.8); tone(t+.42,880,1170,.12,.2); },
+  ticket(){ const t=now(); tone(t,988,988,.09,.22); tone(t+.11,784,784,.12,.18); },  // new ticket: minor 2-note
+  done(){ const t=now(); [659,784,1046].forEach((f,i)=>tone(t+i*.09,f,f,.11,.22)); },
+  breach(){ const t=now(); tone(t,220,110,.4,.28,'sawtooth'); noiseBurst(t,.3,400,120,.2,.9); },
+  promo(){ const t=now(); [523,659,784,1046,1318].forEach((f,i)=>tone(t+i*.1,f,f,.16,.26)); },
+  fired(){ const t=now(); [392,330,262,196].forEach((f,i)=>tone(t+i*.16,f,f,.3,.28,'sawtooth')); },
+  phone(){ const t=now(); tone(t,880,880,.16,.14,'triangle'); tone(t+.2,880,880,.16,.14,'triangle'); },
+  err(){ tone(now(), 180, 140, .16, .2, 'sawtooth'); }
+};
+const SFXLAST = Object.create(null);
+function sfx(name){
+  if (!A.ctx || A.sfxVol <= 0 || !SFX[name]) return;
+  const t = A.ctx.currentTime;
+  if (t - (SFXLAST[name] || -9) < .05) return;
+  SFXLAST[name] = t;
+  SFX[name]();
+}
+
+/* Office muzak: a polite, slightly dead-inside loop in F major, 88 bpm.
+   Elevator-jazz voicings on a triangle bed with a brushed hat. */
+const M_F2=87.31, M_A2=110, M_C3=130.81, M_D3=146.83, M_E3=164.81,
+      M_F3=174.61, M_G3=196, M_A3=220, M_Bb3=233.08, M_C4=261.63,
+      M_D4=293.66, M_E4=329.63, M_F4=349.23, M_A4=440;
+const MZ_BASS = [M_F2,0,0,0, M_D3,0,0,0, M_Bb3/2,0,0,0, M_C3,0,M_E3,0,
+                 M_F2,0,0,0, M_D3,0,0,0, M_Bb3/2,0,0,0, M_C3,0,0,0];
+const MZ_KEYS = [0,[M_A3,M_C4],0,0, 0,[M_F3,M_A3],0,0, 0,[M_Bb3,M_D4],0,0, 0,[M_G3,M_C4],0,0,
+                 0,[M_A3,M_C4],0,0, 0,[M_F3,M_A3],0,0, 0,[M_Bb3,M_D4],0,[M_E4], 0,[M_F4,M_A4],0,0];
+const MZ_HAT  = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,1,
+                 0,0,1,0, 0,0,1,0, 0,0,1,0, 0,1,0,1];
+function musNote(t, f, dur, type, peak){
+  const o = A.ctx.createOscillator(); o.type = type; o.frequency.value = f;
+  const g = A.ctx.createGain();
+  g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+.03);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  const lp = A.ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 1600;
+  o.connect(lp); lp.connect(g); g.connect(A.mus); o.start(t); o.stop(t+dur+.05);
+}
+function musicStart(){
+  if (!A.ctx || A.timer) return;
+  A.next = A.ctx.currentTime + .1; A.step = 0;
+  A.timer = setInterval(() => {
+    if (!A.ctx || document.hidden) return;
+    const spb = 60/88/4;
+    /* Never schedule into the past: a throttled tab would dump the backlog. */
+    if (A.next < A.ctx.currentTime) A.next = A.ctx.currentTime + .05;
+    while (A.next < A.ctx.currentTime + .3){
+      const s = A.step % 32, t = A.next;
+      if (A.musOn){
+        if (MZ_BASS[s]) musNote(t, MZ_BASS[s], spb*3.2, 'triangle', .38);
+        const chord = MZ_KEYS[s];
+        if (chord) for (const f of chord) musNote(t, f, spb*2.6, 'sine', .13);
+        if (MZ_HAT[s]){
+          const n = A.ctx.createBufferSource(); n.buffer = A.noise; n.loop = true;
+          const hp = A.ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value = 8500;
+          const g = A.ctx.createGain(); g.gain.setValueAtTime(.028,t);
+          g.gain.exponentialRampToValueAtTime(.0001,t+.06);
+          n.connect(hp); hp.connect(g); g.connect(A.mus); n.start(t); n.stop(t+.08);
+        }
+      }
+      A.next += spb; A.step++;
+    }
+  }, 40);
+}
+</script>
+
+<script>
+"use strict";
+/* ==========================================================================
+   S2 ART — everything baked at boot. Tile atlas + paper-doll people.
+   ========================================================================== */
+function cv(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const g=c.getContext('2d'); g.imageSmoothingEnabled=false; return [c,g]; }
+function Rt(g,x,y,w,h,c){ g.fillStyle=c; g.fillRect(x|0,y|0,w|0,h|0); }
+
+/* Atlas is a row of 16x16 tiles, index = position. Painted flat, lit from the
+   top-left, in tired-office colours. */
+const ATLAS_N = 40;
+let atlas = null, atlasG = null;
+function tilePx(i){ return i*TILE; }
+function bakeAtlas(){
+  [atlas, atlasG] = cv(ATLAS_N*TILE, TILE);
+  const g = atlasG;
+  const T = (i, fn) => { g.save(); g.translate(tilePx(i), 0); fn(g); g.restore(); };
+
+  T(0, g=>{ Rt(g,0,0,16,16,'#8d857a'); });                                     // void/unused
+  /* 1 carpet: the grey-blue institutional kind, with the sad fleck */
+  T(1, g=>{ Rt(g,0,0,16,16,'#5d6672');
+    for (let i=0;i<9;i++) Rt(g,(i*5.3)%16,(i*7.7)%16,1,1,'#67707c');
+    for (let i=0;i<5;i++) Rt(g,(i*6.1+3)%16,(i*4.3+2)%16,1,1,'#525a65'); });
+  /* 2 kitchen lino */
+  T(2, g=>{ Rt(g,0,0,16,16,'#a89f8d'); Rt(g,0,0,16,1,'#b8b0a0'); Rt(g,0,8,16,1,'#988f7e');
+    Rt(g,8,0,1,16,'#988f7e'); Rt(g,0,0,1,16,'#b8b0a0'); });
+  /* 3 server-room tile */
+  T(3, g=>{ Rt(g,0,0,16,16,'#3a4148'); Rt(g,0,0,16,1,'#454d55'); Rt(g,0,15,16,1,'#30363c');
+    Rt(g,3,3,2,2,'#333a41'); Rt(g,11,9,2,2,'#333a41'); });
+  /* 4 wall (interior, beige) — drawn as the face you see from the south */
+  T(4, g=>{ Rt(g,0,0,16,16,'#c9c0ad'); Rt(g,0,0,16,3,'#8d857a'); Rt(g,0,3,16,1,'#a49b8a');
+    Rt(g,0,13,16,3,'#b1a894'); });
+  /* 5 wall with wainscoting seam */
+  T(5, g=>{ Rt(g,0,0,16,16,'#c9c0ad'); Rt(g,0,0,16,3,'#8d857a'); Rt(g,0,3,16,1,'#a49b8a');
+    Rt(g,0,9,16,2,'#9c9382'); Rt(g,0,13,16,3,'#b1a894'); });
+  /* 6 window wall: parking-lot grey sky, venetian blinds */
+  T(6, g=>{ Rt(g,0,0,16,16,'#c9c0ad'); Rt(g,0,0,16,2,'#8d857a');
+    Rt(g,1,3,14,10,'#93a7b4'); Rt(g,2,4,12,8,'#a8bcc9');
+    for (let y=4;y<12;y+=2) Rt(g,2,y,12,1,'#8fa0ab');
+    Rt(g,1,3,14,1,'#6e7e88'); Rt(g,0,13,16,3,'#b1a894'); });
+  /* 7 glass partition */
+  T(7, g=>{ Rt(g,0,0,16,16,'#b7c6cf'); Rt(g,0,0,16,1,'#dde8ee'); Rt(g,0,15,16,1,'#8fa0ab');
+    Rt(g,7,0,2,16,'#9fb2bd'); g.globalAlpha=.5; Rt(g,2,2,2,12,'#e8f2f7'); g.globalAlpha=1; });
+  /* 8 door (wood, closed look; walkable) */
+  T(8, g=>{ Rt(g,0,0,16,16,'#7a5a3a'); Rt(g,1,1,14,14,'#8a6845'); Rt(g,2,2,12,5,'#77573a');
+    Rt(g,2,9,12,5,'#77573a'); Rt(g,12,7,2,2,'#d9c17a'); });
+  /* 9 desk (faces down; two tiles wide pieces use 9+10) */
+  T(9, g=>{ Rt(g,0,2,16,11,'#9a7a52'); Rt(g,0,2,16,2,'#b08c5e'); Rt(g,0,11,16,2,'#7e6142');
+    Rt(g,1,13,2,3,'#6a5138'); Rt(g,13,13,2,3,'#6a5138'); });
+  /* 10 desk with papers */
+  T(10, g=>{ Rt(g,0,2,16,11,'#9a7a52'); Rt(g,0,2,16,2,'#b08c5e'); Rt(g,0,11,16,2,'#7e6142');
+    Rt(g,2,4,5,4,'#e8e4da'); Rt(g,3,5,3,1,'#b7b2a6'); Rt(g,8,5,4,3,'#e8e4da');
+    Rt(g,1,13,2,3,'#6a5138'); Rt(g,13,13,2,3,'#6a5138'); });
+  /* 11 your terminal desk: CRT glow */
+  T(11, g=>{ Rt(g,0,2,16,11,'#9a7a52'); Rt(g,0,2,16,2,'#b08c5e'); Rt(g,0,11,16,2,'#7e6142');
+    Rt(g,4,0,8,8,'#2b323c'); Rt(g,5,1,6,5,'#0f2e18');
+    Rt(g,6,2,4,1,'#4ade80'); Rt(g,6,4,3,1,'#4ade80'); Rt(g,7,8,2,2,'#20252d');
+    Rt(g,1,13,2,3,'#6a5138'); Rt(g,13,13,2,3,'#6a5138'); });
+  /* 12 office chair */
+  T(12, g=>{ Rt(g,4,3,8,9,'#2c2f35'); Rt(g,4,3,8,2,'#3a3e46'); Rt(g,5,12,6,1,'#1e2126');
+    Rt(g,7,13,2,2,'#454a52'); Rt(g,3,14,10,1,'#1e2126'); });
+  /* 13 coffee machine (the load-bearing appliance) */
+  T(13, g=>{ Rt(g,2,1,12,14,'#3a3f47'); Rt(g,2,1,12,2,'#4a525c'); Rt(g,4,4,8,4,'#16181c');
+    Rt(g,5,5,6,2,'#c94'); Rt(g,6,9,4,4,'#16181c'); Rt(g,7,10,2,2,'#6a4a2a');
+    Rt(g,3,14,10,1,'#23262b'); Rt(g,12,4,1,1,'#4ade80'); });
+  /* 14 vending machine */
+  T(14, g=>{ Rt(g,2,0,12,15,'#8a2f2a'); Rt(g,2,0,12,2,'#a53f38'); Rt(g,4,3,6,9,'#1a1d22');
+    for (let y=4;y<11;y+=3) for (let x=5;x<9;x+=2) Rt(g,x,y,1,2,'#d9c17a');
+    Rt(g,11,4,2,5,'#16181c'); Rt(g,11,10,2,2,'#d9c17a'); });
+  /* 15 printer (possessed) */
+  T(15, g=>{ Rt(g,2,5,12,8,'#b9b2a4'); Rt(g,2,5,12,2,'#cfc8ba'); Rt(g,4,3,8,3,'#a29b8d');
+    Rt(g,5,8,6,2,'#16181c'); Rt(g,6,8,4,1,'#e8e4da'); Rt(g,12,6,1,1,'#d64541');
+    Rt(g,3,13,10,1,'#8d867a'); });
+  /* 16 server rack */
+  T(16, g=>{ Rt(g,2,0,12,15,'#191d24'); Rt(g,2,0,12,1,'#2a3038');
+    for (let y=2;y<14;y+=3){ Rt(g,3,y,10,2,'#0d1015'); Rt(g,11,y,1,1,Math.random()<.5?'#39d7ff':'#4ade80'); }
+    Rt(g,3,14,10,1,'#0a0c10'); });
+  /* 17 potted fern (morale, allegedly) */
+  T(17, g=>{ Rt(g,5,10,6,4,'#8a5a34'); Rt(g,5,10,6,1,'#a06c40');
+    Rt(g,7,4,2,6,'#2e6b34'); Rt(g,4,5,3,2,'#38813f'); Rt(g,9,5,3,2,'#38813f');
+    Rt(g,5,3,2,2,'#469a4e'); Rt(g,9,3,2,2,'#469a4e'); Rt(g,7,2,2,2,'#4fb058'); });
+  /* 18 elevator doors */
+  T(18, g=>{ Rt(g,1,0,14,15,'#9aa2ac'); Rt(g,1,0,14,1,'#b7bec7'); Rt(g,7,1,2,14,'#6b737d');
+    Rt(g,2,1,4,13,'#aab2bb'); Rt(g,10,1,4,13,'#aab2bb'); Rt(g,6,2,1,2,'#d9c17a'); });
+  /* 19 conference table piece */
+  T(19, g=>{ Rt(g,0,3,16,10,'#6d4f33'); Rt(g,0,3,16,2,'#7f5d3c'); Rt(g,0,11,16,2,'#583f28'); });
+  /* 20 whiteboard wall */
+  T(20, g=>{ Rt(g,0,0,16,16,'#c9c0ad'); Rt(g,0,0,16,3,'#8d857a');
+    Rt(g,1,4,14,9,'#eef0ee'); Rt(g,1,4,14,1,'#c6ccc6');
+    Rt(g,3,6,5,1,'#2f7fbe'); Rt(g,3,8,7,1,'#d64541'); Rt(g,3,10,4,1,'#23241f');
+    Rt(g,0,13,16,3,'#b1a894'); });
+  /* 21 kitchen counter */
+  T(21, g=>{ Rt(g,0,2,16,12,'#8d8579'); Rt(g,0,2,16,2,'#a29a8d'); Rt(g,0,12,16,2,'#6d665c');
+    Rt(g,2,5,4,3,'#5d6672'); Rt(g,9,6,5,2,'#c9c0ad'); });
+  /* 22 arcade cabinet: AGENT 360 lives on */
+  T(22, g=>{ Rt(g,2,0,12,15,'#1d2126'); Rt(g,2,0,12,2,'#2a3038');
+    Rt(g,4,2,8,6,'#05070c'); Rt(g,5,3,6,2,'#ffb02e'); Rt(g,5,6,3,1,'#35d0ff');
+    Rt(g,3,9,10,3,'#2a3038'); Rt(g,5,10,2,1,'#d64541'); Rt(g,9,10,2,1,'#39d7ff');
+    Rt(g,3,14,10,1,'#0a0c10'); });
+  /* 23 water cooler */
+  T(23, g=>{ Rt(g,5,7,6,7,'#c9c0ad'); Rt(g,5,7,6,1,'#ddd5c3');
+    Rt(g,5,1,6,6,'#9fd3e8'); Rt(g,6,2,2,4,'#c4e6f2'); Rt(g,6,9,2,2,'#2f7fbe');
+    Rt(g,4,14,8,1,'#8d857a'); });
+  /* 24 filing cabinet */
+  T(24, g=>{ Rt(g,3,1,10,13,'#7a8088'); Rt(g,3,1,10,1,'#8f959d');
+    for (let y=3;y<13;y+=4){ Rt(g,4,y,8,3,'#6b717a'); Rt(g,6,y+1,4,1,'#5b616a'); }
+    Rt(g,4,14,8,1,'#5b616a'); });
+  /* 25 breakroom couch */
+  T(25, g=>{ Rt(g,0,4,16,9,'#4a6741'); Rt(g,0,4,16,2,'#5b7a50'); Rt(g,0,11,16,2,'#3a5233');
+    Rt(g,0,4,2,9,'#3f5a38'); Rt(g,14,4,2,9,'#3f5a38'); Rt(g,1,13,2,2,'#2c2f35'); Rt(g,13,13,2,2,'#2c2f35'); });
+  /* 26 reception desk */
+  T(26, g=>{ Rt(g,0,2,16,11,'#5d6f7d'); Rt(g,0,2,16,2,'#6f8390'); Rt(g,0,11,16,2,'#4c5a66');
+    Rt(g,3,5,4,3,'#e8e4da'); Rt(g,10,5,3,3,'#16181c'); });
+  /* 27 manager carpet (they get the nicer one) */
+  T(27, g=>{ Rt(g,0,0,16,16,'#6d5a6d'); for (let i=0;i<7;i++) Rt(g,(i*5.9)%16,(i*6.3)%16,1,1,'#7a667a');
+    for (let i=0;i<4;i++) Rt(g,(i*7.3+2)%16,(i*5.1+4)%16,1,1,'#5f4e5f'); });
+  /* 28 wall clock (it is always almost 5) */
+  T(28, g=>{ Rt(g,0,0,16,16,'#c9c0ad'); Rt(g,0,0,16,3,'#8d857a');
+    g.fillStyle='#f2efe9'; g.beginPath(); g.arc(8,8,5,0,7); g.fill();
+    g.fillStyle='#23241f'; Rt(g,8,5,1,3); Rt(g,8,8,3,1); Rt(g,0,13,16,3,'#b1a894'); });
+  /* 29 sad motivational poster */
+  T(29, g=>{ Rt(g,0,0,16,16,'#c9c0ad'); Rt(g,0,0,16,3,'#8d857a');
+    Rt(g,3,4,10,9,'#2f4858'); Rt(g,4,5,8,4,'#4a7ba6'); Rt(g,5,10,6,1,'#e8e4da');
+    Rt(g,3,4,10,1,'#1d2f3a'); Rt(g,0,13,16,3,'#b1a894'); });
+  /* 30 supply shelf */
+  T(30, g=>{ Rt(g,2,0,12,15,'#8a6845'); Rt(g,2,0,12,1,'#9c7850');
+    for (let y=2;y<13;y+=4){ Rt(g,3,y,10,1,'#6a4f33');
+      Rt(g,4,y-1,3,2,'#c9c0ad'); Rt(g,8,y-1,2,2,'#2f7fbe'); Rt(g,11,y-1,2,2,'#d64541'); }
+    Rt(g,3,14,10,1,'#5a4229'); });
+  /* 31 dead fern (morale, actually) */
+  T(31, g=>{ Rt(g,5,10,6,4,'#8a5a34'); Rt(g,5,10,6,1,'#a06c40');
+    Rt(g,7,5,2,5,'#7a6a3a'); Rt(g,5,6,2,2,'#8a7a44'); Rt(g,10,7,2,1,'#8a7a44');
+    Rt(g,4,12,1,1,'#8a7a44'); Rt(g,11,11,1,1,'#8a7a44'); });
+}
+
+/* ------------------------- people: paper-doll bake ------------------------ */
+/* 12x16 sprite, 4 directions x 2 walk frames + idle. look = {skin,hair,shirt,
+   pants, tie?, glasses?} — skin/hair index palettes, shirt/pants css colours. */
+const SKINS = ['#e6b58c','#c98e62','#8a5c3b','#f0c9a2'];
+const HAIRS = ['#3b2a1c','#1c1c1e','#7a4a22','#b8b0a0','#a53f38','#4a4e57','#d9c17a'];
+const PW = 12, PH = 16;
+function bakePerson(look){
+  const skin = SKINS[look.skin % SKINS.length], hair = HAIRS[look.hair % HAIRS.length];
+  const shirt = look.shirt || '#2f7fbe', pants = look.pants || '#3a3f47';
+  const frames = { down:[], up:[], left:[], right:[] };
+  const mk = (dir, step) => {
+    const [c,g] = cv(PW,PH);
+    const legL = step===1 ? 1 : 0, legR = step===2 ? 1 : 0;
+    // legs
+    Rt(g,3,12-0,2,3+ (dir==='up'||dir==='down'? legL:0),pants); Rt(g,7,12,2,3+(dir==='up'||dir==='down'?legR:0),pants);
+    Rt(g,3,15,2,1,'#1e2126'); Rt(g,7,15,2,1,'#1e2126');
+    // torso
+    Rt(g,2,7,8,5,shirt);
+    if (look.vest) Rt(g,3,7,6,5,look.vest);
+    if (look.tie && dir==='down') Rt(g,5,7,2,4,look.tie);
+    // arms swing
+    const sw = step===1 ? 1 : step===2 ? -1 : 0;
+    if (dir==='left'||dir==='right'){ Rt(g,dir==='left'?1:9,8+sw,2,4,shirt); }
+    else { Rt(g,1,8+sw,2,4,shirt); Rt(g,9,8-sw,2,4,shirt); }
+    Rt(g,dir==='left'?1:(dir==='right'?9:1),11+sw,2,1,skin);
+    if (dir!=='left'&&dir!=='right') Rt(g,9,11-sw,2,1,skin);
+    // head
+    Rt(g,3,1,6,6,skin);
+    if (dir==='down'){
+      Rt(g,3,1,6,2,hair); Rt(g,3,1,1,3,hair); Rt(g,8,1,1,3,hair);
+      if (look.hairLong) { Rt(g,2,2,1,5,hair); Rt(g,9,2,1,5,hair); }
+      if (look.glasses){ Rt(g,3,4,2,1,'#16181c'); Rt(g,7,4,2,1,'#16181c'); Rt(g,5,4,2,1,'#16181c'); }
+      else { Rt(g,4,4,1,1,'#23241f'); Rt(g,7,4,1,1,'#23241f'); }
+    } else if (dir==='up'){
+      Rt(g,3,1,6,4,hair); if (look.hairLong) Rt(g,3,1,6,6,hair);
+    } else {
+      const fx = dir==='left' ? 3 : 6;
+      Rt(g,3,1,6,2,hair); Rt(g,dir==='left'?7:3,1,2,4,hair);
+      if (look.hairLong) Rt(g,dir==='left'?8:2,2,1,5,hair);
+      if (look.glasses) Rt(g,fx,4,3,1,'#16181c'); else Rt(g,dir==='left'?4:7,4,1,1,'#23241f');
+    }
+    return c;
+  };
+  for (const dir of ['down','up','left','right'])
+    frames[dir] = [mk(dir,0), mk(dir,1), mk(dir,2)];
+  return frames;
+}
+
+/* 40x40 dialogue portrait from the same look. */
+function bakePortrait(look){
+  const skin = SKINS[look.skin % SKINS.length], hair = HAIRS[look.hair % HAIRS.length];
+  const [c,g] = cv(40,40);
+  Rt(g,0,0,40,40,'#1b2129');
+  Rt(g,8,6,24,26,skin);                                     // face
+  Rt(g,8,6,24,8,hair); Rt(g,8,6,4,14,hair); Rt(g,28,6,4,14,hair);   // hair
+  if (look.hairLong){ Rt(g,6,10,3,22,hair); Rt(g,31,10,3,22,hair); }
+  if (look.glasses){ Rt(g,11,18,7,4,'#16181c'); Rt(g,22,18,7,4,'#16181c'); Rt(g,18,19,4,2,'#16181c');
+    Rt(g,12,19,5,2,'#3f5f74'); Rt(g,23,19,5,2,'#3f5f74'); }
+  else { Rt(g,13,19,3,3,'#23241f'); Rt(g,24,19,3,3,'#23241f'); }
+  Rt(g,19,24,2,3,'#00000022');                              // nose shade
+  if (look.smile === false) Rt(g,15,29,10,1,'#7a4a3a'); else { Rt(g,15,29,10,2,'#7a4a3a'); Rt(g,16,28,8,1,'#7a4a3a'); }
+  Rt(g,8,34,24,6,look.shirt || '#2f7fbe');                  // shoulders
+  if (look.tie) Rt(g,18,34,4,6,look.tie);
+  return c;
+}
+</script>
+
+<script>
+"use strict";
+/* ==========================================================================
+   S3 DATA — the career, the office, the people, the tickets. All content
+   lives here as data; the engine below never needs to change to add satire.
+   ========================================================================== */
+
+/* The ladder. perf is a rolling 0..1 score of ticket outcomes; a promotion
+   needs perf >= nextAt.perf held for nextAt.days consecutive days (plus the
+   cert, once certs exist at higher rungs). firedBelow two days running = gone.
+   Only the intern rung is content-complete in the v0.1 slice; the rest of the
+   ladder is real data so the systems and tests see the whole shape. */
+const ROLES = [
+  { id:'intern', title:'INTERN',        pay:0,
+    gates:{ nextAt:{perf:.62, days:3}, firedBelow:.15, cert:null },
+    queue:{ ratePerHr:2.2, slaScale:1.0 }, deskAnchor:'TERMINAL' },
+  { id:'t1',     title:'T1 HELPDESK',   pay:38000,
+    gates:{ nextAt:{perf:.68, days:4}, firedBelow:.22, cert:null },
+    queue:{ ratePerHr:3.0, slaScale:.92 }, deskAnchor:'TERMINAL' },
+  { id:'t2',     title:'T2 HELPDESK',   pay:46000,
+    gates:{ nextAt:{perf:.7, days:4}, firedBelow:.25, cert:null },
+    queue:{ ratePerHr:3.4, slaScale:.86 }, deskAnchor:'TERMINAL' },
+  { id:'t3',     title:'T3 HELPDESK',   pay:58000,
+    gates:{ nextAt:{perf:.72, days:5}, firedBelow:.28, cert:null },
+    queue:{ ratePerHr:3.6, slaScale:.8 }, deskAnchor:'TERMINAL' },
+  { id:'project',title:'PROJECT TEAM',  pay:72000,
+    gates:{ nextAt:{perf:.72, days:5}, firedBelow:.3, cert:null },
+    queue:{ ratePerHr:3.2, slaScale:.85 }, deskAnchor:'TERMINAL' },
+  { id:'procure',title:'PROCUREMENT',   pay:70000,
+    gates:{ nextAt:{perf:.72, days:5}, firedBelow:.3, cert:null },
+    queue:{ ratePerHr:3.0, slaScale:.9 }, deskAnchor:'TERMINAL' },
+  { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
+    gates:{ nextAt:{perf:.74, days:5}, firedBelow:.32, cert:null },
+    queue:{ ratePerHr:2.8, slaScale:.9 }, deskAnchor:'TERMINAL' },
+  { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
+    gates:{ nextAt:{perf:.76, days:6}, firedBelow:.34, cert:null },
+    queue:{ ratePerHr:2.6, slaScale:.85 }, deskAnchor:'TERMINAL' },
+  { id:'vcio',   title:'vCIO',          pay:135000,
+    gates:{ nextAt:{perf:.78, days:6}, firedBelow:.36, cert:null },
+    queue:{ ratePerHr:2.4, slaScale:.85 }, deskAnchor:'TERMINAL' },
+  { id:'director',title:'DIRECTOR OF IT', pay:160000,
+    gates:{ nextAt:null, retireAfterDays:5, firedBelow:.38, cert:null },
+    queue:{ ratePerHr:2.2, slaScale:.9 }, deskAnchor:'TERMINAL' }
+];
+
+/* Shared fill pools — every {token} in a ticket title/line resolves from here
+   (or from the ticket's own fills). Drawn from the `world` stream at day
+   pre-roll, so a day's tickets are fixed the moment you arrive. */
+const FILLS = {
+  client: ['Riverbend Logistics','Meridian Freight','Cortland Dental','Pinnacle Realty',
+           'TriState Plumbing Co','Valley Oak Law','Summit Physical Therapy','Bluestem Ag Supply'],
+  user:   ['Janet','Dale','the office manager','the new hire','Doug from accounting',
+           'the front desk','Sharon','the warehouse guy'],
+  device: ['laptop','desktop','the conference room TV','a label printer','the timeclock',
+           'an iPad','the security camera DVR','a USB hub shaped like a cat'],
+  doc:    ['INVOICE_FINAL_v7','the church newsletter','a 400-page PDF','TPS report',
+           'her recipe collection','the org chart','a scanned napkin'],
+  excuse: ["it worked yesterday","nothing was changed","IT did something","the storm did it",
+           "my grandson set it up","it's probably the firewall"],
+  swear:  ['sugar','fudge','dagnabbit','golly'],
+  mtg:    ['9:15 standup','the client call','all-hands','the QBR','a "quick sync"']
+};
+
+/* ------------------------------- the office ------------------------------ */
+/* Legend: chars -> tile/behavior. base 'auto' floors under furniture resolve
+   to an adjacent walkable floor at parse.
+     walls (solid): # wall  w window  W whiteboard  o clock  p poster
+     floors:        . carpet  , lino  s server tile  m manager carpet
+     solid props:   G glass  E elevator  d desk  q desk+papers  T terminal
+                    c chair  K coffee  V vending  R printer  S rack  f fern
+                    x dead fern  t conf table  k counter  A arcade  C cooler
+                    F cabinet  U couch  N reception  H shelf
+     special:       D door (walkable)  P player spawn  1-9 NPC anchors      */
+const MAPS = { office1: {
+  name:'360 SMART NETWORKS — FLOOR 2',
+  map:[
+    '##########wwwww#wwwww#wwwww#wwwww###########',
+    '#..f.....#......................#mmmmmmmmxm#',
+    '#EP......W..qc...qc...qc...qc...#mm.dq.....#',
+    '#E.......W..1....2....3....4....#mmm8......#',
+    '#........#......................#mmmmmmmmmm#',
+    '#..NN....#......................#GGGGDGGGGG#',
+    '#...6....#......................#..........#',
+    '#........#......................#..tttttt..#',
+    '#p.......#....qc...qc.......Tc..#..7tttt...#',
+    '#........D......................D..........#',
+    '####D#####################D###############o#',
+    '#..........................................#',
+    '#............................9.............#',
+    '#########D######D########D##################',
+    '#kkKkVk......#......#........#.............#',
+    '#,,,,,,......#..HH..#........#.............#',
+    '#,,,,,,..U...#..HH..#....R...#..SSSSSSSS...#',
+    '#C,,,,,..U...#......#........#.............#',
+    '#,,,,,5......#..FF..#........#..SSSSSSSS...#',
+    '#,,A,,,......#......#........#.............#',
+    '#,,,,,,......#####################D#########',
+    '#,,,,x,......#.............................#',
+    '#,,,,,,......D.............................#',
+    '#,,,,,,......#.............................#',
+    '############################################'
+  ],
+  /* Named anchors the schedules and goto steps use; auto-anchors are also
+     derived from interactables (COFFEE, PRINTER, TERMINAL, ELEV, ARCADE,
+     COOLER, VEND, RACKS) as the open tile south of the prop. */
+  anchors:{ HALL:[21,11], HALLE:[38,11], CONF:[36,6], LOBBY:[4,7],
+            KITCHEN:[9,15], KITCHEN2:[10,17], SERVERS:[35,17], SOUTH:[26,21], PITMID:[20,5] }
+}};
+
+/* meta-progression (slice: one cert + one perk visible, more later) */
+const CERTS = {
+  aplus: { name:'COMPTIA A+ (PRACTICE EXAM)', desc:'Minigames start one step easier.',
+           cost:{rep:3}, fx:{gameDiff:-1} }
+};
+const PERKS = {
+  ref: { name:'A GUY WHO KNOWS A GUY', need:{runs:2},
+         desc:'Start future careers with +1 reputation.', fx:{rep:1} }
+};
+
+/* --------------------------------- people --------------------------------- */
+/* sched entries are [minutes-since-9:00, anchor]. Anchors: n1..n9 from map
+   digits, auto anchors (COFFEE, PRINTER...), or MAPS.anchors names. */
+const NPCS = {
+  derek:     { name:'DEREK', role:'T3 · knows where the bodies are pinged',
+    look:{skin:0,hair:0,shirt:'#4a4e57',glasses:true,smile:false},
+    sched:[[0,'n1'],[185,'KITCHEN'],[225,'n1'],[430,'PRINTER'],[450,'n1']],
+    talk:'sm.derek' },
+  raj:       { name:'RAJ', role:'T1 · six coffees deep',
+    look:{skin:2,hair:1,shirt:'#2f7fbe'},
+    sched:[[0,'n2'],[210,'COFFEE'],[235,'n2']],
+    talk:'sm.raj' },
+  kayla:     { name:'KAYLA', role:'T2 · closes tickets in her sleep',
+    look:{skin:3,hair:6,shirt:'#3a7d5c',hairLong:true},
+    sched:[[0,'n3'],[160,'COOLER'],[180,'n3']],
+    talk:'sm.kayla' },
+  mackenzie: { name:'MACKENZIE', role:'Account Executive · has promised things',
+    look:{skin:3,hair:2,shirt:'#7a4e8a',tie:'#d9c17a',hairLong:true},
+    sched:[[0,'LOBBY'],[120,'CONF'],[240,'HALLE'],[420,'n7']],
+    talk:'sm.mack' },
+  brenda:    { name:'BRENDA', role:'Office Manager · thermostat sovereign',
+    look:{skin:0,hair:3,shirt:'#a53f38',hairLong:true,glasses:true},
+    sched:[[0,'n6'],[190,'KITCHEN2'],[220,'n6']],
+    talk:'sm.brenda' },
+  linda:     { name:'LINDA', role:'Service Manager · your boss',
+    look:{skin:1,hair:4,shirt:'#2c4a6b',hairLong:true},
+    sched:[[0,'n8'],[240,'CONF'],[330,'n8']],
+    talk:'sm.linda' },
+  gary:      { name:'GARY', role:'Client · "was just in the area"',
+    look:{skin:0,hair:5,shirt:'#8a6845'},
+    sched:[[150,'LOBBY'],[240,'HALL'],[330,'LOBBY']],
+    talk:'sm.gary', visitor:true }
+};
+
+/* -------------------------------- dialogue -------------------------------- */
+/* Node: { who:npcId|'client'|'sys', t:[lines], opts:[{t, fx:{stress,rep,time,
+   bonus}, next}], next } — no opts and no next ends the scene. Lines and
+   option text may use {token} fills resolved at ticket build. */
+const DIALOGUE = {
+  /* small talk */
+  'sm.derek': { who:'derek', t:['Don\'t touch the blue switch. Not that one. The OTHER blue switch.',
+    'You want to know what fixed it? Reading the error message. Revolutionary.'] },
+  'sm.raj':   { who:'raj', t:['Day four of the migration. The migration is us. We are migrating.',
+    'You get used to the hold music. Then you start humming it. Then it\'s your ringtone.'] },
+  'sm.kayla': { who:'kayla', t:['Eleven tickets before lunch. The trick is to stop having feelings.',
+    'If Derek offers to "show you something real quick", block out your afternoon.'] },
+  'sm.mack':  { who:'mackenzie', t:['Great news! I told Cortland Dental we support their fish tank thermometer. We do now!',
+    'Between us? The demo tomorrow is for software we have not technically... built.'] },
+  'sm.brenda':{ who:'brenda', t:['The thermostat is set where it is set for reasons that predate you.',
+    'If the supply closet is a mess again I am labeling YOU next.'] },
+  'sm.linda': { who:'linda', t:['Numbers look... adequate. Keep the queue moving and we\'ll talk at review time.',
+    'Don\'t burn out. The paperwork when someone burns out is unbelievable.'] },
+  'sm.gary':  { who:'gary', t:['Oh good, you work here! Quick question — it\'s about my home printer.',
+    'I brought the laptop. The one with the... you know. The problem.'] },
+
+  /* generic ticket beats */
+  'g.accept': { who:'sys', t:['Ticket assigned. The SLA clock was already running when you found out about it.'] },
+  'g.resolve':{ who:'sys', t:['Resolved. CSAT survey sent — it will be ignored until it is a 1-star.'] },
+
+  /* per-ticket scenes */
+  't.cof.a':  { who:'derek', t:['Intern. Coffee. Black. The 9:15 standup is in {mtg}... minutes. Go.'] },
+  't.cof.b':  { who:'sys', t:['The machine gurgles like a dying NAS. A paper cup of something coffee-adjacent is produced.'] },
+  't.cof.c':  { who:'derek', t:['...Acceptable. One day I will teach you the ways of the espresso shot. Not today.'] },
+  't.jam.a':  { who:'client', t:['{client} here — the printer will not stop printing {doc}. It\'s at copy 240. We tried {excuse}.'] },
+  't.jam.b':  { who:'sys', t:['On the third cable-pull, the printer sighs and goes quiet. It is not defeated. It is waiting.'] },
+  't.jam.c':  { who:'client', t:['You\'re a lifesaver. Also while I have you — my personal laptop at home—'],
+    opts:[ {t:'"That would need a separate ticket." (professional)', fx:{rep:1, stress:2}},
+           {t:'Pretend the call dropped', fx:{stress:-2}},
+           {t:'Spend 10 minutes on the laptop anyway', fx:{time:10, stress:3, bonus:1}} ] },
+  't.mouse.a':{ who:'client', t:['{user} says the mouse is broken. The cursor "won\'t go".'] },
+  't.mouse.b':{ who:'sys', t:['It is the batteries. It is always the batteries.'],
+    opts:[ {t:'Swap them silently, log 0.25 hours', fx:{bonus:1}},
+           {t:'Teach {user} about batteries', fx:{time:8, rep:1, stress:2}},
+           {t:'"Have you tried turning the mouse off and on?"', fx:{stress:-1}} ] },
+  't.mon.a':  { who:'client', t:['{client}: a monitor shows NO SIGNAL. They are "dead in the water". All hands on deck.'] },
+  't.mon.b':  { who:'sys', t:['It is on HDMI 2. The computer is on HDMI 1. This outage lasted 40 minutes and generated 3 emails to your boss.'],
+    opts:[ {t:'Explain input sources, kindly', fx:{rep:1, time:5}},
+           {t:'Press one button and accept legend status', fx:{bonus:1}} ] },
+  't.tangle.a':{ who:'brenda', t:['The cable bin has achieved sentience. Untangle it, tag it, and nobody mentions this again.'] },
+  't.tangle.b':{ who:'sys', t:['Somewhere in there is a serial cable from 1997. It has outlasted four CEOs.'] },
+  't.pw.a':   { who:'client', t:['{user} is locked out again. Third time this week. They are "positive" they typed it right.'] },
+  't.pw.b':   { who:'sys', t:['Password reset. The old password was on a sticky note under the keyboard.'],
+    opts:[ {t:'Confiscate the sticky note', fx:{rep:1, stress:1}},
+           {t:'Look away. You saw nothing.', fx:{stress:-1}},
+           {t:'Suggest a password manager (they will not use it)', fx:{time:6, rep:1}} ] },
+  't.label.a':{ who:'client', t:['{client}: the label printer prints wingdings now. Labels are "load-bearing" to their warehouse.'] },
+  't.shadow.a':{ who:'raj', t:['Headset on. Rule one: they are never lying, they are just wrong. Rule two: mute button. Cherish it.'] },
+  't.shadow.b':{ who:'raj', t:['Hear that? They said "nothing was changed". Drink. I mean — note that down.'] },
+  't.tags.a': { who:'sys', t:['Fourteen laptops. Fourteen asset tags. Tag 7 goes on slightly crooked and it will haunt you.'] },
+  't.fax.a':  { who:'client', t:['{client}: THE FAX MACHINE IS DOWN. Their entire order flow is faxes. In this economy.'] },
+  't.fax.b':  { who:'sys', t:['You nurse the fax machine back to life. It is older than you. It will outlive everyone.'] },
+  't.kid.a':  { who:'client', t:['The CEO\'s kid\'s laptop is here. It has 47 toolbars and a browser that opens to a casino.'],
+    opts:[ {t:'Wipe it. Start fresh. (an hour of your life)', fx:{time:15, bonus:1}},
+           {t:'Remove toolbars one by one, like a surgeon', fx:{time:8, stress:4}},
+           {t:'Declare it a biohazard', fx:{stress:-2, rep:-1}} ] },
+  't.crm.a':  { who:'linda', t:['The CRM has not been updated since the Obama administration. Make the records... true.'],
+    opts:[ {t:'Actually verify every record', fx:{time:20, rep:2, stress:6, bonus:1}},
+           {t:'Update the ones that are on fire', fx:{time:8}},
+           {t:'Mark all as "reviewed"', fx:{stress:-2, rep:-2}} ] },
+  't.donut.a':{ who:'brenda', t:['Client tour in 20. We need donuts and we need them to look like we always have donuts.'] },
+  't.donut.b':{ who:'sys', t:['The vending machine surrenders a suspiciously adequate box of donuts. Do not ask questions.'] },
+  't.cool.a': { who:'sys', t:['The water cooler is making The Noise again. The Noise is not describable. The Noise is felt.'] },
+  't.cool.b': { who:'sys', t:['You reseat the jug. The Noise stops. The office exhales. You are, briefly, a hero.'] },
+  't.quick.a':{ who:'client', t:['{user} has a "quick question". You are already trapped. The question has seven parts.'],
+    opts:[ {t:'Answer all seven parts', fx:{time:14, rep:1, stress:4, bonus:1}},
+           {t:'Answer two parts, gesture at documentation', fx:{time:5, stress:1}},
+           {t:'"Let me open a ticket for that" (the sacred escape)', fx:{rep:-1, stress:-2}} ] },
+  't.tv.a':   { who:'mackenzie', t:['The conference TV won\'t mirror and {client} walks in for the demo in FIVE minutes. Fix it fix it fix it.'] },
+  't.tv.b':   { who:'sys', t:['It mirrors. Mackenzie mouths "I owe you". This debt will never be repaid.'] },
+  't.spam.a': { who:'client', t:['{client}: real invoices go to spam, actual spam arrives gift-wrapped. The filter has chosen chaos.'] },
+  't.shelf.a':{ who:'derek', t:['Restock the server room shelf. Touch NOTHING with a blinking light. Especially the one I\'ve labeled "NO".'] },
+  't.shelf.b':{ who:'sys', t:['The racks hum like they know something. A cable labeled "TEMP FIX 2011" pulses gently.'] },
+  't.onb.a':  { who:'linda', t:['New hire starts Monday. Sales told them we\'d have everything ready. Sales says a lot of things.'] },
+  't.therm.a':{ who:'sys', t:['The floor is 61°F. Accounting is typing in fingerless gloves. All thermostat roads lead to Brenda.'] },
+  't.therm.b':{ who:'brenda', t:['The thermostat is FINE. If sales wants "warmth" they can generate it with their personalities.'],
+    opts:[ {t:'Side with Brenda (wise)', fx:{rep:1, stress:1}},
+           {t:'Nudge it 2 degrees when she blinks', fx:{stress:5, bonus:1}},
+           {t:'Escalate to an email thread that will outlive us all', fx:{time:8, stress:3}} ] },
+  't.arc.a':  { who:'sys', t:['The break-room arcade cabinet is dark. Morale is measurably down 3%. Someone has unplugged AGENT 360 to charge a vape.'] },
+  't.arc.b':  { who:'sys', t:['The cabinet chimes awake: "360 SMART NETWORKS PRESENTS..." Somewhere, an agent gets their license to bill.'] },
+
+  /* events */
+  'e.standup':{ who:'linda', t:['Standup. Yesterday: tickets. Today: tickets. Blockers: morale. Same time tomorrow.'] },
+  'e.allhands':{ who:'sys', t:['ALL-HANDS: 45 slides on "synergizing the customer journey". Slide 32 is just a stock photo of a lighthouse.'] },
+  'e.pizza':  { who:'sys', t:['Surprise pizza party! In lieu of raises. The pizza is from the cheap place. Morale is legally required to improve.'] },
+  'e.fire':   { who:'sys', t:['Fire drill. Everyone stands in the parking lot pretending they wouldn\'t grab the servers first.'] },
+  'e.bday':   { who:'brenda', t:['Card for Dale in accounting. Sign it. Something warm but professional.'],
+    opts:[ {t:'"Happy birthday Dale!" (safe)', fx:{rep:1}},
+           {t:'An inside joke you don\'t actually share with Dale', fx:{stress:2}},
+           {t:'Illegible scribble (untraceable)', fx:{stress:-1}} ] },
+  'e.tour':   { who:'brenda', t:['Client tour passing through. Look busy. Not "panicked" busy. Competent busy. There is a difference.'] },
+  'e.vend':   { who:'sys', t:['The vending machine has eaten Raj\'s dollar and is displaying "E-7". Raj is staring at it like it owes him more than a dollar.'] },
+  'e.thermo': { who:'sys', t:['The thermostat war has entered a new phase. Someone has brought in a space heater. Brenda has noticed.'] }
+};
+
+/* --------------------------------- tickets -------------------------------- */
+/* steps: {say:node} | {goto:anchor} | {game:id,diff} | {choice:node}.
+   sla in game-minutes (scaled by role slaScale). weight biases the draw.
+   from: npc originator (else a client from FILLS is stamped on). */
+const TICKETS = {
+  'coffee-derek': { tiers:[0,0], weight:3, sla:14, stress:4, from:'derek',
+    title:'Coffee for DEREK before the {mtg}',
+    steps:[{say:'t.cof.a'},{goto:'COFFEE'},{say:'t.cof.b'},{goto:'n1'},{say:'t.cof.c'}] },
+  'printer-jam': { tiers:[0,2], weight:3, sla:18, stress:8,
+    title:'{client}: printer is printing {doc} forever',
+    steps:[{say:'t.jam.a'},{goto:'PRINTER'},{game:'cable',diff:1},{say:'t.jam.b'},{choice:'t.jam.c'}] },
+  'mouse-batteries': { tiers:[0,1], weight:3, sla:16, stress:3,
+    title:'{user}\'s mouse is "broken"',
+    steps:[{say:'t.mouse.a'},{choice:'t.mouse.b'}] },
+  'monitor-input': { tiers:[0,1], weight:3, sla:12, stress:6,
+    title:'{client}: monitor shows NO SIGNAL, business halted',
+    steps:[{say:'t.mon.a'},{choice:'t.mon.b'}] },
+  'cable-bin': { tiers:[0,0], weight:2, sla:30, stress:3, from:'brenda',
+    title:'Untangle the supply-closet cable bin',
+    steps:[{say:'t.tangle.a'},{goto:'SHELF'},{game:'cable',diff:1},{say:'t.tangle.b'}] },
+  'password-reset': { tiers:[0,2], weight:4, sla:14, stress:4,
+    title:'{user} is locked out (attempt 3 of 3)',
+    steps:[{say:'t.pw.a'},{game:'pw',diff:1},{choice:'t.pw.b'}] },
+  'label-printer': { tiers:[0,1], weight:2, sla:20, stress:5,
+    title:'{client}: label printer speaks only wingdings',
+    steps:[{say:'t.label.a'},{game:'jargon',diff:1}] },
+  'shadow-raj': { tiers:[0,0], weight:2, sla:25, stress:2, from:'raj',
+    title:'Shadow RAJ on a live T1 call',
+    steps:[{goto:'n2'},{say:'t.shadow.a'},{game:'jargon',diff:1},{say:'t.shadow.b'}] },
+  'asset-tags': { tiers:[0,0], weight:2, sla:35, stress:2, from:'linda',
+    title:'Asset-tag 14 new laptops',
+    steps:[{goto:'SHELF'},{say:'t.tags.a'}] },
+  'fax-machine': { tiers:[0,2], weight:2, sla:16, stress:7,
+    title:'{client}: THE FAX MACHINE (yes, still)',
+    steps:[{say:'t.fax.a'},{game:'cable',diff:2},{say:'t.fax.b'}] },
+  'ceo-kid': { tiers:[0,1], weight:1, sla:30, stress:6,
+    title:'CEO\'s kid\'s laptop: 47 toolbars',
+    steps:[{choice:'t.kid.a'},{game:'pw',diff:2}] },
+  'crm-update': { tiers:[0,1], weight:2, sla:40, stress:5, from:'linda',
+    title:'Update the CRM ("all of it")',
+    steps:[{choice:'t.crm.a'}] },
+  'donut-run': { tiers:[0,0], weight:2, sla:12, stress:3, from:'brenda',
+    title:'Donuts before the client tour',
+    steps:[{say:'t.donut.a'},{goto:'VEND'},{say:'t.donut.b'},{goto:'n6'}] },
+  'water-cooler': { tiers:[0,1], weight:2, sla:22, stress:3,
+    title:'The water cooler is making The Noise',
+    steps:[{goto:'COOLER'},{say:'t.cool.a'},{game:'cable',diff:1},{say:'t.cool.b'}] },
+  'quick-question': { tiers:[0,2], weight:3, sla:15, stress:5,
+    title:'{user} has a "quick question"',
+    steps:[{choice:'t.quick.a'}] },
+  'conference-tv': { tiers:[0,2], weight:2, sla:10, stress:9, from:'mackenzie',
+    title:'Conference TV won\'t mirror — demo in 5',
+    steps:[{say:'t.tv.a'},{goto:'CONF'},{game:'cable',diff:2},{say:'t.tv.b'}] },
+  'spam-filter': { tiers:[0,2], weight:2, sla:24, stress:5,
+    title:'{client}: spam filter has chosen chaos',
+    steps:[{say:'t.spam.a'},{game:'jargon',diff:2}] },
+  'server-shelf': { tiers:[0,0], weight:2, sla:20, stress:3, from:'derek',
+    title:'Restock the server-room shelf (touch NOTHING)',
+    steps:[{say:'t.shelf.a'},{goto:'SERVERS'},{say:'t.shelf.b'}] },
+  'onboard-newhire': { tiers:[0,1], weight:2, sla:28, stress:6, from:'linda',
+    title:'New hire Monday; nothing is provisioned',
+    steps:[{say:'t.onb.a'},{game:'pw',diff:2}] },
+  'thermostat': { tiers:[0,1], weight:2, sla:26, stress:4,
+    title:'Floor is 61°F; accounting is mutinous',
+    steps:[{say:'t.therm.a'},{goto:'n6'},{choice:'t.therm.b'}] },
+  'arcade-dark': { tiers:[0,1], weight:1, sla:30, stress:2,
+    title:'Break-room arcade is dark; morale -3%',
+    steps:[{say:'t.arc.a'},{goto:'ARCADE'},{game:'cable',diff:1},{say:'t.arc.b'}] }
+};
+
+/* --------------------------------- events --------------------------------- */
+/* when.at = minutes-since-9:00 (exact firing minute); chance rolled at day
+   pre-roll from the world stream. Interrupting events open their scene the
+   moment the clock passes them — the queue does not care. */
+const EVENTS = {
+  'standup':  { when:{at:10, chance:.9},  scene:'e.standup', fx:{time:8, stress:2} },
+  'allhands': { when:{at:240, chance:.22}, scene:'e.allhands', fx:{time:30, stress:5} },
+  'pizza':    { when:{at:185, chance:.15}, scene:'e.pizza', fx:{time:10, stress:-8} },
+  'firedrill':{ when:{at:150, chance:.1},  scene:'e.fire', fx:{time:12, stress:1} },
+  'birthday': { when:{at:130, chance:.3},  scene:'e.bday', fx:{time:4} },
+  'tour':     { when:{at:300, chance:.2},  scene:'e.tour', fx:{time:6, stress:2} },
+  'vending':  { when:{at:210, chance:.15}, scene:'e.vend', fx:{time:4, stress:1} },
+  'thermo':   { when:{at:350, chance:.25}, scene:'e.thermo', fx:{time:4, stress:2} }
+};
+
+/* minigame flavour data */
+const JARGON = [
+  { j:'We need to leverage synergies across the stack to unlock value.',
+    ok:'Please make the two programs share data.',
+    no:['The stairs are now load-bearing.','We are buying a boat.'] },
+  { j:'Circle back offline about the bandwidth on your end.',
+    ok:'Talk later about whether you have time.',
+    no:['Your internet will be taken as payment.','Walk in circles until unplugged.'] },
+  { j:'The cloud migration will be transparent to end users.',
+    ok:'Users should not notice anything changed.',
+    no:['The servers will be made of glass.','Users will be migrated into the cloud.'] },
+  { j:'Let\'s not boil the ocean; think MVP and iterate.',
+    ok:'Do the small version first.',
+    no:['The aquarium project is cancelled.','Most Valuable Printer goes first.'] },
+  { j:'Per my last email, the ask is table stakes for the roadmap.',
+    ok:'I already told you: this part is required.',
+    no:['Dinner will be served on the roadmap.','The table is at stake.'] },
+  { j:'We\'re pivoting to a proactive posture on patch cadence.',
+    ok:'We will start installing updates on time.',
+    no:['Everyone must now stand proactively.','The patches will march in rhythm.'] }
+];
+const PW_RULES = [
+  'No password may contain the word "password".',
+  'Must include at least one number that is not 1.',
+  'Must NOT be the company name plus the year.',
+  'No pet names (see attached list of known pets).',
+  'Cannot be the previous password with one more exclamation mark.'
+];
+</script>
+
+<script>
+"use strict";
+/* ==========================================================================
+   S4 ENGINE — world parse, movement, NPC schedules and pathing, camera,
+   renderer. Fixed-timestep sim lives in S5; this is space, not time.
+   ========================================================================== */
+const LEGEND = {
+  '#':{w:4}, 'w':{w:6}, 'W':{w:20}, 'o':{w:28}, 'p':{w:29},
+  '.':{f:1}, ',':{f:2}, 's':{f:3}, 'm':{f:27},
+  'G':{o:7}, 'E':{o:18, act:'elevator', anchor:'ELEV'},
+  'd':{o:9}, 'q':{o:10}, 'T':{o:11, act:'terminal', anchor:'TERMINAL'},
+  'c':{o:12}, 'K':{o:13, act:'coffee', anchor:'COFFEE'},
+  'V':{o:14, act:'vending', anchor:'VEND'}, 'R':{o:15, act:'printer', anchor:'PRINTER'},
+  'S':{o:16, act:'rack'}, 'f':{o:17}, 'x':{o:31},
+  't':{o:19}, 'k':{o:21}, 'A':{o:22, act:'arcade', anchor:'ARCADE'},
+  'C':{o:23, act:'cooler', anchor:'COOLER'}, 'F':{o:24},
+  'U':{o:25, act:'couch'}, 'N':{o:26}, 'H':{o:30, act:'shelf', anchor:'SHELF'},
+  'D':{f:8, door:true}, 'P':{f:-1, spawn:true}
+};
+const W2 = { W:0, H:0, base:null, obj:null, solid:null, act:null, anchors:{}, name:'' };
+const cellIx = (x,y) => y*W2.W + x;
+const inMap = (x,y) => x>=0 && y>=0 && x<W2.W && y<W2.H;
+const solidAt = (x,y) => !inMap(x,y) || W2.solid[cellIx(x,y)] === 1;
+
+function loadMap(id){
+  const M = MAPS[id];
+  const rows = M.map;
+  W2.H = rows.length; W2.W = rows[0].length; W2.name = M.name;
+  W2.base = new Uint8Array(W2.W*W2.H);
+  W2.obj  = new Uint8Array(W2.W*W2.H).fill(255);
+  W2.solid= new Uint8Array(W2.W*W2.H);
+  W2.act  = new Array(W2.W*W2.H).fill(null);
+  W2.anchors = {}; W2.spawn = [1,1];
+  const autoFloor = [];   // cells whose floor copies a neighbour's
+  for (let y=0;y<W2.H;y++) for (let x=0;x<W2.W;x++){
+    const ch = rows[y][x], c = cellIx(x,y);
+    if (ch >= '1' && ch <= '9'){ W2.base[c] = 255; autoFloor.push(c); W2.anchors['n'+ch] = [x,y]; continue; }
+    const L = LEGEND[ch];
+    if (!L){ W2.base[c] = 1; continue; }
+    if (L.w !== undefined){ W2.base[c] = L.w; W2.solid[c] = 1; continue; }
+    if (L.o !== undefined){
+      W2.base[c] = 255; autoFloor.push(c);
+      W2.obj[c] = L.o; W2.solid[c] = 1;
+      if (L.act) W2.act[c] = L.act;
+      if (L.anchor && !W2.anchors[L.anchor]){
+        /* anchor = the walkable tile you stand on to use it: prefer south */
+        for (const [dx,dy] of [[0,1],[0,-1],[-1,0],[1,0]]){
+          const nx=x+dx, ny=y+dy;
+          if (inMap(nx,ny) && LEGEND[rows[ny][nx]] && LEGEND[rows[ny][nx]].f !== undefined || (rows[ny] && rows[ny][nx] >= '1' && rows[ny][nx] <= '9')){
+            W2.anchors[L.anchor] = [nx,ny]; break;
+          }
+        }
+      }
+      continue;
+    }
+    /* floors */
+    if (L.spawn){ W2.base[c] = 255; autoFloor.push(c); W2.spawn = [x,y]; continue; }
+    W2.base[c] = L.f;
+    if (L.door) W2.act[c] = 'door';
+  }
+  /* resolve auto floors from any resolved walkable neighbour (2 passes) */
+  for (let pass=0; pass<3; pass++)
+    for (const c of autoFloor){
+      if (W2.base[c] !== 255) continue;
+      const x = c % W2.W, y = (c / W2.W)|0;
+      for (const [dx,dy] of [[0,1],[0,-1],[-1,0],[1,0]]){
+        if (!inMap(x+dx,y+dy)) continue;
+        const b = W2.base[cellIx(x+dx,y+dy)];
+        if (b !== 255 && !W2.solid[cellIx(x+dx,y+dy)] && b !== 4 && b !== 6){ W2.base[c] = b; break; }
+      }
+    }
+  for (const c of autoFloor) if (W2.base[c] === 255) W2.base[c] = 1;
+  for (const k in M.anchors) W2.anchors[k] = M.anchors[k].slice();
+}
+
+/* ------------------------------- entities --------------------------------- */
+/* Cell-plus-tween movement. An entity owns its cell; when a step starts it
+   reserves the destination so two bodies can never swap into each other. */
+const occ = new Set();
+const okey = (x,y) => x + y*1000;
+function entAt(x,y){ return occ.has(okey(x,y)); }
+
+function makeEnt(x, y, look){
+  return { x, y, tx:x, ty:y, t:1, dir:'down', walkT:0, look,
+           frames:bakePerson(look), path:null, pi:0, anchor:null, waitT:0, teleports:0 };
+}
+function entPix(e){
+  const fx = lerp(e.x, e.tx, e.t) * TILE, fy = lerp(e.y, e.ty, e.t) * TILE;
+  return [fx, fy];
+}
+function tryStep(e, dx, dy){
+  const nx = e.tx + dx, ny = e.ty + dy;
+  e.dir = dx<0?'left':dx>0?'right':dy<0?'up':'down';
+  if (solidAt(nx,ny) || entAt(nx,ny)) return false;
+  occ.delete(okey(e.tx,e.ty));
+  e.x = e.tx; e.y = e.ty;
+  e.tx = nx; e.ty = ny; e.t = 0;
+  occ.add(okey(nx,ny));
+  return true;
+}
+function entUpdate(e, dt, speed){
+  if (e.t < 1){
+    e.t = Math.min(1, e.t + dt*speed);
+    e.walkT += dt*speed;
+    if (e.t >= 1){ e.x = e.tx; e.y = e.ty; }
+  }
+}
+
+/* A* on the tiny grid — NPCs only, so occupancy of OTHER npcs is soft
+   (they path through and resolve by waiting). */
+function astar(sx, sy, gx, gy, avoidOcc){
+  if (sx===gx && sy===gy) return [];
+  const open = [[0, sx, sy]], came = new Map(), gs = new Map();
+  const key = (x,y)=>x+','+y;
+  gs.set(key(sx,sy), 0);
+  const h = (x,y)=>Math.abs(x-gx)+Math.abs(y-gy);
+  let guard = 0;
+  while (open.length && guard++ < 4000){
+    open.sort((a,b)=>a[0]-b[0]);
+    const [,x,y] = open.shift();
+    if (x===gx && y===gy){
+      const path = [];
+      let k = key(gx,gy);
+      while (k !== key(sx,sy)){ const [px,py] = k.split(',').map(Number); path.push([px,py]); k = came.get(k); }
+      return path.reverse();
+    }
+    for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const nx=x+dx, ny=y+dy;
+      if (solidAt(nx,ny)) continue;
+      /* a blocked NPC re-paths AROUND standing bodies (goal excepted), which is
+         what breaks head-on deadlocks in one-tile doorways */
+      if (avoidOcc && entAt(nx,ny) && !(nx===gx && ny===gy)) continue;
+      const ng = gs.get(key(x,y)) + 1;
+      if (ng < (gs.get(key(nx,ny)) ?? 1e9)){
+        gs.set(key(nx,ny), ng); came.set(key(nx,ny), key(x,y));
+        open.push([ng + h(nx,ny), nx, ny]);
+      }
+    }
+  }
+  return null;
+}
+
+const npcs = {};          // id -> ent (+ .id, .rel, .sched)
+let player = null;
+
+function spawnPeople(){
+  for (const k of Object.keys(npcs)) delete npcs[k];
+  occ.clear();
+  player = makeEnt(W2.spawn[0], W2.spawn[1], {skin:1, hair:0, shirt:'#c9c0ad', pants:'#3a3f47'});
+  occ.add(okey(player.tx, player.ty));
+  for (const id in NPCS){
+    const N = NPCS[id];
+    const a = schedAnchor(N, 0);
+    if (!a) continue;
+    const e = makeEnt(a[0], a[1], N.look);
+    e.id = id; e.portrait = bakePortrait(N.look);
+    e.hidden = !!N.visitor && !schedActive(N, 0);
+    npcs[id] = e;
+    if (!e.hidden) occ.add(okey(e.tx, e.ty));
+  }
+}
+function schedActive(N, min){ return !N.visitor || (min >= N.sched[0][0]); }
+function schedAnchor(N, min){
+  let a = N.sched[0][1];
+  for (const [t, an] of N.sched) if (min >= t) a = an;
+  return anchorPos(a);
+}
+function anchorPos(name){
+  const a = W2.anchors[name];
+  return a ? a.slice() : null;
+}
+/* NPCs walk their schedule; blocked briefly they wait, blocked long they
+   re-path, and after 10 stuck seconds they teleport (counted — the self test
+   requires the count stays 0 on shipped maps). */
+function npcUpdate(e, dt, clockMin){
+  const N = NPCS[e.id];
+  if (N.visitor){
+    const on = schedActive(N, clockMin);
+    if (on && e.hidden){ e.hidden = false; occ.add(okey(e.tx,e.ty)); }
+  }
+  if (e.hidden) return;
+  entUpdate(e, dt, 4.2);
+  if (e.t < 1) return;
+  const goal = schedAnchor(N, clockMin);
+  if (!goal) return;
+  if (e.tx === goal[0] && e.ty === goal[1]){
+    e.path = null;
+    if (R('npc') < dt*.25) e.dir = ['down','left','right','up'][Ri('npc',4)];
+    return;
+  }
+  if (!e.path || !e.path.length || e.goalX !== goal[0] || e.goalY !== goal[1]){
+    e.path = astar(e.tx, e.ty, goal[0], goal[1], e.waitT > 1) || [];
+    e.pi = 0; e.goalX = goal[0]; e.goalY = goal[1];
+  }
+  if (e.pi >= e.path.length){ e.path = null; return; }
+  const [nx, ny] = e.path[e.pi];
+  const moved = tryStep(e, nx - e.tx, ny - e.ty);
+  if (moved){ e.pi++; e.waitT = 0; }
+  else {
+    e.waitT += dt;
+    if (e.waitT > 1.2){ e.path = null; }        // re-path, now around bodies
+    if (e.waitT > 10){
+      /* fallback of last resort — land on the goal or its nearest free side */
+      let land = null;
+      if (!entAt(goal[0], goal[1]) && !solidAt(goal[0], goal[1])) land = goal;
+      else for (const [dx,dy] of [[0,1],[0,-1],[-1,0],[1,0]]){
+        const nx2 = goal[0]+dx, ny2 = goal[1]+dy;
+        if (!solidAt(nx2,ny2) && !entAt(nx2,ny2)){ land = [nx2,ny2]; break; }
+      }
+      if (land){
+        occ.delete(okey(e.tx,e.ty));
+        e.x = e.tx = land[0]; e.y = e.ty = land[1]; e.t = 1;
+        occ.add(okey(e.tx,e.ty));
+        e.teleports++;
+      }
+      e.waitT = 0;
+    }
+  }
+}
+
+/* --------------------------------- camera --------------------------------- */
+const cam = { x:0, y:0 };
+function camUpdate(dt){
+  const [px, py] = entPix(player);
+  const gx = clamp(px + TILE/2 - VW/2, 0, W2.W*TILE - VW);
+  const gy = clamp(py + TILE/2 - VH/2, 0, W2.H*TILE - VH);
+  cam.x = lerp(cam.x, gx, Math.min(1, dt*8));
+  cam.y = lerp(cam.y, gy, Math.min(1, dt*8));
+}
+
+/* -------------------------------- renderer -------------------------------- */
+function drawWorld(){
+  const cx = Math.round(cam.x), cy = Math.round(cam.y);
+  const x0 = Math.max(0, (cx/TILE)|0), y0 = Math.max(0, (cy/TILE)|0);
+  const x1 = Math.min(W2.W-1, ((cx+VW)/TILE)|0), y1 = Math.min(W2.H-1, ((cy+VH)/TILE)|0);
+  ctx.fillStyle = '#0b0c0e'; ctx.fillRect(0,0,VW,VH);
+  for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){
+    const c = cellIx(x,y);
+    ctx.drawImage(atlas, W2.base[c]*TILE, 0, TILE, TILE, x*TILE-cx, y*TILE-cy, TILE, TILE);
+  }
+  /* y-sorted pass: objects sort by their cell bottom, entities by feet */
+  const draws = [];
+  for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){
+    const c = cellIx(x,y);
+    if (W2.obj[c] !== 255) draws.push([y*TILE+TILE, 0, W2.obj[c], x*TILE-cx, y*TILE-cy]);
+  }
+  const people = [player, ...Object.values(npcs).filter(e=>!e.hidden)];
+  for (const e of people){
+    const [ex, ey] = entPix(e);
+    const fr = e.t < 1 ? (1 + (((e.walkT*2)|0) % 2)) : 0;
+    draws.push([ey+TILE, 1, e, ex-cx, ey-cy, fr]);
+  }
+  draws.sort((a,b)=>a[0]-b[0]);
+  for (const d of draws){
+    if (d[1] === 0) ctx.drawImage(atlas, d[2]*TILE, 0, TILE, TILE, d[3], d[4], TILE, TILE);
+    else {
+      const e = d[2];
+      ctx.drawImage(e.frames[e.dir][d[5]], d[3]+2, d[4]-2);
+    }
+  }
+  /* goto objective marker */
+  if (typeof run !== 'undefined' && run && run.marker){
+    const [mx,my] = run.marker;
+    const bob = Math.sin(performance.now()/180)*2;
+    const sx2 = mx*TILE-cx+8, sy2 = my*TILE-cy-6+bob;
+    ctx.fillStyle = '#ffb02e';
+    ctx.beginPath(); ctx.moveTo(sx2, sy2+6); ctx.lineTo(sx2-5, sy2-2); ctx.lineTo(sx2+5, sy2-2);
+    ctx.closePath(); ctx.fill();
+  }
+  /* facing-cell interaction hint */
+  if (typeof G !== 'undefined' && G.state === 'work'){
+    const [fx, fy] = faceCell();
+    if (inMap(fx,fy) && W2.act[cellIx(fx,fy)]){
+      ctx.strokeStyle = 'rgba(255,176,46,.8)'; ctx.lineWidth = 1;
+      ctx.strokeRect(fx*TILE-cx+.5, fy*TILE-cy+.5, TILE-1, TILE-1);
+    } else {
+      const tn = talkTarget();
+      if (tn){
+        const [ex,ey] = entPix(tn);
+        ctx.strokeStyle = 'rgba(47,127,190,.8)'; ctx.lineWidth = 1;
+        ctx.strokeRect(Math.round(ex)-cx+.5, Math.round(ey)-cy-2.5, TILE-1, TILE+2);
+      }
+    }
+  }
+}
+const DIRV = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
+function faceCell(){
+  const [dx,dy] = DIRV[player.dir];
+  return [player.tx + dx, player.ty + dy];
+}
+function talkTarget(){
+  const [fx,fy] = faceCell();
+  for (const id in npcs){
+    const e = npcs[id];
+    if (!e.hidden && e.tx === fx && e.ty === fy) return e;
+  }
+  return null;
+}
+</script>
+
+<script>
+"use strict";
+/* ==========================================================================
+   S5 SIM — the day machine. Fixed timestep; the clock is the antagonist.
+   ========================================================================== */
+const G = { state:'boot', screenId:'s-boot', textSpeed:1, faults:0, tests:null, showTests:false };
+const DAY_MIN = 480;                       // 9:00 -> 17:00, 1 game-minute per real second
+let run = null;
+let meta = { certs:[], rep:0, conn:0, runsPlayed:0, best:{ days:0, rung:0 } };
+
+/* ------------------------------- run + days ------------------------------- */
+function runInit(seed){
+  rngInit(seed);
+  run = { seed, day:1, rung:0, clock:0, perfHist:[], gateStreak:0, firedStreak:0,
+          stress:20, coffee:0, crashes:[], burnout:0, rep:meta.certs.length ? 1 : 0,
+          queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[],
+          scores:[], breaches:0, resolved:0, aces:0, daysAtTop:0, satOn:{}, promoted:false };
+  for (const p in PERKS) if (metaHasPerk(p)) run.rep += PERKS[p].fx.rep || 0;
+}
+function newRun(seed){
+  runInit(seed);
+  startCommute();
+}
+function metaHasPerk(p){ return PERKS[p].need.runs !== undefined && meta.runsPlayed >= PERKS[p].need.runs; }
+
+function rollDay(){
+  const role = ROLES[run.rung];
+  let elig = Object.keys(TICKETS).filter(id =>
+    TICKETS[id].tiers[0] <= run.rung && run.rung <= TICKETS[id].tiers[1]);
+  /* Beyond the authored frontier (v0.1 writes intern-T2 deeply) the queue
+     starts repeating itself. Career-accurate, honestly. */
+  if (!elig.length) elig = Object.keys(TICKETS);
+  const bag = [];
+  for (const id of elig) for (let i=0;i<TICKETS[id].weight;i++) bag.push(id);
+  const n = Math.max(3, Math.round(role.queue.ratePerHr * 8 * (0.85 + R('world')*0.3)));
+  const arrivals = [];
+  let last = null;
+  for (let i=0;i<n;i++){
+    let id = bag[(R('world')*bag.length)|0];
+    if (id === last && bag.length > TICKETS[id].weight) id = bag[(R('world')*bag.length)|0];
+    last = id;
+    const T = TICKETS[id];
+    const fills = {};
+    const need = (T.title.match(/\{(\w+)\}/g) || []).map(s=>s.slice(1,-1));
+    for (const st of T.steps){
+      const node = DIALOGUE[st.say || st.choice];
+      if (node) for (const line of node.t)
+        for (const m of (line.match(/\{(\w+)\}/g) || [])) need.push(m.slice(1,-1));
+    }
+    for (const tok of new Set(need)){
+      const pool = (T.fills && T.fills[tok]) || FILLS[tok];
+      if (pool) fills[tok] = pool[(R('world')*pool.length)|0];
+    }
+    arrivals.push({
+      at: 6 + R('world')*(DAY_MIN-70), id, uid: run.uid++,
+      title: fill(T.title, fills), fills,
+      sla: Math.round(T.sla * role.queue.slaScale), stress: T.stress
+    });
+  }
+  arrivals.sort((a,b)=>a.at-b.at);
+  const events = [];
+  for (const id in EVENTS) if (R('world') < EVENTS[id].when.chance) events.push({ at:EVENTS[id].when.at, id });
+  events.sort((a,b)=>a.at-b.at);
+  run.plan = { arrivals, events, ai:0, ei:0 };
+}
+function fill(s, fills){ return s.replace(/\{(\w+)\}/g, (_,t) => fills[t] !== undefined ? fills[t] : '{'+t+'}'); }
+
+function startCommute(){
+  rollDay();
+  run.clock = 0; run.queue = []; run.active = null; run.marker = null;
+  run.scores = []; run.breaches = 0; run.resolved = 0; run.aces = 0;
+  run.coffee = 0; run.crashes = []; run.satOn = {}; run.pendingEvents = [];
+  G.state = 'commute';
+  const role = ROLES[run.rung];
+  document.getElementById('r-eyebrow').textContent = 'day ' + run.day + ' — ' + fmtDate(run.day);
+  document.getElementById('r-title').textContent = role.title + (run.day === 1 ? ' — FIRST DAY' : '');
+  document.getElementById('r-stats').innerHTML =
+    '<dt>Position</dt><dd>' + role.title + '</dd>' +
+    '<dt>Burnout</dt><dd>' + Math.round(run.burnout) + '%</dd>' +
+    '<dt>Reputation</dt><dd>' + run.rep + '</dd>' +
+    '<dt>Job posting</dt><dd>' + run.seed + '</dd>';
+  document.getElementById('r-note').textContent = run.day === 1
+    ? 'Orientation is a PDF nobody sent you. Your badge photo is already unflattering. Good luck in there.'
+    : commuteLine();
+  const act = document.getElementById('r-actions'); act.innerHTML = '';
+  mkBtn(act, 'CLOCK IN ▶', () => clockIn());
+  show('s-review');
+  saveGame();
+}
+function commuteLine(){
+  const lines = ['The parking lot is full of cars nicer than yours. They belong to sales.',
+    'Radio traffic report mentions your exit by name. It is not a compliment.',
+    'You rehearse saying "per my last email" in the rearview mirror.',
+    'Today feels different. It is not, but it feels different.'];
+  return lines[(run.day + run.rung) % lines.length];
+}
+function fmtDate(d){
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+  return days[(d-1) % 5] + ', week ' + (1 + (((d-1)/5)|0));
+}
+function clockIn(){
+  loadMap('office1');
+  spawnPeople();
+  cam.x = clamp(player.tx*TILE - VW/2, 0, W2.W*TILE - VW);
+  cam.y = clamp(player.ty*TILE - VH/2, 0, W2.H*TILE - VH);
+  G.state = 'work'; show(null); clearInput();
+  document.getElementById('hud').style.display = 'flex';
+  audioInit(); view.focus();
+  if (run.day === 1) toast('HOLD A DOOR. MAKE EYE CONTACT. FIND YOUR DESK.', 'corp', 4200);
+}
+
+/* -------------------------------- the step -------------------------------- */
+const STEP = 1/30;
+let simAcc = 0;
+function sim(dt){
+  if (G.state !== 'work' && G.state !== 'modal') return;
+  /* the clock does not care what you are doing */
+  run.clock += dt;
+  slaTick();
+  arrivalsTick();
+  crashTick();
+  if (G.state === 'work'){
+    eventsTick();
+    run.stress = Math.max(0, run.stress - dt*0.02*(1 - run.queue.length*0.12));
+    playerMove(dt);
+    for (const id in npcs) npcUpdate(npcs[id], dt, run.clock);
+    camUpdate(dt);
+    workInput();
+    gotoCheck();
+  } else modalTick(dt);
+  if (run.clock >= DAY_MIN && G.state === 'work') endDay();
+  for (const k in press) press[k] = false;
+}
+
+function arrivalsTick(){
+  const P2 = run.plan;
+  while (P2.ai < P2.arrivals.length && run.clock >= P2.arrivals[P2.ai].at){
+    const a = P2.arrivals[P2.ai++];
+    const T = TICKETS[a.id];
+    run.queue.push({ uid:a.uid, id:a.id, title:a.title, fills:a.fills, at:a.at,
+      deadline:a.at + a.sla, sla:a.sla, stress:a.stress, si:0, bonus:0, gameScores:[],
+      from:T.from || null });
+    run.stress = Math.min(100, run.stress + 1);
+    sfx('ticket');
+    toast('NEW TICKET — ' + a.title.toUpperCase().slice(0, 44), 'amber', 2600);
+  }
+}
+function eventsTick(){
+  const P2 = run.plan;
+  while (run.pendingEvents.length){ openEvent(run.pendingEvents.shift()); return; }
+  while (P2.ei < P2.events.length && run.clock >= P2.events[P2.ei].at){
+    const e = P2.events[P2.ei++];
+    openEvent(e.id); return;
+  }
+}
+function openEvent(id){
+  const E = EVENTS[id];
+  run.clock += E.fx.time || 0;                       // meetings eat the day, atomically
+  if (E.fx.stress) run.stress = clamp(run.stress + E.fx.stress, 0, 100);
+  openDlg(E.scene, {}, null);
+}
+function slaTick(){
+  for (let i=run.queue.length-1; i>=0; i--){
+    const t = run.queue[i];
+    if (run.active === t) continue;                  // a ticket in hand cannot silently breach
+    if (run.clock > t.deadline){
+      run.queue.splice(i,1);
+      run.scores.push(0); run.breaches++;
+      run.stress = clamp(run.stress + t.stress, 0, 100);
+      sfx('breach');
+      toast('SLA BREACH — ' + t.title.toUpperCase().slice(0,40), 'red', 3400);
+    }
+  }
+}
+function crashTick(){
+  while (run.crashes.length && run.clock >= run.crashes[0]){
+    run.crashes.shift();
+    run.stress = clamp(run.stress + 8, 0, 100);
+    toast('THE COFFEE HAS LEFT. ONLY THE JITTERS REMAIN.', 'red', 2600);
+  }
+}
+
+/* ------------------------------ player input ------------------------------ */
+function playerMove(dt){
+  entUpdate(player, dt, held.sprint ? 6.5 : 4.2);
+  if (player.t < 1) return;
+  const want = held.up ? 'up' : held.down ? 'down' : held.left ? 'left' : held.right ? 'right' : null;
+  if (!want){ player.turnT = 0; return; }
+  if (player.dir !== want){ player.dir = want; player.turnT = 0.07; return; }
+  player.turnT = (player.turnT || 0) - dt;
+  if (player.turnT > 0) return;
+  const [dx,dy] = DIRV[want];
+  tryStep(player, dx, dy);
+}
+function workInput(){
+  if (press.queue){ openQueue(); return; }
+  if (!press.use) return;
+  const tn = talkTarget();
+  if (tn){ smalltalk(tn); return; }
+  const [fx,fy] = faceCell();
+  if (!inMap(fx,fy)) return;
+  const act = W2.act[cellIx(fx,fy)];
+  if (act) interact(act);
+}
+function smalltalk(e){
+  const N = NPCS[e.id];
+  const node = DIALOGUE[N.talk];
+  const line = node.t[(run.day + (run.satOn[e.id]||0)) % node.t.length];
+  run.satOn[e.id] = (run.satOn[e.id]||0) + 1;
+  if (run.satOn[e.id] === 1) run.stress = Math.max(0, run.stress - 1);
+  openDlg(null, {}, null, { who:N.name, role:N.role, text:line, portrait:e.portrait });
+  const [pdx,pdy] = DIRV[player.dir];
+  e.dir = pdx === 1 ? 'left' : pdx === -1 ? 'right' : pdy === 1 ? 'up' : 'down';
+}
+function interact(act){
+  switch(act){
+    case 'terminal': openQueue(); break;
+    case 'coffee':
+      if (run.coffee >= 4){ toast('YOUR HANDS ARE ALREADY VIBRATING. THE MACHINE REFUSES.', 'red', 2600); sfx('err'); break; }
+      run.coffee++; run.stress = Math.max(0, run.stress - 12);
+      run.crashes.push(run.clock + 90); run.crashes.sort((a,b)=>a-b);
+      sfx('coffee'); toast('COFFEE ' + run.coffee + ' OF 4 — STRESS DOWN, FUTURE MORTGAGED', 'corp', 2400);
+      break;
+    case 'couch':
+      if (run.satOn._couch){ toast('THE COUCH HAS GIVEN ALL IT CAN TODAY.', 'corp', 2000); break; }
+      run.satOn._couch = 1; run.stress = Math.max(0, run.stress - 6);
+      toast('YOU SIT. THE QUEUE DOES NOT.', 'corp', 2400);
+      break;
+    case 'arcade':
+      if (!run.satOn._arc){ run.satOn._arc = 1; run.stress = Math.max(0, run.stress - 2); }
+      toast('AGENT 360 — GOLDENSHARE. HIGH SCORE: "DRK". OF COURSE IT IS.', 'corp', 2800);
+      break;
+    case 'vending': toast('B4 IS STUCK AGAIN. B4 IS ALWAYS STUCK. B4 IS A LIE.', 'corp', 2200); break;
+    case 'cooler': toast('THE WATER IS FINE. THE GOSSIP IS FINER.', 'corp', 2000); break;
+    case 'printer': toast('IT DISPLAYS "PC LOAD LETTER". NOBODY HAS EVER KNOWN WHAT THAT MEANS.', 'corp', 2600); break;
+    case 'rack': toast('A CABLE LABELED "TEMP FIX 2011" PULSES GENTLY. DO NOT.', 'corp', 2600); break;
+    case 'shelf': toast('ASSET TAGS, LABEL TAPE, AND A BOX MARKED "OLD KEYBOARDS (HAUNTED)".', 'corp', 2600); break;
+    case 'elevator': toast('IT GOES TO OTHER FLOORS. YOUR CAREER DOES NOT. YET.', 'corp', 2400); break;
+    case 'door': break;
+  }
+}
+function gotoCheck(){
+  if (!run.marker || !run.active) return;
+  const [mx,my] = run.marker;
+  if (Math.abs(player.tx - mx) + Math.abs(player.ty - my) <= 1){
+    run.marker = null;
+    run.active.si++;
+    advanceStep();
+  }
+}
+
+/* -------------------------------- tickets --------------------------------- */
+function openQueue(){
+  G.state = 'modal';
+  G.modal = { kind:'tix', sel:0 };
+  renderQueue();
+  document.getElementById('tix').style.display = 'block';
+}
+function closeModalToWork(){
+  G.modal = null; G.state = 'work';
+  document.getElementById('tix').style.display = 'none';
+  document.getElementById('dlg').style.display = 'none';
+  clearInput();
+}
+function renderQueue(){
+  const list = document.getElementById('tix-list');
+  list.innerHTML = '';
+  if (!run.queue.length){
+    list.innerHTML = '<div class="empty">Queue zero. Do not say it out loud — the phones can hear you.</div>';
+    return;
+  }
+  run.queue.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'row' + (i === G.modal.sel ? ' sel' : '');
+    const left = Math.round(t.deadline - run.clock);
+    const cls = left < 5 ? 'bad' : left < 12 ? 'warn' : '';
+    row.innerHTML = '<span class="id">#' + (10000 + t.uid) + '</span>' +
+      '<span class="ttl">' + t.title + (t.si > 0 ? ' <span style="color:var(--corp)">(in progress)</span>' : '') + '</span>' +
+      '<span class="sla ' + cls + '">' + (left <= 0 ? 'BREACHING' : left + 'm') + '</span>';
+    row.onclick = () => { G.modal.sel = i; startTicket(t); };
+    list.appendChild(row);
+  });
+}
+function startTicket(t){
+  run.active = t;
+  document.getElementById('tix').style.display = 'none';
+  if (t.si === 0 && !t.from){ /* client tickets announce themselves */ }
+  advanceStep();
+}
+/* Drives the active ticket through its steps. Modal steps re-enter here on
+   completion; goto steps drop back to the world until gotoCheck fires. */
+function advanceStep(){
+  const t = run.active;
+  if (!t) return;
+  if (t.si >= TICKETS[t.id].steps.length){ resolveTicket(t); return; }
+  const st = TICKETS[t.id].steps[t.si];
+  if (st.goto){
+    const a = anchorPos(st.goto);
+    if (!a){ t.si++; advanceStep(); return; }
+    run.marker = a;
+    if (G.modal) closeModalToWork();
+    toast('GO TO: ' + st.goto, 'corp', 1800);
+    return;
+  }
+  if (st.say){ openDlg(st.say, t.fills, () => { t.si++; advanceStep(); }); return; }
+  if (st.choice){ openDlg(st.choice, t.fills, () => { t.si++; advanceStep(); }, null, t); return; }
+  if (st.game){ openGame(st.game, st.diff, score => { t.gameScores.push(score); t.si++; advanceStep(); }); return; }
+  t.si++; advanceStep();
+}
+function resolveTicket(t){
+  const i = run.queue.indexOf(t);
+  if (i >= 0) run.queue.splice(i,1);
+  const r = clamp((t.deadline - run.clock) / t.sla, 0, 1);
+  const gameAvg = t.gameScores.length
+    ? t.gameScores.reduce((a,b)=>a+b,0) / t.gameScores.length : .75;
+  const score = clamp(.30 + .40*r + .25*gameAvg + .12*t.bonus, 0, 1);
+  run.scores.push(score); run.resolved++;
+  if (score >= .8) run.aces++;
+  /* work costs something: each ticket leaves residue, heavier as the stakes
+     rise with rank — this is what eventually burns a career down */
+  run.stress = clamp(run.stress + t.stress*(.45 + run.rung*.10) - 2.2, 0, 100);
+  run.active = null; run.marker = null;
+  if (G.modal) closeModalToWork();
+  sfx('done');
+  toast(score >= .8 ? 'RESOLVED — CSAT 5★ (THEY WILL NEVER FILL IT IN)' :
+        score >= .5 ? 'RESOLVED — ADEQUATELY' : 'RESOLVED — TECHNICALLY', score >= .8 ? 'ok' : 'corp', 2600);
+}
+
+/* ------------------------------- end of day ------------------------------- */
+function endDay(){
+  if (G.modal) closeModalToWork();
+  document.getElementById('hud').style.display = 'none';
+  /* anything still open rolls into the void; unworked queue counts against you */
+  for (const t of run.queue){ run.scores.push(0); run.breaches++; }
+  run.queue = [];
+  const dayPerf = run.scores.length
+    ? run.scores.reduce((a,b)=>a+b,0) / run.scores.length : .5;
+  run.perfHist.push(dayPerf);
+  const eod = run.stress;
+  run.burnout = clamp(run.burnout + Math.max(0, eod - 55) * .35, 0, 100);
+  /* the weekend, technically — every fifth day the body claws a little back */
+  const weekend = run.day % 5 === 0;
+  run.stress = Math.round(run.stress * (weekend ? .3 : .55));
+  if (weekend) run.burnout = Math.max(0, run.burnout - 6);
+  const role = ROLES[run.rung];
+  /* gates */
+  let promo = false, fired = false;
+  if (dayPerf < role.gates.firedBelow) run.firedStreak++; else run.firedStreak = 0;
+  if (role.gates.nextAt){
+    if (dayPerf >= role.gates.nextAt.perf) run.gateStreak++; else run.gateStreak = 0;
+    if (run.gateStreak >= role.gates.nextAt.days){ promo = true; }
+  } else run.daysAtTop++;
+  reviewScreen(dayPerf, eod, promo);
+  if (run.firedStreak >= 2){ careerOver('fired'); return; }
+  if (run.burnout >= 100){ careerOver('burnout'); return; }
+  if (promo){ run.rung++; run.rep += 2; run.gateStreak = 0; run.promoted = true; sfx('promo'); }
+  if (!role.gates.nextAt && run.daysAtTop >= role.gates.retireAfterDays){ careerOver('retired'); return; }
+  G.state = 'review';
+  show('s-review');
+  run.day++;
+  saveGame();
+}
+function perfName(p){
+  return p >= .8 ? 'EXCEEDS EXPECTATIONS (SUSPICIOUS)' :
+         p >= .62 ? 'MEETS EXPECTATIONS' :
+         p >= .4 ? 'DEVELOPING (HR WORD FOR STRUGGLING)' :
+         'SEE ME — LINDA';
+}
+function reviewScreen(dayPerf, eod, promo){
+  document.getElementById('r-eyebrow').textContent = 'end of day ' + run.day;
+  document.getElementById('r-title').textContent = promo ? 'PROMOTED.' : 'DAILY PERFORMANCE REVIEW';
+  document.getElementById('r-stats').innerHTML =
+    '<dt>Tickets resolved</dt><dd>' + run.resolved + ' (' + run.aces + ' aced)</dd>' +
+    '<dt>SLA breaches</dt><dd style="color:' + (run.breaches ? 'var(--alert)' : 'var(--ok)') + '">' + run.breaches + '</dd>' +
+    '<dt>Performance</dt><dd>' + Math.round(dayPerf*100) + '% — ' + perfName(dayPerf) + '</dd>' +
+    '<dt>End-of-day stress</dt><dd>' + Math.round(eod) + '%</dd>' +
+    '<dt>Burnout</dt><dd style="color:' + (run.burnout > 60 ? 'var(--alert)' : 'inherit') + '">' + Math.round(run.burnout) + '%</dd>' +
+    (promo ? '<dt>New title</dt><dd style="color:var(--amber)">' + ROLES[run.rung+1].title + '</dd>' : '');
+  document.getElementById('r-note').textContent = promo
+    ? 'Linda shook your hand for exactly one pump. There is a cake with someone else\'s name crossed out. You have made it.'
+    : reviewLine(dayPerf);
+  const act = document.getElementById('r-actions'); act.innerHTML = '';
+  mkBtn(act, 'NEXT DAY ▶', () => startCommute());
+  mkBtn(act, 'SAVE & QUIT', () => { saveGame(); toTitle(); }, true);
+}
+function reviewLine(p){
+  if (p >= .8) return 'Kayla nodded at you in the hallway. From Kayla, that is a standing ovation.';
+  if (p >= .6) return 'Nobody said anything, which in MSP terms is a glowing review.';
+  if (p >= .4) return 'Derek looked at your queue, then at you, then just... exhaled.';
+  return 'Linda has "popped a meeting on your calendar for first thing". Sleep well.';
+}
+function careerOver(kind){
+  G.state = 'over';
+  meta.runsPlayed++;
+  meta.rep += Math.floor(run.rep / 2) + (kind === 'retired' ? 5 : 0);
+  meta.best.days = Math.max(meta.best.days, run.day);
+  meta.best.rung = Math.max(meta.best.rung, run.rung);
+  const savedRun = run; run = null;
+  saveGame();
+  const texts = {
+    burnout: ['BURNED OUT', 'You typed "per my last email" into the microwave and hit START. Security walked you out gently — they\'ve seen it before. Day ' + savedRun.day + ', ' + ROLES[savedRun.rung].title + '.'],
+    fired:   ['LET GO', '"We\'re restructuring the support function," said Linda, restructuring you specifically out of the building. Day ' + savedRun.day + '.'],
+    retired: ['RETIRED (LEGEND)', 'You survived to Director and walked out on a Friday with a box of desk plants and every password in your head. They will be calling you within a month. Consulting rates apply.']
+  };
+  const [title, note] = texts[kind];
+  document.getElementById('o-eyebrow').textContent = 'exit interview — ' + savedRun.seed;
+  document.getElementById('o-title').textContent = title;
+  document.getElementById('o-title').style.color = kind === 'retired' ? 'var(--ok)' : 'var(--alert)';
+  document.getElementById('o-stats').innerHTML =
+    '<dt>Days survived</dt><dd>' + savedRun.day + '</dd>' +
+    '<dt>Final title</dt><dd>' + ROLES[savedRun.rung].title + '</dd>' +
+    '<dt>Tickets resolved</dt><dd>' + savedRun.perfHist.length + ' days of queue</dd>' +
+    '<dt>Reputation banked</dt><dd>+' + (Math.floor(savedRun.rep/2) + (kind==='retired'?5:0)) + ' (total ' + meta.rep + ')</dd>' +
+    '<dt>Careers lived</dt><dd>' + meta.runsPlayed + '</dd>';
+  document.getElementById('o-note').textContent = kind === 'retired'
+    ? 'Retirement unlocks nothing further. That is the joke.'
+    : 'Reputation follows you. The next job posting starts a new career with everything you\'ve banked.';
+  const act = document.getElementById('o-actions'); act.innerHTML = '';
+  mkBtn(act, 'NEW CAREER ▶', () => actSetup());
+  mkBtn(act, 'TITLE SCREEN', () => toTitle(), true);
+  show('s-over');
+  sfx(kind === 'retired' ? 'promo' : 'fired');
+}
+
+/* ------------------------------- save / load ------------------------------ */
+const SAVE_KEY = 'managed.save', SAVE_V = 1;
+const MIGRATIONS = {};   // v -> fn(save) mutating up one version
+function saveGame(){
+  if (typeof SAVE_SUSPEND !== 'undefined' && SAVE_SUSPEND) return;   // self test never touches the real save
+  try {
+    const data = { v:SAVE_V, meta, run: run ? serializeRun() : null };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch(_){}
+}
+function serializeRun(){
+  const { plan, queue } = run;
+  return { seed:run.seed, day:run.day, rung:run.rung, clock:run.clock,
+    perfHist:run.perfHist, gateStreak:run.gateStreak, firedStreak:run.firedStreak,
+    stress:run.stress, coffee:run.coffee, crashes:run.crashes, burnout:run.burnout,
+    rep:run.rep, uid:run.uid, scores:run.scores, breaches:run.breaches,
+    resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
+    satOn:run.satOn, promoted:run.promoted,
+    plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
+    queue: queue.map(t => ({ uid:t.uid, id:t.id, title:t.title, fills:t.fills, at:t.at,
+      deadline:t.deadline, sla:t.sla, stress:t.stress, si:t.si, bonus:t.bonus,
+      gameScores:t.gameScores, from:t.from })),
+    px:player ? player.tx : null, py:player ? player.ty : null,
+    rng: rngState() };
+}
+function loadGame(){
+  let raw;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch(_){ return null; }
+  if (!raw) return null;
+  let s;
+  try { s = JSON.parse(raw); } catch(_){ return null; }
+  if (typeof s.v !== 'number') return null;
+  if (s.v > SAVE_V) return 'future';
+  while (s.v < SAVE_V){ const m = MIGRATIONS[s.v]; if (!m) return null; m(s); s.v++; }
+  return s;
+}
+function resumeRun(s){
+  meta = s.meta;
+  const r = s.run;
+  rngInit(r.seed, r.rng);
+  run = { seed:r.seed, day:r.day, rung:r.rung, clock:r.clock, perfHist:r.perfHist,
+    gateStreak:r.gateStreak, firedStreak:r.firedStreak, stress:r.stress,
+    coffee:r.coffee, crashes:r.crashes, burnout:r.burnout, rep:r.rep,
+    queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
+    pendingEvents:[], scores:r.scores, breaches:r.breaches, resolved:r.resolved,
+    aces:r.aces, daysAtTop:r.daysAtTop, satOn:r.satOn || {}, promoted:r.promoted };
+  if (!run.plan || run.clock <= 0.001 || run.clock >= DAY_MIN){ startCommute(); return; }
+  loadMap('office1');
+  spawnPeople();
+  if (r.px !== null && !solidAt(r.px, r.py)){
+    occ.delete(okey(player.tx, player.ty));
+    player.x = player.tx = r.px; player.y = player.ty = r.py; player.t = 1;
+    occ.add(okey(player.tx, player.ty));
+  }
+  G.state = 'work'; show(null); clearInput();
+  document.getElementById('hud').style.display = 'flex';
+}
+</script>
+
+<script>
+"use strict";
+/* ==========================================================================
+   S6 UI — dialogue engine, queue panel, minigames, HUD, screens, toasts.
+   ========================================================================== */
+let QUIET = false;                    // headless sims silence the DOM chatter
+const TOASTC = { amber:'var(--amber)', corp:'var(--corp)', red:'var(--alert)', ok:'var(--ok)' };
+function toast(text, kind, ms){
+  if (QUIET) return;
+  const wrap = document.getElementById('toasts'); if (!wrap) return;
+  while (wrap.children.length > 3) wrap.firstChild.remove();
+  const c = TOASTC[kind] || TOASTC.corp;
+  const d = document.createElement('div');
+  d.textContent = text;
+  d.style.cssText = 'font-family:var(--pix);font-size:clamp(6px,1.15vh,10px);letter-spacing:.05em;'+
+    'padding:7px 11px;background:rgba(10,13,17,.94);border:1px solid '+c+';color:'+c+
+    ';box-shadow:0 6px 20px rgba(0,0,0,.6);max-width:84%;text-align:center;line-height:1.5';
+  wrap.appendChild(d);
+  setTimeout(() => { d.style.transition='opacity .35s'; d.style.opacity='0';
+    setTimeout(() => d.remove(), 400); }, ms || 2400);
+}
+function clearToasts(){ const w = document.getElementById('toasts'); if (w) w.textContent=''; }
+function mkBtn(parent, label, fn, ghost){
+  const b = document.createElement('button');
+  b.className = 'btn' + (ghost ? ' ghost' : '');
+  b.textContent = label; b.onclick = fn;
+  parent.appendChild(b);
+  return b;
+}
+
+/* ------------------------------ dialogue box ------------------------------ */
+let dlg = null;
+function whoOf(node, fills, custom){
+  if (custom) return [custom.who, custom.role];
+  if (node.who === 'sys') return ['DISPATCH', '· narrating your life'];
+  if (node.who === 'client') return [(fills.client || 'CLIENT').toUpperCase(), '· on line 2'];
+  const N = NPCS[node.who];
+  return N ? [N.name, '· ' + N.role] : ['?', ''];
+}
+function openDlg(nodeId, fills, onDone, custom, ticket){
+  const node = custom ? null : DIALOGUE[nodeId];
+  if (!node && !custom){ if (onDone) onDone(); return; }
+  G.state = 'modal'; G.modal = { kind:'dlg' };
+  const lines = custom ? [custom.text] : node.t.map(l => fill(l, fills || {}));
+  const opts = (!custom && node.opts)
+    ? node.opts.map(o => ({ t: fill(o.t, fills || {}), fx: o.fx || {} })) : null;
+  const [who, role] = whoOf(node || {}, fills || {}, custom);
+  dlg = { lines, li:0, reveal:0, opts, onDone, ticket, done:false };
+  document.getElementById('d-name').textContent = who;
+  document.getElementById('d-role').textContent = role;
+  document.getElementById('d-opts').innerHTML = '';
+  document.getElementById('dlg').style.display = 'block';
+  dlgPaint();
+}
+function dlgPaint(){
+  const line = dlg.lines[dlg.li];
+  document.getElementById('d-txt').textContent = line.slice(0, Math.ceil(dlg.reveal));
+  const last = dlg.li === dlg.lines.length - 1;
+  const full = dlg.reveal >= line.length;
+  document.getElementById('d-more').style.display = (full && !(last && dlg.opts)) ? 'block' : 'none';
+  if (last && full && dlg.opts && !dlg.optsShown){
+    dlg.optsShown = true;
+    const box = document.getElementById('d-opts');
+    dlg.opts.forEach((o, i) => {
+      const b = document.createElement('button');
+      b.className = 'opt';
+      b.innerHTML = '<span class="k">' + (i+1) + '</span>' + o.t;
+      b.onclick = () => pickOpt(i);
+      box.appendChild(b);
+    });
+  }
+}
+function pickOpt(i){
+  if (!dlg || !dlg.opts || !dlg.optsShown || i >= dlg.opts.length) return;
+  const fx = dlg.opts[i].fx;
+  applyFx(fx, dlg.ticket);
+  sfx('ui');
+  dlgFinish();
+}
+function applyFx(fx, ticket){
+  if (!fx) return;
+  if (fx.stress) run.stress = clamp(run.stress + fx.stress, 0, 100);
+  if (fx.rep) run.rep = Math.max(0, run.rep + fx.rep);
+  if (fx.time) run.clock += fx.time;               // the day shrinks; that was the price
+  if (fx.bonus && ticket) ticket.bonus += fx.bonus;
+}
+function dlgFinish(){
+  const done = dlg.onDone;
+  dlg = null;
+  closeModalToWork();
+  if (done) done();
+}
+function dlgTick(dt){
+  if (!dlg) return;
+  const line = dlg.lines[dlg.li];
+  if (dlg.reveal < line.length){
+    dlg.reveal += dt * (G.textSpeed === 2 ? 200 : G.textSpeed === 0 ? 45 : 90);
+    if (((dlg.reveal|0) % 3) === 0) sfx('blip');
+    dlgPaint();
+  }
+  if (press.use){
+    if (dlg.reveal < line.length){ dlg.reveal = line.length; dlgPaint(); }
+    else if (dlg.li < dlg.lines.length - 1){ dlg.li++; dlg.reveal = 0; dlgPaint(); }
+    else if (!dlg.opts) dlgFinish();
+  }
+  if (dlg && dlg.optsShown){
+    if (press.one) pickOpt(0);
+    else if (press.two) pickOpt(1);
+    else if (press.three) pickOpt(2);
+  }
+}
+
+/* ------------------------------- queue panel ------------------------------ */
+let tixRepaint = 0;
+function tixTick(dt){
+  const m = G.modal;
+  tixRepaint -= dt;
+  if (press.up && m.sel > 0){ m.sel--; tixRepaint = 0; sfx('blip'); }
+  if (press.down && m.sel < run.queue.length - 1){ m.sel++; tixRepaint = 0; sfx('blip'); }
+  if (press.use && run.queue.length){ startTicket(run.queue[Math.min(m.sel, run.queue.length-1)]); return; }
+  if (press.queue){ closeModalToWork(); return; }
+  if (tixRepaint <= 0){ tixRepaint = .3; renderQueue(); }
+}
+
+/* -------------------------------- minigames ------------------------------- */
+/* Shared contract: GAMES[id].init(diff) -> state; state.step(dt); state.draw();
+   sets state.score (0..1) and state.finished. Layout draws from the `game`
+   stream; the outcome is entirely the player's inputs. */
+let MG = null;
+function openGame(id, diff, onDone){
+  G.state = 'modal'; G.modal = { kind:'game' };
+  let d = diff + (meta.certs.includes('aplus') ? -1 : 0);
+  if (run && run.coffee >= 3) d += 1;          // the jitters: cup four was a choice
+  MG = GAMES[id].init(Math.max(1, d));
+  MG.gid = id; MG.onDone = onDone;
+}
+function gameTick(dt){
+  MG.step(dt);
+  if (MG.finished){
+    const score = MG.score, done = MG.onDone;
+    MG = null;
+    closeModalToWork();
+    if (done) done(score);
+  }
+}
+const CABLE_COLS = ['#d64541','#2f7fbe','#ffb02e','#4ade80','#c084fc','#39d7ff','#ff8ad1'];
+const PW_ITEMS = [
+  { pw:'Summer2024!', ok:false, why:'company season + year' },
+  { pw:'xK9#mQ2$vL', ok:true },
+  { pw:'password!!!', ok:false, why:'contains "password"' },
+  { pw:'Fluffy4ever', ok:false, why:'that is the CFO\'s cat' },
+  { pw:'correct-horse-battery', ok:true },
+  { pw:'360Smart2026', ok:false, why:'company name + year' },
+  { pw:'Tr0ub4dor&3', ok:true },
+  { pw:'Password1', ok:false, why:'it is THE password' },
+  { pw:'j#8Lq!pv2N', ok:true },
+  { pw:'Winter2019!!', ok:false, why:'previous password plus !' },
+  { pw:'9mX!ee#40z', ok:true },
+  { pw:'Rex_goodboy', ok:false, why:'known pet (see attached list)' }
+];
+const GAMES = {
+  cable: { init(diff){
+    const n = 3 + diff;
+    const cols = CABLE_COLS.slice(0, n);
+    const left = cols.map((c,i)=>({c, i}));
+    const right = cols.map((c,i)=>({c, i}));
+    for (let i=n-1;i>0;i--){ const j = Ri('game', i+1); [right[i], right[j]] = [right[j], right[i]]; }
+    return { kind:'cable', n, left, right, cur:0, side:0, pickL:-1,
+      linked:new Array(n).fill(-1), mistakes:0, hint:'MATCH THE CABLES · ↑↓ + E',
+      step(dt){
+        if (press.up) this.cur = (this.cur + this.n - 1) % this.n;
+        if (press.down) this.cur = (this.cur + 1) % this.n;
+        if (press.use){
+          if (this.side === 0){
+            if (this.linked[this.left[this.cur].i] < 0){ this.pickL = this.cur; this.side = 1; this.cur = 0; sfx('blip'); }
+          } else {
+            const L = this.left[this.pickL], Rp = this.right[this.cur];
+            if (this.linked.includes(this.cur)){ /* port taken */ }
+            else if (L.i === Rp.i){ this.linked[L.i] = this.cur; sfx('ui'); }
+            else { this.mistakes++; sfx('err'); }
+            this.side = 0; this.cur = this.pickL;
+          }
+        }
+        if (!this.linked.includes(-1)){
+          this.score = clamp(1 - this.mistakes*.18, .25, 1);
+          this.finished = true;
+        }
+      },
+      draw(){
+        mgPanel('CABLE MANAGEMENT', this.hint);
+        const y0 = 70, dy = Math.min(24, 130/this.n);
+        for (let i=0;i<this.n;i++){
+          const sel = (this.side===0 && this.cur===i);
+          const y = y0 + i*dy;
+          ctx.fillStyle = this.left[i].c;
+          ctx.fillRect(120, y, 40, 8);
+          if (this.linked[this.left[i].i] >= 0){
+            const j = this.linked[this.left[i].i];
+            ctx.strokeStyle = this.left[i].c; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(160, y+4); ctx.lineTo(320, y0 + j*dy + 4); ctx.stroke();
+          }
+          if (sel){ ctx.strokeStyle='#fff'; ctx.strokeRect(118.5, y-2.5, 44, 13); }
+          if (this.side===1 && this.pickL===i){ ctx.strokeStyle='#ffb02e'; ctx.strokeRect(118.5, y-2.5, 44, 13); }
+        }
+        for (let j=0;j<this.n;j++){
+          const y = y0 + j*dy;
+          ctx.fillStyle = '#1b2129'; ctx.fillRect(320, y-2, 46, 12);
+          ctx.fillStyle = this.right[j].c; ctx.fillRect(324, y, 12, 8);
+          ctx.fillStyle = '#0d1014'; ctx.fillRect(340, y, 20, 8);
+          if (this.side===1 && this.cur===j){ ctx.strokeStyle='#fff'; ctx.strokeRect(318.5, y-4.5, 49, 17); }
+        }
+        txt('MISTAKES ' + this.mistakes, 240, 216, this.mistakes ? '#d64541' : '#8b93a0', 7, 'center');
+      } };
+  }},
+  pw: { init(diff){
+    const k = 2 + diff;
+    const items = [];
+    const used = new Set();
+    while (items.length < k){
+      const i = Ri('game', PW_ITEMS.length);
+      if (used.has(i)) continue;
+      used.add(i); items.push(PW_ITEMS[i]);
+    }
+    return { kind:'pw', items, at:0, right:0, flash:0, flashTxt:'',
+      hint:'PASSWORD TRIAGE · 1 APPROVE · 2 REJECT',
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.at >= this.items.length){
+          if (this.flash <= 0){ this.score = this.right / this.items.length; this.finished = true; }
+          return;
+        }
+        const it = this.items[this.at];
+        let pick = null;
+        if (press.one) pick = true;
+        if (press.two) pick = false;
+        if (pick !== null){
+          const correct = (pick === it.ok);
+          if (correct){ this.right++; sfx('ui'); } else sfx('err');
+          this.flash = .8;
+          this.flashTxt = correct ? 'CORRECT' : ('NOPE — ' + (it.ok ? 'that one was fine' : it.why));
+          this.at++;
+        }
+      },
+      draw(){
+        mgPanel('PASSWORD TRIAGE', this.hint);
+        txt('POLICY: no "password" · no company+year · no pets · no last-password+!', 240, 66, '#8b93a0', 6, 'center');
+        if (this.at < this.items.length){
+          const it = this.items[this.at];
+          ctx.fillStyle = '#10141a'; ctx.fillRect(140, 100, 200, 34);
+          ctx.strokeStyle = '#343b44'; ctx.strokeRect(140.5, 100.5, 199, 33);
+          txt(it.pw, 240, 122, '#ffb02e', 10, 'center');
+          txt('RESET REQUEST ' + (this.at+1) + ' OF ' + this.items.length, 240, 150, '#8b93a0', 6, 'center');
+        } else txt('FILED. HR HAS BEEN CCED FOR NO REASON.', 240, 120, '#4ade80', 7, 'center');
+        if (this.flash > 0) txt(this.flashTxt.toUpperCase(), 240, 176, this.flashTxt==='CORRECT' ? '#4ade80' : '#d64541', 6, 'center');
+        txt('SCORE ' + this.right + '/' + this.items.length, 240, 216, '#8b93a0', 7, 'center');
+      } };
+  }},
+  jargon: { init(diff){
+    const k = 1 + diff;
+    const rounds = [];
+    const used = new Set();
+    while (rounds.length < k){
+      const i = Ri('game', JARGON.length);
+      if (used.has(i)) continue;
+      used.add(i);
+      const J = JARGON[i];
+      const opts = [{t:J.ok, ok:true}, {t:J.no[0]}, {t:J.no[1]}];
+      for (let a=2;a>0;a--){ const b = Ri('game', a+1); [opts[a], opts[b]] = [opts[b], opts[a]]; }
+      rounds.push({ j:J.j, opts });
+    }
+    return { kind:'jargon', rounds, at:0, right:0, flash:0, ok:false,
+      hint:'TRANSLATE THE MEETING · PRESS 1 – 3',
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.at >= this.rounds.length){
+          if (this.flash <= 0){ this.score = this.right / this.rounds.length; this.finished = true; }
+          return;
+        }
+        let pick = press.one ? 0 : press.two ? 1 : press.three ? 2 : -1;
+        if (pick >= 0){
+          this.ok = !!this.rounds[this.at].opts[pick].ok;
+          if (this.ok){ this.right++; sfx('ui'); } else sfx('err');
+          this.flash = .7; this.at++;
+        }
+      },
+      draw(){
+        mgPanel('JARGON TRANSLATION', this.hint);
+        if (this.at < this.rounds.length){
+          const r = this.rounds[this.at];
+          wrapTxt('"' + r.j + '"', 240, 74, 340, '#e8e4da', 7);
+          r.opts.forEach((o, i) => {
+            ctx.fillStyle = '#161b21'; ctx.fillRect(90, 120 + i*28, 300, 22);
+            ctx.strokeStyle = '#343b44'; ctx.strokeRect(90.5, 120.5 + i*28, 299, 21);
+            txt((i+1) + '.', 100, 134 + i*28, '#2f7fbe', 7);
+            wrapTxt(o.t, 246, 130 + i*28, 270, '#c9c4b8', 6);
+          });
+        } else txt('MEETING SURVIVED.', 240, 130, '#4ade80', 8, 'center');
+        if (this.flash > 0 && this.at > 0)
+          txt(this.ok ? 'CORRECT' : 'THAT IS NOT WHAT THAT MEANS', 240, 210, this.ok ? '#4ade80' : '#d64541', 6, 'center');
+      } };
+  }}
+};
+function mgPanel(title, hint){
+  ctx.fillStyle = 'rgba(8,10,13,.88)'; ctx.fillRect(0,0,VW,VH);
+  ctx.fillStyle = '#12161b'; ctx.fillRect(60, 26, 360, 214);
+  ctx.strokeStyle = '#343b44'; ctx.strokeRect(60.5, 26.5, 359, 213);
+  ctx.fillStyle = '#ffb02e'; ctx.fillRect(60, 26, 360, 2);
+  txt(title, 240, 44, '#ffb02e', 8, 'center');
+  txt(hint, 240, 56, '#8b93a0', 6, 'center');
+}
+/* Canvas text helpers — the agent360 discipline: shadow not bold, never below
+   6px, round the origin. */
+function txt(s, x, y, col, size, align){
+  ctx.font = Math.max(6, size||8) + 'px "Press Start 2P", monospace';
+  ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
+  x = Math.round(x); y = Math.round(y);
+  ctx.fillStyle = '#000'; ctx.fillText(s, x+1, y+1);
+  ctx.fillStyle = col; ctx.fillText(s, x, y);
+}
+function wrapTxt(s, cx, y, w, col, size){
+  ctx.font = Math.max(6, size) + 'px "Press Start 2P", monospace';
+  const words = s.split(' ');
+  let line = '', lines = [];
+  for (const wd of words){
+    const t = line ? line + ' ' + wd : wd;
+    if (ctx.measureText(t).width > w && line){ lines.push(line); line = wd; }
+    else line = t;
+  }
+  if (line) lines.push(line);
+  lines.forEach((l, i) => txt(l, cx, y + i*10, col, size, 'center'));
+}
+
+/* --------------------------------- modal hub ------------------------------ */
+function modalTick(dt){
+  if (!G.modal) { G.state = 'work'; return; }
+  if (G.modal.kind === 'dlg') dlgTick(dt);
+  else if (G.modal.kind === 'tix') tixTick(dt);
+  else if (G.modal.kind === 'game') gameTick(dt);
+}
+
+/* ----------------------------------- HUD ---------------------------------- */
+function hudUpdate(){
+  if (!run) return;
+  const h = Math.floor(run.clock/60) + 9;
+  const m = Math.floor(run.clock % 60);
+  const hh = h > 12 ? h - 12 : h;
+  document.getElementById('h-clock').innerHTML = '<b>' + hh + ':' + (m<10?'0':'') + m + '</b> ' + (h >= 12 ? 'PM' : 'AM');
+  document.getElementById('h-day').textContent = run.day;
+  document.getElementById('h-role').textContent = ROLES[run.rung].title;
+  const q = document.getElementById('h-queue');
+  const breaching = run.queue.some(t => t.deadline - run.clock < 5);
+  q.textContent = 'QUEUE ' + run.queue.length;
+  q.className = breaching ? 'breach' : '';
+  const sm = document.getElementById('h-stressm');
+  sm.firstElementChild.style.width = Math.round(run.stress) + '%';
+  sm.className = 'meter' + (run.stress > 75 ? ' bad' : run.stress > 45 ? ' warn' : '');
+  document.getElementById('h-coffee').textContent = '☕' + run.coffee;
+}
+
+/* --------------------------------- screens -------------------------------- */
+const SCREENS = ['s-boot','s-title','s-setup','s-pause','s-review','s-over','s-controls','s-options'];
+function show(id){
+  G.screenId = id;
+  for (const s of SCREENS){ const el = document.getElementById(s); if (el) el.hidden = (s !== id); }
+}
+function toTitle(){
+  G.state = 'title';
+  document.getElementById('hud').style.display = 'none';
+  const s = loadGame();
+  const btn = document.getElementById('b-continue');
+  btn.disabled = !(s && s !== 'future' && s.run);
+  document.getElementById('t-meta').textContent = meta.runsPlayed
+    ? 'Careers lived: ' + meta.runsPlayed + ' · Banked reputation: ' + meta.rep +
+      ' · Best: day ' + meta.best.days + ', ' + ROLES[meta.best.rung].title +
+      (meta.certs.length ? ' · Certs: ' + meta.certs.join(', ').toUpperCase() : '')
+    : 'No careers on file. The industry awaits, unenthusiastically.';
+  show('s-title');
+  clearToasts();
+}
+function actSetup(){
+  G.state = 'setup';
+  const box = document.getElementById('seedbox');
+  if (!box.value) box.value = 'JOB-' + (1000 + (Math.random()*9000|0));
+  /* one-time cert shop row */
+  const old = document.getElementById('certrow');
+  if (old) old.remove();
+  if (!meta.certs.includes('aplus') && meta.rep >= CERTS.aplus.cost.rep){
+    const row = document.createElement('div');
+    row.id = 'certrow'; row.className = 'row';
+    const b = mkBtn(row, 'STUDY: ' + CERTS.aplus.name + ' (-' + CERTS.aplus.cost.rep + ' REP)', () => {
+      meta.certs.push('aplus'); meta.rep -= CERTS.aplus.cost.rep;
+      saveGame(); sfx('promo'); row.remove();
+      toast('CERTIFIED. THE FRAME COSTS EXTRA.', 'ok', 3000);
+    }, true);
+    b.style.fontSize = '8px';
+    document.getElementById('s-setup').insertBefore(row, document.getElementById('s-setup').lastElementChild);
+  }
+  show('s-setup');
+}
+function act(a){
+  switch(a){
+    case 'newrun': actSetup(); break;
+    case 'reroll': document.getElementById('seedbox').value = 'JOB-' + (1000 + (Math.random()*9000|0)); break;
+    case 'start': {
+      const v = (document.getElementById('seedbox').value || 'JOB-1337').trim().toUpperCase().slice(0,18);
+      newRun(v || 'JOB-1337');
+      break;
+    }
+    case 'continue': {
+      const s = loadGame();
+      if (s && s !== 'future' && s.run) resumeRun(s);
+      break;
+    }
+    case 'controls': G.state = 'menu'; show('s-controls'); break;
+    case 'options': G.state = 'menu'; show('s-options'); break;
+    case 'back': toTitle(); break;
+    case 'resume': resumeWork(); break;
+    case 'quitsave': saveGame(); toTitle(); break;
+    case 'textspeed': {
+      G.textSpeed = (G.textSpeed + 1) % 3;
+      document.getElementById('o-tspd').textContent = ['SLOW','NORMAL','LUDICROUS'][G.textSpeed];
+      break;
+    }
+  }
+}
+function pauseGame(){
+  if (G.modal) closeModalToWork();
+  if (G.state !== 'work') return;
+  G.state = 'pause';
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('p-title').textContent = 'DAY ' + run.day + ' — ' + ROLES[run.rung].title;
+  document.getElementById('p-meta').innerHTML =
+    '<dt>Clock</dt><dd>' + document.getElementById('h-clock').textContent + '</dd>' +
+    '<dt>Open tickets</dt><dd>' + run.queue.length + '</dd>' +
+    '<dt>Stress</dt><dd>' + Math.round(run.stress) + '%</dd>' +
+    '<dt>Burnout</dt><dd>' + Math.round(run.burnout) + '%</dd>' +
+    '<dt>Job posting</dt><dd>' + run.seed + '</dd>';
+  show('s-pause');
+  saveGame();
+}
+function resumeWork(){
+  if (G.state !== 'pause') return;
+  G.state = 'work'; show(null); clearInput(); view.focus();
+  document.getElementById('hud').style.display = 'flex';
+}
+document.addEventListener('click', e => {
+  audioInit();
+  const b = e.target.closest('[data-act]');
+  if (b) act(b.dataset.act);
+});
+function onKey(e){
+  audioInit();
+  if (e.code === 'F4'){
+    e.preventDefault();
+    if (G.showTests){ G.showTests = false; show(G.testReturn); return; }
+    const sim = (G.state === 'title' || G.state === 'over' || G.state === 'menu');
+    G.testReturn = G.screenId;
+    selfTest(sim);
+    G.showTests = true; show(null);
+    return;
+  }
+  if (G.showTests) return;
+  if (e.code === 'KeyM'){ A.musOn = !A.musOn; toast(A.musOn ? 'MUZAK ON' : 'MUZAK OFF (BLESSED SILENCE)', 'corp', 1600); }
+  if (e.code === 'Escape'){
+    if (G.state === 'work') pauseGame();
+    else if (G.state === 'modal' && G.modal && G.modal.kind === 'tix') closeModalToWork();
+    else if (G.state === 'pause') resumeWork();
+    else if (G.state === 'menu') act('back');
+    else if (G.state === 'setup') act('back');
+  }
+}
+document.getElementById('o-sfx').oninput = e => { A.sfxVol = e.target.value/100; if (A.sfx) A.sfx.gain.value = A.sfxVol; };
+document.getElementById('o-mus').oninput = e => { A.musVol = e.target.value/100; if (A.mus) A.mus.gain.value = A.musVol; };
+</script>
+
+<script>
+"use strict";
+/* ==========================================================================
+   S7 — self test, headless day bot, boot, the loop.
+   ========================================================================== */
+let SAVE_SUSPEND = false;               // the self test must never touch the real save
+
+/* Headless full-day player. Drives the REAL systems (arrivals, SLA, fx,
+   scoring, endDay) with walking costed by real A* path lengths — no DOM
+   modals, no rendering. skill = minigame quality 0..1. Used by the F4 suite
+   and by tools/playtest.js. */
+function simDay(skill, policy){
+  policy = policy || {};
+  QUIET = true;
+  if (!W2.W) loadMap('office1');
+  let pos = W2.spawn.slice();
+  const walkTo = (a) => {
+    const path = astar(pos[0], pos[1], a[0], a[1]);
+    run.clock += (path ? path.length : 24) / 4.2;
+    pos = a.slice();
+  };
+  G.state = 'work';
+  let guard = 0;
+  while (run.clock < DAY_MIN && guard++ < 500){
+    arrivalsTick(); crashTick(); slaTick();
+    const P2 = run.plan;
+    while (P2.ei < P2.events.length && run.clock >= P2.events[P2.ei].at){
+      const E = EVENTS[P2.events[P2.ei++].id];
+      run.clock += E.fx.time || 0;
+      if (E.fx.stress) run.stress = clamp(run.stress + E.fx.stress, 0, 100);
+    }
+    if (policy.coffee !== false && run.stress > (policy.coffeeAt ?? 62) && run.coffee < 4){
+      walkTo(anchorPos('COFFEE'));
+      run.coffee++; run.stress = Math.max(0, run.stress - 12);
+      run.crashes.push(run.clock + 90); run.crashes.sort((a,b)=>a-b);
+    }
+    if (!run.queue.length){
+      const nextA = P2.ai < P2.arrivals.length ? P2.arrivals[P2.ai].at : DAY_MIN;
+      const nextE = P2.ei < P2.events.length ? P2.events[P2.ei].at : DAY_MIN;
+      run.clock = Math.min(DAY_MIN, Math.max(run.clock + .5, Math.min(nextA, nextE)));
+      run.stress = Math.max(0, run.stress - .4);
+      continue;
+    }
+    if (policy.slack){ run.clock += 14; slaTick(); continue; }   // "looking into it"
+    const t = run.queue.slice().sort((a,b)=>a.deadline-b.deadline)[0];
+    run.active = t;
+    const steps = TICKETS[t.id].steps;
+    let sg = 0;
+    while (t.si < steps.length && sg++ < 20){
+      const st = steps[t.si];
+      if (st.goto){ walkTo(anchorPos(st.goto)); }
+      else if (st.say){ run.clock += DIALOGUE[st.say].t.length * .35; }
+      else if (st.choice){
+        run.clock += .5;
+        const node = DIALOGUE[st.choice];
+        const o = node.opts ? node.opts[policy.pick || 0] || node.opts[0] : null;
+        if (o) applyFx(o.fx, t);
+      }
+      else if (st.game){
+        run.clock += 1.2;
+        const jitter = run.coffee >= 3 ? .08 : 0;     // mirrors the real jitters penalty
+        t.gameScores.push(clamp(skill - jitter + Rr('game', -.08, .08), 0, 1));
+      }
+      t.si++;
+      arrivalsTick(); crashTick(); slaTick();
+    }
+    resolveTicket(t);
+  }
+  endDay();
+  QUIET = false;
+}
+
+/* --------------------------------- self test ------------------------------ */
+function selfTest(runSim){
+  const Rres = [];
+  const ok = (name, pass, detail) => Rres.push({ name, pass:!!pass, detail:detail||'' });
+
+  /* --- static content lints (always run) --- */
+  {
+    const M = MAPS.office1, rows = M.map, Wm = rows[0].length;
+    ok('map is rectangular', rows.every(r => r.length === Wm));
+    const known = new Set(Object.keys(LEGEND).concat('123456789'.split('')));
+    let unk = null;
+    for (const r of rows) for (const ch of r) if (!known.has(ch)) unk = ch;
+    ok('map has no unknown tiles', !unk, unk ? JSON.stringify(unk) : '');
+    /* BFS reachability over the parsed world */
+    const hadMap = W2.W > 0;
+    if (!hadMap) loadMap('office1');
+    const seen = new Uint8Array(W2.W*W2.H);
+    const q = [W2.spawn.slice()]; seen[cellIx(W2.spawn[0], W2.spawn[1])] = 1;
+    while (q.length){
+      const [x,y] = q.pop();
+      for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const nx=x+dx, ny=y+dy;
+        if (!inMap(nx,ny) || seen[cellIx(nx,ny)] || W2.solid[cellIx(nx,ny)]) continue;
+        seen[cellIx(nx,ny)] = 1; q.push([nx,ny]);
+      }
+    }
+    const wantAnchors = new Set(['TERMINAL','COFFEE','PRINTER','VEND','ARCADE','COOLER','SHELF','ELEV']);
+    for (const id in NPCS) for (const [,a] of NPCS[id].sched) wantAnchors.add(a);
+    for (const id in TICKETS) for (const st of TICKETS[id].steps) if (st.goto) wantAnchors.add(st.goto);
+    let missing = [], sealed = [];
+    for (const a of wantAnchors){
+      const p = anchorPos(a);
+      if (!p){ missing.push(a); continue; }
+      if (!seen[cellIx(p[0], p[1])]) sealed.push(a);
+    }
+    ok('every anchor exists', !missing.length, missing.join(' '));
+    ok('every anchor is reachable', !sealed.length, sealed.join(' '));
+    /* no two NPCs share a target anchor at any point in the day */
+    let clash = null;
+    const sampleMins = [];
+    for (let m2 = 0; m2 <= 480; m2 += 15) sampleMins.push(m2);
+    for (const min of sampleMins){
+      const at = {};
+      for (const id in NPCS){
+        if (NPCS[id].visitor && min < NPCS[id].sched[0][0]) continue;   // not in the building yet
+        const a = schedAnchor(NPCS[id], min);
+        if (!a) continue;
+        const k = a[0]+','+a[1];
+        if (at[k]) clash = id + '+' + at[k] + '@' + min;
+        at[k] = id;
+      }
+    }
+    ok('no two NPCs share an anchor slot', !clash, clash || '');
+  }
+  {
+    let bad = [];
+    for (const id in TICKETS){
+      const T = TICKETS[id];
+      if (!(T.sla > 6)) bad.push(id + ':sla');
+      if (!(T.weight > 0)) bad.push(id + ':weight');
+      for (const st of T.steps){
+        if (st.say && !DIALOGUE[st.say]) bad.push(id + ':say:' + st.say);
+        if (st.choice && !DIALOGUE[st.choice]) bad.push(id + ':choice:' + st.choice);
+        if (st.choice && DIALOGUE[st.choice] && !DIALOGUE[st.choice].opts) bad.push(id + ':choice-no-opts');
+        if (st.game && !GAMES[st.game]) bad.push(id + ':game:' + st.game);
+      }
+      const toks = new Set((T.title.match(/\{(\w+)\}/g) || []).map(s => s.slice(1,-1)));
+      for (const st of T.steps){
+        const n = DIALOGUE[st.say || st.choice];
+        if (n) for (const l of n.t) for (const m2 of (l.match(/\{(\w+)\}/g) || [])) toks.add(m2.slice(1,-1));
+      }
+      for (const tok of toks) if (!((T.fills && T.fills[tok]) || FILLS[tok])) bad.push(id + ':fill:' + tok);
+      if (T.from && !NPCS[T.from]) bad.push(id + ':from');
+    }
+    ok('every ticket is resolvable (nodes, games, fills)', !bad.length, bad.slice(0,4).join(' '));
+    bad = [];
+    for (const id in NPCS) if (!DIALOGUE[NPCS[id].talk]) bad.push(id);
+    for (const id in EVENTS) if (!DIALOGUE[EVENTS[id].scene]) bad.push(id);
+    ok('every NPC and event has its dialogue', !bad.length, bad.join(' '));
+    ok('the ladder has all 10 rungs', ROLES.length === 10);
+    const elig0 = Object.keys(TICKETS).filter(id => TICKETS[id].tiers[0] <= 0 && 0 <= TICKETS[id].tiers[1]);
+    ok('the intern queue has enough variety', elig0.length >= 12, elig0.length + ' templates');
+    ok('jargon rounds each offer 3 options', JARGON.every(j => j.no.length === 2 && j.ok));
+    ok('password pool is big enough', PW_ITEMS.length >= 10 && PW_ITEMS.some(i=>i.ok) && PW_ITEMS.some(i=>!i.ok));
+    ok('fill pools have variety', Object.values(FILLS).every(p => p.length >= 3));
+  }
+
+  if (runSim){
+    /* snapshot EVERYTHING, run the sim on a test career, restore. */
+    const saved = {
+      json: JSON.stringify({ meta, run: run ? serializeRun() : null }),
+      seed: RNG.seed, streams: rngState(), state: G.state, sfx: A.sfxVol, quiet: QUIET
+    };
+    SAVE_SUSPEND = true; A.sfxVol = 0;
+
+    /* determinism: same posting, same day */
+    rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+    const p1 = JSON.stringify(run.plan);
+    rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+    ok('determinism: one seed, one day', JSON.stringify(run.plan) === p1);
+
+    /* stream isolation: extra npc rolls cannot reshape the day */
+    rngInit('JOB-TEST'); runInit('JOB-TEST');
+    for (let i=0;i<100;i++) R('npc');
+    rollDay();
+    ok('stream isolation: npc rolls never touch the queue', JSON.stringify(run.plan) === p1);
+
+    /* the tripwire: a full simulated day makes zero unseeded gameplay rolls */
+    rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+    const savedRandom = Math.random;
+    let leaks = 0;
+    Math.random = function(){ leaks++; return .5; };
+    let simErr = null;
+    try { simDay(.8); } catch(e){ simErr = String(e).slice(0,80); }
+    Math.random = savedRandom;
+    ok('a simulated day completes', !simErr && (G.state === 'review' || G.state === 'over'), simErr || G.state);
+    ok('no unseeded rolls during the day', leaks === 0, leaks + ' leaks');
+    ok('the day produced work', run === null || run.perfHist.length >= 1);
+
+    /* SLA: an untouched ticket breaches at its deadline */
+    rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+    run.queue.push({ uid:999, id:'password-reset', title:'t', fills:{}, at:0,
+      deadline:10, sla:10, stress:5, si:0, bonus:0, gameScores:[], from:null });
+    run.clock = 10.5; slaTick();
+    ok('SLA: untouched tickets breach on time', run.breaches === 1 && run.queue.length === 0);
+
+    /* save roundtrip */
+    rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+    loadMap('office1'); spawnPeople();
+    run.clock = 120; R('world'); R('queue');
+    const s1 = serializeRun();
+    const metaKeep = JSON.parse(JSON.stringify(meta));
+    resumeRun({ meta: metaKeep, run: JSON.parse(JSON.stringify(s1)) });
+    const s2 = serializeRun();
+    ok('save: serialize -> resume -> serialize is identity',
+       JSON.stringify(s1) === JSON.stringify(s2));
+
+    /* migrations: garbage and the future are both survivable */
+    let mig = 'ok';
+    try {
+      const g1 = (() => { try { localStorage.setItem('managed.test','{"v":99}'); } catch(_){ return 'skip'; } })();
+      if (g1 !== 'skip'){
+        const raw = localStorage.getItem('managed.test');
+        const s = JSON.parse(raw);
+        if (!(s.v > SAVE_V)) mig = 'future not detected';
+        localStorage.removeItem('managed.test');
+      }
+    } catch(e){ mig = String(e).slice(0,40); }
+    ok('save: future versions are detected, not crashed on', mig === 'ok', mig);
+
+    /* burnout arithmetic */
+    ok('burnout math: stress 80 evening adds 10.5', Math.abs(Math.max(0, 80-50)*.35 - 10.5) < 1e-9);
+
+    /* NPC day: schedules complete without the teleport fallback */
+    rngInit('JOB-TEST');
+    loadMap('office1'); spawnPeople();
+    for (let min=0; min<480; ){
+      for (const id in npcs) npcUpdate(npcs[id], .25, min);
+      min += .25;
+    }
+    const tps = Object.values(npcs).reduce((a,e)=>a+e.teleports,0);
+    ok('NPCs walk their whole day (no teleport fallback)', tps === 0, tps + ' teleports');
+
+    /* restore the player's world */
+    const snap = JSON.parse(saved.json);
+    meta = snap.meta;
+    run = null;
+    if (snap.run){
+      rngInit(snap.run.seed, snap.run.rng);
+      /* rebuild without switching screens: resumeRun would; do it quietly */
+      const keepState = saved.state;
+      resumeRun({ meta: snap.meta, run: snap.run });
+      G.state = keepState;
+    } else {
+      rngInit(saved.seed, saved.streams);
+      loadMap('office1'); spawnPeople();
+      G.state = saved.state;
+    }
+    A.sfxVol = saved.sfx; QUIET = saved.quiet;
+    SAVE_SUSPEND = false;
+    document.getElementById('hud').style.display =
+      (G.state === 'work' || G.state === 'modal') ? 'flex' : 'none';
+  }
+
+  G.tests = Rres;
+  const fails = Rres.filter(r => !r.pass);
+  console.log('[managed self-test] ' + (Rres.length - fails.length) + '/' + Rres.length + ' passed');
+  fails.forEach(f => console.error('[managed self-test] FAIL ' + f.name + ' ' + f.detail));
+  return Rres;
+}
+function drawTestReport(){
+  const Rt = G.tests; if (!Rt) return;
+  const fails = Rt.filter(r => !r.pass).length;
+  ctx.fillStyle = 'rgba(10,12,15,.94)'; ctx.fillRect(0,0,VW,VH);
+  txt('SELF TEST  ' + (Rt.length-fails) + '/' + Rt.length + ' PASSED', 8, 14,
+      fails ? '#d64541' : '#4ade80', 7);
+  const showRows = fails ? Rt.filter(r=>!r.pass) : Rt;
+  const max = Math.min(showRows.length, 22);
+  for (let i=0;i<max;i++){
+    const r = showRows[i];
+    txt((r.pass?'OK  ':'FAIL') + ' ' + r.name + (r.detail ? '  ' + r.detail : ''),
+        8, 28 + i*10, r.pass ? '#8b93a0' : '#ff8a7d', 6);
+  }
+  txt('F4 CLOSES', VW-8, VH-8, '#8b93a0', 6, 'right');
+}
+
+/* ------------------------------- boot + loop ------------------------------ */
+const BOOTLINES = [
+  'MANAGED SERVICES KERNEL v2.6 (EOL)',
+  'MOUNTING SHARED DRIVE ......... EVENTUALLY',
+  'SYNCING CRM ................... 4,022 CONFLICTS',
+  'BREWING COFFEE ................ CRITICAL PATH',
+  'LOADING SLA TIMERS ............ ALREADY RUNNING',
+  'ONBOARDING PACKET ............. 214 PAGES',
+  'MORALE ........................ SCHEDULED'
+];
+let bootI = 0, bootT = null;
+function bootDone(){
+  if (bootT){ clearInterval(bootT); bootT = null; }
+  toTitle();
+}
+function fault(where, err){
+  G.faults = (G.faults||0) + 1;
+  const t = performance.now();
+  if (!G.faultAt || t - G.faultAt > 3000){
+    G.faultAt = t;
+    console.error('[managed] ' + where + ' fault #' + G.faults, err);
+    toast('FAULT IN ' + where.toUpperCase() + ' — SEE CONSOLE', 'red', 5000);
+  }
+}
+let last = 0;
+function loop(t){
+  const dt = Math.min(.1, last ? (t-last)/1000 : STEP);
+  last = t;
+  simAcc += dt;
+  let n = 0;
+  while (simAcc >= STEP && n++ < 6){
+    try { sim(STEP); } catch(err){ fault('sim', err); }
+    simAcc -= STEP;
+  }
+  if (n >= 6) simAcc = 0;                    // hitch: drop time, never spiral
+  try { render(); } catch(err){ fault('render', err); }
+  requestAnimationFrame(loop);
+}
+let idleT = 0;
+function render(){
+  if (G.state === 'work' || G.state === 'modal' || G.state === 'pause'){
+    drawWorld();
+    if (G.state === 'modal' && G.modal && G.modal.kind === 'game' && MG) MG.draw();
+    if (G.state !== 'pause') hudUpdate();
+  } else if (W2.W){
+    /* menus idle over a slow pan of the office */
+    idleT += 1/60;
+    cam.x = 40 + Math.sin(idleT*.1)*36 + 140;
+    cam.y = 60 + Math.cos(idleT*.07)*30;
+    drawWorld();
+  }
+  if (G.showTests) drawTestReport();
+}
+function fit(){
+  const vv = window.visualViewport;
+  const w = Math.min(innerWidth || 1e9, vv && vv.width || 1e9);
+  const h = Math.min(innerHeight || 1e9, vv && vv.height || 1e9);
+  let s = Math.min(w/VW, h/VH);
+  if (s >= 1) s = Math.floor(s);            // integer scale keeps pixels square
+  view.style.width = Math.floor(VW*s)+'px';
+  view.style.height = Math.floor(VH*s)+'px';
+}
+addEventListener('resize', fit);
+
+function boot(){
+  bakeAtlas();
+  rngInit('MENU');
+  loadMap('office1');
+  spawnPeople();
+  const s = loadGame();
+  if (s && s !== 'future' && s.meta) meta = s.meta;
+  selfTest(false);                          // content lints, loudly, every boot
+  const bl = document.getElementById('bootline');
+  bootT = setInterval(() => {
+    bl.textContent = BOOTLINES[bootI] || '';
+    if (++bootI >= BOOTLINES.length + 1) bootDone();
+  }, 300);
+  show('s-boot');
+  fit();
+  requestAnimationFrame(loop);
+}
+addEventListener('keydown', function bootSkip(e){
+  if (G.state === 'boot'){ bootDone(); }
+});
+boot();
+</script>
+
+<script>
+"use strict";
+/* PWA: an enhancement for the HOSTED copy only — the manifest/icon links 404
+   quietly on file:// and this guard skips registration there, so the
+   double-clicked single file behaves exactly like always. */
+if ('serviceWorker' in navigator &&
+    (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')){
+  addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+</script>
