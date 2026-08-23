@@ -1623,6 +1623,7 @@ const FORGIVEN = .25;
 const BREACH_TOLERANCE = .12;
 const FIRE_GRACE = 3;          // days at the very start of a career that cannot end it
 const ACTIVE_GRACE = 10;       // minutes a ticket you are actively working may run over
+const DAY_OVERRUN = 20;        // how far past 17:00 a meeting can hold the day open
 const DAY_MIN = 480;
 /* A plain-language record of what actually happened this session. F1 shows
    it; it exists so play feedback can be about real events ("day 3, the CFO
@@ -1876,7 +1877,11 @@ function sim(dt){
       if (G.state === 'work') gotoCheck();   // workInput may have opened a modal
     }
   } else modalTick(dt);
-  if (run.clock >= DAY_MIN && G.state === 'work') endDay();
+  /* The clock deliberately keeps running inside a meeting — that is the whole
+     satire. The DAY must not: gated on 'work' alone, sitting in a dialogue at
+     16:59 held the shift open indefinitely while SLAs kept burning. It runs a
+     little over, the way they do, and then it is simply over. */
+  if (run.clock >= DAY_MIN && (G.state === 'work' || run.clock >= DAY_MIN + DAY_OVERRUN)) endDay();
   for (const k in press) press[k] = false;
 }
 
@@ -2421,7 +2426,7 @@ function serializeRun(){
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
     queue: queue.map(t => ({ uid:t.uid, id:t.id, title:t.title, fills:t.fills, at:t.at,
       deadline:t.deadline, sla:t.sla, stress:t.stress, si:t.si, bonus:t.bonus,
-      gameScores:t.gameScores, from:t.from })),
+      gameScores:t.gameScores, from:t.from, gameCap:t.gameCap })),
     px:player ? player.tx : null, py:player ? player.ty : null,
     rng: rngState() };
 }
@@ -3565,6 +3570,31 @@ function selfTest(runSim){
       /* days worked at the PREVIOUS rung must not count toward this one */
       ok('gate: only days at the current rung count',
          gateAfter(over, 1, over.length) === 1);
+    }
+    /* The abandon cap has to survive a save: without it, quitting during a
+       botched minigame and continuing laundered the attempt, which is exactly
+       the exploit the cap exists to close. */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.queue.length = 0;
+      run.queue.push({ uid:8080, id:'password-reset', title:'capped', fills:{}, at:0,
+        deadline:120, sla:60, stress:4, si:0, bonus:0, gameScores:[], from:null, gameCap:.31 });
+      const wire = serializeRun();
+      ok('save: an abandoned minigame stays capped across a reload',
+         wire.queue[0].gameCap === .31, 'cap ' + wire.queue[0].gameCap);
+    }
+    /* A meeting that runs past 17:00 must not hold the shift open forever. */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      G.state = 'modal'; G.modal = { kind:'dlg' };
+      run.clock = DAY_MIN + 1; run.queue = []; run.crashes = [];
+      sim(0); const heldOpen = G.state === 'modal';
+      run.clock = DAY_MIN + DAY_OVERRUN + 1;
+      sim(0); const closed = G.state === 'review' || G.state === 'over' || !run;
+      ok('the day ends even if you are in a meeting at 17:00', heldOpen && closed,
+         'held ' + heldOpen + ', closed ' + closed);
+      if (run){ run.pendingEnd = null; }
+      G.modal = null;
     }
     /* every ticket carries stakes, and they are the triage decision */
     {
