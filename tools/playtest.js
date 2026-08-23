@@ -27,9 +27,14 @@ async function launch() {
   await page.waitForTimeout(300);
 
   const PERSONAS = {
-    diligent: { skill:.8, policy:{} },
-    slacker: { skill:.5, policy:{ slack:true } },
-    overcaffeinated: { skill:.75, policy:{ coffeeAt:30 } },
+    /* how a thinking player actually plays: work the highest-stakes ticket
+       that is closest to breaching, and take the option that does the job */
+    diligent:  { skill:.8,  policy:{ order:'pridead', pick:'best' } },
+    /* pure earliest-deadline-first, never looks at priority — the common,
+       plausible, slightly-wrong way to play */
+    firefighter: { skill:.7, policy:{ order:'deadline' } },
+    slacker:   { skill:.5,  policy:{ slack:true } },
+    overcaffeinated: { skill:.75, policy:{ coffeeAt:30, order:'pridead' } },
   };
   for (const [name, cfg] of Object.entries(PERSONAS)) {
     const rows = [];

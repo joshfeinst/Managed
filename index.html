@@ -76,13 +76,17 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
   background:#191e24; border-bottom:1px solid var(--line);}
 #tix header .t{font-family:var(--pix); font-size:.7em; letter-spacing:.1em; color:var(--amber)}
 #tix header .hint{color:var(--dim); font-size:.8em}
-#tix .row{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
+#tix .row{display:grid; grid-template-columns:auto auto 1fr auto; gap:10px; align-items:center;
   padding:8px 12px; border-bottom:1px dotted #2a313a; cursor:pointer}
 #tix .row:hover,#tix .row.sel{background:#1c242e}
 #tix .row .id{font-family:var(--pix); font-size:.6em; color:var(--dim)}
 #tix .row .sla{font-weight:700; color:var(--ok); font-variant-numeric:tabular-nums}
 #tix .row .sla.warn{color:var(--amber)} #tix .row .sla.bad{color:var(--alert)}
 #tix .row .ttl{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+#tix .row .pri{font-family:var(--pix); font-size:.55em; letter-spacing:.06em; padding:2px 5px;
+  border:1px solid currentColor; border-radius:2px; white-space:nowrap}
+#tix .row .p1{color:#ff8a7d} #tix .row .p2{color:var(--amber)}
+#tix .row .p3{color:#8be6ff} #tix .row .p4{color:var(--dim)}
 #tix .empty{padding:18px 12px; color:var(--dim); text-align:center}
 
 .toastwrap{position:absolute; left:0; right:0; top:13%; display:flex; flex-direction:column;
@@ -736,39 +740,44 @@ function bakePortrait(look){
 /* The ladder. perf is a rolling 0..1 score of ticket outcomes; a promotion
    needs perf >= nextAt.perf held for nextAt.days consecutive days (plus the
    cert, once certs exist at higher rungs). firedBelow two days running = gone.
+   The QUEUE is deliberately flat above the intern rung: measuring it showed
+   that ramping load per rung made T2 upward unwinnable even for perfect play.
+   Climbing gets harder because the gate rises and because every ticket costs
+   more stress the higher you are — the job does not get busier, it gets
+   heavier, and burnout is what eventually ends the career.
    Only the intern rung is content-complete in the v0.1 slice; the rest of the
    ladder is real data so the systems and tests see the whole shape. */
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
-    gates:{ nextAt:{perf:.62, days:3}, firedBelow:.15, cert:null },
-    queue:{ ratePerHr:1.4, slaScale:1.0 }, deskAnchor:'TERMINAL' },
+    gates:{ nextAt:{perf:0.58, days:3}, firedBelow:0.28, cert:null },
+    queue:{ ratePerHr:3.0, slaScale:1.0 }, deskAnchor:'TERMINAL' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
-    gates:{ nextAt:{perf:.64, days:4}, firedBelow:.22, cert:null },
-    queue:{ ratePerHr:1.9, slaScale:.92 }, deskAnchor:'TERMINAL' },
+    gates:{ nextAt:{perf:0.59, days:3}, firedBelow:0.3, cert:null },
+    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
-    gates:{ nextAt:{perf:.66, days:4}, firedBelow:.25, cert:null },
-    queue:{ ratePerHr:2.3, slaScale:.86 }, deskAnchor:'TERMINAL' },
+    gates:{ nextAt:{perf:0.6, days:4}, firedBelow:0.32, cert:null },
+    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
-    gates:{ nextAt:{perf:.68, days:5}, firedBelow:.28, cert:null },
-    queue:{ ratePerHr:2.5, slaScale:.8 }, deskAnchor:'TERMINAL' },
+    gates:{ nextAt:{perf:0.61, days:4}, firedBelow:0.33, cert:null },
+    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
-    gates:{ nextAt:{perf:.72, days:5}, firedBelow:.3, cert:null },
-    queue:{ ratePerHr:2.2, slaScale:.85 }, deskAnchor:'TERMINAL' },
+    gates:{ nextAt:{perf:0.62, days:4}, firedBelow:0.34, cert:null },
+    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
-    gates:{ nextAt:{perf:.72, days:5}, firedBelow:.3, cert:null },
-    queue:{ ratePerHr:2.0, slaScale:.9 }, deskAnchor:'TERMINAL' },
+    gates:{ nextAt:{perf:0.62, days:4}, firedBelow:0.34, cert:null },
+    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:.74, days:5}, firedBelow:.32, cert:null },
-    queue:{ ratePerHr:1.9, slaScale:.9 }, deskAnchor:'TERMINAL' },
+    gates:{ nextAt:{perf:0.63, days:5}, firedBelow:0.35, cert:null },
+    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
-    gates:{ nextAt:{perf:.76, days:6}, firedBelow:.34, cert:null },
-    queue:{ ratePerHr:1.7, slaScale:.85 }, deskAnchor:'TERMINAL' },
+    gates:{ nextAt:{perf:0.64, days:5}, firedBelow:0.36, cert:null },
+    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'vcio',   title:'vCIO',          pay:135000,
-    gates:{ nextAt:{perf:.78, days:6}, firedBelow:.36, cert:null },
-    queue:{ ratePerHr:1.5, slaScale:.85 }, deskAnchor:'TERMINAL' },
+    gates:{ nextAt:{perf:0.65, days:5}, firedBelow:0.37, cert:null },
+    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
-    gates:{ nextAt:null, retireAfterDays:5, firedBelow:.38, cert:null },
-    queue:{ ratePerHr:1.4, slaScale:.9 }, deskAnchor:'TERMINAL' }
+    gates:{ nextAt:null, retireAfterDays:5, firedBelow:0.38, cert:null },
+    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' }
 ];
 
 /* Shared fill pools — every {token} in a ticket title/line resolves from here
@@ -1034,85 +1043,85 @@ const DIALOGUE = {
    sla in game-minutes (scaled by role slaScale). weight biases the draw.
    from: npc originator (else a client from FILLS is stamped on). */
 const TICKETS = {
-  'coffee-derek': { tiers:[0,0], weight:3, sla:30, stress:4, from:'derek',
+  'coffee-derek': { tiers:[0,0], weight:3, sla:30, pri:4, stress:4, from:'derek',
     title:'Coffee for DEREK before the {mtg}',
     steps:[{say:'t.cof.a'},{goto:'COFFEE'},{say:'t.cof.b'},{goto:'n1'},{say:'t.cof.c'}] },
-  'printer-jam': { tiers:[0,2], weight:3, sla:40, stress:8,
+  'printer-jam': { tiers:[0,2], weight:3, sla:40, pri:3, stress:8,
     title:'{client}: printer is printing {doc} forever',
     steps:[{say:'t.jam.a'},{goto:'PRINTER'},{game:'cable',diff:1},{say:'t.jam.b'},{choice:'t.jam.c'}] },
-  'mouse-batteries': { tiers:[0,1], weight:3, sla:34, stress:3,
+  'mouse-batteries': { tiers:[0,1], weight:3, sla:34, pri:2, stress:3,
     title:'{user}\'s mouse is "broken"',
     steps:[{say:'t.mouse.a'},{choice:'t.mouse.b'}] },
-  'monitor-input': { tiers:[0,1], weight:3, sla:26, stress:6,
+  'monitor-input': { tiers:[0,2], weight:3, sla:26, pri:3, stress:6,
     title:'{client}: monitor shows NO SIGNAL, business halted',
     steps:[{say:'t.mon.a'},{choice:'t.mon.b'}] },
-  'cable-bin': { tiers:[0,0], weight:2, sla:65, stress:3, from:'brenda',
+  'cable-bin': { tiers:[0,0], weight:2, sla:65, pri:1, stress:3, from:'brenda',
     title:'Untangle the supply-closet cable bin',
     steps:[{say:'t.tangle.a'},{goto:'SHELF'},{game:'cable',diff:1},{say:'t.tangle.b'}] },
-  'password-reset': { tiers:[0,2], weight:4, sla:30, stress:4,
+  'password-reset': { tiers:[0,2], weight:4, sla:30, pri:3, stress:4,
     title:'{user} is locked out (attempt 3 of 3)',
     steps:[{say:'t.pw.a'},{game:'pw',diff:1},{choice:'t.pw.b'}] },
-  'label-printer': { tiers:[0,1], weight:2, sla:44, stress:5,
+  'label-printer': { tiers:[0,2], weight:2, sla:44, pri:2, stress:5,
     title:'{client}: label printer speaks only wingdings',
     steps:[{say:'t.label.a'},{game:'jargon',diff:1}] },
-  'shadow-raj': { tiers:[0,0], weight:2, sla:55, stress:2, from:'raj',
+  'shadow-raj': { tiers:[0,0], weight:2, sla:55, pri:1, stress:2, from:'raj',
     title:'Shadow RAJ on a live T1 call',
     steps:[{goto:'n2'},{say:'t.shadow.a'},{game:'jargon',diff:1},{say:'t.shadow.b'}] },
-  'asset-tags': { tiers:[0,0], weight:2, sla:75, stress:2, from:'linda',
+  'asset-tags': { tiers:[0,0], weight:2, sla:75, pri:1, stress:2, from:'linda',
     title:'Asset-tag 14 new laptops',
     steps:[{goto:'SHELF'},{say:'t.tags.a'}] },
-  'fax-machine': { tiers:[0,2], weight:2, sla:36, stress:7,
+  'fax-machine': { tiers:[0,3], weight:2, sla:36, pri:3, stress:7,
     title:'{client}: THE FAX MACHINE (yes, still)',
     steps:[{say:'t.fax.a'},{game:'cable',diff:2},{say:'t.fax.b'}] },
-  'ceo-kid': { tiers:[0,1], weight:1, sla:65, stress:6,
+  'ceo-kid': { tiers:[0,3], weight:1, sla:65, pri:4, stress:6,
     title:'CEO\'s kid\'s laptop: 47 toolbars',
     steps:[{choice:'t.kid.a'},{game:'pw',diff:2}] },
-  'crm-update': { tiers:[0,1], weight:2, sla:85, stress:5, from:'linda',
+  'crm-update': { tiers:[0,2], weight:2, sla:85, pri:1, stress:5, from:'linda',
     title:'Update the CRM ("all of it")',
     steps:[{choice:'t.crm.a'}] },
-  'donut-run': { tiers:[0,0], weight:2, sla:26, stress:3, from:'brenda',
+  'donut-run': { tiers:[0,0], weight:2, sla:26, pri:2, stress:3, from:'brenda',
     title:'Donuts before the client tour',
     steps:[{say:'t.donut.a'},{goto:'VEND'},{say:'t.donut.b'},{goto:'n6'}] },
-  'water-cooler': { tiers:[0,1], weight:2, sla:48, stress:3,
+  'water-cooler': { tiers:[0,2], weight:2, sla:48, pri:1, stress:3,
     title:'The water cooler is making The Noise',
     steps:[{goto:'COOLER'},{say:'t.cool.a'},{game:'cable',diff:1},{say:'t.cool.b'}] },
-  'quick-question': { tiers:[0,2], weight:3, sla:33, stress:5,
+  'quick-question': { tiers:[0,3], weight:3, sla:33, pri:2, stress:5,
     title:'{user} has a "quick question"',
     steps:[{choice:'t.quick.a'}] },
-  'conference-tv': { tiers:[0,2], weight:2, sla:24, stress:9, from:'mackenzie',
+  'conference-tv': { tiers:[0,3], weight:2, sla:24, pri:4, stress:9, from:'mackenzie',
     title:'Conference TV won\'t mirror — demo in 5',
     steps:[{say:'t.tv.a'},{goto:'CONF'},{game:'cable',diff:2},{say:'t.tv.b'}] },
-  'spam-filter': { tiers:[0,2], weight:2, sla:52, stress:5,
+  'spam-filter': { tiers:[0,3], weight:2, sla:52, pri:2, stress:5,
     title:'{client}: spam filter has chosen chaos',
     steps:[{say:'t.spam.a'},{game:'jargon',diff:2}] },
-  'server-shelf': { tiers:[0,0], weight:2, sla:44, stress:3, from:'derek',
+  'server-shelf': { tiers:[0,2], weight:2, sla:44, pri:1, stress:3, from:'derek',
     title:'Restock the server-room shelf (touch NOTHING)',
     steps:[{say:'t.shelf.a'},{goto:'SERVERS'},{say:'t.shelf.b'}] },
-  'onboard-newhire': { tiers:[0,1], weight:2, sla:60, stress:6, from:'linda',
+  'onboard-newhire': { tiers:[0,2], weight:2, sla:60, pri:3, stress:6, from:'linda',
     title:'New hire Monday; nothing is provisioned',
     steps:[{say:'t.onb.a'},{game:'pw',diff:2}] },
-  'thermostat': { tiers:[0,1], weight:2, sla:56, stress:4,
+  'thermostat': { tiers:[0,2], weight:2, sla:56, pri:2, stress:4,
     title:'Floor is 61°F; accounting is mutinous',
     steps:[{say:'t.therm.a'},{goto:'n6'},{choice:'t.therm.b'}] },
-  'boat-email': { tiers:[0,2], weight:2, sla:30, stress:7,
+  'boat-email': { tiers:[0,3], weight:2, sla:30, pri:3, stress:7,
     title:'{client}: the owner cannot get email. On his boat.',
     steps:[{say:'t.vip.a'},{choice:'t.vip.b'}] },
-  'comms-cupboard': { tiers:[0,1], weight:2, sla:50, stress:6, from:'derek',
+  'comms-cupboard': { tiers:[0,2], weight:2, sla:50, pri:2, stress:6, from:'derek',
     title:'{client} "tidied" the comms cupboard. With scissors.',
     steps:[{say:'t.wire.a'},{goto:'SERVERS'},{game:'cable',diff:2},{say:'t.wire.b'}] },
-  'shared-drive': { tiers:[0,2], weight:3, sla:34, stress:8,
+  'shared-drive': { tiers:[0,3], weight:3, sla:34, pri:4, stress:8,
     title:'{user} deleted the shared drive. The shared one.',
     steps:[{say:'t.share.a'},{game:'pw',diff:1},{choice:'t.share.b'}] },
-  'mfa-off': { tiers:[0,2], weight:2, sla:40, stress:6,
+  'mfa-off': { tiers:[0,3], weight:2, sla:40, pri:1, stress:6,
     title:'{client} would like MFA turned off, please',
     steps:[{say:'t.mfa.a'},{goto:'n8'},{choice:'t.mfa.b'}] },
-  'scanner-ghost': { tiers:[0,1], weight:2, sla:36, stress:4, from:'brenda',
+  'scanner-ghost': { tiers:[0,2], weight:2, sla:36, pri:2, stress:4, from:'brenda',
     title:'The scanner emails PDFs to someone who left in 2019',
     steps:[{say:'t.scan.a'},{game:'jargon',diff:1},{say:'t.scan.b'}] },
-  'ups-beeping': { tiers:[0,1], weight:2, sla:38, stress:5,
+  'ups-beeping': { tiers:[0,3], weight:2, sla:38, pri:2, stress:5,
     title:'Something in the cage is beeping (nobody knows how long)',
     steps:[{say:'t.ups.a'},{goto:'SERVERS'},{say:'t.ups.b'},{game:'cable',diff:1}] },
-  'arcade-dark': { tiers:[0,1], weight:1, sla:65, stress:2,
+  'arcade-dark': { tiers:[0,1], weight:1, sla:65, pri:1, stress:2,
     title:'Break-room arcade is dark; morale -3%',
     steps:[{say:'t.arc.a'},{goto:'ARCADE'},{game:'cable',diff:1},{say:'t.arc.b'}] }
 };
@@ -1576,7 +1585,18 @@ const G = { state:'boot', screenId:'s-boot', textSpeed:1, faults:0, tests:null, 
    debt of cups past the second, and what an unmetabolised crash costs at
    17:00. The self-tests assert endDay against THESE, so retuning can never
    silently drift from the invariants that guard it. */
-const BURN = { entropy:1.1, thresh:55, rate:.35, sleepDebt:2.2, freeCups:2, crashStress:8 };
+/* Every balance number the burnout economy reads, in one place, so a retune
+   cannot drift away from the self-tests guarding it. night/weekend are the
+   overnight stress carry: the pillar is that STRESS mostly resets and BURNOUT
+   does not, and at a .55 carry it did not — you woke at 47/100 every morning
+   and the treadmill, not your play, decided the career. */
+const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.2, freeCups:3,
+               crashStress:8, night:.40, weekend:.22, weekendRelief:4 };
+/* Share of a day's arrivals you may let burn before it counts against you.
+   The day deliberately holds more work than fits: triage IS the job, and the
+   first casualties are expected rather than punished. */
+const BREACH_TOLERANCE = .12;
+const FIRE_GRACE = 3;          // days at the very start of a career that cannot end it
 const DAY_MIN = 480;
 /* A plain-language record of what actually happened this session. F1 shows
    it; it exists so play feedback can be about real events ("day 3, the CFO
@@ -1598,7 +1618,8 @@ function runInit(seed){
   run = { seed, day:1, rung:0, clock:0, perfHist:[], gateStreak:0, firedStreak:0,
           stress:20, coffee:0, crashes:[], burnout:0, rep:meta.certs.length ? 1 : 0,
           queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[], pendingScenes:[], seen:{},
-          scores:[], breaches:0, resolved:0, aces:0, daysAtTop:0, satOn:{}, promoted:false };
+          scores:[], breaches:0, resolved:0, aces:0, daysAtTop:0, satOn:{}, promoted:false,
+          burned:[], earned:0, stakesDone:0 };
   for (const p in PERKS) if (metaHasPerk(p)) run.rep += PERKS[p].fx.rep || 0;
 }
 function newRun(seed){
@@ -1697,6 +1718,7 @@ function startCommute(){
   run.phase = 'work';
   run.clock = 0; run.queue = []; run.active = null; run.marker = null;
   run.scores = []; run.breaches = 0; run.resolved = 0; run.aces = 0;
+  run.burned = []; run.earned = 0; run.stakesDone = 0;
   run.speedSum = 0; run.qualSum = 0;
   run.coffee = 0; run.crashes = []; run.satOn = {}; run.pendingEvents = [];
   rollDay();
@@ -1818,11 +1840,16 @@ function slaTick(){
     if (run.active === t) continue;                  // a ticket in hand cannot silently breach
     if (run.clock > t.deadline){
       run.queue.splice(i,1);
-      run.scores.push(0); run.breaches++;
-      run.stress = clamp(run.stress + t.stress, 0, 100);
-      slog('BREACHED: ' + t.title);
+      const pri = TICKETS[t.id].pri || 2;
+      run.scores.push(0); run.breaches++; run.burned.push(pri);
+      /* Dropping tickets is the job now, so a breach cannot cost a flat panic
+         attack — the day is oversubscribed on purpose and that pegged stress
+         at 100 by lunchtime. What it costs tracks what you dropped, exactly
+         like the score does: letting the P4 burn is cheap in both currencies. */
+      run.stress = clamp(run.stress + t.stress * (.30 + .25*pri), 0, 100);
+      slog('BREACHED (P' + (5-pri) + '): ' + t.title);
       sfx('breach');
-      toast('SLA BREACH — ' + t.title.toUpperCase().slice(0,40), 'red', 3400);
+      toast('SLA BREACH P' + (5-pri) + ' — ' + t.title.toUpperCase().slice(0,38), 'red', 3400);
     }
   }
 }
@@ -1949,7 +1976,12 @@ function renderQueue(){
     run.queue.forEach(t => {
       const row = document.createElement('div');
       row.className = 'row';
+      /* Priority is the whole triage decision, so it is the first thing on
+         the row — and it is the office's priority, not the technically
+         correct one. That is the joke and also the skill. */
+      const pn = 5 - (TICKETS[t.id].pri || 2);
       row.innerHTML = '<span class="id">#' + (10000 + t.uid) + '</span>' +
+        '<span class="pri p' + pn + '">P' + pn + '</span>' +
         '<span class="ttl">' + t.title + (t.si > 0 ? ' <span style="color:var(--corp)">(in progress)</span>' : '') + '</span>' +
         '<span class="sla"></span>';
       row.onclick = () => {
@@ -2017,15 +2049,27 @@ function resolveTicket(t){
   const r = clamp((t.deadline - run.clock) / t.sla, 0, 1);
   const gameAvg = t.gameScores.length
     ? t.gameScores.reduce((a,b)=>a+b,0) / t.gameScores.length : .75;
-  const score = clamp(.30 + .40*r + .25*gameAvg + .12*t.bonus, 0, 1);
+  /* Promptness SATURATES. Grading on raw SLA-remaining paid you to skim the
+     freshest ticket off the top and let the old ones burn — measurably: LIFO
+     out-scored earliest-deadline-first. Anything finished with half its window
+     to spare is equally "on time"; only cutting it fine costs you. */
+  const prompt = clamp(r * 2, 0, 1);
+  const score = clamp(.28 + .14*prompt + .38*gameAvg + .20*clamp(t.bonus,0,1), 0, 1);
+  const stakes = TICKETS[t.id].pri || 2;
   run.speedSum = (run.speedSum || 0) + r;
   run.qualSum = (run.qualSum || 0) + gameAvg;
+  run.earned = (run.earned || 0) + stakes * score;
+  run.stakesDone = (run.stakesDone || 0) + stakes;
   run.scores.push(score); run.resolved++;
   if (score >= .8) run.aces++;
   /* work costs something: each ticket leaves residue, heavier as the stakes
      rise with rank — this is what eventually burns a career down */
-  run.stress = clamp(run.stress + t.stress*(.45 + run.rung*.10) - 2.2, 0, 100);
-  slog('resolved ' + Math.round(score*100) + '%: ' + t.title +
+  /* Per-ticket residue, and the rung ramp on it, are PER TICKET — so they were
+     silently multiplied when the day went from ~7 tickets to ~18. Measured, the
+     old numbers made resolving cost +15 stress a day at T1 alone and ended every
+     career there. The ramp survives; its slope now assumes a full queue. */
+  run.stress = clamp(run.stress + t.stress*(.22 + run.rung*.05) - 1.1, 0, 100);
+  slog('resolved ' + Math.round(score*100) + '% (P' + (5-stakes) + '): ' + t.title +
        (t.gameScores.length ? ' (craft ' + Math.round(gameAvg*100) + '%)' : ''));
   run.active = null; run.marker = null;
   if (G.modal) closeModalToWork();
@@ -2046,13 +2090,31 @@ function endDay(){
      otherwise, since the day ends before its crash ever lands */
   if (run.crashes.length) run.stress = clamp(run.stress + run.crashes.length * BURN.crashStress, 0, 100);
   /* anything still open rolls into the void; unworked queue counts against you */
-  for (const t of run.queue){ run.scores.push(0); run.breaches++; }
+  for (const t of run.queue){ run.scores.push(0); run.breaches++; run.burned.push(TICKETS[t.id].pri || 2); }
   run.queue = [];
-  const dayPerf = run.scores.length
-    ? run.scores.reduce((a,b)=>a+b,0) / run.scores.length : .5;
+  /* An oversubscribed day cannot be cleared, and grading the mean over every
+     ticket that existed would just mean everyone fails. What is graded is the
+     work you took (its quality) against a fair expectation of how much a day
+     holds — with the first few casualties forgiven, because triage is the job.
+     Breaches beyond that tolerance dilute the average, so WHICH tickets you
+     let burn is the decision the day is really asking about. */
+  const arrived = run.resolved + run.breaches;
+  const tolerance = Math.max(2, Math.round(arrived * BREACH_TOLERANCE));
+  /* Forgiveness goes to the CHEAPEST casualties, lowest priority first. You
+     are allowed to drop tickets — you are not allowed to choose badly which. */
+  const burned = run.burned.slice().sort((a,b) => a - b);
+  const costly = burned.slice(tolerance);
+  const burnedStakes = costly.reduce((a,b) => a+b, 0);
+  const denom = Math.max(1, (run.stakesDone || 0) + burnedStakes);
+  const dayPerf = arrived ? clamp((run.earned || 0) / denom, 0, 1) : .5;
+  /* the review has to be able to explain the number it just showed you */
+  run.lastScore = { tolerance, forgiven: Math.min(run.breaches, tolerance),
+                    costly: costly.length,
+                    worst: costly.length ? 5 - Math.max.apply(null, costly) : null };
   run.perfHist.push(dayPerf);
   slog('END OF DAY — perf ' + Math.round(dayPerf*100) + '%, ' + run.resolved + ' resolved, ' +
-       run.breaches + ' breached, stress ' + Math.round(run.stress) + ', burnout ' + Math.round(run.burnout) + '%');
+       run.breaches + ' breached (' + (run.breaches - Math.min(run.breaches, tolerance)) +
+       ' beyond tolerance), stress ' + Math.round(run.stress) + ', burnout ' + Math.round(run.burnout) + '%');
   const eod = run.stress;
   /* burnout = the bad evenings, plus plain career entropy: even a perfect run
      ends eventually — promotion outraces it or it wins. That's the roguelite. */
@@ -2060,12 +2122,17 @@ function endDay(){
                       + Math.max(0, run.coffee - BURN.freeCups) * BURN.sleepDebt, 0, 100);
   /* the weekend, technically — every fifth day the body claws a little back */
   const weekend = run.day % 5 === 0;
-  run.stress = Math.round(run.stress * (weekend ? .3 : .55));
-  if (weekend) run.burnout = Math.max(0, run.burnout - 4);
+  run.stress = Math.round(run.stress * (weekend ? BURN.weekend : BURN.night));
+  if (weekend) run.burnout = Math.max(0, run.burnout - BURN.weekendRelief);
   const role = ROLES[run.rung];
   /* gates */
   let promo = false, fired = false;
   if (dayPerf < role.gates.firedBelow) run.firedStreak++; else run.firedStreak = 0;
+  /* Nobody fires the new intern in week one — they have not learned your name.
+     Two fumbled days at the very start of a career is a tutorial, not a
+     performance problem, and being fired on day two is where a first player
+     puts the game down. The grace covers the opening days only. */
+  if (run.day <= FIRE_GRACE) run.firedStreak = 0;
   if (role.gates.nextAt){
     if (dayPerf >= role.gates.nextAt.perf) run.gateStreak++; else run.gateStreak = 0;
     if (run.gateStreak >= role.gates.nextAt.days){ promo = true; }
@@ -2086,7 +2153,9 @@ function endDay(){
     G.state = 'review'; show('s-review'); saveGame();
     return;
   }
-  if (promo){ run.rung++; run.rep += 2; run.gateStreak = 0; run.promoted = true;
+  /* a promotion is a clean slate: you do not carry yesterday's warning into
+     a job you just earned */
+  if (promo){ run.rung++; run.rep += 2; run.gateStreak = 0; run.firedStreak = 0; run.promoted = true;
     slog('PROMOTED to ' + ROLES[run.rung].title); sfx('promo'); }
   G.state = 'review';
   show('s-review');
@@ -2112,10 +2181,16 @@ function reviewScreen(dayPerf, eod, promo, ending){
   const speed = run.resolved ? Math.round(run.speedSum / run.resolved * 100) : 0;
   const qual  = run.resolved ? Math.round(run.qualSum / run.resolved * 100) : 0;
   const gate  = role0.gates.nextAt;
+  const ls    = run.lastScore;
   document.getElementById('r-stats').innerHTML =
     '<dt>Tickets resolved</dt><dd>' + run.resolved + ' (' + run.aces + ' aced)</dd>' +
     '<dt>SLA breaches</dt><dd style="color:' + (run.breaches ? 'var(--alert)' : 'var(--ok)') + '">' +
-      run.breaches + (run.breaches ? ' — each scores zero' : '') + '</dd>' +
+      run.breaches + (ls && run.breaches
+        ? ' — ' + ls.forgiven + ' written off as triage' +
+          (ls.costly ? ', ' + ls.costly + ' held against you' +
+            (ls.worst ? ' (worst: a P' + ls.worst + ')' : '')
+                      : ', none held against you')
+        : '') + '</dd>' +
     '<dt>Speed</dt><dd>' + speed + '% SLA left when you closed them</dd>' +
     '<dt>Craft</dt><dd>' + qual + '% on the hands-on bits</dd>' +
     '<dt>Performance</dt><dd>' + Math.round(dayPerf*100) + '% — ' + perfName(dayPerf) + '</dd>' +
@@ -2182,8 +2257,18 @@ function careerOver(kind){
 }
 
 /* ------------------------------- save / load ------------------------------ */
-const SAVE_KEY = 'managed.save', SAVE_V = 1;
-const MIGRATIONS = {};   // v -> fn(save) mutating up one version
+const SAVE_KEY = 'managed.save', SAVE_V = 2;
+const MIGRATIONS = {
+  /* v1 -> v2: the day score became stakes-weighted. A v1 save has quality
+     scores but no stakes ledger, so rebuild one at the neutral weight — the
+     resumed day grades the same as it would have under v1. */
+  1(s){
+    const r = s.run; if (!r) return;
+    r.stakesDone = (r.resolved || 0) * 2;
+    r.earned = (r.scores || []).reduce((a,b) => a+b, 0) * 2;
+    r.burned = new Array(r.breaches || 0).fill(2);
+  }
+};   // v -> fn(save) mutating up one version
 function saveGame(){
   if (typeof SAVE_SUSPEND !== 'undefined' && SAVE_SUSPEND) return;   // self test never touches the real save
   try {
@@ -2197,6 +2282,7 @@ function serializeRun(){
     perfHist:run.perfHist, gateStreak:run.gateStreak, firedStreak:run.firedStreak,
     stress:run.stress, coffee:run.coffee, crashes:run.crashes, burnout:run.burnout,
     rep:run.rep, uid:run.uid, scores:run.scores, breaches:run.breaches,
+    burned:run.burned || [], earned:run.earned || 0, stakesDone:run.stakesDone || 0,
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
     introDone: !!run.introDone, seen: run.seen || {},
@@ -2230,6 +2316,7 @@ function resumeRun(s){
     queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
     pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone,
     seen: r.seen || {}, scores:r.scores,
+    burned: r.burned || [], earned: r.earned || 0, stakesDone: r.stakesDone || 0,
     breaches:r.breaches, resolved:r.resolved,
     aces:r.aces, daysAtTop:r.daysAtTop, satOn:r.satOn || {}, promoted:r.promoted,
     phase:r.phase || 'work', pendingEnd: r.pendingEnd || null };
@@ -2901,6 +2988,20 @@ let SAVE_SUSPEND = false;               // the self test must never touch the re
    scoring, endDay) with walking costed by real A* path lengths — no DOM
    modals, no rendering. skill = minigame quality 0..1. Used by the F4 suite
    and by tools/playtest.js. */
+/* Dialogue choices are the other half of the day's judgement, so the headless
+   player needs to be able to make them well or badly on purpose — 'best' takes
+   the option that buys quality (bonus, then reputation, then calm), 'worst'
+   takes the one that ducks the work. An index still means that literal option. */
+function botPick(node, policy){
+  if (!node || !node.opts || !node.opts.length) return null;
+  const p = policy && policy.pick;
+  const val = o => [((o.fx&&o.fx.bonus)||0), ((o.fx&&o.fx.rep)||0), -((o.fx&&o.fx.stress)||0)];
+  const cmp = (a,b) => { const x=val(a), y=val(b);
+    return (y[0]-x[0]) || (y[1]-x[1]) || (y[2]-x[2]); };
+  if (p === 'best')  return node.opts.slice().sort(cmp)[0];
+  if (p === 'worst') return node.opts.slice().sort((a,b)=>cmp(b,a))[0];
+  return node.opts[p || 0] || node.opts[0];
+}
 function simDay(skill, policy){
   policy = policy || {};
   QUIET = true;
@@ -2921,9 +3022,17 @@ function simDay(skill, policy){
     arrivalsTick(); crashTick(); slaTick();
     const P2 = run.plan;
     while (P2.ei < P2.events.length && run.clock >= P2.events[P2.ei].at){
-      const E = EVENTS[P2.events[P2.ei++].id];
+      const eid = P2.events[P2.ei++].id, E = EVENTS[eid];
+      slog('event: ' + eid + (E.fx.time ? ' (-' + E.fx.time + ' min)' : ''));
       run.clock += E.fx.time || 0;
       if (E.fx.stress) run.stress = clamp(run.stress + E.fx.stress, 0, 100);
+      /* an event scene with choices is a decision the player makes; the bot
+         takes its policy pick and records it the same way */
+      const node = DIALOGUE[E.scene];
+      if (node && node.opts){
+        const o = botPick(node, policy);
+        if (o){ slog('chose: "' + o.t + '"'); applyFx(o.fx, null); }
+      }
     }
     if (policy.coffee !== false && run.stress > (policy.coffeeAt ?? 62) && run.coffee < 4){
       walkTo(anchorPos('COFFEE'));
@@ -2938,7 +3047,22 @@ function simDay(skill, policy){
       continue;
     }
     if (policy.slack){ run.clock += 14; slaTick(); continue; }   // "looking into it"
-    const t = run.queue.slice().sort((a,b)=>a.deadline-b.deadline)[0];
+    /* Which ticket to work next is the player's main standing decision, so it
+       has to be measurable: policy.order names the triage rule under test. */
+    const pri = t => TICKETS[t.id].pri || 2;
+    const ORDERS = {
+      deadline: (a,b) => a.deadline - b.deadline,
+      newest:   (a,b) => b.at - a.at,
+      oldest:   (a,b) => a.at - b.at,
+      shortest: (a,b) => ticketWork(TICKETS[a.id]) - ticketWork(TICKETS[b.id]),
+      longest:  (a,b) => ticketWork(TICKETS[b.id]) - ticketWork(TICKETS[a.id]),
+      slack:    (a,b) => b.deadline - a.deadline,
+      pri:      (a,b) => pri(b) - pri(a),
+      pridead:  (a,b) => pri(b) - pri(a) || a.deadline - b.deadline,
+      deadpri:  (a,b) => a.deadline - b.deadline || pri(b) - pri(a),
+      worstpri: (a,b) => pri(a) - pri(b)
+    };
+    const t = run.queue.slice().sort(ORDERS[policy.order] || ORDERS.deadline)[0];
     run.active = t;
     const steps = TICKETS[t.id].steps;
     let sg = 0;
@@ -2953,8 +3077,8 @@ function simDay(skill, policy){
       else if (st.choice){
         run.clock += 2;
         const node = DIALOGUE[st.choice];
-        const o = node.opts ? node.opts[policy.pick || 0] || node.opts[0] : null;
-        if (o) applyFx(o.fx, t);
+        const o = botPick(node, policy);
+        if (o){ slog('chose: "' + o.t + '"'); applyFx(o.fx, t); }
       }
       else if (st.game){
         run.clock += 12;
@@ -3131,6 +3255,63 @@ function selfTest(runSim){
     } catch(e){ mig = String(e).slice(0,40); }
     ok('save: future versions are detected, not crashed on', mig === 'ok', mig);
 
+    /* Number keys must actually take a dialogue choice. Nothing covered this
+       path — the bots set the press latches directly and the day-sim never
+       touches the UI at all — so a later function declaration silently
+       overwrote pickOpt() and every choice in the game went dead, invisibly. */
+    {
+      const savedRun = run, savedDlg = dlg, savedState = G.state, savedModal = G.modal;
+      let picked = null;
+      const node = Object.keys(DIALOGUE).find(k => DIALOGUE[k].opts && DIALOGUE[k].opts.length >= 2);
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      openDlg(node, {}, () => { picked = 'done'; });
+      /* run the prose out, then take option two through the real latch */
+      for (let i = 0; i < 400 && dlg && !dlg.optsShown; i++){ press.use = true; dlgTick(.2); press.use = false; }
+      const shown = !!(dlg && dlg.optsShown);
+      if (shown){ press.two = true; dlgTick(.05); press.two = false; }
+      ok('input: number keys take a dialogue choice', shown && picked === 'done',
+         shown ? 'choice did not register' : 'options never appeared');
+      dlg = savedDlg; G.state = savedState; G.modal = savedModal; run = savedRun;
+      document.getElementById('dlg').style.display = 'none';
+    }
+    /* every ticket carries stakes, and they are the triage decision */
+    {
+      const bad = Object.keys(TICKETS).filter(id => {
+        const k = TICKETS[id].pri;
+        return !(typeof k === 'number' && k >= 1 && k <= 4);
+      });
+      ok('content: every ticket has a priority in 1..4', !bad.length, bad.join(','));
+      const spread = new Set(Object.keys(TICKETS).map(id => TICKETS[id].pri));
+      ok('content: the queue actually spans the priority range', spread.size === 4,
+         [...spread].sort().join('/'));
+    }
+    /* THE central invariant: which ticket you let burn has to change the
+       score, or triage is decoration. Same day, same work, same number of
+       breaches — only the stakes of the casualties differ. */
+    {
+      const dayScore = (burnedPris) => {
+        rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+        run.day = 2; run.clock = DAY_MIN + 1; run.queue = []; run.crashes = [];
+        run.stress = 30; run.coffee = 0;
+        run.resolved = 8; run.stakesDone = 16; run.earned = 16 * .7;
+        run.scores = new Array(8).fill(.7);
+        run.breaches = burnedPris.length; run.burned = burnedPris.slice();
+        endDay();
+        return run ? run.perfHist[run.perfHist.length-1] : null;
+      };
+      /* six casualties either way; tolerance writes off the cheapest two */
+      const cheap = dayScore([1,1,1,1,1,1]);
+      const dear  = dayScore([4,4,4,4,4,4]);
+      ok('triage: letting the P1s burn scores worse than letting the P4s burn',
+         cheap !== null && dear !== null && cheap - dear > .05,
+         'cheap ' + (cheap||0).toFixed(3) + ' vs dear ' + (dear||0).toFixed(3));
+      /* and the allowance is real: a couple of dropped P4s cost nothing */
+      const none = dayScore([]);
+      const two  = dayScore([1,1]);
+      ok('triage: the first casualties are free, because dropping tickets is the job',
+         none !== null && two !== null && Math.abs(none - two) < 1e-9,
+         'clean ' + (none||0).toFixed(3) + ' vs two-dropped ' + (two||0).toFixed(3));
+    }
     /* burnout arithmetic */
     /* assert against the IMPLEMENTATION, not against two literals: the old
        form compared 30*.35 to 10.5 and could never fail, and it named the
