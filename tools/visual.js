@@ -119,6 +119,21 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   await p.evaluate(()=>{ careerOver('burnout'); }); await p.waitForTimeout(400);
   bad += await audit('career over');
 
+  /* the minigames and the pause menu draw their own overlays too */
+  await p.evaluate(()=>{ newRun('JOB-VIS2'); clockIn(); if (G.modal) closeModalToWork(); });
+  await p.waitForTimeout(300);
+  for (const g of ['cable','pw','jargon']){
+    await p.evaluate((k)=>{ if (G.modal) closeModalToWork(); openGame(k, 1, ()=>{}); }, g);
+    await p.waitForTimeout(400);
+    bad += await audit('minigame: ' + g);
+  }
+  await p.evaluate(()=>{ if (G.modal) closeModalToWork(); pauseGame ? pauseGame() : act('pause'); });
+  await p.waitForTimeout(300);
+  bad += await audit('pause');
+  await p.evaluate(()=>{ G.state='work'; show(null); selfTest(); });
+  await p.waitForTimeout(600);
+  bad += await audit('self-test report');
+
   console.log('page errors:', errs.length ? errs.join(' | ') : 0);
   console.log(bad === 0 && !errs.length ? 'VISUAL OK' : 'VISUAL ISSUES: ' + bad);
   await b.close();
