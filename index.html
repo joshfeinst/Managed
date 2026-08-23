@@ -1698,8 +1698,9 @@ const G = { state:'boot', screenId:'s-boot', textSpeed:1, faults:0, tests:null, 
    overnight stress carry: the pillar is that STRESS mostly resets and BURNOUT
    does not, and at a .55 carry it did not — you woke at 47/100 every morning
    and the treadmill, not your play, decided the career. */
-const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.2, freeCups:3,
-               crashStress:8, night:.40, weekend:.22, weekendRelief:4, promoRelief:6 };
+const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.6, freeCups:2,
+               crashStress:8, night:.40, weekend:.22, weekendRelief:4, promoRelief:6,
+               frayed:68, wrecked:86, cup:15 };
 /* Share of a day's arrivals you may let burn before it counts against you.
    The day deliberately holds more work than fits: triage IS the job, and the
    first casualties are expected rather than punished. */
@@ -1728,6 +1729,7 @@ function repHelp(){ return Math.min(REP.maxHelp, Math.max(0, (run.rep || 0) * RE
 const ACTIVE_GRACE = 10;       // minutes a ticket you are actively working may run over
 const DAY_OVERRUN = 20;        // how far past 17:00 a meeting can hold the day open
 const MIN_SLACK = 18;          // minutes you always get to notice a ticket exists
+const ACE = .95;               // what actually counts as a job well done
 const DAY_MIN = 480;
 /* A plain-language record of what actually happened this session. F1 shows
    it; it exists so play feedback can be about real events ("day 3, the CFO
@@ -2150,7 +2152,7 @@ function interact(act){
     case 'terminal': openQueue(); break;
     case 'coffee':
       if (run.coffee >= 4){ toast('YOUR HANDS ARE ALREADY VIBRATING. THE MACHINE REFUSES.', 'red', 2600); sfx('err'); break; }
-      run.coffee++; run.stress = Math.max(0, run.stress - 12);
+      run.coffee++; run.stress = Math.max(0, run.stress - BURN.cup);
       run.crashes.push(run.clock + 90); run.crashes.sort((a,b)=>a-b);
       slog('coffee #' + run.coffee + ' (stress ' + Math.round(run.stress) + ')');
       sfx('coffee');
@@ -2336,7 +2338,7 @@ function resolveTicket(t){
   run.earned = (run.earned || 0) + stakes * score;
   run.stakesDone = (run.stakesDone || 0) + stakes;
   run.scores.push(score); run.resolved++;
-  if (score >= .8) run.aces++;
+  if (score >= ACE) run.aces++;      // .80 aced four tickets in five; it meant nothing
   /* work costs something: each ticket leaves residue, heavier as the stakes
      rise with rank — this is what eventually burns a career down */
   /* Per-ticket residue, and the rung ramp on it, are PER TICKET — so they were
@@ -2350,11 +2352,11 @@ function resolveTicket(t){
   if (G.modal) closeModalToWork();
   sfx('done');
   toast('RESOLVED ' + Math.round(score*100) + '% — ' +
-        (score >= .8 ? 'CSAT 5★ (THEY WILL NEVER FILL IT IN)' :
+        (score >= ACE ? 'CSAT 5★ (THEY WILL NEVER FILL IT IN)' :
          score >= .5 ? 'ADEQUATE' : 'TECHNICALLY') +
         '  ·  ' + Math.round(r*100) + '% SLACK LEFT' +
         (t.gameScores.length ? ', CRAFT ' + Math.round(gameAvg*100) + '%' : ''),
-        score >= .8 ? 'ok' : 'corp', 3000);
+        score >= ACE ? 'ok' : 'corp', 3000);
 }
 
 /* ------------------------------- end of day ------------------------------- */
@@ -2836,10 +2838,13 @@ function openGame(id, diff, onDone){
   let d = diff + (cert ? -1 : 0);
   if (run && run.coffee >= 3) d += 1;          // the jitters: cup four was a choice
   /* A meter that ten systems write to and nothing ever reads is decoration.
-     Stress is what the hands-on work is supposed to cost you, so past the
-     evening threshold it costs you: the work gets harder, which is the reason
-     to walk to the kitchen before the queue makes the decision for you. */
-  if (run && run.stress > BURN.thresh + 15) d += 1;
+     Stress is what the hands-on work is supposed to cost you, so it costs you:
+     frayed hands make the work a step harder, and past that it is two. Measured
+     at a single gentle step, never drinking coffee still beat every coffee
+     policy in the game — the walk and the crash were not worth avoiding
+     anything. Coffee is a loan; a loan has to be worth taking. */
+  if (run && run.stress > BURN.frayed) d += 1;
+  if (run && run.stress > BURN.wrecked) d += 1;
   MG = GAMES[id].init(Math.max(1, d));
   /* on the easiest games there is no difficulty left to remove, so the cert
      pays out as one forgiven slip instead of doing nothing at all */
@@ -3372,7 +3377,7 @@ function simDay(skill, policy){
     }
     if (policy.coffee !== false && run.stress > (policy.coffeeAt ?? 62) && run.coffee < 4){
       walkTo(anchorPos('COFFEE'));
-      run.coffee++; run.stress = Math.max(0, run.stress - 12);
+      run.coffee++; run.stress = Math.max(0, run.stress - BURN.cup);
       run.crashes.push(run.clock + 90); run.crashes.sort((a,b)=>a-b);
     }
     if (!run.queue.length){
@@ -3421,7 +3426,8 @@ function simDay(skill, policy){
         /* mirrors the real penalties: cup four, and hands that have stopped
            cooperating. Without both the sim overstates craft all afternoon. */
         const jitter = (run.coffee >= BURN.freeCups ? .08 : 0)
-                     + (run.stress > BURN.thresh + 15 ? .08 : 0);
+                     + (run.stress > BURN.frayed ? .08 : 0)
+                     + (run.stress > BURN.wrecked ? .08 : 0);
         t.gameScores.push(clamp(skill - jitter + Rr('game', -.08, .08), 0, 1));
       }
       t.si++;
@@ -4279,7 +4285,7 @@ function writeHandbook(){
     '<b>Coffee</b> takes 12 off your stress now and gives ' + BURN.crashStress +
     ' back when it crashes 90 minutes later. Past ' + BURN.freeCups +
     ' cups it also gives you the jitters — hands-on work gets harder — and costs you sleep, ' +
-    'which is burnout you keep. So does <b>stress</b> itself: above ' + (BURN.thresh + 15) +
+    'which is burnout you keep. So does <b>stress</b> itself: above ' + BURN.frayed +
     ' your hands stop cooperating, and the walk to the kitchen stops being a break and ' +
     'starts being the job. <b>Stress</b> mostly washes off overnight; anything above <b>' +
     BURN.thresh + '</b> at 5pm converts into <b>burnout</b>, which never washes off and ends ' +
