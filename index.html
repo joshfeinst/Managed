@@ -68,8 +68,13 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
 @keyframes bob{50%{transform:translateY(2px)}}
 @media (prefers-reduced-motion:reduce){#dlg .more{animation:none}}
 
+/* #frame zeroes line-height to kill the inline gap under the canvas, and every
+   DOM overlay inside it inherits that. The queue's title cell is the one cell
+   with overflow:hidden, so its glyphs were clipped by a zero-height line box
+   and every ticket title in the game rendered blank while sitting correctly in
+   the DOM. Overlays must set their own line-height. */
 #tix{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(600px,94%);
-  max-height:88%; overflow:auto; display:none; background:rgba(14,17,21,.97);
+  max-height:88%; overflow:auto; display:none; background:rgba(14,17,21,.97); line-height:1.45;
   border:1px solid var(--line); border-top:3px solid var(--amber);
   font-size:clamp(11px,2vh,15px); box-shadow:0 18px 50px -12px #000;}
 #tix header{display:flex; justify-content:space-between; align-items:center; padding:8px 12px;
@@ -936,7 +941,7 @@ const DIALOGUE = {
     opts:[ {t:'"That would need a separate ticket." (professional)', fx:{rep:1, stress:2}},
            {t:'Pretend the call dropped', fx:{stress:-2}},
            {t:'Spend 10 minutes on the laptop anyway', fx:{time:10, stress:3, bonus:1}} ] },
-  't.mouse.a':{ who:'client', t:['{user} says the mouse is broken. The cursor "won\'t go".'] },
+  't.mouse.a':{ who:'client', t:['{User} says the mouse is broken. The cursor "won\'t go".'] },
   't.mouse.b':{ who:'sys', t:['It is the batteries. It is always the batteries.'],
     opts:[ {t:'Swap them silently, log 0.25 hours', fx:{bonus:1}},
            {t:'Teach {user} about batteries', fx:{time:8, rep:1, stress:2}},
@@ -947,7 +952,7 @@ const DIALOGUE = {
            {t:'Press one button and accept legend status', fx:{bonus:1}} ] },
   't.tangle.a':{ who:'brenda', t:['The cable bin has achieved sentience. Untangle it, tag it, and nobody mentions this again.'] },
   't.tangle.b':{ who:'sys', t:['Somewhere in there is a serial cable from 1997. It has outlasted four CEOs.'] },
-  't.pw.a':   { who:'client', t:['{user} is locked out again. Third time this week. They are "positive" they typed it right.'] },
+  't.pw.a':   { who:'client', t:['{User} is locked out again. Third time this week. They are "positive" they typed it right.'] },
   't.pw.b':   { who:'sys', t:['Password reset. The old password was on a sticky note under the keyboard.'],
     opts:[ {t:'Confiscate the sticky note', fx:{rep:1, stress:1}},
            {t:'Look away. You saw nothing.', fx:{stress:-1}},
@@ -970,7 +975,7 @@ const DIALOGUE = {
   't.donut.b':{ who:'sys', t:['The vending machine surrenders a suspiciously adequate box of donuts. Do not ask questions.'] },
   't.cool.a': { who:'sys', t:['The water cooler is making The Noise again. The Noise is not describable. The Noise is felt.'] },
   't.cool.b': { who:'sys', t:['You reseat the jug. The Noise stops. The office exhales. You are, briefly, a hero.'] },
-  't.quick.a':{ who:'client', t:['{user} has a "quick question". You are already trapped. The question has seven parts.'],
+  't.quick.a':{ who:'client', t:['{User} has a "quick question". You are already trapped. The question has seven parts.'],
     opts:[ {t:'Answer all seven parts', fx:{time:14, rep:1, stress:4, bonus:1}},
            {t:'Answer two parts, gesture at documentation', fx:{time:5, stress:1}},
            {t:'"Let me open a ticket for that" (the sacred escape)', fx:{rep:-1, stress:-2}} ] },
@@ -1005,7 +1010,7 @@ const DIALOGUE = {
            {t:'Blame the phone carrier and move on', fx:{stress:-2, rep:-1}} ] },
   't.wire.a': { who:'derek', t:['Somebody at {client} "tidied" the comms cupboard. With scissors. Photos attached; you may want to sit down.'] },
   't.wire.b': { who:'sys', t:['You rebuild the patch panel from memory and vibes. Two ports remain unexplained. They always will.'] },
-  't.share.a':{ who:'client', t:['{user} deleted the shared drive folder. Not their copy. The shared one. For everyone. On a Friday.'] },
+  't.share.a':{ who:'client', t:['{User} deleted the shared drive folder. Not their copy. The shared one. For everyone. On a Friday.'] },
   't.share.b':{ who:'sys', t:['The backup restores clean. Nobody will ever know how close this was.'],
     opts:[ {t:'Tell them exactly what happened, kindly', fx:{rep:1, stress:2, time:5}},
            {t:'Say "recovered from backup" and let the legend grow', fx:{bonus:1}},
@@ -1052,7 +1057,7 @@ const TICKETS = {
     title:'{client}: printer is printing {doc} forever',
     steps:[{say:'t.jam.a'},{goto:'PRINTER'},{game:'cable',diff:1},{say:'t.jam.b'},{choice:'t.jam.c'}] },
   'mouse-batteries': { tiers:[0,1], weight:3, sla:34, pri:2, stress:3,
-    title:'{user}\'s mouse is "broken"',
+    title:'{User}\'s mouse is "broken"',
     steps:[{say:'t.mouse.a'},{choice:'t.mouse.b'}] },
   'monitor-input': { tiers:[0,2], weight:3, sla:26, pri:3, stress:6,
     title:'{client}: monitor shows NO SIGNAL, business halted',
@@ -1061,7 +1066,7 @@ const TICKETS = {
     title:'Untangle the supply-closet cable bin',
     steps:[{say:'t.tangle.a'},{goto:'SHELF'},{game:'cable',diff:1},{say:'t.tangle.b'}] },
   'password-reset': { tiers:[0,2], weight:4, sla:30, pri:3, stress:4,
-    title:'{user} is locked out (attempt 3 of 3)',
+    title:'{User} is locked out (attempt 3 of 3)',
     steps:[{say:'t.pw.a'},{game:'pw',diff:1},{choice:'t.pw.b'}] },
   'label-printer': { tiers:[0,2], weight:2, sla:44, pri:2, stress:5,
     title:'{client}: label printer speaks only wingdings',
@@ -1088,7 +1093,7 @@ const TICKETS = {
     title:'The water cooler is making The Noise',
     steps:[{goto:'COOLER'},{say:'t.cool.a'},{game:'cable',diff:1},{say:'t.cool.b'}] },
   'quick-question': { tiers:[0,3], weight:3, sla:33, pri:2, stress:5,
-    title:'{user} has a "quick question"',
+    title:'{User} has a "quick question"',
     steps:[{choice:'t.quick.a'}] },
   'conference-tv': { tiers:[0,3], weight:2, sla:24, pri:4, stress:9, from:'mackenzie',
     title:'Conference TV won\'t mirror — demo in 5',
@@ -1112,7 +1117,7 @@ const TICKETS = {
     title:'{client} "tidied" the comms cupboard. With scissors.',
     steps:[{say:'t.wire.a'},{goto:'SERVERS'},{game:'cable',diff:2},{say:'t.wire.b'}] },
   'shared-drive': { tiers:[0,3], weight:3, sla:34, pri:4, stress:8,
-    title:'{user} deleted the shared drive. The shared one.',
+    title:'{User} deleted the shared drive. The shared one.',
     steps:[{say:'t.share.a'},{game:'pw',diff:1},{choice:'t.share.b'}] },
   'mfa-off': { tiers:[0,3], weight:2, sla:40, pri:1, stress:6,
     title:'{client} would like MFA turned off, please',
@@ -3313,6 +3318,44 @@ function selfTest(runSim){
           return !FILLS[k] && !Object.keys(TICKETS).some(i => TICKETS[i].fills && TICKETS[i].fills[k]);
         })).map(([id]) => id);
       ok('content: every fill token has a pool', !unres.length, [...new Set(unres)].join(','));
+    }
+    /* A pool entry like "the front desk" reads wrong at the start of a
+       sentence, so a leading token must use the capitalising {Token} form. */
+    {
+      const strings = [];
+      for (const id in TICKETS) strings.push([id, TICKETS[id].title]);
+      for (const id in DIALOGUE){
+        const n = DIALOGUE[id];
+        (n.t || []).forEach(l => strings.push([id, l]));
+      }
+      const bad = strings.filter(([, t]) => {
+        const m = /^\{([a-zA-Z]+)\}/.exec(t);
+        if (!m || /^[A-Z]/.test(m[1])) return false;
+        const pool = FILLS[fillKey(m[1])] || [];
+        return pool.some(v => /^[a-z]/.test(String(v)));
+      }).map(([id]) => id);
+      ok('content: a sentence never opens on a lower-case fill',
+         !bad.length, [...new Set(bad)].join(','));
+    }
+    /* The queue panel is the game's central UI and its rows must actually be
+       readable. #frame zeroes line-height for the canvas, overlays inherit it,
+       and the one cell with overflow:hidden clipped every ticket title to
+       nothing while sitting perfectly correct in the DOM. */
+    {
+      const savedRun = run, savedState = G.state, savedModal = G.modal;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const role = ROLES[run.rung], P = run.plan;
+      run.clock = 60;
+      const a = makeArrival(P.arrivals[0].id, 60, role);
+      run.queue.push({ uid:a.uid, id:a.id, title:a.title, fills:a.fills, at:60,
+        deadline:120, sla:a.sla, stress:a.stress, si:0, bonus:0, gameScores:[], from:null });
+      openQueue(); renderQueue();
+      const cell = document.querySelector('#tix-list .row .ttl');
+      const r = cell ? cell.getBoundingClientRect() : null;
+      ok('ui: queue rows render their ticket title', !!r && r.height > 4 && r.width > 40,
+         r ? Math.round(r.width) + 'x' + Math.round(r.height) : 'no row');
+      document.getElementById('tix').style.display = 'none';
+      G.state = savedState; G.modal = savedModal; run = savedRun;
     }
     /* every ticket carries stakes, and they are the triage decision */
     {
