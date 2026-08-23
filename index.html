@@ -772,13 +772,13 @@ const ROLES = [
     gates:{ nextAt:{perf:0.575, days:3}, firedBelow:0.34, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.58, days:3}, firedBelow:0.35, cert:null },
+    gates:{ nextAt:{perf:0.575, days:3}, firedBelow:0.35, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
-    gates:{ nextAt:{perf:0.585, days:3}, firedBelow:0.36, cert:null },
+    gates:{ nextAt:{perf:0.578, days:3}, firedBelow:0.36, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'vcio',   title:'vCIO',          pay:135000,
-    gates:{ nextAt:{perf:0.59, days:3}, firedBelow:0.37, cert:null },
+    gates:{ nextAt:{perf:0.58, days:3}, firedBelow:0.37, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
     gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.38, cert:null },
@@ -1608,6 +1608,18 @@ const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.2, freeCups:3,
 /* Share of a day's arrivals you may let burn before it counts against you.
    The day deliberately holds more work than fits: triage IS the job, and the
    first casualties are expected rather than punished. */
+/* What a ticket is WORTH, by priority. Deliberately superlinear: a P1 takes
+   about a third longer to work than a P2, so a linear 4/3 weighting made the
+   two worth an identical 0.11 stakes per minute and left a rational player
+   indifferent between them — which is exactly the choice the day is supposed
+   to be about. At 7/4 the priority order is strictly monotone in value per
+   minute (P1 .19, P2 .14, P3 .07, P4 .03) and working the P1 is simply right. */
+const STAKES = { 1:1, 2:2, 3:4, 4:7 };
+function stakesOf(id){ return STAKES[(TICKETS[id] && TICKETS[id].pri) || 2] || 2; }
+/* A breach inside the allowance is DISCOUNTED, not free. A hard write-off made
+   the first few casualties worth exactly zero, so which one you dropped was
+   worth nothing at all until you crossed a cliff nobody can see. */
+const FORGIVEN = .25;
 const BREACH_TOLERANCE = .12;
 const FIRE_GRACE = 3;          // days at the very start of a career that cannot end it
 const ACTIVE_GRACE = 10;       // minutes a ticket you are actively working may run over
@@ -1888,7 +1900,7 @@ function slaTick(){
     if (run.clock > t.deadline){
       run.queue.splice(i,1);
       const pri = TICKETS[t.id].pri || 2;
-      run.scores.push(0); run.breaches++; run.burned.push(pri);
+      run.scores.push(0); run.breaches++; run.burned.push(stakesOf(t.id));
       /* Dropping tickets is the job now, so a breach cannot cost a flat panic
          attack — the day is oversubscribed on purpose and that pegged stress
          at 100 by lunchtime. What it costs tracks what you dropped, exactly
@@ -2108,7 +2120,7 @@ function resolveTicket(t){
      to spare is equally "on time"; only cutting it fine costs you. */
   const prompt = clamp(r * 2, 0, 1);
   const score = clamp(.28 + .14*prompt + .38*gameAvg + .20*clamp(t.bonus,0,1), 0, 1);
-  const stakes = TICKETS[t.id].pri || 2;
+  const stakes = stakesOf(t.id);
   run.speedSum = (run.speedSum || 0) + r;
   run.qualSum = (run.qualSum || 0) + gameAvg;
   run.earned = (run.earned || 0) + stakes * score;
@@ -2143,7 +2155,7 @@ function endDay(){
      otherwise, since the day ends before its crash ever lands */
   if (run.crashes.length) run.stress = clamp(run.stress + run.crashes.length * BURN.crashStress, 0, 100);
   /* anything still open rolls into the void; unworked queue counts against you */
-  for (const t of run.queue){ run.scores.push(0); run.breaches++; run.burned.push(TICKETS[t.id].pri || 2); }
+  for (const t of run.queue){ run.scores.push(0); run.breaches++; run.burned.push(stakesOf(t.id)); }
   run.queue = [];
   /* An oversubscribed day cannot be cleared, and grading the mean over every
      ticket that existed would just mean everyone fails. What is graded is the
@@ -2157,13 +2169,16 @@ function endDay(){
      are allowed to drop tickets — you are not allowed to choose badly which. */
   const burned = run.burned.slice().sort((a,b) => a - b);
   const costly = burned.slice(tolerance);
-  const burnedStakes = costly.reduce((a,b) => a+b, 0);
+  const burnedStakes = costly.reduce((a,b) => a+b, 0)
+                     + burned.slice(0, tolerance).reduce((a,b) => a+b, 0) * FORGIVEN;
   const denom = Math.max(1, (run.stakesDone || 0) + burnedStakes);
   const dayPerf = arrived ? clamp((run.earned || 0) / denom, 0, 1) : .5;
   /* the review has to be able to explain the number it just showed you */
   run.lastScore = { tolerance, forgiven: Math.min(run.breaches, tolerance),
                     costly: costly.length,
-                    worst: costly.length ? 5 - Math.max.apply(null, costly) : null };
+                    worst: costly.length
+                      ? 5 - (+Object.keys(STAKES).find(k => STAKES[k] === Math.max.apply(null, costly)) || 2)
+                      : null };
   run.perfHist.push(dayPerf);
   slog('END OF DAY — perf ' + Math.round(dayPerf*100) + '%, ' + run.resolved + ' resolved, ' +
        run.breaches + ' breached (' + (run.breaches - Math.min(run.breaches, tolerance)) +
@@ -3535,18 +3550,24 @@ function selfTest(runSim){
         endDay();
         return run ? run.perfHist[run.perfHist.length-1] : null;
       };
-      /* six casualties either way; tolerance writes off the cheapest two */
-      const cheap = dayScore([1,1,1,1,1,1]);
-      const dear  = dayScore([4,4,4,4,4,4]);
+      /* six casualties either way; only what they were worth differs */
+      const cheap = dayScore(new Array(6).fill(STAKES[1]));
+      const dear  = dayScore(new Array(6).fill(STAKES[4]));
       ok('triage: letting the P1s burn scores worse than letting the P4s burn',
          cheap !== null && dear !== null && cheap - dear > .05,
          'cheap ' + (cheap||0).toFixed(3) + ' vs dear ' + (dear||0).toFixed(3));
-      /* and the allowance is real: a couple of dropped P4s cost nothing */
+      /* The allowance DISCOUNTS the first casualties, it does not delete them.
+         Free forgiveness made which ticket you dropped worth exactly nothing
+         until you crossed an invisible cliff. Cheap, and always felt. */
       const none = dayScore([]);
-      const two  = dayScore([1,1]);
-      ok('triage: the first casualties are free, because dropping tickets is the job',
-         none !== null && two !== null && Math.abs(none - two) < 1e-9,
-         'clean ' + (none||0).toFixed(3) + ' vs two-dropped ' + (two||0).toFixed(3));
+      const twoCheap = dayScore([STAKES[1], STAKES[1]]);
+      const twoDear  = dayScore([STAKES[4], STAKES[4]]);
+      ok('triage: an allowed casualty is discounted, not free',
+         none > twoCheap && none - twoCheap < .06,
+         'clean ' + (none||0).toFixed(3) + ' vs two P4s ' + (twoCheap||0).toFixed(3));
+      ok('triage: inside the allowance, dropping a P1 still costs more than a P4',
+         twoCheap - twoDear > .04,
+         'two P4s ' + (twoCheap||0).toFixed(3) + ' vs two P1s ' + (twoDear||0).toFixed(3));
     }
     /* burnout arithmetic */
     /* assert against the IMPLEMENTATION, not against two literals: the old
