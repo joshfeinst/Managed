@@ -1706,7 +1706,7 @@ const G = { state:'boot', screenId:'s-boot', textSpeed:1, faults:0, tests:null, 
    and the treadmill, not your play, decided the career. */
 const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.6, freeCups:2,
                crashStress:8, night:.40, weekend:.22, weekendRelief:4, promoRelief:6,
-               frayed:68, wrecked:86, cup:15 };
+               frayed:68, wrecked:86, cup:15, sleepless:.22 };
 /* Share of a day's arrivals you may let burn before it counts against you.
    The day deliberately holds more work than fits: triage IS the job, and the
    first casualties are expected rather than punished. */
@@ -1998,8 +1998,14 @@ function presentCommute(){
   document.getElementById('r-title').textContent = role.title + (run.day === 1 ? ' — FIRST DAY' : '');
   document.getElementById('r-stats').innerHTML =
     '<dt>Position</dt><dd>' + role.title + '</dd>' +
-    '<dt>Burnout</dt><dd>' + Math.round(run.burnout) + '%</dd>' +
+    /* Burnout is not just a number any more, so say what it is doing to you */
+    '<dt>Burnout</dt><dd style="color:' + (run.burnout > 60 ? 'var(--alert)' : 'inherit') + '">' +
+      Math.round(run.burnout) + '%' + (run.burnout > 25
+        ? ' — you are sleeping through less of it every night' : '') + '</dd>' +
     '<dt>Reputation</dt><dd>' + run.rep + '</dd>' +
+    /* Day one is deliberately lighter, and never saying so made day two read
+       as your play collapsing when it was the difficulty arriving. */
+    (run.day === 1 ? '<dt>Today</dt><dd>a half-load first day, and everyone knows it</dd>' : '') +
     '<dt>Job posting</dt><dd>' + run.seed + '</dd>';
   document.getElementById('r-note').textContent = run.day === 1
     ? 'Orientation is a PDF nobody sent you. Your badge photo is already unflattering. Good luck in there.'
@@ -2461,7 +2467,13 @@ function endDay(){
                       + Math.max(0, run.coffee - BURN.freeCups) * BURN.sleepDebt, 0, 100);
   /* the weekend, technically — every fifth day the body claws a little back */
   const weekend = run.day % 5 === 0;
-  run.stress = Math.round(run.stress * (weekend ? BURN.weekend : BURN.night));
+  /* Burnout used to be a bar filling on a schedule — it did nothing at all
+     until the moment it ended the career. What burnout actually is, is nights
+     that stop working: the more of it you carry, the less the evening gives
+     back, and the next day starts closer to the edge. It compounds, which is
+     the point of it, and it is felt long before 100. */
+  const carry = (weekend ? BURN.weekend : BURN.night) + (run.burnout / 100) * BURN.sleepless;
+  run.stress = Math.round(run.stress * Math.min(.92, carry));
   if (weekend) run.burnout = Math.max(0, run.burnout - BURN.weekendRelief);
   const role = ROLES[run.rung];
   /* gates */
@@ -4145,6 +4157,28 @@ function selfTest(runSim){
          CABLE_TAGS.length >= CABLE_COLS.length &&
          new Set(CABLE_TAGS).size === CABLE_TAGS.length,
          CABLE_TAGS.length + ' tags for ' + CABLE_COLS.length + ' colours');
+    }
+    /* Burnout has to be felt on the days before the last one: what it actually
+       is, is nights that stop working. */
+    {
+      const carryAt = burn => {
+        rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+        run.day = 3; run.clock = DAY_MIN + 1; run.queue = []; run.crashes = [];
+        run.burnout = burn; run.stress = 80; run.coffee = 0;
+        run.resolved = 4; run.stakesDone = 8; run.earned = 8 * .7;
+        run.scores = [.7,.7,.7,.7]; run.breaches = 0; run.burned = [];
+        endDay();
+        const out = run ? run.stress : null;
+        if (run) run.pendingEnd = null;
+        return out;
+      };
+      const fresh = carryAt(0), spent = carryAt(80);
+      ok('a burned-out night gives back less than a rested one',
+         fresh !== null && spent !== null && spent > fresh,
+         'fresh wakes at ' + fresh + ', burned-out at ' + spent);
+      ok('but a night always gives back something',
+         spent !== null && spent < 80, 'woke at ' + spent + ' from 80');
+      run = null;
     }
     /* every ticket carries stakes, and they are the triage decision */
     {
