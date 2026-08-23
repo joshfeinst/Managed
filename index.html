@@ -1838,7 +1838,7 @@ const G = { state:'boot', screenId:'s-boot', textSpeed:1, faults:0, tests:null, 
    does not, and at a .55 carry it did not — you woke at 47/100 every morning
    and the treadmill, not your play, decided the career. */
 const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.6, freeCups:2,
-               crashStress:8, night:.40, weekend:.22, weekendRelief:4, promoRelief:6,
+               crashStress:4, night:.40, weekend:.22, weekendRelief:4, promoRelief:6,
                frayed:68, wrecked:86, cup:15, sleepless:.22 };
 /* Share of a day's arrivals you may let burn before it counts against you.
    The day deliberately holds more work than fits: triage IS the job, and the
@@ -1870,6 +1870,7 @@ const ACTIVE_GRACE_MAX = 26;   // ...and the most that grace can ever be worth
 const DAY_OVERRUN = 20;        // how far past 17:00 a meeting can hold the day open
 const MIN_SLACK = 18;          // minutes you always get to notice a ticket exists
 const ACE = .95;               // what actually counts as a job well done
+const COFFEE_MAX = 4;          // cups the machine will give you in one day
 const EVENT_WARN = 12;         // minutes of notice a meeting gives you
 const DUCK_DEBT = .55;         // burnout per point of stress dodged rather than spent
 /* what the calendar invite is actually called */
@@ -2339,13 +2340,18 @@ function interact(act){
   switch(act){
     case 'terminal': openQueue(); break;
     case 'coffee':
-      if (run.coffee >= 4){ toast('YOUR HANDS ARE ALREADY VIBRATING. THE MACHINE REFUSES.', 'red', 2600); sfx('err'); break; }
+      if (run.coffee >= COFFEE_MAX){ toast('YOUR HANDS ARE ALREADY VIBRATING. THE MACHINE REFUSES.', 'red', 2600); sfx('err'); break; }
       run.coffee++; run.stress = Math.max(0, run.stress - BURN.cup);
       run.crashes.push(run.clock + 90); run.crashes.sort((a,b)=>a-b);
       slog('coffee #' + run.coffee + ' (stress ' + Math.round(run.stress) + ')');
       sfx('coffee');
-      toast('COFFEE ' + run.coffee + ' OF 4 — STRESS -12 NOW, +8 WHEN IT CRASHES IN 90 MIN' +
-            (run.coffee >= 3 ? ' · CUP 3+ = JITTERS (HARDER HANDS-ON WORK) AND SLEEP DEBT' : ''),
+      /* written from the record, like the handbook: this line quoted -12 for a
+         cup worth 15, advertised a four-cup allowance, and warned about the
+         jitters a cup after they had already started */
+      toast('COFFEE ' + run.coffee + ' OF ' + COFFEE_MAX + ' — STRESS -' + BURN.cup +
+            ' NOW, +' + BURN.crashStress + ' WHEN IT CRASHES IN 90 MIN' +
+            (run.coffee >= BURN.freeCups ? ' · JITTERS FROM HERE (HARDER HANDS-ON WORK)' : '') +
+            (run.coffee > BURN.freeCups ? ' AND SLEEP DEBT' : ''),
             'corp', 3600);
       break;
     case 'couch':
@@ -3606,7 +3612,7 @@ function simDay(skill, policy){
         if (o){ slog('chose: "' + o.t + '"'); applyFx(o.fx, null); }
       }
     }
-    if (policy.coffee !== false && run.stress > (policy.coffeeAt ?? 62) && run.coffee < 4){
+    if (policy.coffee !== false && run.stress > (policy.coffeeAt ?? 62) && run.coffee < COFFEE_MAX){
       walkTo(anchorPos('COFFEE'));
       run.coffee++; run.stress = Math.max(0, run.stress - BURN.cup);
       run.crashes.push(run.clock + 90); run.crashes.sort((a,b)=>a-b);
@@ -4334,6 +4340,25 @@ function selfTest(runSim){
       }
       ok('no rung falls through to somebody else\'s ticket pool', !borrowed.length, borrowed.join(','));
       ok('every rung has enough tickets to fill its own day', !thin.length, thin.join(' '));
+    }
+    /* The coffee toast is the other place the game quotes its own arithmetic at
+       the player, and it had drifted exactly as the handbook had. */
+    {
+      const savedRun = run;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      run.stress = 80; run.coffee = 0;
+      const said = [];
+      const orig = window.toast;
+      window.toast = function(t){ said.push(String(t)); };
+      try { interact('coffee'); } catch(_){ }
+      window.toast = orig;
+      const line = said.join(' ');
+      const quoted = [BURN.cup, BURN.crashStress, COFFEE_MAX];
+      const absent = line ? quoted.filter(v => line.indexOf(String(v)) < 0) : quoted;
+      ok('the coffee toast quotes the live numbers', line && !absent.length,
+         line ? 'missing ' + absent.join(',') : 'no toast fired');
+      run = savedRun;
     }
     /* every ticket carries stakes, and they are the triage decision */
     {
