@@ -757,32 +757,32 @@ const ROLES = [
     gates:{ nextAt:{perf:0.58, days:3}, firedBelow:0.28, cert:null },
     queue:{ ratePerHr:3.0, slaScale:1.0 }, deskAnchor:'TERMINAL' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
-    gates:{ nextAt:{perf:0.59, days:3}, firedBelow:0.3, cert:null },
+    gates:{ nextAt:{perf:0.54, days:3}, firedBelow:0.3, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
-    gates:{ nextAt:{perf:0.6, days:4}, firedBelow:0.32, cert:null },
+    gates:{ nextAt:{perf:0.56, days:3}, firedBelow:0.32, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
-    gates:{ nextAt:{perf:0.61, days:4}, firedBelow:0.33, cert:null },
+    gates:{ nextAt:{perf:0.55, days:3}, firedBelow:0.33, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
-    gates:{ nextAt:{perf:0.62, days:4}, firedBelow:0.34, cert:null },
+    gates:{ nextAt:{perf:0.57, days:3}, firedBelow:0.34, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
-    gates:{ nextAt:{perf:0.62, days:4}, firedBelow:0.34, cert:null },
+    gates:{ nextAt:{perf:0.575, days:3}, firedBelow:0.34, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.63, days:5}, firedBelow:0.35, cert:null },
+    gates:{ nextAt:{perf:0.58, days:3}, firedBelow:0.35, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
-    gates:{ nextAt:{perf:0.64, days:5}, firedBelow:0.36, cert:null },
+    gates:{ nextAt:{perf:0.585, days:3}, firedBelow:0.36, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'vcio',   title:'vCIO',          pay:135000,
-    gates:{ nextAt:{perf:0.65, days:5}, firedBelow:0.37, cert:null },
+    gates:{ nextAt:{perf:0.59, days:3}, firedBelow:0.37, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
-    gates:{ nextAt:null, retireAfterDays:5, firedBelow:0.38, cert:null },
-    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' }
+    gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.38, cert:null },
+    queue:{ ratePerHr:2.2, slaScale:1.05 }, deskAnchor:'TERMINAL' }
 ];
 
 /* Shared fill pools — every {token} in a ticket title/line resolves from here
@@ -1604,12 +1604,13 @@ const G = { state:'boot', screenId:'s-boot', textSpeed:1, faults:0, tests:null, 
    does not, and at a .55 carry it did not — you woke at 47/100 every morning
    and the treadmill, not your play, decided the career. */
 const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.2, freeCups:3,
-               crashStress:8, night:.40, weekend:.22, weekendRelief:4 };
+               crashStress:8, night:.40, weekend:.22, weekendRelief:4, promoRelief:6 };
 /* Share of a day's arrivals you may let burn before it counts against you.
    The day deliberately holds more work than fits: triage IS the job, and the
    first casualties are expected rather than punished. */
 const BREACH_TOLERANCE = .12;
 const FIRE_GRACE = 3;          // days at the very start of a career that cannot end it
+const ACTIVE_GRACE = 10;       // minutes a ticket you are actively working may run over
 const DAY_MIN = 480;
 /* A plain-language record of what actually happened this session. F1 shows
    it; it exists so play feedback can be about real events ("day 3, the CFO
@@ -1627,16 +1628,29 @@ function slog(msg){
   if (SLOG.length > 400) SLOG.shift();
 }                       // 9:00 -> 17:00, 1 game-minute per real second
 let run = null;
-let meta = { certs:[], rep:0, conn:0, runsPlayed:0, best:{ days:0, rung:0 } };
+let meta = { certs:[], rep:0, conn:0, runsPlayed:0, carry:0, best:{ days:0, rung:0 } };
 
 /* ------------------------------- run + days ------------------------------- */
+/* You do not come back at the level you left. Nine rungs cannot fit inside one
+   career's burnout budget and were never meant to: the ladder is climbed across
+   careers, and what carries over is roughly half of how far you got. Which is
+   also, exactly, how re-entering this industry works. */
+function startingRung(){
+  /* One rung below where you got to: you left as a T3, they hire you back as a
+     T2, because the market is tough and the recruiter said so with real
+     sympathy. This is deliberately NOT read off meta.best — a personal best is
+     a record and never falls, and hiring off a record drops a player into a
+     job they cannot hold and fires them out of it forever. meta.carry is what
+     the industry currently thinks you are worth, and being let go moves it. */
+  return clamp(meta.carry || 0, 0, ROLES.length - 2);
+}
 function runInit(seed){
   rngInit(seed);
-  run = { seed, day:1, rung:0, clock:0, perfHist:[], gateStreak:0, firedStreak:0,
+  run = { seed, day:1, rung:startingRung(), clock:0, perfHist:[], gateStreak:0, firedStreak:0,
           stress:20, coffee:0, crashes:[], burnout:0, rep:meta.certs.length ? 1 : 0,
           queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[], pendingScenes:[], seen:{},
           scores:[], breaches:0, resolved:0, aces:0, daysAtTop:0, satOn:{}, promoted:false,
-          burned:[], earned:0, stakesDone:0 };
+          burned:[], earned:0, stakesDone:0, rungSince:0 };
   for (const p in PERKS) if (metaHasPerk(p)) run.rep += PERKS[p].fx.rep || 0;
 }
 function newRun(seed){
@@ -1865,7 +1879,12 @@ function openEvent(id){
 function slaTick(){
   for (let i=run.queue.length-1; i>=0; i--){
     const t = run.queue[i];
-    if (run.active === t) continue;                  // a ticket in hand cannot silently breach
+    /* A ticket in hand does not breach SILENTLY — but it does breach. The
+       immunity was total, so parking a P1 in the active slot and walking away
+       held it past its deadline all afternoon for free, which is both an
+       exploit and the opposite of what the ticket is for. It gets a short
+       grace to finish what is on screen, and then it goes like any other. */
+    if (run.active === t && run.clock <= t.deadline + ACTIVE_GRACE) continue;
     if (run.clock > t.deadline){
       run.queue.splice(i,1);
       const pri = TICKETS[t.id].pri || 2;
@@ -1890,7 +1909,7 @@ function slaTick(){
 function crashTick(){
   while (run.crashes.length && run.clock >= run.crashes[0]){
     run.crashes.shift();
-    run.stress = clamp(run.stress + 8, 0, 100);
+    run.stress = clamp(run.stress + BURN.crashStress, 0, 100);
     toast('THE COFFEE HAS LEFT. ONLY THE JITTERS REMAIN.', 'red', 2600);
   }
 }
@@ -2102,7 +2121,7 @@ function resolveTicket(t){
      silently multiplied when the day went from ~7 tickets to ~18. Measured, the
      old numbers made resolving cost +15 stress a day at T1 alone and ended every
      career there. The ramp survives; its slope now assumes a full queue. */
-  run.stress = clamp(run.stress + t.stress*(.22 + run.rung*.05) - 1.1, 0, 100);
+  run.stress = clamp(run.stress + t.stress*(.22 + run.rung*.028) - 1.1, 0, 100);
   slog('resolved ' + Math.round(score*100) + '% (P' + (5-stakes) + '): ' + t.title +
        (t.gameScores.length ? ' (craft ' + Math.round(gameAvg*100) + '%)' : ''));
   run.active = null; run.marker = null;
@@ -2168,8 +2187,19 @@ function endDay(){
      puts the game down. The grace covers the opening days only. */
   if (run.day <= FIRE_GRACE) run.firedStreak = 0;
   if (role.gates.nextAt){
-    if (dayPerf >= role.gates.nextAt.perf) run.gateStreak++; else run.gateStreak = 0;
-    if (run.gateStreak >= role.gates.nextAt.days){ promo = true; }
+    /* A promotion is judged on your LAST N DAYS AVERAGE, not on N perfect days
+       in a row. Under the day-to-day variance the queue actually produces, a
+       consecutive streak was a 9% shot per window — an eleven-day wait inside
+       an eight-day career, which is why the ladder measured as unclimbable
+       above T2. An average rewards the same consistency without letting one
+       bad Tuesday delete a good week, and is what a review actually looks at. */
+    const need = role.gates.nextAt;
+    const since = run.rungSince || 0;
+    const win = run.perfHist.slice(Math.max(since, run.perfHist.length - need.days));
+    run.gateWin = win.length;
+    run.gateAvg = win.length ? win.reduce((a,b) => a+b, 0) / win.length : 0;
+    run.gateStreak = win.length;                       // what the review counts up
+    if (win.length >= need.days && run.gateAvg >= need.perf) promo = true;
   } else run.daysAtTop++;
   /* A career ending still gets its day explained first: the review is built
      either way, and its button leads to the exit interview instead of the
@@ -2190,6 +2220,10 @@ function endDay(){
   /* a promotion is a clean slate: you do not carry yesterday's warning into
      a job you just earned */
   if (promo){ run.rung++; run.rep += 2; run.gateStreak = 0; run.firedStreak = 0; run.promoted = true;
+    run.rungSince = run.perfHist.length;               // judged from its own first day
+    /* the news itself is worth something: a promotion buys one good night */
+    run.stress = Math.round(run.stress * .6);
+    run.burnout = Math.max(0, run.burnout - BURN.promoRelief);
     slog('PROMOTED to ' + ROLES[run.rung].title); sfx('promo'); }
   G.state = 'review';
   show('s-review');
@@ -2228,8 +2262,9 @@ function reviewScreen(dayPerf, eod, promo, ending){
     '<dt>Speed</dt><dd>' + speed + '% SLA left when you closed them</dd>' +
     '<dt>Craft</dt><dd>' + qual + '% on the hands-on bits</dd>' +
     '<dt>Performance</dt><dd>' + Math.round(dayPerf*100) + '% — ' + perfName(dayPerf) + '</dd>' +
-    (gate ? '<dt>Promotion needs</dt><dd>' + Math.round(gate.perf*100) + '% for ' + gate.days +
-      ' days running — streak ' + Math.min(run.gateStreak, gate.days) + '/' + gate.days + '</dd>' : '') +
+    (gate ? '<dt>Promotion needs</dt><dd>' + Math.round(gate.perf*100) + '% averaged over ' + gate.days +
+      ' days — your last ' + Math.min(run.gateWin || 0, gate.days) + ' average ' +
+      Math.round((run.gateAvg || 0)*100) + '%</dd>' : '') +
     '<dt>End-of-day stress</dt><dd>' + Math.round(eod) + '%</dd>' +
     '<dt>Burnout</dt><dd style="color:' + (run.burnout > 60 ? 'var(--alert)' : 'inherit') + '">' +
       Math.round(run.burnout) + '% — permanent</dd>' +
@@ -2263,6 +2298,10 @@ function careerOver(kind){
   meta.rep += Math.floor(run.rep / 2) + (kind === 'retired' ? 5 : 0);
   meta.best.days = Math.max(meta.best.days, run.day);
   meta.best.rung = Math.max(meta.best.rung, run.rung);
+  /* what the next recruiter believes. Climbing raises it; being let go costs
+     you a peg, which is the only thing in this game that walks backwards. */
+  if (kind === 'fired') meta.carry = Math.max(0, (meta.carry || 0) - 1);
+  else meta.carry = Math.max(meta.carry || 0, run.rung - 1);
   const savedRun = run; run = null;
   saveGame();
   const texts = {
@@ -2317,6 +2356,7 @@ function serializeRun(){
     stress:run.stress, coffee:run.coffee, crashes:run.crashes, burnout:run.burnout,
     rep:run.rep, uid:run.uid, scores:run.scores, breaches:run.breaches,
     burned:run.burned || [], earned:run.earned || 0, stakesDone:run.stakesDone || 0,
+    speedSum:run.speedSum || 0, qualSum:run.qualSum || 0, rungSince:run.rungSince || 0,
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
     introDone: !!run.introDone, seen: run.seen || {},
@@ -2351,6 +2391,7 @@ function resumeRun(s){
     pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone,
     seen: r.seen || {}, scores:r.scores,
     burned: r.burned || [], earned: r.earned || 0, stakesDone: r.stakesDone || 0,
+    speedSum: r.speedSum || 0, qualSum: r.qualSum || 0, rungSince: r.rungSince || 0,
     breaches:r.breaches, resolved:r.resolved,
     aces:r.aces, daysAtTop:r.daysAtTop, satOn:r.satOn || {}, promoted:r.promoted,
     phase:r.phase || 'work', pendingEnd: r.pendingEnd || null };
@@ -3401,6 +3442,73 @@ function selfTest(runSim){
          r ? Math.round(r.width) + 'x' + Math.round(r.height) : 'no row');
       document.getElementById('tix').style.display = 'none';
       G.state = savedState; G.modal = savedModal; run = savedRun;
+    }
+    /* A held ticket must not be immortal: parking a P1 in the active slot and
+       walking away used to hold it past its deadline all afternoon for free. */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.queue.length = 0;
+      const held = { uid:4242, id:'shared-drive', title:'held', fills:{}, at:0,
+                     deadline:100, sla:40, stress:8, si:0, bonus:0, gameScores:[], from:null };
+      run.queue.push(held); run.active = held;
+      run.clock = 100 + ACTIVE_GRACE - 1; slaTick();
+      const survivedGrace = run.queue.includes(held);
+      run.clock = 100 + ACTIVE_GRACE + 1; slaTick();
+      const breachedAfter = !run.queue.includes(held);
+      run.active = null;
+      ok('SLA: the ticket in your hands gets a grace, not immunity',
+         survivedGrace && breachedAfter,
+         'grace ' + survivedGrace + ', breached after ' + breachedAfter);
+    }
+    /* The day's running averages have to survive a mid-day save, or the review
+       reports craft and speed over only the tickets closed since the reload.
+       A serialize->resume->serialize identity check cannot see this: a field
+       that is never written is identical on both sides. */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.resolved = 4; run.speedSum = 2.4; run.qualSum = 3.12;
+      const wire = serializeRun();
+      ok('save: the day\'s craft and speed averages survive a reload',
+         wire.speedSum === 2.4 && wire.qualSum === 3.12,
+         'speed ' + wire.speedSum + ', craft ' + wire.qualSum);
+    }
+    /* one constant, one meaning: the crash charged during the day and the one
+       charged at 17:00 are the same mechanic */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.stress = 10; run.crashes = [run.clock];
+      crashTick();
+      ok('coffee: the crash costs BURN.crashStress wherever it lands',
+         Math.abs(run.stress - (10 + BURN.crashStress)) < 1e-9, 'got ' + run.stress);
+    }
+    /* Promotion is judged on a rolling average, and it must be judged only on
+       days worked AT THE CURRENT RUNG — otherwise a strong intern arrives at
+       T1 already holding a promotion. */
+    {
+      const gateAfter = (perfs, rung, since) => {
+        rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+        run.rung = rung; run.perfHist = perfs.slice(0, -1); run.rungSince = since;
+        run.day = 9; run.clock = DAY_MIN + 1; run.queue = []; run.crashes = [];
+        run.stress = 20; run.coffee = 0;
+        const last = perfs[perfs.length-1];
+        run.resolved = 6; run.stakesDone = 12; run.earned = 12 * last;
+        run.scores = new Array(6).fill(last); run.breaches = 0; run.burned = [];
+        endDay();
+        return run ? run.rung : rung;
+      };
+      const need = ROLES[1].gates.nextAt;
+      const over  = new Array(need.days).fill(need.perf + .06);
+      const under = new Array(need.days).fill(need.perf - .06);
+      /* one bad day inside an otherwise clear window must not reset everything */
+      const bumpy = over.slice(); bumpy[0] = need.perf - .04;
+      ok('gate: a clear rolling average promotes you',
+         gateAfter(over, 1, 0) === 2, 'stayed at rung ' + gateAfter(over, 1, 0));
+      ok('gate: a short average does not', gateAfter(under, 1, 0) === 1);
+      ok('gate: one bad day inside a good window does not delete the week',
+         gateAfter(bumpy, 1, 0) === 2);
+      /* days worked at the PREVIOUS rung must not count toward this one */
+      ok('gate: only days at the current rung count',
+         gateAfter(over, 1, over.length) === 1);
     }
     /* every ticket carries stakes, and they are the triage decision */
     {

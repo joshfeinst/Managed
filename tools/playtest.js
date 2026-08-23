@@ -41,6 +41,10 @@ async function launch() {
     for (let i = 0; i < N; i++) {
       const r = await page.evaluate(({ seed, skill, policy }) => {
         SAVE_SUSPEND = true; QUIET = true; A.sfxVol = 0;
+        /* every persona career is a FRESH player. meta persists in the page, and
+           once the starting rung reads off it, leaving it alone silently
+           measured career N+1 of one long life instead of somebody's first day. */
+        meta = { certs:[], rep:0, conn:0, runsPlayed:0, carry:0, best:{ days:0, rung:0 } };
         runInit(seed);
         const days = [];
         let guard = 0, promos = [];

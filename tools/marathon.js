@@ -3,7 +3,7 @@
    queue, works tickets, drinks coffee, pauses, and clicks through reviews.
    Catches what the headless day-bot structurally cannot: modal traps, screens
    that never advance, faults in render, state that stops progressing.
-   Usage: node tools/marathon.js /abs/path/index.html [days=8] */
+   Usage: node mmarathon.js /abs/path/index.html [days=8] */
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
@@ -102,6 +102,7 @@ async function launch() {
       // world: coffee when stressed, else drive the active ticket / queue
       if (G.state === 'work'){
         if (run.day !== M.daysSeen){ M.daysSeen = run.day; }
+      M.maxDay = Math.max(M.maxDay || 0, run.day);
         // teleport-free navigation: walk toward marker or terminal via held keys
         const goal = run.marker || (run.queue.length ? (W2.anchors.TERMINAL || null) : null);
         if (run.stress > 70 && run.coffee < 3 && !run.marker){
@@ -177,6 +178,7 @@ async function launch() {
 
   const fin = await page.evaluate(() => ({
     faults: G.faults || 0, state: G.state, day: run ? run.day : null,
+    maxDay: window.__M.maxDay || 0,
     reviews: window.__M.reviews, log: window.__M.log,
     stall: window.__M.stallTicks, modalTicks: window.__M.modalTicks,
     // occupancy integrity: no two bodies in one cell, every body reserved
@@ -195,8 +197,19 @@ async function launch() {
   }));
   console.log('FINAL', JSON.stringify(fin));
   console.log('page errors:', errors.length ? errors.join(' | ') : 0);
+  /* A career that dies on day two is not a pass just because nothing threw.
+     The driver is a deliberately clumsy player, but the opening days must
+     still survive clumsy — that is the whole first-play experience. */
+  /* high-water mark recorded live by the driver: scraping it out of a log line
+     after the fact reported day 0 whenever the career ended before the line
+     landed, which failed a clean run for a reporting race. */
+  const daysReached = fin.maxDay || fin.day ||
+    (fin.log.join(' ').match(/career ended day (\d+)/) || [0,0])[1];
+  console.log('days reached:', daysReached);
+  const survivedOpening = +daysReached >= 3 || fin.state !== 'over';
+  if (!survivedOpening) console.log('EARLY CAREER DEATH: ended on day ' + daysReached);
   const clean = !fin.faults && !errors.length && fin.stall <= 400 && fin.modalTicks <= 900 &&
-                fin.occOk && !fin.occOk.dup && !fin.occOk.missing;
+                fin.occOk && !fin.occOk.dup && !fin.occOk.missing && survivedOpening;
   console.log(clean ? 'MARATHON OK' : 'MARATHON ISSUES');
   await browser.close();
   process.exit(clean ? 0 : 1);
