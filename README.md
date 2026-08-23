@@ -1,6 +1,6 @@
 # Managed — an MSP life simulator
 
-You get hired as the unpaid intern at **360 Smart Networks**, a managed IT
+You get hired as the unpaid intern at **Proactive IT Partners**, a managed IT
 services provider, and you live the career: the ticket queue, the SLA timers,
 the coffee machine, the printer that is possessed, the standup that could have
 been an email — all the way up (if you survive) through T1/T2/T3 helpdesk,

@@ -175,7 +175,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
     </div>
 
     <div id="tix">
-      <header><span class="t">SERVICE QUEUE — 360 SMART NETWORKS</span><span class="hint">sorted P1 first · ↑↓ pick · Enter work · Esc close</span></header>
+      <header><span class="t">SERVICE QUEUE — PROACTIVE IT PARTNERS</span><span class="hint">sorted P1 first · ↑↓ pick · Enter work · Esc close</span></header>
       <div id="tix-list"></div>
     </div>
 
@@ -185,7 +185,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
     <div class="screen" id="s-boot">
       <div class="eyebrow" id="bootline">reticulating org charts</div>
       <h1 class="logo">MANAGED</h1>
-      <div class="sub" style="font-family:var(--pix);font-size:clamp(7px,1.1vh,10px)">A 360 SMART NETWORKS CAREER</div>
+      <div class="sub" style="font-family:var(--pix);font-size:clamp(7px,1.1vh,10px)">A PROACTIVE IT PARTNERS CAREER</div>
     </div>
 
     <!-- TITLE -->
@@ -208,7 +208,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
       <div class="panel" style="width:min(520px,92vw)">
         <dl class="dl">
           <dt>Position</dt><dd>IT Intern (unpaid, "great exposure")</dd>
-          <dt>Company</dt><dd>360 Smart Networks — Managed IT Services</dd>
+          <dt>Company</dt><dd>Proactive IT Partners — Managed IT Services</dd>
           <dt>Benefits</dt><dd>Coffee is free. That is the benefit.</dd>
         </dl>
         <p class="hint" style="margin:12px 0 6px">Job posting ID — the same ID always produces the same career. Share it.</p>
@@ -838,7 +838,7 @@ const ANCHOR_NAMES = {
   n6:"BRENDA'S DESK", n7:"MACKENZIE'S DESK", n8:"LINDA'S OFFICE", n9:'THE HALLWAY'
 };
 const MAPS = { office1: {
-  name:'360 SMART NETWORKS — FLOOR 2',
+  name:'PROACTIVE IT PARTNERS — FLOOR 2',
   map:[
     '##########wwwww#wwwww#wwwww#wwwww###########',
     '#..f.....#......................#mmmmmmmmxm#',
@@ -1002,7 +1002,7 @@ const DIALOGUE = {
            {t:'Nudge it 2 degrees when she blinks', fx:{stress:5, bonus:1}},
            {t:'Escalate to an email thread that will outlive us all', fx:{time:8, stress:3}} ] },
   't.arc.a':  { who:'sys', t:['The break-room arcade cabinet is dark. Morale is measurably down 3%. Someone has unplugged AGENT 360 to charge a vape.'] },
-  't.arc.b':  { who:'sys', t:['The cabinet chimes awake: "360 SMART NETWORKS PRESENTS..." Somewhere, an agent gets their license to bill.'] },
+  't.arc.b':  { who:'sys', t:['The cabinet chimes awake: "AGENT 360" — somebody\'s side project, still running, still better documented than anything here. Somewhere an agent gets their license to bill.'] },
 
   /* first morning */
   'i.day1': { who:'linda', t:[
@@ -1375,7 +1375,7 @@ const PW_BAD = [
     make:() => PW_SEASONS[Ri('game',PW_SEASONS.length)] + (2018 + Ri('game',10)) + '!' },
   { rule:'no company name + year',
     why:'company name plus a year',
-    make:() => '360Smart' + (2018 + Ri('game',10)) },
+    make:() => 'Proactive' + (2018 + Ri('game',10)) },
   { rule:'no pet names',
     why:'known pet — it is on the list',
     make:() => PW_PETS[Ri('game',PW_PETS.length)] + '_' + ['goodboy','4ever','2024','love'][Ri('game',4)] },
