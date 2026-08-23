@@ -95,7 +95,13 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
 #tix .empty{padding:18px 12px; color:var(--dim); text-align:center}
 
 .toastwrap{position:absolute; left:0; right:0; top:13%; display:flex; flex-direction:column;
-  align-items:center; gap:6px; pointer-events:none; z-index:50}
+  align-items:center; gap:6px; pointer-events:none; z-index:20}
+/* A panel is something you opened in order to read it, so nothing floats over
+   it: toasts used to cover the top four rows of the queue exactly when the
+   queue was busiest, and sat across every minigame board. While a panel is up
+   the toasts move out from under it and dim. */
+#tix, #dlg{z-index:60}
+body.panelopen .toastwrap{top:auto; bottom:2%; opacity:.55}
 
 /* ---------------- full screens ---------------- */
 .screen{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -2216,11 +2222,13 @@ function gotoCheck(){
 function openQueue(){
   G.state = 'modal';
   G.modal = { kind:'tix', sel:0 };
+  document.body.classList.add('panelopen');
   renderQueue();
   document.getElementById('tix').style.display = 'block';
 }
 function closeModalToWork(){
   G.modal = null; G.state = 'work';
+  document.body.classList.remove('panelopen');
   dlg = null; MG = null;
   document.getElementById('tix').style.display = 'none';
   document.getElementById('dlg').style.display = 'none';
@@ -2286,6 +2294,10 @@ function renderQueue(){
     sla.textContent = left <= 0 ? 'BREACHING' : left + 'm';
     sla.className = 'sla ' + (left < 5 ? 'bad' : left < 12 ? 'warn' : '');
     row.classList.toggle('sel', i === sel);
+    /* Enter works the selected row, so the selected row has to be on screen.
+       The panel scrolls past eight tickets and the cursor used to walk off the
+       bottom of it, working a ticket the player could not see. */
+    if (i === sel && row.scrollIntoView) row.scrollIntoView({ block:'nearest' });
   });
 }
 function startTicket(t){
@@ -2745,6 +2757,7 @@ function openDlg(nodeId, fills, onDone, custom, ticket){
   document.getElementById('d-role').textContent = role;
   document.getElementById('d-opts').innerHTML = '';
   document.getElementById('dlg').style.display = 'block';
+  document.body.classList.add('panelopen');
   dlgPaint();
 }
 function dlgPaint(){
@@ -2866,6 +2879,7 @@ function openGame(id, diff, onDone){
   if (run && run.stress > BURN.frayed) d += 1;
   if (run && run.stress > BURN.wrecked) d += 1;
   MG = GAMES[id].init(Math.max(1, d));
+  document.body.classList.add('panelopen');
   /* on the easiest games there is no difficulty left to remove, so the cert
      pays out as one forgiven slip instead of doing nothing at all */
   MG.forgive = cert ? 1 : 0;
