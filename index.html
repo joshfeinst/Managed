@@ -46,6 +46,8 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
 #hud .meter{display:inline-block; width:58px; height:8px; background:#252b33; border:1px solid #3a424d; vertical-align:middle}
 #hud .meter i{display:block; height:100%; background:var(--corp); transition:width .2s}
 #hud .meter.warn i{background:var(--amber)} #hud .meter.bad i{background:var(--alert)}
+#hud .meter.burn i{background:#8a6bb5} #hud .meter.burn.warn i{background:var(--amber)}
+#hud .meter.burn.bad i{background:var(--alert)}
 #hud #h-queue{color:var(--amber)} #hud #h-queue.breach{color:var(--alert)}
 
 #dlg{position:absolute; left:50%; bottom:4%; transform:translateX(-50%); width:min(560px,92%);
@@ -84,7 +86,7 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
 #tix .empty{padding:18px 12px; color:var(--dim); text-align:center}
 
 .toastwrap{position:absolute; left:0; right:0; top:13%; display:flex; flex-direction:column;
-  align-items:center; gap:6px; pointer-events:none}
+  align-items:center; gap:6px; pointer-events:none; z-index:50}
 
 /* ---------------- full screens ---------------- */
 .screen{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -142,6 +144,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
       <div class="grp">
         <span id="h-queue">QUEUE 0</span>
         <span><span class="lab">stress</span> <span class="meter" id="h-stressm"><i style="width:0%"></i></span></span>
+        <span><span class="lab">burnout</span> <span class="meter burn" id="h-burnm"><i style="width:0%"></i></span></span>
         <span><span class="lab">coffee</span> <b id="h-coffee">☕0</b></span>
       </div>
     </div>
@@ -195,6 +198,8 @@ input[type=range]{accent-color:var(--corp); width:150px}
         </dl>
         <p class="hint" style="margin:12px 0 6px">Job posting ID — the same ID always produces the same career. Share it.</p>
         <input type="text" id="seedbox" maxlength="18" spellcheck="false">
+        <p class="hint" id="abandon-warn" style="margin:10px 0 0;color:var(--alert);display:none">
+          A career is already in progress. Accepting this offer abandons it — click ACCEPT OFFER again to confirm.</p>
       </div>
       <div class="row">
         <button class="btn" data-act="start">ACCEPT OFFER ▶</button>
@@ -258,8 +263,12 @@ input[type=range]{accent-color:var(--corp); width:150px}
         <div class="ctl"><span>Run self test</span><span>F4</span></div>
       </div>
       <p class="hint">Your terminal (the glowing one at your desk) opens the <b>service queue</b>. Tickets breach their
-      SLA whether or not you are watching them — the clock only stops when you clock out. Coffee is in the kitchen.
-      The printer is possessed. Welcome aboard.</p>
+      SLA whether or not you are watching them — the clock only stops when you clock out. The printer is possessed.
+      Welcome aboard.</p>
+      <p class="hint"><b>Coffee</b> takes 12 off your stress now and gives 8 back when it crashes 90 minutes later.
+      The third and fourth cups also give you the jitters — hands-on work gets harder — and cost you sleep, which
+      is burnout you keep. <b>Stress</b> mostly washes off overnight; anything above
+      <b>55</b> at 5pm converts into <b>burnout</b>, which never washes off and ends the career at 100%.</p>
       <div class="row"><button class="btn ghost" data-act="back">◀ BACK</button></div>
     </div>
 
@@ -1173,7 +1182,7 @@ const LEGEND = {
   't':{o:19}, 'k':{o:21}, 'A':{o:22, act:'arcade', anchor:'ARCADE'},
   'C':{o:23, act:'cooler', anchor:'COOLER'}, 'F':{o:24},
   'U':{o:25, act:'couch'}, 'N':{o:26}, 'H':{o:30, act:'shelf', anchor:'SHELF'},
-  'D':{f:8, door:true}, 'P':{f:-1, spawn:true}
+  'D':{f:8}, 'P':{f:-1, spawn:true}
 };
 const W2 = { W:0, H:0, base:null, obj:null, solid:null, act:null, anchors:{}, name:'' };
 const cellIx = (x,y) => y*W2.W + x;
@@ -1683,6 +1692,8 @@ function makeArrival(id, at, role){
 function fill(s, fills){ return s.replace(/\{(\w+)\}/g, (_,t) => fills[t] !== undefined ? fills[t] : '{'+t+'}'); }
 
 function startCommute(){
+  /* a career that ended yesterday does not get another morning */
+  if (run.pendingEnd){ careerOver(run.pendingEnd); return; }
   run.phase = 'work';
   run.clock = 0; run.queue = []; run.active = null; run.marker = null;
   run.scores = []; run.breaches = 0; run.resolved = 0; run.aces = 0;
@@ -1863,7 +1874,10 @@ function interact(act){
       run.coffee++; run.stress = Math.max(0, run.stress - 12);
       run.crashes.push(run.clock + 90); run.crashes.sort((a,b)=>a-b);
       slog('coffee #' + run.coffee + ' (stress ' + Math.round(run.stress) + ')');
-      sfx('coffee'); toast('COFFEE ' + run.coffee + ' OF 4 — STRESS DOWN, FUTURE MORTGAGED', 'corp', 2400);
+      sfx('coffee');
+      toast('COFFEE ' + run.coffee + ' OF 4 — STRESS -12 NOW, +8 WHEN IT CRASHES IN 90 MIN' +
+            (run.coffee >= 3 ? ' · CUP 3+ = JITTERS (HARDER HANDS-ON WORK) AND SLEEP DEBT' : ''),
+            'corp', 3600);
       break;
     case 'couch':
       if (run.satOn._couch){ toast('THE COUCH HAS GIVEN ALL IT CAN TODAY.', 'corp', 2000); break; }
@@ -2016,8 +2030,12 @@ function resolveTicket(t){
   run.active = null; run.marker = null;
   if (G.modal) closeModalToWork();
   sfx('done');
-  toast(score >= .8 ? 'RESOLVED — CSAT 5★ (THEY WILL NEVER FILL IT IN)' :
-        score >= .5 ? 'RESOLVED — ADEQUATELY' : 'RESOLVED — TECHNICALLY', score >= .8 ? 'ok' : 'corp', 2600);
+  toast('RESOLVED ' + Math.round(score*100) + '% — ' +
+        (score >= .8 ? 'CSAT 5★ (THEY WILL NEVER FILL IT IN)' :
+         score >= .5 ? 'ADEQUATE' : 'TECHNICALLY') +
+        '  ·  ' + Math.round(r*100) + '% SLA LEFT' +
+        (t.gameScores.length ? ', CRAFT ' + Math.round(gameAvg*100) + '%' : ''),
+        score >= .8 ? 'ok' : 'corp', 3000);
 }
 
 /* ------------------------------- end of day ------------------------------- */
@@ -2052,12 +2070,24 @@ function endDay(){
     if (dayPerf >= role.gates.nextAt.perf) run.gateStreak++; else run.gateStreak = 0;
     if (run.gateStreak >= role.gates.nextAt.days){ promo = true; }
   } else run.daysAtTop++;
-  reviewScreen(dayPerf, eod, promo);
-  if (run.firedStreak >= 2){ careerOver('fired'); return; }
-  if (run.burnout >= 100){ careerOver('burnout'); return; }
+  /* A career ending still gets its day explained first: the review is built
+     either way, and its button leads to the exit interview instead of the
+     next morning. Being fired with no idea which day did it is not feedback. */
+  const ending = run.firedStreak >= 2 ? 'fired'
+               : run.burnout >= 100 ? 'burnout'
+               : (!role.gates.nextAt && run.daysAtTop >= role.gates.retireAfterDays) ? 'retired'
+               : null;
+  reviewScreen(dayPerf, eod, promo, ending);
+  if (ending){
+    /* the career is over the moment the day is scored; the exit interview is
+       just the next screen. Recording it means quitting on this screen cannot
+       resurrect the run, and headless callers end the career too. */
+    run.pendingEnd = ending;
+    G.state = 'review'; show('s-review'); saveGame();
+    return;
+  }
   if (promo){ run.rung++; run.rep += 2; run.gateStreak = 0; run.promoted = true;
     slog('PROMOTED to ' + ROLES[run.rung].title); sfx('promo'); }
-  if (!role.gates.nextAt && run.daysAtTop >= role.gates.retireAfterDays){ careerOver('retired'); return; }
   G.state = 'review';
   show('s-review');
   run.day++;
@@ -2073,9 +2103,11 @@ function perfName(p){
          p >= .4 ? 'DEVELOPING (HR WORD FOR STRUGGLING)' :
          'SEE ME — LINDA';
 }
-function reviewScreen(dayPerf, eod, promo){
+function reviewScreen(dayPerf, eod, promo, ending){
   document.getElementById('r-eyebrow').textContent = 'end of day ' + run.day;
-  document.getElementById('r-title').textContent = promo ? 'PROMOTED.' : 'DAILY PERFORMANCE REVIEW';
+  document.getElementById('r-title').textContent =
+    ending === 'fired' ? 'YOUR LAST DAY' : ending === 'burnout' ? 'YOU ARE DONE IN'
+    : ending === 'retired' ? 'THE LAST FRIDAY' : promo ? 'PROMOTED.' : 'DAILY PERFORMANCE REVIEW';
   const role0 = ROLES[run.rung];
   const speed = run.resolved ? Math.round(run.speedSum / run.resolved * 100) : 0;
   const qual  = run.resolved ? Math.round(run.qualSum / run.resolved * 100) : 0;
@@ -2093,12 +2125,20 @@ function reviewScreen(dayPerf, eod, promo){
     '<dt>Burnout</dt><dd style="color:' + (run.burnout > 60 ? 'var(--alert)' : 'inherit') + '">' +
       Math.round(run.burnout) + '% — permanent</dd>' +
     (promo ? '<dt>New title</dt><dd style="color:var(--amber)">' + ROLES[run.rung+1].title + '</dd>' : '');
-  document.getElementById('r-note').textContent = promo
-    ? 'Linda shook your hand for exactly one pump. There is a cake with someone else\'s name crossed out. You have made it.'
+  document.getElementById('r-note').textContent =
+    ending === 'fired' ? 'Two days under ' + Math.round(role0.gates.firedBelow*100) +
+      '% and the conversation writes itself. Linda did not enjoy it either, she says.'
+    : ending === 'burnout' ? 'Burnout hit 100%. You are not fired; you are simply finished, which is worse and quieter.'
+    : ending === 'retired' ? 'You held the top of the ladder long enough to walk out on your own terms.'
+    : promo ? 'Linda shook your hand for exactly one pump. There is a cake with someone else\'s name crossed out. You have made it.'
     : reviewLine(dayPerf);
   const act = document.getElementById('r-actions'); act.innerHTML = '';
-  mkBtn(act, 'NEXT DAY ▶', () => startCommute());
-  mkBtn(act, 'SAVE & QUIT', () => { saveGame(); toTitle(); }, true);
+  if (ending){
+    mkBtn(act, 'EXIT INTERVIEW ▶', () => careerOver(ending));
+  } else {
+    mkBtn(act, 'NEXT DAY ▶', () => startCommute());
+    mkBtn(act, 'SAVE & QUIT', () => { saveGame(); toTitle(); }, true);
+  }
 }
 function reviewLine(p){
   if (p >= .8) return 'Kayla nodded at you in the hallway. From Kayla, that is a standing ovation.';
@@ -2108,6 +2148,7 @@ function reviewLine(p){
 }
 function careerOver(kind){
   slog('CAREER OVER: ' + kind);
+  if (run) run.pendingEnd = null;
   G.state = 'over';
   meta.runsPlayed++;
   meta.rep += Math.floor(run.rep / 2) + (kind === 'retired' ? 5 : 0);
@@ -2160,6 +2201,7 @@ function serializeRun(){
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
     introDone: !!run.introDone, seen: run.seen || {},
     phase:run.phase || 'work', activeUid: run.active ? run.active.uid : null,
+    pendingEnd: run.pendingEnd || null,
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
     queue: queue.map(t => ({ uid:t.uid, id:t.id, title:t.title, fills:t.fills, at:t.at,
       deadline:t.deadline, sla:t.sla, stress:t.stress, si:t.si, bonus:t.bonus,
@@ -2190,7 +2232,8 @@ function resumeRun(s){
     seen: r.seen || {}, scores:r.scores,
     breaches:r.breaches, resolved:r.resolved,
     aces:r.aces, daysAtTop:r.daysAtTop, satOn:r.satOn || {}, promoted:r.promoted,
-    phase:r.phase || 'work' };
+    phase:r.phase || 'work', pendingEnd: r.pendingEnd || null };
+  if (run.pendingEnd){ careerOver(run.pendingEnd); return; }
   if (!run.plan){ startCommute(); return; }
   /* the day in this save was already scored at its review screen: go on to the
      next day rather than through endDay a second time */
@@ -2284,7 +2327,10 @@ function dlgPaint(){
     dlg.opts.forEach((o, i) => {
       const b = document.createElement('button');
       b.className = 'opt';
-      b.innerHTML = '<span class="k">' + (i+1) + '</span>' + o.t;
+      /* time is the one cost the player cannot see anywhere else, and it is
+         the one that quietly breaches the rest of the queue */
+      const cost = o.fx && o.fx.time ? ' <span style="color:var(--amber)">(−' + o.fx.time + ' min)</span>' : '';
+      b.innerHTML = '<span class="k">' + (i+1) + '</span>' + o.t + cost;
       b.onclick = () => pickOpt(i);
       box.appendChild(b);
     });
@@ -2350,37 +2396,54 @@ function tixTick(dt){
    sets state.score (0..1) and state.finished. Layout draws from the `game`
    stream; the outcome is entirely the player's inputs. */
 let MG = null;
-/* What an abandoned minigame was worth when it was walked away from. Charged
-   on pause so a retry averages against it instead of replacing it. */
+/* What an abandoned minigame was already worth — i.e. the best it could still
+   have finished at. The retry is capped here, so walking out of a botched
+   board can never beat having finished it, and an accidental alt-tab on a
+   clean board costs nothing. */
 function abandonScore(g){
   if (!g) return 0;
-  if (g.kind === 'cable'){
-    const done = g.linked.filter(x => x >= 0).length;
-    return clamp(1 - g.mistakes*.18, 0, 1) * (done / g.n);
+  if (g.kind === 'cable') return cableScore(g);
+  if (g.kind === 'pw'){
+    const left = g.items.length - g.at;
+    return g.items.length ? (g.right + left) / g.items.length : 1;
   }
-  if (g.kind === 'pw') return g.items.length ? g.right / g.items.length : 0;
-  if (g.kind === 'jargon') return g.rounds.length ? g.right / g.rounds.length : 0;
+  if (g.kind === 'jargon'){
+    const left = g.rounds.length - g.at;
+    return g.rounds.length ? (g.right + left) / g.rounds.length : 1;
+  }
   return 0;
 }
 function openGame(id, diff, onDone){
   G.state = 'modal'; G.modal = { kind:'game' };
-  let d = diff + (meta.certs.includes('aplus') ? -1 : 0);
+  const cert = meta.certs.includes('aplus');
+  let d = diff + (cert ? -1 : 0);
   if (run && run.coffee >= 3) d += 1;          // the jitters: cup four was a choice
   MG = GAMES[id].init(Math.max(1, d));
+  /* on the easiest games there is no difficulty left to remove, so the cert
+     pays out as one forgiven slip instead of doing nothing at all */
+  MG.forgive = cert ? 1 : 0;
   MG.gid = id; MG.onDone = onDone;
 }
 function gameTick(dt){
   MG.step(dt);
   if (MG.finished){
-    const score = MG.score, done = MG.onDone;
+    const cap = run && run.active ? (run.active.gameCap ?? 1) : 1;
+    const score = Math.min(MG.score, cap), done = MG.onDone;
     MG = null;
     closeModalToWork();
     if (done) done(score);
   }
 }
+/* Accuracy first, then the clock: the board is solvable on sight, so without
+   a pace component it handed out full marks for free. */
+function cableScore(g){
+  const miss = Math.max(0, g.mistakes - (g.forgive || 0));
+  const over = Math.max(0, g.t - g.par);
+  return clamp(1 - miss*.18 - over*.035, .2, 1);
+}
 const CABLE_COLS = ['#d64541','#2f7fbe','#ffb02e','#4ade80','#c084fc','#39d7ff','#ff8ad1'];
 const PW_ITEMS = [
-  { pw:'Summer2024!', ok:false, why:'company season + year' },
+  { pw:'Summer2024!', ok:false, why:'a season plus a year is not a password' },
   { pw:'xK9#mQ2$vL', ok:true },
   { pw:'password!!!', ok:false, why:'contains "password"' },
   { pw:'Fluffy4ever', ok:false, why:'that is the CFO\'s cat' },
@@ -2400,9 +2463,10 @@ const GAMES = {
     const left = cols.map((c,i)=>({c, i}));
     const right = cols.map((c,i)=>({c, i}));
     for (let i=n-1;i>0;i--){ const j = Ri('game', i+1); [right[i], right[j]] = [right[j], right[i]]; }
-    return { kind:'cable', n, left, right, cur:0, side:0, pickL:-1,
-      linked:new Array(n).fill(-1), mistakes:0, hint:'PICK A CABLE — ↑↓ TO MOVE, E TO GRAB',
+    return { kind:'cable', n, left, right, cur:0, side:0, pickL:-1, t:0, par: n * 2.4,
+      linked:new Array(n).fill(-1), mistakes:0, buzz:0, hint:'PICK A CABLE — ↑↓ TO MOVE, E TO GRAB',
       step(dt){
+        this.t += dt; this.buzz = Math.max(0, this.buzz - dt);
         this.hint = this.side === 0
           ? 'PICK A CABLE — ↑↓ TO MOVE, E TO GRAB'
           : 'NOW ITS PORT — ↑↓ TO MOVE, E TO PLUG IN';
@@ -2411,16 +2475,17 @@ const GAMES = {
         if (press.use){
           if (this.side === 0){
             if (this.linked[this.left[this.cur].i] < 0){ this.pickL = this.cur; this.side = 1; this.cur = 0; sfx('blip'); }
+            else { this.buzz = .35; sfx('err'); }          // already plugged in — say so
           } else {
             const L = this.left[this.pickL], Rp = this.right[this.cur];
-            if (this.linked.includes(this.cur)){ /* port taken */ }
+            if (this.linked.includes(this.cur)){ this.buzz = .35; sfx('err'); }   // port taken
             else if (L.i === Rp.i){ this.linked[L.i] = this.cur; sfx('ui'); }
-            else { this.mistakes++; sfx('err'); }
+            else { this.mistakes++; this.buzz = .35; sfx('err'); }
             this.side = 0; this.cur = this.pickL;
           }
         }
         if (!this.linked.includes(-1)){
-          this.score = clamp(1 - this.mistakes*.18, .25, 1);
+          this.score = cableScore(this);
           this.finished = true;
         }
       },
@@ -2447,7 +2512,15 @@ const GAMES = {
           ctx.fillStyle = '#0d1014'; ctx.fillRect(340, y, 20, 8);
           if (this.side===1 && this.cur===j){ ctx.strokeStyle='#fff'; ctx.strokeRect(318.5, y-4.5, 49, 17); }
         }
-        txt('MISTAKES ' + this.mistakes, 240, 216, this.mistakes ? '#d64541' : '#8b93a0', 7, 'center');
+        const over = Math.max(0, this.t - this.par);
+        txt('MISTAKES ' + this.mistakes + (this.forgive ? ' (1 FORGIVEN)' : ''),
+            140, 216, this.mistakes ? '#d64541' : '#8b93a0', 6, 'center');
+        txt('TIME ' + this.t.toFixed(1) + 's / ' + this.par.toFixed(0) + 's',
+            340, 216, over > 0 ? '#ffb02e' : '#4ade80', 6, 'center');
+        if (this.buzz > 0){
+          ctx.strokeStyle = 'rgba(214,69,65,' + (this.buzz*2).toFixed(2) + ')';
+          ctx.lineWidth = 2; ctx.strokeRect(61, 27, 358, 212);
+        }
       } };
   }},
   pw: { init(diff){
@@ -2473,7 +2546,9 @@ const GAMES = {
         if (press.two) pick = false;
         if (pick !== null){
           const correct = (pick === it.ok);
-          if (correct){ this.right++; sfx('ui'); } else sfx('err');
+          if (correct){ this.right++; sfx('ui'); }
+          else if (this.forgive){ this.forgive--; this.right++; sfx('ui'); }
+          else sfx('err');
           this.flash = .8;
           this.flashTxt = correct ? 'CORRECT' : ('NOPE — ' + (it.ok ? 'that one was fine' : it.why));
           this.at++;
@@ -2481,7 +2556,8 @@ const GAMES = {
       },
       draw(){
         mgPanel('PASSWORD TRIAGE', this.hint);
-        txt('POLICY: no "password" · no company+year · no pets · no last-password+!', 240, 66, '#8b93a0', 6, 'center');
+        txt('POLICY: no "password" · no season or company + year · no pet names', 240, 62, '#8b93a0', 6, 'center');
+        txt('· nothing that is last time\'s password with another "!" on it', 240, 72, '#8b93a0', 6, 'center');
         if (this.at < this.items.length){
           const it = this.items[this.at];
           ctx.fillStyle = '#10141a'; ctx.fillRect(140, 100, 200, 34);
@@ -2517,7 +2593,9 @@ const GAMES = {
         let pick = press.one ? 0 : press.two ? 1 : press.three ? 2 : -1;
         if (pick >= 0){
           this.ok = !!this.rounds[this.at].opts[pick].ok;
-          if (this.ok){ this.right++; sfx('ui'); } else sfx('err');
+          if (this.ok){ this.right++; sfx('ui'); }
+          else if (this.forgive){ this.forgive--; this.right++; this.ok = true; sfx('ui'); }
+          else sfx('err');
           this.flash = .7; this.at++;
         }
       },
@@ -2607,7 +2685,13 @@ function hudUpdate(){
   q.className = breaching ? 'breach' : '';
   const sm = document.getElementById('h-stressm');
   sm.firstElementChild.style.width = Math.round(run.stress) + '%';
-  sm.className = 'meter' + (run.stress > 75 ? ' bad' : run.stress > 45 ? ' warn' : '');
+  /* the meter turns at the threshold that actually costs you burnout tonight,
+     not at a round number that means nothing */
+  sm.className = 'meter' + (run.stress > BURN.thresh + 20 ? ' bad'
+                          : run.stress > BURN.thresh ? ' warn' : '');
+  const bm = document.getElementById('h-burnm');
+  bm.firstElementChild.style.width = Math.round(run.burnout) + '%';
+  bm.className = 'meter burn' + (run.burnout > 75 ? ' bad' : run.burnout > 50 ? ' warn' : '');
   document.getElementById('h-coffee').textContent = '☕' + run.coffee;
   const ot = objectiveText();
   const obj = document.getElementById('obj');
@@ -2653,6 +2737,7 @@ function toTitle(){
 function actSetup(){
   G.state = 'setup';
   G.abandonArmed = false;
+  { const w = document.getElementById('abandon-warn'); if (w) w.style.display = 'none'; }
   const box = document.getElementById('seedbox');
   if (!box.value) box.value = 'JOB-' + (1000 + (Math.random()*9000|0));
   /* one-time cert shop row */
@@ -2680,11 +2765,14 @@ function act(a){
       if (s && s !== 'future' && s.run &&
           (!G.abandonArmed || performance.now() - (G.abandonAt || 0) < 600)){
         G.abandonArmed = true; G.abandonAt = performance.now();
+        const w = document.getElementById('abandon-warn');
+        if (w) w.style.display = 'block';
         toast('A CAREER IS IN PROGRESS. ACCEPT AGAIN TO ABANDON IT.', 'red', 3800);
         sfx('err');
         break;
       }
       G.abandonArmed = false;
+      { const w = document.getElementById('abandon-warn'); if (w) w.style.display = 'none'; }
       const v = (document.getElementById('seedbox').value || 'JOB-1337').trim().toUpperCase().slice(0,18);
       newRun(v || 'JOB-1337');
       break;
@@ -2715,7 +2803,8 @@ function pauseGame(){
     if (run){
       if (dlg && dlg.scene && !dlg.onDone) (run.pendingScenes = run.pendingScenes || []).push(dlg.scene);
       if (run.active){
-        if (G.modal.kind === 'game' && MG) run.active.gameScores.push(abandonScore(MG));
+        if (G.modal.kind === 'game' && MG)
+          run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
         run.resumePending = true;
       }
     }
@@ -3116,12 +3205,22 @@ function selfTest(runSim){
                   sla:40, stress:5, si:0, bonus:0, gameScores:[], from:null };
       run.queue.push(t); run.active = t;
       openGame('cable', 2, () => {});
-      MG.mistakes = 3;
-      const before = t.gameScores.length;
+      MG.mistakes = 3; MG.forgive = 0; MG.t = 0;
+      const capWanted = cableScore(MG);
       pauseGame();
-      ok('minigame: walking out of a game still scores the attempt',
-         t.gameScores.length === before + 1 && t.gameScores[0] < 1,
-         'scores ' + JSON.stringify(t.gameScores));
+      ok('minigame: bailing caps the retry at what you walked away from',
+         Math.abs((t.gameCap ?? 1) - capWanted) < 1e-9 && (t.gameCap ?? 1) < 1,
+         'cap ' + (t.gameCap ?? 1).toFixed(2));
+      /* and finishing a fresh board perfectly cannot beat that cap */
+      t.si = 0;
+      openGame('cable', 2, () => {});
+      MG.mistakes = 0; MG.t = 0; MG.linked = MG.linked.map((_, i2) => i2);
+      MG.step(0.016);
+      const capped = Math.min(MG.score, t.gameCap ?? 1);
+      ok('minigame: a perfect retry cannot beat the abandoned attempt',
+         capped <= (t.gameCap ?? 1) + 1e-9 && capped < 1,
+         'retry ' + capped.toFixed(2));
+      if (G.modal) closeModalToWork();
       run.active = null; run.queue = []; G.state = 'work'; run.resumePending = false;
     }
 

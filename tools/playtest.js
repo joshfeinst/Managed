@@ -41,9 +41,11 @@ async function launch() {
         let guard = 0, promos = [];
         while (run && guard++ < 70) {
           startCommute();
+          if (!run) break;                    // yesterday ended the career
           const rungBefore = run.rung;
           simDay(skill, policy);
           if (!run) break;
+          if (run.pendingEnd){ startCommute(); break; }   // resolve the ending
           days.push({ perf: +run.perfHist[run.perfHist.length-1].toFixed(2),
                       burn: Math.round(run.burnout), br: run.breaches, res: run.resolved });
           if (run.rung > rungBefore) promos.push({ day: run.day - 1, to: ROLES[run.rung].id });
