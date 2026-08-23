@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Managed</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14161a">
@@ -225,7 +226,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
 
     <!-- PAUSE -->
     <div class="screen" id="s-pause" hidden>
-      <div class="eyebrow">on a break — the queue is not</div>
+      <div class="eyebrow">on a break — the office will keep, briefly</div>
       <h2 class="ttl" id="p-title">PAUSED</h2>
       <div class="panel" style="width:min(520px,92vw)"><dl class="dl" id="p-meta"></dl></div>
       <div class="grid2 panel" style="width:min(520px,92vw)">
@@ -277,9 +278,9 @@ input[type=range]{accent-color:var(--corp); width:150px}
         <div class="ctl"><span>Session log (for feedback)</span><span>F1</span></div>
         <div class="ctl"><span>Run self test</span><span>F4</span></div>
       </div>
-      <p class="hint">Your terminal (the glowing one at your desk) opens the <b>service queue</b>. Tickets breach their
-      SLA whether or not you are watching them — the clock only stops when you clock out. The printer is possessed.
-      Welcome aboard.</p>
+      <p class="hint">Your terminal (the glowing one at your desk) opens the <b>service queue</b>. The clock runs while
+      you work and walk; every job charges its minutes up front, so reading, menus and thinking are free — the shift
+      bills the work, not you. The printer is possessed. Welcome aboard.</p>
       <p class="hint" id="hb-burn"></p>
       <div class="row"><button class="btn ghost" data-act="back">◀ BACK</button></div>
     </div>
@@ -374,7 +375,8 @@ addEventListener('keydown', e => {
   const playing = typeof G !== 'undefined' && G && (G.state === 'work' || G.state === 'modal');
   const a = playing ? KEYMAP[e.code] : null;
   if (e.repeat){ if (a) e.preventDefault(); return; }
-  if (a){ held[a] = true; e.preventDefault(); }
+  if (a){ held[a] = true; e.preventDefault();
+          if (a==='up'||a==='down'||a==='left'||a==='right') dirPushed(a); }
   keys.add(e.code);
   if (playing){
     if (e.code==='KeyE' || e.code==='Space' || e.code==='Enter') press.use = true;
@@ -389,6 +391,12 @@ addEventListener('keydown', e => {
 });
 /* Multi-bound actions (W and Up both walk): releasing ONE key must not cancel
    the action while the other is still physically down. */
+/* Most-recent-direction order. 'held' knows WHICH dirs are down but not which
+   one the player pressed last — and a fixed up>down>left>right priority means
+   holding S while tapping D walks you into the wall forever and ignores the D.
+   Four playtesters reported travel 'fighting' them; this is most of why. */
+const dirOrder = [];
+function dirPushed(d){ const i = dirOrder.indexOf(d); if (i >= 0) dirOrder.splice(i,1); dirOrder.push(d); }
 addEventListener('keyup', e => {
   keys.delete(e.code);
   const a = KEYMAP[e.code];
@@ -417,6 +425,15 @@ addEventListener('blur', () => {
   if (typeof G !== 'undefined' && (G.state === 'work' || G.state === 'modal') && typeof pauseGame === 'function') pauseGame();
 });
 addEventListener('focus', clearInput);
+/* The tab being KILLED was the one exit that saved nothing: blur and
+   visibilitychange both pause (which saves), but a straight close fires
+   neither reliably — pagehide is the event that actually runs on the way
+   out. Six of six playtesters lost progress to this. */
+addEventListener('pagehide', () => {
+  if (typeof G === 'undefined' || typeof pauseGame !== 'function') return;
+  if (G.state === 'work' || G.state === 'modal') pauseGame();   // parks modals, saves
+  else if (typeof saveGame === 'function') saveGame();
+});
 document.addEventListener('visibilitychange', () => {
   clearInput();
   if (document.hidden && typeof G !== 'undefined' && (G.state === 'work' || G.state === 'modal') && typeof pauseGame === 'function') pauseGame();
@@ -1780,7 +1797,13 @@ function drawWorld(){
       ctx.fillStyle = '#ffb02e';
       ctx.beginPath(); ctx.moveTo(tx0, sy2+5.5); ctx.lineTo(tx0-4.5, sy2-1.5); ctx.lineTo(tx0+4.5, sy2-1.5);
       ctx.closePath(); ctx.fill();
-      txtPlate(objv.label, clamp(tx0, 40, VW-40), sy2-7, '#ffb02e', 6, 'center');
+      /* Up close, the label plate was sitting ON the thing it labels — near a
+         map edge the x-clamp slid it straight over the target and its approach
+         tile, and playtesters read the coffee machine as covered/unreachable.
+         Within a few tiles the arrow alone is unambiguous; the words step
+         aside once they can only get in the way. */
+      const near = Math.abs(player.tx - mx) + Math.abs(player.ty - my) <= 3;
+      if (!near) txtPlate(objv.label, clamp(tx0, 40, VW-40), sy2-7, '#ffb02e', 6, 'center');
     } else {
       const ex = clamp(tx0, 16, VW-16), ey = clamp(ty0, 26, VH-16);
       /* aim down the path a few tiles, so the arrow points at the doorway you
@@ -2324,7 +2347,7 @@ function arrivalsTick(){
       from:T.from || null });
     run.stress = Math.min(100, run.stress + 1);
     sfx('ticket');
-    toast('NEW TICKET — ' + a.title.toUpperCase().slice(0, 44), 'amber', 2600);
+    toast('NEW TICKET — ' + a.title.toUpperCase(), 'amber', 2600);
     slog('ticket in: ' + a.title);
     if (run.day === 1 && !run.taughtQueue){
       run.taughtQueue = true;
@@ -2355,7 +2378,7 @@ function eventsTick(){
   if (P2.ei < P2.events.length){
     const next = P2.events[P2.ei];
     const away = next.at - run.clock;
-    if (away <= EVENT_WARN && away > 0 && !run.warned[next.id]){
+    if (away <= EVENT_WARN && away > 0 && !(run.warned = run.warned || {})[next.id]){
       run.warned[next.id] = 1;
       const h = Math.floor(next.at/60) + 9, mm = Math.floor(next.at % 60);
       toast('CALENDAR: ' + (EV_NAMES[next.id] || next.id).toUpperCase() + ' AT ' +
@@ -2386,6 +2409,8 @@ function slaTick(){
         run.clock <= t.deadline + clamp(workLeft(t), ACTIVE_GRACE, ACTIVE_GRACE_MAX)) continue;
     if (run.clock > t.deadline){
       run.queue.splice(i,1);
+      /* a dead errand cannot keep sending you across the office */
+      if (run.active === t){ run.active = null; run.marker = null; run.resumePending = false; }
       const pri = TICKETS[t.id].pri || 2;
       run.scores.push(0); run.breaches++; run.burned.push(stakesOf(t.id));
       /* Dropping tickets is the job now, so a breach cannot cost a flat panic
@@ -2405,8 +2430,10 @@ function slaTick(){
          burn — and shouting about every one of them makes a designed rhythm
          read as a failing afternoon. It shouts about the ones the office would
          actually shout about. */
-      if (pn <= 2){ sfx('breach'); toast('SLA BREACH P' + pn + ' — ' + t.title.toUpperCase().slice(0,38), 'red', 3400); }
-      else { sfx('blip'); toast('aged out (P' + pn + ') — ' + t.title.slice(0,40), 'corp', 1800); }
+      /* the box wraps and its duration scales with length — the hard slices
+         here were the only reason messages cut off mid-word */
+      if (pn <= 2){ sfx('breach'); toast('SLA BREACH P' + pn + ' — ' + t.title.toUpperCase(), 'red', 3400); }
+      else { sfx('blip'); toast('aged out (P' + pn + ') — ' + t.title, 'corp', 1800); }
     }
   }
 }
@@ -2422,13 +2449,82 @@ function crashTick(){
 function playerMove(dt){
   entUpdate(player, dt, held.sprint ? 6.5 : 4.2);
   if (player.t < 1) return;
-  const want = held.up ? 'up' : held.down ? 'down' : held.left ? 'left' : held.right ? 'right' : null;
-  if (!want){ player.turnT = 0; return; }
+  /* freshest-pressed held direction wins; the rest queue behind it */
+  const heldDirs = [];
+  for (let i = dirOrder.length - 1; i >= 0; i--) if (held[dirOrder[i]]) heldDirs.push(dirOrder[i]);
+  for (const d of ['up','down','left','right']) if (held[d] && !heldDirs.includes(d)) heldDirs.push(d);
+  const want = heldDirs[0] || null;
+  if (!want){ player.turnT = 0; autoWalk(); return; }
+  G.autoPath = null;                       // touching the keys takes the wheel back
   if (player.dir !== want){ player.dir = want; player.turnT = 0.07; return; }
   player.turnT = (player.turnT || 0) - dt;
   if (player.turnT > 0) return;
   const [dx,dy] = DIRV[want];
-  tryStep(player, dx, dy);
+  /* a blocked step falls through to the other held axis: pushing up-and-right
+     against a wall slides right instead of grinding on the wall */
+  if (!tryStep(player, dx, dy) && heldDirs[1]){
+    const [ax,ay] = DIRV[heldDirs[1]];
+    tryStep(player, ax, ay);
+  }
+}
+/* Click-to-walk. A mouse-only playtester proved the whole overworld was
+   keyboard-gated: five clicks on floor, NPC and desk moved her zero tiles in
+   five minutes of trying. The engine already owns A* and tween movement, so a
+   click on open floor walks there, and a click on something solid walks to its
+   nearest open side and USES it — the convention of every pointer-driven tile
+   game. Touching a movement key cancels the route instantly. */
+function autoWalk(){
+  const ap = G.autoPath;
+  if (!ap) return;
+  if (!ap.path.length){
+    if (ap.use){
+      const [ux,uy] = ap.use;
+      const ddx = ux - player.tx, ddy = uy - player.ty;
+      if (Math.abs(ddx) + Math.abs(ddy) === 1){
+        player.dir = ddx<0?'left':ddx>0?'right':ddy<0?'up':'down';
+        press.use = true;
+      }
+    }
+    G.autoPath = null;
+    return;
+  }
+  const [nx,ny] = ap.path[0];
+  if (nx === player.tx && ny === player.ty){ ap.path.shift(); return; }
+  const dx = Math.sign(nx - player.tx), dy = Math.sign(ny - player.ty);
+  if (!tryStep(player, dx, dy)){
+    /* somebody wandered into the route: re-plan once, then give up quietly */
+    if (ap.replanned){ G.autoPath = null; return; }
+    const goal = ap.path[ap.path.length - 1];
+    const fresh = astar(player.tx, player.ty, goal[0], goal[1]);
+    G.autoPath = fresh ? { path: fresh, use: ap.use, replanned: true } : null;
+  }
+}
+function walkToClick(vx, vy){
+  if (!W2.W || !player) return false;
+  const cx2 = Math.round(cam.x), cy2 = Math.round(cam.y);
+  const tx = Math.floor((vx + cx2) / TILE), ty = Math.floor((vy + cy2) / TILE);
+  if (tx < 0 || ty < 0 || tx >= W2.W || ty >= W2.H) return false;
+  const blocked = solidAt(tx, ty) || entAt(tx, ty);
+  if (blocked && Math.abs(tx - player.tx) + Math.abs(ty - player.ty) === 1){
+    player.dir = tx<player.tx?'left':tx>player.tx?'right':ty<player.ty?'up':'down';
+    press.use = true; return true;         // next to it already: face it and use it
+  }
+  if (blocked){
+    let best = null;
+    for (const [ax,ay] of [[tx,ty-1],[tx,ty+1],[tx-1,ty],[tx+1,ty]]){
+      if (ax<0||ay<0||ax>=W2.W||ay>=W2.H) continue;
+      if (solidAt(ax,ay) || entAt(ax,ay)) continue;
+      const pth = astar(player.tx, player.ty, ax, ay);
+      if (pth && (!best || pth.length < best.length)) best = pth;
+    }
+    if (!best) return false;
+    G.autoPath = { path: best, use: [tx, ty] };
+    return true;
+  }
+  const pth = astar(player.tx, player.ty, tx, ty);
+  if (!pth) return false;
+  G.autoPath = { path: pth, use: null };
+  return true;
 }
 function workInput(){
   if (press.queue){ openQueue(); return; }
@@ -2876,7 +2972,8 @@ function careerOver(kind){
   if (kind === 'fired') meta.carry = Math.max(0, (meta.carry || 0) - 1);
   else meta.carry = Math.max(meta.carry || 0, run.rung - 1);
   const savedRun = run; run = null;
-  saveGame();
+  saveGame(true);                        // the one save that MEANS "no career"
+
   const texts = {
     burnout: ['BURNED OUT', 'You typed "per my last email" into the microwave and hit START. Security walked you out gently — they\'ve seen it before. Day ' + savedRun.day + ', ' + ROLES[savedRun.rung].title + '.'],
     fired:   ['LET GO', '"We\'re restructuring the support function," said Linda, restructuring you specifically out of the building. Day ' + savedRun.day + '.'],
@@ -2915,10 +3012,22 @@ const MIGRATIONS = {
     r.burned = new Array(r.breaches || 0).fill(2);
   }
 };   // v -> fn(save) mutating up one version
-function saveGame(){
+function saveGame(wipeRun){
   if (typeof SAVE_SUSPEND !== 'undefined' && SAVE_SUSPEND) return;   // self test never touches the real save
   try {
-    const data = { v:SAVE_V, meta, run: run ? serializeRun() : null };
+    /* With no live run this used to write run:null — which meant any save
+       call made from the title screen (the pace dial, most famously) silently
+       erased the stored career. A playtest fleet caught it: change a setting,
+       lose your job. Now a title-screen save updates meta and PRESERVES the
+       stored run; only careerOver, which means it, passes wipeRun. A save
+       from a newer version of the game is never overwritten at all. */
+    let carried = null;
+    if (!run && !wipeRun){
+      const s = loadGame();
+      if (s === 'future') return;
+      if (s && s.run) carried = s.run;
+    }
+    const data = { v:SAVE_V, meta, run: run ? serializeRun() : carried };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   } catch(_){}
 }
@@ -2934,6 +3043,12 @@ function serializeRun(){
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
     introDone: !!run.introDone, seen: run.seen || {},
+    /* Both were memory-only, and both detonated on resume: a missing warned
+       threw a TypeError per tick for the 12 minutes before every calendar
+       event of every CONTINUEd career (input dead, FAULT banners), and a
+       missing taughtQueue replayed the first-ticket tutorial on every day-1
+       arrival after a quit. */
+    warned: run.warned || {}, taughtQueue: !!run.taughtQueue,
     phase:run.phase || 'work', activeUid: run.active ? run.active.uid : null,
     pendingEnd: run.pendingEnd || null,
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
@@ -2955,6 +3070,7 @@ function loadGame(){
   return s;
 }
 function resumeRun(s){
+  clearToasts();
   meta = normalizeMeta(s.meta);
   const r = s.run;
   rngInit(r.seed, r.rng);
@@ -2963,6 +3079,7 @@ function resumeRun(s){
     coffee:r.coffee, crashes:r.crashes, burnout:r.burnout, rep:r.rep,
     queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
     pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone,
+    warned: r.warned || {}, taughtQueue: !!r.taughtQueue,
     seen: r.seen || {}, scores:r.scores,
     burned: r.burned || [], earned: r.earned || 0, stakesDone: r.stakesDone || 0,
     speedSum: r.speedSum || 0, qualSum: r.qualSum || 0, qualN: r.qualN || 0,
@@ -3669,7 +3786,12 @@ function screenForState(){
     default:        return null;
   }
 }
+function clearToasts(){
+  const tc = document.getElementById('toasts');
+  if (tc) tc.innerHTML = '';                 // a toast about a dead career is a haunting
+}
 function toTitle(){
+  clearToasts();
   G.state = 'title';
   hudShow(false);
   const s = loadGame();
@@ -3824,30 +3946,37 @@ function onKey(e){
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)){
     if (e.code !== 'F4') return;
   }
+  /* Closing an overlay puts you back where you were: three playtesters found
+     that F4 always dumped them on the pause menu (the overlay force-pauses on
+     open, and close showed the pause screen), and that Esc under an open F1
+     log resumed the game BLIND underneath the near-opaque overlay. Overlays
+     now remember whether they did the pausing, and Esc closes them. */
+  const closeOverlay = () => {
+    G.showLog = false; G.showTests = false;
+    if (G.overlayPaused && G.state === 'pause'){ G.overlayPaused = false; resumeWork(); }
+    else show(screenForState());
+  };
+  if (e.code === 'Escape' && (G.showLog || G.showTests)){
+    e.preventDefault(); closeOverlay(); return;
+  }
   if (e.code === 'F1'){
     e.preventDefault();
-    if (G.showLog){                      // closing: put the player back
-      G.showLog = false;
-      show(screenForState());
-      return;
-    }
+    if (G.showLog){ closeOverlay(); return; }
     /* never leave the day running behind the log, and never let a DOM screen
        sit on top of it — it draws on the canvas */
-    if (G.state === 'work' || G.state === 'modal') pauseGame();
+    G.overlayPaused = (G.state === 'work' || G.state === 'modal');
+    if (G.overlayPaused) pauseGame();
     G.logReturn = G.screenId;
     G.showLog = true; show(null);
     return;
   }
   if (e.code === 'F4'){
     e.preventDefault();
-    if (G.showLog){ G.showLog = false; show(screenForState()); }
-    if (G.showTests){
-      G.showTests = false;
-      show(screenForState());          // the CURRENT state's screen — never a stale one
-      return;
-    }
+    if (G.showLog) G.showLog = false;
+    if (G.showTests){ closeOverlay(); return; }
     /* never leave a live sim (or an open modal) running under the report */
-    if (G.state === 'work' || G.state === 'modal') pauseGame();
+    G.overlayPaused = (G.state === 'work' || G.state === 'modal');
+    if (G.overlayPaused) pauseGame();
     const sim = (G.state === 'title' || G.state === 'over' || G.state === 'menu');
     G.testReturn = G.screenId;          // show(null) below clears it otherwise
     selfTest(sim);
@@ -3855,6 +3984,16 @@ function onKey(e){
     return;
   }
   if (G.showTests) return;
+  /* Enter/Space press the obvious button on any DOM screen — genre-veteran
+     playtesters hammered Enter at the title, the briefing and the review and
+     got silence. The primary (non-ghost) visible button is the obvious one. */
+  if ((e.code === 'Enter' || e.code === 'Space') &&
+      ['title','menu','commute','review','over','setup'].includes(G.state)){
+    const scr = G.screenId && document.getElementById(G.screenId);
+    const b = scr && Array.from(scr.querySelectorAll('.btn:not(.ghost)'))
+      .find(x => !x.disabled && x.offsetParent !== null);
+    if (b){ e.preventDefault(); b.click(); return; }
+  }
   if (e.code === 'KeyH' && G.state === 'modal' && G.modal && G.modal.kind === 'game'){
     e.preventDefault(); briefReopen(); return;
   }
@@ -4965,6 +5104,205 @@ function selfTest(runSim){
          m.pace === null && m.seenGames && typeof m.seenGames === 'object' && m.certs[0] === 'aplus');
     }
 
+    /* --- what the first playtest fleet caught (wave 1, six players) --- */
+
+    /* the file declares its own encoding: served without a charset header it
+       rendered every arrow, dash and coffee cup as mojibake for all six */
+    /* file:// defaults to UTF-8, so characterSet alone cannot see a missing
+       declaration — require the tag itself, which is what HTTP servers need */
+    ok('page: charset is declared and UTF-8',
+       document.characterSet === 'UTF-8' && !!document.querySelector('meta[charset]'),
+       document.characterSet + (document.querySelector('meta[charset]') ? '' : ' / no meta tag'));
+
+    /* warned + taughtQueue survive the save; a resumed career neither
+       crashes eventsTick for 12 minutes before every meeting nor replays
+       the first-ticket tutorial on every arrival */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.warned = { standup: 1 }; run.taughtQueue = true;
+      const ser = serializeRun();
+      resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(ser)) });
+      ok('save: event warnings and the tutorial flag survive a resume',
+         run && run.warned && run.warned.standup === 1 && run.taughtQueue === true,
+         JSON.stringify({ w: run && run.warned, t: run && run.taughtQueue }));
+      /* an OLD save has neither field — the resume must default them, and
+         eventsTick must survive a warnable event either way */
+      const old = JSON.parse(JSON.stringify(ser));
+      delete old.warned; delete old.taughtQueue;
+      resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: old });
+      let evOk = run && typeof run.warned === 'object' && run.taughtQueue === false;
+      run.warned = undefined;                     // the exact wave-1 crash state
+      run.plan.events = [{ id:'standup', at: run.clock + 5 }];
+      run.plan.ei = 0; run.pendingScenes = []; run.pendingEvents = [];
+      G.state = 'work';
+      let threw = null;
+      try { eventsTick(); } catch(e){ threw = e.message; }
+      ok('save: a resumed career survives the 12 minutes before a meeting',
+         evOk && threw === null, threw || (evOk ? '' : 'defaults missing'));
+      if (G.modal) closeModalToWork();
+      run = null;
+    }
+
+    /* a title-screen save (no live run) must never erase the stored career —
+       the pace dial did exactly that; only careerOver may wipe */
+    {
+      QUIET = true;
+      const realRaw = localStorage.getItem(SAVE_KEY);
+      try {
+        rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+        SAVE_SUSPEND = false;
+        saveGame();                               // a live career hits the disk
+        run = null;
+        saveGame();                               // ...then a title-screen save (pace, options)
+        const after = JSON.parse(localStorage.getItem(SAVE_KEY));
+        ok('save: a title-screen save preserves the stored career',
+           after && after.run && after.run.seed === 'JOB-TEST',
+           after && after.run ? '' : 'run was clobbered to null');
+        saveGame(true);                           // careerOver means it
+        const wiped = JSON.parse(localStorage.getItem(SAVE_KEY));
+        ok('save: only careerOver wipes the stored career', wiped && wiped.run === null);
+        localStorage.setItem(SAVE_KEY, JSON.stringify({ v: SAVE_V + 7, meta: {} }));
+        saveGame();                               // a FUTURE save is not ours to touch
+        const fut = JSON.parse(localStorage.getItem(SAVE_KEY));
+        ok('save: a newer version\'s save is never overwritten from the title',
+           fut && fut.v === SAVE_V + 7, 'v=' + (fut && fut.v));
+      } finally {
+        SAVE_SUSPEND = true;
+        if (realRaw === null) localStorage.removeItem(SAVE_KEY);
+        else localStorage.setItem(SAVE_KEY, realRaw);
+      }
+    }
+
+    /* a breached active ticket takes its GO-TO marker to the grave */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const t = { uid:902, id:'coffee-derek', title:'t', fills:{}, at:0, deadline:10,
+                  sla:10, stress:4, si:0, bonus:0, gameScores:[], from:null };
+      run.queue = [t]; run.active = t; run.marker = [5,5]; run.markerLabel = 'x';
+      run.clock = t.deadline + ACTIVE_GRACE_MAX + 1;
+      slaTick();
+      ok('sla: a breached errand clears its own objective marker',
+         run.active === null && run.marker === null && run.queue.length === 0,
+         'active ' + !!run.active + ' marker ' + !!run.marker);
+      run = null;
+    }
+
+    /* click-to-walk: a click on open floor walks there; a click on the coffee
+       machine walks to its open side and USES it; keys cancel the route */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      G.state = 'work'; G.autoPath = null;
+      for (const d of ['up','down','left','right']) held[d] = false;
+      /* the machine ITSELF (solid, act='coffee') — the COFFEE anchor is the
+         walkable tile beside it, which would just be a walk */
+      let kpos = null;
+      for (let ky = 0; ky < W2.H && !kpos; ky++)
+        for (let kx = 0; kx < W2.W && !kpos; kx++)
+          if (W2.act[ky*W2.W + kx] === 'coffee' && solidAt(kx, ky)) kpos = [kx, ky];
+      /* a floor tile a real walk away */
+      let far = null;
+      for (let r = 8; r > 3 && !far; r--)
+        for (let dx2 = -r; dx2 <= r && !far; dx2++)
+          for (let dy2 = -r; dy2 <= r && !far; dy2++){
+            const fx = player.tx + dx2, fy = player.ty + dy2;
+            if (fx<1||fy<1||fx>=W2.W-1||fy>=W2.H-1) continue;
+            if (Math.abs(dx2)+Math.abs(dy2) < 5) continue;
+            if (solidAt(fx,fy) || entAt(fx,fy)) continue;
+            if (astar(player.tx, player.ty, fx, fy)) far = [fx,fy];
+          }
+      const c0 = [Math.round(cam.x), Math.round(cam.y)];
+      const hit = far && walkToClick(far[0]*TILE + 8 - c0[0], far[1]*TILE + 8 - c0[1]);
+      let walked = false;
+      if (hit){
+        for (let i = 0; i < 900 && G.autoPath; i++) playerMove(1/30);
+        walked = player.tx === far[0] && player.ty === far[1];
+      }
+      ok('mouse: a click on open floor walks the player there',
+         !!hit && walked, far ? 'arrived ' + walked : 'no floor tile found');
+      /* the coffee machine: solid, so the click means "go use it" */
+      let usedIt = false;
+      if (kpos){
+        press.use = false; G.autoPath = null;
+        const ok2 = walkToClick(kpos[0]*TILE + 8 - Math.round(cam.x), kpos[1]*TILE + 8 - Math.round(cam.y));
+        if (ok2){
+          for (let i = 0; i < 1200 && G.autoPath; i++) playerMove(1/30);
+          usedIt = press.use === true &&
+                   Math.abs(player.tx - kpos[0]) + Math.abs(player.ty - kpos[1]) === 1;
+        }
+      }
+      ok('mouse: a click on the coffee machine walks up and uses it',
+         usedIt, kpos ? 'use=' + press.use : 'no coffee anchor');
+      press.use = false;
+      /* touching a movement key takes the wheel back instantly */
+      G.autoPath = { path: [[player.tx+1, player.ty]], use: null };
+      held.right = true; dirPushed('right');
+      playerMove(1/30);
+      ok('mouse: touching a key cancels the auto-route', G.autoPath === null);
+      held.right = false;
+      run = null;
+    }
+
+    /* movement: the freshest key wins, and a blocked axis slides to the other */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      /* find a spot with a wall above and floor to the right */
+      let spot = null;
+      for (let y = 1; y < W2.H-1 && !spot; y++)
+        for (let x = 1; x < W2.W-1 && !spot; x++)
+          if (!solidAt(x,y) && solidAt(x,y-1) && !solidAt(x+1,y) && !entAt(x,y) && !entAt(x+1,y))
+            spot = [x,y];
+      let slid = false, fresh = false;
+      if (spot){
+        occ.delete(okey(player.tx, player.ty));
+        player.tx = spot[0]; player.ty = spot[1]; player.x = spot[0]; player.y = spot[1];
+        player.t = 1; occ.add(okey(spot[0], spot[1]));
+        held.up = true; held.right = true;
+        dirPushed('right'); dirPushed('up');   // up pressed LAST: it is preferred, and blocked
+        player.dir = 'up'; player.turnT = 0;
+        playerMove(1/30);
+        slid = player.tx === spot[0] + 1;      // ...so the held right axis carried the step
+        /* freshest-key: back on the spot, down held first, right pressed after —
+           the attempted step must go right (open floor by construction) */
+        occ.delete(okey(player.tx, player.ty));
+        player.tx = spot[0]; player.ty = spot[1]; player.x = spot[0]; player.y = spot[1];
+        player.t = 1; occ.add(okey(spot[0], spot[1]));
+        held.up = false; held.right = true; held.down = true;
+        dirPushed('down'); dirPushed('right');
+        player.turnT = 0; player.dir = 'right';
+        playerMove(1/30);
+        fresh = player.tx === spot[0] + 1;
+        held.down = false; held.right = false;
+      }
+      ok('movement: a blocked direction slides along the other held axis',
+         slid, spot ? '' : 'no test spot on map');
+      ok('movement: the most recently pressed key steers', fresh);
+      run = null;
+    }
+
+    /* overlays: Esc closes the F1 log, and closing returns to the game when
+       the overlay itself did the pausing — never to a surprise pause menu */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      G.state = 'work'; G.showLog = false; G.showTests = false;
+      const ev = c => ({ code: c, preventDefault(){}, target: null });
+      onKey(ev('F1'));
+      const opened = G.showLog === true && G.state === 'pause' && G.overlayPaused === true;
+      onKey(ev('Escape'));
+      ok('overlay: Esc closes the session log and resumes the game',
+         opened && G.showLog === false && G.state === 'work',
+         'opened=' + opened + ' after=' + G.state);
+      run = null; G.state = 'title';
+    }
+
     /* NPC day: schedules complete without the teleport fallback */
     rngInit('JOB-TEST');
     loadMap('office1'); spawnPeople();
@@ -5157,6 +5495,11 @@ function render(){
       if (MG.brief) drawBrief(MG);     // over the real board, so you see what is coming
     }
     if (G.state !== 'pause') hudUpdate();
+    /* a quiet autosave while simply working, so the worst an abrupt close can
+       cost is ~25 seconds — pagehide is the front door, this is the deadbolt */
+    if (G.state === 'work' && run && performance.now() - (G.lastAuto || 0) > 25000){
+      G.lastAuto = performance.now(); saveGame();
+    }
   } else if (W2.W){
     /* menus idle over a slow pan of the office */
     idleT += 1/60;
@@ -5217,7 +5560,11 @@ function clickAdvance(ev){
     if (k === 'dlg'){ press.use = true; return; }
     return;                                   // the queue panel has its own rows
   }
-  if (G.state === 'work'){ press.use = true; }
+  if (G.state === 'work'){
+    const pt = canvasPoint(ev);
+    if (pt && typeof walkToClick === 'function' && walkToClick(pt.x, pt.y)) return;
+    press.use = true;
+  }
 }
 addEventListener('pointerdown', clickAdvance);
 

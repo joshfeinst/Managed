@@ -125,8 +125,13 @@ async function open(o){
     /* What a person could click: buttons and rows, with where they are. */
     async clickables(){
       return page.evaluate(() => {
+        const SEL = 'button,[data-act],.opt,a,input';
         const out = [];
-        for (const el of document.querySelectorAll('button,[data-act],.row,.opt,a,input')){
+        for (const el of document.querySelectorAll(SEL + ',.row')){
+          /* leaves only: a container row's center is the dead gap BETWEEN its
+             buttons — clicking it does nothing, which cost a harness run 42
+             seconds of clicking the space between ACCEPT and BACK */
+          if (el.querySelector && el.querySelector(SEL)) continue;
           const st = getComputedStyle(el);
           if (st.display === 'none' || st.visibility === 'hidden') continue;
           const r = el.getBoundingClientRect();
