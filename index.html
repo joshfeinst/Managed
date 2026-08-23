@@ -2941,6 +2941,11 @@ function cableScore(g){
   return clamp(1 - miss*.18 - over*.035, .2, 1);
 }
 const CABLE_COLS = ['#d64541','#2f7fbe','#ffb02e','#4ade80','#c084fc','#39d7ff','#ff8ad1'];
+/* Every cable is also LABELLED. Matching purely on hue — with red against
+   green and blue against purple in the same rack — is a puzzle a colour-blind
+   player cannot see at all, and this is half the minigames in the game. The
+   port tag is how you would actually trace a patch panel anyway. */
+const CABLE_TAGS = ['A1','B2','C3','D4','E5','F6','G7'];
 
 const GAMES = {
   cable: { init(diff){
@@ -2983,6 +2988,9 @@ const GAMES = {
           const y = y0 + i*dy;
           ctx.fillStyle = this.left[i].c;
           ctx.fillRect(120, y, 40, 8);
+          /* the tag sits beside the cable, not on it — six-pixel dark text on a
+             red cable is exactly as unreadable as no tag at all */
+          txt(CABLE_TAGS[this.left[i].i], 114, y + 7, '#8b93a0', 6, 'right');
           if (this.linked[this.left[i].i] >= 0){
             const j = this.linked[this.left[i].i];
             ctx.strokeStyle = this.left[i].c; ctx.lineWidth = 2;
@@ -2996,6 +3004,7 @@ const GAMES = {
           ctx.fillStyle = '#1b2129'; ctx.fillRect(320, y-2, 46, 12);
           ctx.fillStyle = this.right[j].c; ctx.fillRect(324, y, 12, 8);
           ctx.fillStyle = '#0d1014'; ctx.fillRect(340, y, 20, 8);
+          txt(CABLE_TAGS[this.right[j].i], 350, y + 7, '#8b93a0', 6, 'center');
           if (this.side===1 && this.cur===j){ ctx.strokeStyle='#fff'; ctx.strokeRect(318.5, y-4.5, 49, 17); }
         }
         const over = Math.max(0, this.t - this.par);
@@ -4127,6 +4136,15 @@ function selfTest(runSim){
          'got ' + ducked.toFixed(2));
       ok('relief from an event costs nothing', given === 0, 'got ' + given.toFixed(2));
       run = null;
+    }
+    /* Colour must never be the only way to read a puzzle: the cable rack pairs
+       red against green and blue against purple, and it is half the minigames
+       in the game. */
+    {
+      ok('every cable has a label, not just a colour',
+         CABLE_TAGS.length >= CABLE_COLS.length &&
+         new Set(CABLE_TAGS).size === CABLE_TAGS.length,
+         CABLE_TAGS.length + ' tags for ' + CABLE_COLS.length + ' colours');
     }
     /* every ticket carries stakes, and they are the triage decision */
     {
