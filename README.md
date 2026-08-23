@@ -43,10 +43,13 @@ self-tests if you're curious.
 
 ## A day at Proactive
 
-You clock in at 9:00 and the shift is eight game-hours. The clock doesn't stop
-for dialogue, for meetings, or for a minigame — your SLAs count down the whole
-time. Options has a pace dial for how fast those eight hours pass in the real
-world: about thirteen minutes on Relaxed, eight on Standard, five on Crunch. The
+You clock in at 9:00 and the shift is eight game-hours. Working a ticket costs
+you minutes off that shift, and so does a meeting, and you can watch it happen —
+but the panels themselves hold the clock, so reading a line is free and taking
+your time over a decision is free. The work is priced, not your reading speed.
+
+Options has a pace dial for how fast those eight hours pass in the real world:
+about thirteen minutes on Relaxed, eight on Standard, five on Crunch. The
 tickets, the deadlines and the scoring are the same at all three, so it changes
 how much room you get and nothing else. A profile that hasn't finished a career
 yet starts on Relaxed.
@@ -72,8 +75,9 @@ Some other things worth knowing:
 - Grab a ticket when it lands and work it straight through and you'll score full
   marks. The clock you're racing is the one that runs while it sits there.
 - The first time you meet a minigame it opens on a card explaining what it is,
-  which keys do what, and what costs you marks. The clock stops while that card
-  is up.
+  which keys do what, and what costs you marks. H brings it back later.
+- Stopping to talk to someone costs you nothing. Neither does clicking away
+  mid-conversation; you come back to the line you were on.
 - Stress climbs all day and makes hands-on work harder. That's what the kitchen
   is for. The fourth cup of coffee is a trap.
 - Stress mostly resets overnight. Burnout doesn't. That's the run.

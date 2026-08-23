@@ -1912,6 +1912,34 @@ const EV_NAMES = {
   printerq:'the queue at the printer'
 };
 const DAY_MIN = 480;
+/* What a piece of work COSTS, in game-minutes, charged once when it starts.
+
+   The day always meant to bill you for reading a ticket and playing a board —
+   the headless model that every SLA target was tuned against charges exactly
+   these numbers. Real play was charging them too, and then ALSO billing the
+   wall clock for as long as the panel stayed open, which is a second charge
+   for the same work. Measured: a conversation designed to cost ~10 minutes
+   billed a further 10 to 17 on top, scaled to how fast you happen to read.
+
+   So the panels hold the clock now and the work is priced here instead. The
+   satire survives — a meeting still eats a visible chunk of your afternoon,
+   atomically, the way they do — but it eats the same chunk whether you read
+   at 200 words a minute or 80, and it does not charge you twice if you tab
+   away and come back. Only ticket work is priced: an event already charges
+   its own fx.time, and stopping to talk to somebody is free, because the
+   model never charged for that either. */
+const TALK = { perLine:3, choice:2, game:12 };
+/* A SAY step is priced by its length: nothing else charges for it.
+   A CHOICE step is priced at a couple of minutes of dithering, because the
+   option you then pick carries its own fx.time and that is the real bill —
+   pricing its prose as well would charge the same conversation twice, which
+   is the whole mistake this record exists to stop. */
+function stepCost(st){
+  if (st.say)    return (DIALOGUE[st.say] ? DIALOGUE[st.say].t.length : 0) * TALK.perLine;
+  if (st.choice) return TALK.choice;
+  if (st.game)   return TALK.game;
+  return 0;
+}
 /* How much of the shift one real second buys.
 
    The day is 480 game-minutes at every setting, and every number the sim
@@ -2259,10 +2287,9 @@ function sim(dt){
   /* Everything measured in GAME MINUTES advances by the paced delta; walking,
      the camera and the NPCs stay on real seconds, because the pace setting is
      about how much room you get inside the day, not about moving in syrup.
-     A how-to-play card holds the clock outright: the shift bills you for the
-     work, not for being told what the work is. */
-  const held = !!(G.modal && G.modal.kind === 'game' && MG && MG.brief);
-  const cdt = held ? 0 : dt * paceRate();
+     A panel holds the clock outright. Reading is not the work; the work is
+     priced by TALK and charged when it starts. See that record. */
+  const cdt = G.state === 'modal' ? 0 : dt * paceRate();
   run.clock += cdt;
   slaTick();
   arrivalsTick();
@@ -2309,7 +2336,16 @@ function eventsTick(){
   const P2 = run.plan;
   /* scenes interrupted by a pause replay first (their fx already applied) */
   if (run.pendingScenes && run.pendingScenes.length){
-    openDlg(run.pendingScenes.shift(), {}, null); return;
+    /* saves written before scenes remembered their place hold plain ids */
+    const s = run.pendingScenes.shift();
+    const id = (s && typeof s === 'object') ? s.id : s;
+    openDlg(id, {}, null);
+    if (dlg && s && typeof s === 'object' && s.li > 0){
+      dlg.li = Math.min(s.li, dlg.lines.length - 1);
+      dlg.reveal = dlg.lines[dlg.li].length;     // don't re-type what was read
+      dlgPaint();
+    }
+    return;
   }
   if (run.pendingEvents.length){ openEvent(run.pendingEvents.shift()); return; }
   /* Meetings used to appear out of nothing and take up to half an hour off a
@@ -2583,6 +2619,8 @@ function advanceStep(){
     toast('GO TO: ' + (ANCHOR_NAMES[st.goto] || st.goto) + ' — FOLLOW THE AMBER ARROW', 'corp', 2600);
     return;
   }
+  /* charged once, up front, at the same price the balance model pays */
+  run.clock += stepCost(st);
   if (st.say){ openDlg(st.say, t.fills, () => { t.si++; advanceStep(); }); return; }
   if (st.choice){ openDlg(st.choice, t.fills, () => { t.si++; advanceStep(); }, null, t); return; }
   if (st.game){ openGame(st.game, st.diff, score => { t.gameScores.push(score); t.si++; advanceStep(); }); return; }
@@ -3736,7 +3774,12 @@ function pauseGame(){
        while a ticket is active, and an abandoned minigame is scored as played
        so F4/alt-tab cannot re-roll a bad board for free. */
     if (run){
-      if (dlg && dlg.scene && !dlg.onDone) (run.pendingScenes = run.pendingScenes || []).push(dlg.scene);
+      /* Remember WHERE you were, not just which scene it was. Clicking away
+         mid-briefing and coming back to Linda starting from her first line
+         again is the same conversation charged twice in attention, even now
+         that it is no longer charged twice in minutes. */
+      if (dlg && dlg.scene && !dlg.onDone)
+        (run.pendingScenes = run.pendingScenes || []).push({ id: dlg.scene, li: dlg.li });
       if (run.active){
         if (G.modal.kind === 'game' && MG)
           run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
@@ -3929,15 +3972,15 @@ function simDay(skill, policy){
          bot-validated SLA target unreachable in real play. Reading a line is
          ~3s, a choice ~2s of dithering, a minigame ~12s. */
       if (st.goto){ walkTo(anchorPos(st.goto)); }
-      else if (st.say){ run.clock += DIALOGUE[st.say].t.length * 3; }
+      else if (st.say){ run.clock += stepCost(st); }
       else if (st.choice){
-        run.clock += 2;
+        run.clock += stepCost(st);
         const node = DIALOGUE[st.choice];
         const o = botPick(node, policy);
         if (o){ slog('chose: "' + o.t + '"'); applyFx(o.fx, t); }
       }
       else if (st.game){
-        run.clock += 12;
+        run.clock += stepCost(st);
         /* mirrors the real penalties: cup four, and hands that have stopped
            cooperating. Without both the sim overstates craft all afternoon. */
         const jitter = (run.coffee >= BURN.freeCups ? .08 : 0)
@@ -4795,27 +4838,109 @@ function selfTest(runSim){
       ok('minigame: no how-to-play card overflows its panel', over.length === 0, over.join(' '));
     }
 
-    /* the card holds the shift clock — reading the rules is not billable */
+    /* Panels hold the clock, and ticket work is priced instead. The old
+       invariant here asserted the clock resumed once the CARD was dismissed;
+       it does not any more, and that is the fix, not a regression. */
     {
       rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
       loadMap('office1'); spawnPeople();
-      meta.seenGames = {};
+      meta.seenGames = {}; meta.pace = 'standard';
       run.clock = 60; G.state = 'work';
       openGame('pw', 2, () => {});
       const first = !!(MG.brief && MG.brief.first);
       const t0 = run.clock;
-      for (let i = 0; i < 30; i++) sim(STEP);
-      const heldFor = run.clock - t0;
+      for (let i = 0; i < 30; i++) sim(STEP);          // a second on the card
+      const onCard = run.clock - t0;
       MG.brief.t = 1; press.use = true; gameTick(STEP);
-      const dismissed = !MG.brief;
       const t1 = run.clock;
-      for (let i = 0; i < 30; i++) sim(STEP);
-      ok('minigame: a first sighting opens on its card', first);
-      ok('minigame: the card holds the shift clock, and only the card',
-         heldFor === 0 && dismissed && run.clock - t1 > 0,
-         'held ' + heldFor.toFixed(3) + ' then ran ' + (run.clock - t1).toFixed(2));
+      for (let i = 0; i < 30; i++) sim(STEP);          // a second on the board
+      const onBoard = run.clock - t1;
       if (G.modal) closeModalToWork();
+      const t2 = run.clock;
+      for (let i = 0; i < 30; i++) sim(STEP);          // a second out on the floor
+      const onFloor = run.clock - t2;
+      ok('minigame: a first sighting opens on its card', first);
+      ok('clock: a panel holds the day; the floor does not',
+         onCard === 0 && onBoard === 0 && onFloor > 0,
+         'card ' + onCard + ' board ' + onBoard + ' floor ' + onFloor.toFixed(2));
       run.active = null; run.queue = []; G.state = 'work';
+    }
+
+    /* Real play and the model that every SLA target was tuned against must
+       bill a ticket's steps IDENTICALLY. They did not: the model charged
+       TALK, real play charged TALK and then the wall clock on top for as long
+       as you took to read it. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      meta.pace = 'standard';
+      const t = { uid:901, id:'printer-jam', title:'t', fills:{}, at:0, deadline:999,
+                  sla:80, stress:5, si:0, bonus:0, gameScores:[], from:null };
+      run.queue.push(t); run.active = t;
+      const steps = TICKETS[t.id].steps;
+      let modelled = 0, billed = 0, guard = 0;
+      while (t.si < steps.length && guard++ < 20){
+        const st = steps[t.si];
+        if (st.goto){ t.si++; continue; }               // walking is real, and real time
+        modelled += stepCost(st);
+        const before = run.clock;
+        advanceStep();
+        /* the player takes ten seconds over it, which must cost nothing */
+        for (let i = 0; i < 300; i++) sim(STEP);
+        billed += run.clock - before;
+        if (G.modal && G.modal.kind === 'dlg'){
+          const spent = run.clock;
+          while (dlg && guard++ < 60){
+            dlg.reveal = dlg.lines[dlg.li].length;
+            if (dlg.optsShown){ press.one = true; dlgTick(STEP); break; }
+            press.use = true; dlgTick(STEP);
+          }
+          /* an option's own fx.time is a real, designed charge — not a surcharge */
+          modelled += run.clock - spent;
+          billed   += run.clock - spent;
+        } else if (G.modal){ closeModalToWork(); t.si++; }
+      }
+      ok('clock: a ticket costs what the balance model says it costs',
+         Math.abs(billed - modelled) < 1e-6,
+         'billed ' + billed.toFixed(1) + ' vs modelled ' + modelled.toFixed(1));
+      /* Agreement is not correctness: both sides read stepCost, so a wrong
+         price agrees with itself. Pin the prices themselves. */
+      const say = TICKETS[t.id].steps.find(x => x.say), ch = TICKETS[t.id].steps.find(x => x.choice);
+      ok('clock: a scene is priced by its length, a choice by its dithering',
+         (!say || stepCost(say) === DIALOGUE[say.say].t.length * TALK.perLine) &&
+         (!ch  || stepCost(ch)  === TALK.choice) &&
+         stepCost({ game:'cable' }) === TALK.game &&
+         stepCost({ goto:'servers' }) === 0,
+         'perLine ' + TALK.perLine + ' choice ' + TALK.choice + ' game ' + TALK.game);
+      if (G.modal) closeModalToWork();
+      run.active = null; run.queue = []; G.state = 'work'; QUIET = false;
+    }
+
+    /* an interrupted scene comes back where you left it, not at line one */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      G.state = 'work'; run.pendingScenes = [];
+      openDlg('i.day1', {}, null);
+      const total = dlg.lines.length;
+      if (total > 1){
+        dlg.li = total - 1; dlg.reveal = dlg.lines[dlg.li].length;
+        pauseGame();
+        const parked = run.pendingScenes[run.pendingScenes.length - 1];
+        G.state = 'work'; run.pendingScenes = [parked];
+        eventsTick();
+        ok('scenes: clicking away and back resumes the line you were on',
+           !!dlg && dlg.li === total - 1,
+           'came back at ' + (dlg ? dlg.li : 'nothing') + ' of ' + total);
+      } else ok('scenes: clicking away and back resumes the line you were on', true, 'single line');
+      /* and a save written before scenes remembered their place still opens */
+      if (G.modal) closeModalToWork();
+      G.state = 'work'; run.pendingScenes = ['i.day1'];
+      eventsTick();
+      ok('scenes: an older save’s plain scene id still replays', !!dlg && dlg.li === 0);
+      if (G.modal) closeModalToWork();
+      run.pendingScenes = []; G.state = 'work';
     }
 
     /* the pace dial moves real time only: same day, same everything else */
