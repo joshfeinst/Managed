@@ -787,13 +787,21 @@ const ROLES = [
    pre-roll, so a day's tickets are fixed the moment you arrive. */
 const FILLS = {
   client: ['Riverbend Logistics','Meridian Freight','Cortland Dental','Pinnacle Realty',
-           'TriState Plumbing Co','Valley Oak Law','Summit Physical Therapy','Bluestem Ag Supply'],
+           'TriState Plumbing Co','Valley Oak Law','Summit Physical Therapy','Bluestem Ag Supply',
+           'Halloran & Sons Roofing','Northgate Veterinary','Calder Brothers Concrete',
+           'Westmoor Property Group','Fairlane Orthodontics','Tannerville Public Library',
+           'Copperfield Insurance','Delacroix Bakery Group'],
   user:   ['Janet','Dale','the office manager','the new hire','Doug from accounting',
-           'the front desk','Sharon','the warehouse guy'],
+           'the front desk','Sharon','the warehouse guy','Marcy','the night dispatcher',
+           'Gary in shipping','the practice manager','Priya','the owner\'s brother',
+           'the temp whose badge never worked','Kev from the van'],
   device: ['laptop','desktop','the conference room TV','a label printer','the timeclock',
-           'an iPad','the security camera DVR','a USB hub shaped like a cat'],
+           'an iPad','the security camera DVR','a USB hub shaped like a cat',
+           'a barcode scanner','the waiting-room tablet','a forklift-mounted terminal',
+           'the signature pad','a label maker from 2004','the badge reader'],
   doc:    ['INVOICE_FINAL_v7','the church newsletter','a 400-page PDF','TPS report',
-           'her recipe collection','the org chart','a scanned napkin'],
+           'her recipe collection','the org chart','a scanned napkin','FINAL_final_v2_USE_THIS',
+           'a fax of a photocopy of a fax','the 2019 fire safety poster','a blank page, 300 times'],
   excuse: ["it worked yesterday","nothing was changed","IT did something","the storm did it",
            "my grandson set it up","it's probably the firewall"],
   swear:  ['sugar','fudge','dagnabbit','golly'],
@@ -1782,13 +1790,34 @@ function rollDay(){
   const load = first ? .55 : 1;
   const n = Math.max(3, Math.round(role.queue.ratePerHr * 8 * load * (0.85 + R('world')*0.3)));
   const arrivals = [];
-  let last = null;
+  /* 23 tickets a day out of a 27-template pool used to deal 15 distinct ones —
+     the same template up to five times, and four LITERALLY IDENTICAL lines a
+     day once the fills happened to match. A repeated client with a different
+     printer reads as a busy day; the same sentence twice reads as a bug. */
+  const perDay = {}, titlesToday = new Set();
+  /* A template with no fill tokens reads the same every single time, so it gets
+     one slot a day; one that names a different client each time can carry two. */
+  const capOf = id => /\{\w+\}/.test(TICKETS[id].title) ? 2 : 1;
   for (let i=0;i<n;i++){
-    let id = bag[(R('world')*bag.length)|0];
-    if (id === last && bag.length > TICKETS[id].weight) id = bag[(R('world')*bag.length)|0];
-    last = id;
+    let id = null;
+    for (let tries = 0; tries < 14; tries++){
+      const c = bag[(R('world')*bag.length)|0];
+      if ((perDay[c] || 0) < capOf(c)){ id = c; break; }
+    }
+    if (!id){                                  // pool genuinely too thin to spread
+      const room = elig.filter(x => (perDay[x] || 0) < capOf(x));
+      if (!room.length) break;
+      id = room[(R('world')*room.length)|0];
+    }
+    perDay[id] = (perDay[id] || 0) + 1;
     seen[id] = (seen[id] || 0) + 1;
-    arrivals.push(makeArrival(id, 6 + R('world')*(DAY_MIN-70), role));
+    let a = null;
+    for (let tries = 0; tries < 6; tries++){    // re-roll the fills, not the ticket
+      a = makeArrival(id, 6 + R('world')*(DAY_MIN-70), role);
+      if (!titlesToday.has(a.title)) break;
+    }
+    titlesToday.add(a.title);
+    arrivals.push(a);
   }
   arrivals.sort((a,b)=>a.at-b.at);
   if (first){
@@ -1801,7 +1830,20 @@ function rollDay(){
     }
   }
   const events = [];
-  for (const id in EVENTS) if (R('world') < EVENTS[id].when.chance) events.push({ at:EVENTS[id].when.at, id });
+  /* One event opened 88% of every day of every career: the same standup, from
+     the same person, forever. The morning rotates now — it is still usually a
+     meeting, because it is always a meeting, but not always THAT meeting. */
+  const MORNINGS = ['standup', 'allhands', 'firedrill', 'outage'];
+  const morningPool = MORNINGS.filter(id => EVENTS[id]);
+  const opener = morningPool.length && R('world') < .82
+    ? morningPool[(R('world') * R('world') * morningPool.length) | 0]   // standup still leads
+    : null;
+  if (opener) events.push({ at: EVENTS[opener].when.at === 10 ? 10 : 12, id: opener });
+  for (const id in EVENTS){
+    if (id === opener) continue;
+    if (MORNINGS.indexOf(id) >= 0 && opener) continue;   // one meeting to open with
+    if (R('world') < EVENTS[id].when.chance) events.push({ at:EVENTS[id].when.at, id });
+  }
   events.sort((a,b)=>a.at-b.at);
   run.plan = { arrivals, events, ai:0, ei:0 };
 }
@@ -3744,6 +3786,36 @@ function selfTest(runSim){
       MG = null; G.state = savedState; G.modal = savedModal;
       ok('stress makes the hands-on work harder', frayed > calm,
          'cable ports ' + calm + ' calm vs ' + frayed + ' stressed');
+    }
+    /* A day used to deal twenty-three tickets out of fifteen distinct templates,
+       the same one up to five times, and four literally identical lines. */
+    {
+      let worstSame = 0, dupTitles = 0, minDistinct = 99, rolled = 0;
+      const openers = {};
+      for (let c = 0; c < 8; c++){
+        rngInit('LINT-' + c); runInit('LINT-' + c);
+        for (let d = 0; d < 6; d++){
+          run.day = d + 1; rollDay(); rolled++;
+          const counts = {}, titles = {};
+          for (const a of run.plan.arrivals){
+            counts[a.id] = (counts[a.id] || 0) + 1;
+            titles[a.title] = (titles[a.title] || 0) + 1;
+          }
+          worstSame = Math.max(worstSame, ...Object.values(counts));
+          dupTitles += Object.values(titles).filter(v => v > 1).reduce((x,v) => x+v-1, 0);
+          /* proportional: day one deals a deliberately lighter queue */
+          minDistinct = Math.min(minDistinct,
+            Object.keys(counts).length / Math.max(1, run.plan.arrivals.length));
+          if (run.plan.events.length) openers[run.plan.events[0].id] = 1;
+        }
+      }
+      run = null;
+      ok('a day never deals the same ticket more than twice', worstSame <= 2, 'worst ' + worstSame);
+      ok('a day never deals two identical ticket lines', dupTitles === 0, dupTitles + ' duplicates');
+      ok('a day is dealt from a broad slice of the pool', minDistinct >= .7,
+         'thinnest day was ' + Math.round(minDistinct*100) + '% distinct');
+      ok('the morning is not always the same meeting',
+         Object.keys(openers).length >= 3, [...Object.keys(openers)].join(','));
     }
     /* every ticket carries stakes, and they are the triage decision */
     {
