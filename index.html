@@ -1538,7 +1538,7 @@ function runInit(seed){
   rngInit(seed);
   run = { seed, day:1, rung:0, clock:0, perfHist:[], gateStreak:0, firedStreak:0,
           stress:20, coffee:0, crashes:[], burnout:0, rep:meta.certs.length ? 1 : 0,
-          queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[], pendingScenes:[],
+          queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[], pendingScenes:[], seen:{},
           scores:[], breaches:0, resolved:0, aces:0, daysAtTop:0, satOn:{}, promoted:false };
   for (const p in PERKS) if (metaHasPerk(p)) run.rep += PERKS[p].fx.rep || 0;
 }
@@ -1556,7 +1556,13 @@ function rollDay(){
      starts repeating itself. Career-accurate, honestly. */
   if (!elig.length) elig = Object.keys(TICKETS);
   const bag = [];
-  for (const id of elig) for (let i=0;i<TICKETS[id].weight;i++) bag.push(id);
+  const seen = run.seen || (run.seen = {});
+  for (const id of elig){
+    /* weight decays with how often this career has already dealt it, so the
+       first days show breadth instead of the same printer three times */
+    const w = Math.max(1, Math.round(TICKETS[id].weight * 4 / (1 + 1.6 * (seen[id] || 0))));
+    for (let i=0;i<w;i++) bag.push(id);
+  }
   /* Day one is your first day: a lighter queue, and the first ticket is a
      hand-picked one that teaches the loop (read it, walk somewhere, come
      back) without a minigame on top. */
@@ -1569,6 +1575,7 @@ function rollDay(){
     let id = bag[(R('world')*bag.length)|0];
     if (id === last && bag.length > TICKETS[id].weight) id = bag[(R('world')*bag.length)|0];
     last = id;
+    seen[id] = (seen[id] || 0) + 1;
     arrivals.push(makeArrival(id, 6 + R('world')*(DAY_MIN-70), role));
   }
   arrivals.sort((a,b)=>a.at-b.at);
@@ -1576,7 +1583,10 @@ function rollDay(){
     /* nothing lands before the standup is over and they have found the desk */
     for (const a of arrivals) if (a.at < 34) a.at = 34 + (a.at % 9);
     arrivals.sort((a,b)=>a.at-b.at);
-    if (TICKETS['coffee-derek']) arrivals.unshift(makeArrival('coffee-derek', 20, role));
+    if (TICKETS['coffee-derek']){
+      seen['coffee-derek'] = (seen['coffee-derek'] || 0) + 1;
+      arrivals.unshift(makeArrival('coffee-derek', 20, role));
+    }
   }
   const events = [];
   for (const id in EVENTS) if (R('world') < EVENTS[id].when.chance) events.push({ at:EVENTS[id].when.at, id });
@@ -2098,7 +2108,7 @@ function serializeRun(){
     rep:run.rep, uid:run.uid, scores:run.scores, breaches:run.breaches,
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
-    introDone: !!run.introDone,
+    introDone: !!run.introDone, seen: run.seen || {},
     phase:run.phase || 'work', activeUid: run.active ? run.active.uid : null,
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
     queue: queue.map(t => ({ uid:t.uid, id:t.id, title:t.title, fills:t.fills, at:t.at,
@@ -2126,7 +2136,8 @@ function resumeRun(s){
     gateStreak:r.gateStreak, firedStreak:r.firedStreak, stress:r.stress,
     coffee:r.coffee, crashes:r.crashes, burnout:r.burnout, rep:r.rep,
     queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
-    pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone, scores:r.scores,
+    pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone,
+    seen: r.seen || {}, scores:r.scores,
     breaches:r.breaches, resolved:r.resolved,
     aces:r.aces, daysAtTop:r.daysAtTop, satOn:r.satOn || {}, promoted:r.promoted,
     phase:r.phase || 'work' };
@@ -3262,6 +3273,11 @@ function fit(){
 addEventListener('resize', fit);
 
 function boot(){
+  if (matchMedia('(hover:none) and (pointer:coarse)').matches){
+    const el = document.getElementById('bootline');
+    if (el) el.textContent = 'keyboard required — this one needs a real desk';
+    toast('MANAGED NEEDS A KEYBOARD. FITTINGLY, IT IS A DESK JOB.', 'red', 12000);
+  }
   bakeAtlas();
   rngInit('MENU');
   loadMap('office1');
