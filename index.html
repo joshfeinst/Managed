@@ -169,7 +169,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
     </div>
 
     <div id="tix">
-      <header><span class="t">SERVICE QUEUE — 360 SMART NETWORKS</span><span class="hint">↑↓ pick · Enter work · Esc close</span></header>
+      <header><span class="t">SERVICE QUEUE — 360 SMART NETWORKS</span><span class="hint">sorted P1 first · ↑↓ pick · Enter work · Esc close</span></header>
       <div id="tix-list"></div>
     </div>
 
@@ -1727,6 +1727,7 @@ const REP = { perPoint:.008, maxHelp:.07 };
 function repHelp(){ return Math.min(REP.maxHelp, Math.max(0, (run.rep || 0) * REP.perPoint)); }
 const ACTIVE_GRACE = 10;       // minutes a ticket you are actively working may run over
 const DAY_OVERRUN = 20;        // how far past 17:00 a meeting can hold the day open
+const MIN_SLACK = 18;          // minutes you always get to notice a ticket exists
 const DAY_MIN = 480;
 /* A plain-language record of what actually happened this session. F1 shows
    it; it exists so play feedback can be about real events ("day 3, the CFO
@@ -1920,7 +1921,13 @@ function makeArrival(id, at, role){
      with the most generous deadline on the board. slaMult is the slack, in
      multiples of the work: 1.4 rush, 1.9 routine, 3.2 backlog. */
   const workMin = ticketWork(T);
-  const sla = workMin * (T.slaMult || 1.9) * role.queue.slaScale * dayEase;
+  /* Slack scaled purely as a multiple of work punished the long jobs hardest:
+     a rush multiplier on a 46-minute P1 left an 11-minute window to notice it
+     in, so the tickets the game most wants you to protect were the ones you
+     could least afford to be mid-ticket for. Every ticket gets a minimum
+     window to be picked up in, whatever its length. */
+  const sla = Math.max(workMin * (T.slaMult || 1.9), workMin + MIN_SLACK)
+            * role.queue.slaScale * dayEase;
   return { at, id, uid: run.uid++, title: fill(T.title, fills), fills,
            sla: Math.round(sla), stress: T.stress };
 }
@@ -1944,7 +1951,7 @@ function startCommute(){
   run.clock = 0; run.queue = []; run.active = null; run.marker = null;
   run.scores = []; run.breaches = 0; run.resolved = 0; run.aces = 0;
   run.burned = []; run.earned = 0; run.stakesDone = 0;
-  run.speedSum = 0; run.qualSum = 0;
+  run.speedSum = 0; run.qualSum = 0; run.qualN = 0;
   run.coffee = 0; run.crashes = []; run.satOn = {}; run.pendingEvents = [];
   rollDay();
   presentCommute();
@@ -2203,6 +2210,12 @@ function closeModalToWork(){
    panel just silently ignored you. Rows are rebuilt only when the set of
    tickets actually changes; otherwise only the SLA text and selection move. */
 let tixRows = new Map(), tixKey = '', tixRun = null;
+/* one ordering, used by the panel and by the cursor, so Enter always works the
+   row the player is actually looking at */
+function queueView(){
+  return run.queue.slice().sort((a, b) =>
+    ((TICKETS[b.id].pri || 2) - (TICKETS[a.id].pri || 2)) || (a.deadline - b.deadline));
+}
 function renderQueue(){
   const list = document.getElementById('tix-list');
   /* rows belong to one career: uids restart, so the key alone is not identity */
@@ -2215,10 +2228,15 @@ function renderQueue(){
     }
     return;
   }
-  const key = run.queue.map(t => t.uid + ':' + (t.si > 0 ? 1 : 0)).join(',');
+  /* The only dynamic thing on this panel used to be a countdown, so the panel
+     taught earliest-deadline-first — which measures as one of the WORST triage
+     rules in the game. It shows the queue the way the job wants it worked:
+     highest stakes first, and inside a priority the one closest to burning. */
+  const view = queueView();
+  const key = view.map(t => t.uid + ':' + (t.si > 0 ? 1 : 0)).join(',');
   if (key !== tixKey){
     tixKey = key; tixRows.clear(); list.innerHTML = '';
-    run.queue.forEach(t => {
+    view.forEach(t => {
       const row = document.createElement('div');
       row.className = 'row';
       /* Priority is the whole triage decision, so it is the first thing on
@@ -2230,7 +2248,7 @@ function renderQueue(){
         '<span class="ttl">' + t.title + (t.si > 0 ? ' <span style="color:var(--corp)">(in progress)</span>' : '') + '</span>' +
         '<span class="sla"></span>';
       row.onclick = () => {
-        const at = run.queue.indexOf(t);
+        const at = view.indexOf(t);
         if (at >= 0 && G.modal) G.modal.sel = at;
         startTicket(t);
       };
@@ -2238,7 +2256,7 @@ function renderQueue(){
       list.appendChild(row);
     });
   }
-  run.queue.forEach((t, i) => {
+  view.forEach((t, i) => {
     const row = tixRows.get(t.uid);
     if (!row) return;
     const left = Math.round(t.deadline - run.clock);
@@ -2314,7 +2332,7 @@ function resolveTicket(t){
   const score = clamp(BASE + (1 - BASE) * (got / avail), 0, 1);
   const stakes = stakesOf(t.id);
   run.speedSum = (run.speedSum || 0) + r;
-  run.qualSum = (run.qualSum || 0) + gameAvg;
+  if (offers.game){ run.qualSum = (run.qualSum || 0) + gameAvg; run.qualN = (run.qualN || 0) + 1; }
   run.earned = (run.earned || 0) + stakes * score;
   run.stakesDone = (run.stakesDone || 0) + stakes;
   run.scores.push(score); run.resolved++;
@@ -2326,7 +2344,7 @@ function resolveTicket(t){
      old numbers made resolving cost +15 stress a day at T1 alone and ended every
      career there. The ramp survives; its slope now assumes a full queue. */
   run.stress = clamp(run.stress + t.stress*(.22 + run.rung*.028) - 1.1, 0, 100);
-  slog('resolved ' + Math.round(score*100) + '% (P' + (5-stakes) + '): ' + t.title +
+  slog('resolved ' + Math.round(score*100) + '% (P' + (5 - (TICKETS[t.id].pri || 2)) + '): ' + t.title +
        (t.gameScores.length ? ' (craft ' + Math.round(gameAvg*100) + '%)' : ''));
   run.active = null; run.marker = null;
   if (G.modal) closeModalToWork();
@@ -2334,7 +2352,7 @@ function resolveTicket(t){
   toast('RESOLVED ' + Math.round(score*100) + '% — ' +
         (score >= .8 ? 'CSAT 5★ (THEY WILL NEVER FILL IT IN)' :
          score >= .5 ? 'ADEQUATE' : 'TECHNICALLY') +
-        '  ·  ' + Math.round(r*100) + '% SLA LEFT' +
+        '  ·  ' + Math.round(r*100) + '% SLACK LEFT' +
         (t.gameScores.length ? ', CRAFT ' + Math.round(gameAvg*100) + '%' : ''),
         score >= .8 ? 'ok' : 'corp', 3000);
 }
@@ -2417,6 +2435,18 @@ function endDay(){
                : run.burnout >= 100 ? 'burnout'
                : (!role.gates.nextAt && run.daysAtTop >= role.gates.retireAfterDays) ? 'retired'
                : null;
+  /* The promotion is applied HERE, once, before anything reads the rung. It
+     used to be applied after the ending check returned, so a promotion earned
+     on the day burnout ended the career simply vanished — the exit interview
+     named the old job and meta.carry, which is read off the rung you reached,
+     lost a whole step of the ladder you had actually climbed. Being let go is
+     the one case that does not come with a promotion. */
+  if (promo && ending !== 'fired'){
+    run.rung++; run.rep += 2; run.promoted = true;
+    run.gateStreak = 0; run.firedStreak = 0; run.rungSince = run.perfHist.length;
+    run.stress = Math.round(run.stress * .6);
+    run.burnout = Math.max(0, run.burnout - BURN.promoRelief);
+  } else if (promo) promo = false;             // fired is fired
   reviewScreen(dayPerf, eod, promo, ending);
   if (ending){
     /* the career is over the moment the day is scored; the exit interview is
@@ -2426,13 +2456,7 @@ function endDay(){
     G.state = 'review'; show('s-review'); saveGame();
     return;
   }
-  /* a promotion is a clean slate: you do not carry yesterday's warning into
-     a job you just earned */
-  if (promo){ run.rung++; run.rep += 2; run.gateStreak = 0; run.firedStreak = 0; run.promoted = true;
-    run.rungSince = run.perfHist.length;               // judged from its own first day
-    /* the news itself is worth something: a promotion buys one good night */
-    run.stress = Math.round(run.stress * .6);
-    run.burnout = Math.max(0, run.burnout - BURN.promoRelief);
+  if (promo){
     slog('PROMOTED to ' + ROLES[run.rung].title); sfx('promo'); }
   G.state = 'review';
   show('s-review');
@@ -2456,7 +2480,7 @@ function reviewScreen(dayPerf, eod, promo, ending){
     : ending === 'retired' ? 'THE LAST FRIDAY' : promo ? 'PROMOTED.' : 'DAILY PERFORMANCE REVIEW';
   const role0 = ROLES[run.rung];
   const speed = run.resolved ? Math.round(run.speedSum / run.resolved * 100) : 0;
-  const qual  = run.resolved ? Math.round(run.qualSum / run.resolved * 100) : 0;
+  const qual  = run.qualN ? Math.round(run.qualSum / run.qualN * 100) : null;
   const gate  = role0.gates.nextAt;
   const ls    = run.lastScore;
   document.getElementById('r-stats').innerHTML =
@@ -2468,8 +2492,9 @@ function reviewScreen(dayPerf, eod, promo, ending){
             (ls.worst ? ' (worst: a P' + ls.worst + ')' : '')
                       : ', none held against you')
         : '') + '</dd>' +
-    '<dt>Speed</dt><dd>' + speed + '% SLA left when you closed them</dd>' +
-    '<dt>Craft</dt><dd>' + qual + '% on the hands-on bits</dd>' +
+    '<dt>Speed</dt><dd>' + speed + '% of the waiting-room left when you closed them</dd>' +
+    '<dt>Craft</dt><dd>' + (qual === null ? 'nothing hands-on today'
+      : qual + '% across ' + run.qualN + ' hands-on job' + (run.qualN === 1 ? '' : 's')) + '</dd>' +
     '<dt>Performance</dt><dd>' + Math.round(dayPerf*100) + '% — ' + perfName(dayPerf) + '</dd>' +
     (gate ? '<dt>Promotion needs</dt><dd>' + Math.round((run.gateBar != null ? run.gateBar : gate.perf)*100) +
       '% averaged over ' + gate.days + ' days — your last ' +
@@ -2483,7 +2508,7 @@ function reviewScreen(dayPerf, eod, promo, ending){
     '<dt>End-of-day stress</dt><dd>' + Math.round(eod) + '%</dd>' +
     '<dt>Burnout</dt><dd style="color:' + (run.burnout > 60 ? 'var(--alert)' : 'inherit') + '">' +
       Math.round(run.burnout) + '% — permanent</dd>' +
-    (promo ? '<dt>New title</dt><dd style="color:var(--amber)">' + ROLES[run.rung+1].title + '</dd>' : '');
+    (promo ? '<dt>New title</dt><dd style="color:var(--amber)">' + ROLES[run.rung].title + '</dd>' : '');
   document.getElementById('r-note').textContent =
     ending === 'fired' ? 'Two days under ' + Math.round(role0.gates.firedBelow*100) +
       '% and the conversation writes itself. Linda did not enjoy it either, she says.'
@@ -2571,7 +2596,8 @@ function serializeRun(){
     stress:run.stress, coffee:run.coffee, crashes:run.crashes, burnout:run.burnout,
     rep:run.rep, uid:run.uid, scores:run.scores, breaches:run.breaches,
     burned:run.burned || [], earned:run.earned || 0, stakesDone:run.stakesDone || 0,
-    speedSum:run.speedSum || 0, qualSum:run.qualSum || 0, rungSince:run.rungSince || 0,
+    speedSum:run.speedSum || 0, qualSum:run.qualSum || 0, qualN:run.qualN || 0,
+    rungSince:run.rungSince || 0,
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
     introDone: !!run.introDone, seen: run.seen || {},
@@ -2606,7 +2632,8 @@ function resumeRun(s){
     pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone,
     seen: r.seen || {}, scores:r.scores,
     burned: r.burned || [], earned: r.earned || 0, stakesDone: r.stakesDone || 0,
-    speedSum: r.speedSum || 0, qualSum: r.qualSum || 0, rungSince: r.rungSince || 0,
+    speedSum: r.speedSum || 0, qualSum: r.qualSum || 0, qualN: r.qualN || 0,
+    rungSince: r.rungSince || 0,
     breaches:r.breaches, resolved:r.resolved,
     aces:r.aces, daysAtTop:r.daysAtTop, satOn:r.satOn || {}, promoted:r.promoted,
     phase:r.phase || 'work', pendingEnd: r.pendingEnd || null };
@@ -2773,7 +2800,10 @@ function tixTick(dt){
   tixRepaint -= dt;
   if (press.up && m.sel > 0){ m.sel--; tixRepaint = 0; sfx('blip'); }
   if (press.down && m.sel < run.queue.length - 1){ m.sel++; tixRepaint = 0; sfx('blip'); }
-  if (press.use && run.queue.length){ startTicket(run.queue[Math.min(m.sel, run.queue.length-1)]); return; }
+  if (press.use && run.queue.length){
+    const view = queueView();
+    startTicket(view[Math.min(m.sel, view.length-1)]); return;
+  }
   if (press.queue){ closeModalToWork(); return; }
   if (tixRepaint <= 0){ tixRepaint = .3; renderQueue(); }
 }
@@ -3898,6 +3928,80 @@ function selfTest(runSim){
          seen.size > 1, seen.size + ' distinct orders in 6 seeds');
       ok('the same posting still deals the same conversation',
          orderFor('ORD-1') === orderFor('ORD-1'));
+      run = null;
+    }
+    /* A promotion earned on the day burnout ends the career must still count:
+       the ending used to return before the rung was applied, so the exit
+       interview named the old job and meta.carry lost a step of the ladder. */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const need = ROLES[1].gates.nextAt;
+      run.rung = 1; run.rungSince = 0; run.rep = 0;
+      run.perfHist = new Array(need.days - 1).fill(need.perf + .08);
+      run.burnout = 99.9;                       // tonight is the last night
+      run.day = 12; run.clock = DAY_MIN + 1; run.queue = []; run.crashes = [];
+      run.stress = 90; run.coffee = 0;
+      run.resolved = 6; run.stakesDone = 12; run.earned = 12 * (need.perf + .08);
+      run.scores = new Array(6).fill(need.perf + .08); run.breaches = 0; run.burned = [];
+      endDay();
+      ok('a promotion on your last day still counts',
+         run && run.rung === 2 && run.pendingEnd === 'burnout',
+         run ? 'rung ' + run.rung + ', ending ' + run.pendingEnd : 'run gone');
+      if (run) run.pendingEnd = null;
+    }
+
+    /* and at the very top, where the review used to read one rung past the end
+       of the ladder and throw */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const top = ROLES.length - 2;             // the last rung with a promotion
+      const need = ROLES[top].gates.nextAt;
+      run.rung = top; run.rungSince = 0; run.rep = 0;
+      run.perfHist = new Array(need.days - 1).fill(need.perf + .08);
+      run.burnout = 99.9;
+      run.day = 20; run.clock = DAY_MIN + 1; run.queue = []; run.crashes = [];
+      run.stress = 90; run.coffee = 0;
+      run.resolved = 6; run.stakesDone = 12; run.earned = 12 * (need.perf + .08);
+      run.scores = new Array(6).fill(need.perf + .08); run.breaches = 0; run.burned = [];
+      let threw = null;
+      try { endDay(); } catch(e){ threw = String(e).slice(0,60); }
+      ok('the last promotion on the ladder does not run off the end',
+         !threw && run && run.rung === top + 1, threw || (run ? 'rung ' + run.rung : 'run gone'));
+      if (run) run.pendingEnd = null;
+    }
+    /* The session log prints a priority, and priority is not the stakes weight:
+       with stakes 1/2/4/7 a naive 5-minus-weight made every P2 read as a P1 and
+       every P1 read as a P-2. */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const before = SLOG_TOTAL;
+      run.queue.length = 0;
+      const t = { uid:9191, id:'shared-drive', title:'log check', fills:{}, at:0,
+                  deadline: run.clock + 90, sla:90, stress:8, si:0, bonus:0,
+                  gameScores:[], from:null };
+      run.queue.push(t); run.active = t;
+      resolveTicket(t);
+      const line = SLOG.slice(SLOG.length - (SLOG_TOTAL - before)).join(' ');
+      const want = 'P' + (5 - TICKETS['shared-drive'].pri);
+      ok('the log names the priority, not the stakes weight',
+         line.indexOf('(' + want + ')') >= 0, want + ' not in "' + line.slice(-60) + '"');
+    }
+    /* Every ticket must leave a usable window to be picked up in. Scaling slack
+       purely as a multiple of work gave the longest, highest-stakes jobs the
+       shortest fuse — the opposite of what the priority system asks for. */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const role = ROLES[0];
+      let worst = 1e9, worstId = '';
+      for (const id in TICKETS){
+        if (TICKETS[id].tiers[0] > 0) continue;
+        run.day = 2;                                  // no first-day leash
+        const a = makeArrival(id, 0, role);
+        const slack = a.sla - ticketWork(TICKETS[id]);
+        if (slack < worst){ worst = slack; worstId = id; }
+      }
+      ok('every ticket leaves time to notice it',
+         worst >= MIN_SLACK * .9, 'tightest is ' + worstId + ' at ' + Math.round(worst) + ' min');
       run = null;
     }
     /* every ticket carries stakes, and they are the triage decision */
