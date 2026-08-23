@@ -27,8 +27,19 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
 
 /* ---------------- DOM overlays: HUD, dialogue, ticket panel ---------------- */
 #hud{position:absolute; left:0; right:0; top:0; display:none; justify-content:space-between;
-  align-items:center; gap:10px; padding:5px 9px; pointer-events:none;
-  font-size:clamp(10px,1.9vh,15px); background:linear-gradient(180deg, rgba(10,12,15,.82), rgba(10,12,15,0));}
+  align-items:center; gap:10px; padding:6px 10px; pointer-events:none;
+  font-size:clamp(10px,1.9vh,15px);
+  background:linear-gradient(180deg, rgba(8,10,13,.94) 0%, rgba(8,10,13,.86) 62%, rgba(8,10,13,0) 100%);
+  text-shadow:0 1px 2px #000;}
+#obj{position:absolute; left:0; right:0; top:0; display:none; justify-content:center;
+  pointer-events:none; margin-top:calc(clamp(10px,1.9vh,15px) + 14px);}
+#obj span{font-family:var(--pix); font-size:clamp(6px,1.15vh,9px); letter-spacing:.06em;
+  color:var(--amber); background:rgba(8,10,13,.88); border:1px solid #4a3a18;
+  padding:4px 9px; text-align:center; max-width:86%;}
+#keyhint{position:absolute; left:0; right:0; bottom:0; display:none; justify-content:center;
+  pointer-events:none; padding:0 0 5px;}
+#keyhint span{font-family:var(--pix); font-size:clamp(5px,1vh,8px); letter-spacing:.05em;
+  color:#9aa3b0; background:rgba(8,10,13,.8); padding:3px 8px;}
 #hud .grp{display:flex; gap:10px; align-items:center; white-space:nowrap}
 #hud .lab{color:var(--dim); font-size:.78em; letter-spacing:.08em; text-transform:uppercase}
 #hud b{font-weight:700}
@@ -49,7 +60,9 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
   background:#1b2129; border:1px solid #333b46; padding:6px 9px; cursor:pointer}
 #dlg .opt:hover,#dlg .opt.sel{border-color:var(--corp); background:#20303f; color:#fff}
 #dlg .opt .k{color:var(--corp); font-weight:700; margin-right:7px}
-#dlg .more{position:absolute; right:12px; bottom:6px; color:var(--dim); font-size:.7em; animation:bob 1s infinite}
+#dlg .more{position:absolute; right:12px; bottom:5px; color:var(--corp); font-family:var(--pix);
+  font-size:.52em; letter-spacing:.08em; animation:bob 1s infinite}
+#dlg .pick{color:var(--dim); font-size:.72em; margin-top:6px; letter-spacing:.04em}
 @keyframes bob{50%{transform:translateY(2px)}}
 @media (prefers-reduced-motion:reduce){#dlg .more{animation:none}}
 
@@ -133,11 +146,14 @@ input[type=range]{accent-color:var(--corp); width:150px}
       </div>
     </div>
 
+    <div id="obj"><span id="obj-t"></span></div>
+    <div id="keyhint"><span>WASD / ARROWS MOVE · E USE &amp; TALK · TAB QUEUE · ESC PAUSE</span></div>
+
     <div id="dlg">
       <div class="who"><span id="d-name"></span> <span class="role" id="d-role"></span></div>
       <div class="txt" id="d-txt"></div>
       <div class="opts" id="d-opts"></div>
-      <div class="more" id="d-more">▼</div>
+      <div class="more" id="d-more">E ▸</div>
     </div>
 
     <div id="tix">
@@ -192,6 +208,14 @@ input[type=range]{accent-color:var(--corp); width:150px}
       <div class="eyebrow">on a break — the queue is not</div>
       <h2 class="ttl" id="p-title">PAUSED</h2>
       <div class="panel" style="width:min(520px,92vw)"><dl class="dl" id="p-meta"></dl></div>
+      <div class="grid2 panel" style="width:min(520px,92vw)">
+        <div class="ctl"><span>Walk</span><span>WASD · Arrows</span></div>
+        <div class="ctl"><span>Talk / use / advance</span><span>E · Space · Enter</span></div>
+        <div class="ctl"><span>Dialogue choices</span><span>1 – 3 · click</span></div>
+        <div class="ctl"><span>Service queue</span><span>Tab</span></div>
+        <div class="ctl"><span>Mute music</span><span>M</span></div>
+        <div class="ctl"><span>Self test</span><span>F4</span></div>
+      </div>
       <div class="row">
         <button class="btn" data-act="resume">BACK TO WORK ▶</button>
         <button class="btn ghost" data-act="quitsave">SAVE &amp; QUIT</button>
@@ -754,6 +778,17 @@ const FILLS = {
                     x dead fern  t conf table  k counter  A arcade  C cooler
                     F cabinet  U couch  N reception  H shelf
      special:       D door (walkable)  P player spawn  1-9 NPC anchors      */
+/* Anchor ids are terse; players are not. */
+const ANCHOR_NAMES = {
+  TERMINAL:'YOUR DESK', COFFEE:'THE COFFEE MACHINE', PRINTER:'THE PRINTER',
+  VEND:'THE VENDING MACHINE', ARCADE:'THE ARCADE CABINET', COOLER:'THE WATER COOLER',
+  SHELF:'THE SUPPLY SHELF', ELEV:'THE ELEVATOR', SERVERS:'THE SERVER ROOM',
+  CONF:'THE CONFERENCE ROOM', KITCHEN:'THE KITCHEN', KITCHEN2:'THE KITCHEN',
+  LOBBY:'RECEPTION', HALL:'THE HALLWAY', HALLE:'THE EAST HALLWAY', SOUTH:'THE SOUTH WING',
+  PITMID:'THE HELPDESK PIT',
+  n1:"DEREK'S DESK", n2:"RAJ'S DESK", n3:"KAYLA'S DESK", n4:'THE FOURTH DESK',
+  n6:"BRENDA'S DESK", n7:"MACKENZIE'S DESK", n8:"LINDA'S OFFICE", n9:'THE HALLWAY'
+};
 const MAPS = { office1: {
   name:'360 SMART NETWORKS — FLOOR 2',
   map:[
@@ -920,6 +955,16 @@ const DIALOGUE = {
            {t:'Escalate to an email thread that will outlive us all', fx:{time:8, stress:3}} ] },
   't.arc.a':  { who:'sys', t:['The break-room arcade cabinet is dark. Morale is measurably down 3%. Someone has unplugged AGENT 360 to charge a vape.'] },
   't.arc.b':  { who:'sys', t:['The cabinet chimes awake: "360 SMART NETWORKS PRESENTS..." Somewhere, an agent gets their license to bill.'] },
+
+  /* first morning */
+  'i.day1': { who:'linda', t:[
+    'You must be the intern. Badge photo is unflattering — that is normal, it is the camera and also the lighting and also us.',
+    'Your desk is the one with the green screen, far end of the pit. The amber arrow points at it. Follow the amber arrow; it is the closest thing to a mentor you get.',
+    'Tickets land in your queue all day. Open it at your terminal, or hit TAB from anywhere — which is what everyone actually does.',
+    'The SLA clock starts when the ticket lands, not when you notice it. That is the entire job, philosophically.',
+    'Coffee is in the kitchen. It helps, and then it stops helping. Welcome to 360.'] },
+  'i.firstticket': { who:'sys', t:[
+    'Your first ticket. Open the queue (TAB), pick it, and do what it says — the arrow will point wherever you need to be.'] },
 
   /* events */
   'e.standup':{ who:'linda', t:['Standup. Yesterday: tickets. Today: tickets. Blockers: morale. Same time tomorrow.'] },
@@ -1357,14 +1402,49 @@ function drawWorld(){
       ctx.drawImage(e.frames[e.dir][d[5]], d[3]+2, d[4]-2);
     }
   }
-  /* goto objective marker */
-  if (typeof run !== 'undefined' && run && run.marker){
-    const [mx,my] = run.marker;
-    const bob = Math.sin(performance.now()/180)*2;
-    const sx2 = mx*TILE-cx+8, sy2 = my*TILE-cy-6+bob;
-    ctx.fillStyle = '#ffb02e';
-    ctx.beginPath(); ctx.moveTo(sx2, sy2+6); ctx.lineTo(sx2-5, sy2-2); ctx.lineTo(sx2+5, sy2-2);
+  /* YOU. Eight identical office drones on screen and one of them is the
+     player: without this you genuinely cannot find yourself. */
+  if (typeof G !== 'undefined' && (G.state === 'work' || G.state === 'modal')){
+    const [px0, py0] = entPix(player);
+    const bx = Math.round(px0) - cx + 8, by = Math.round(py0) - cy - 5 + Math.sin(performance.now()/300)*1.5;
+    ctx.fillStyle = '#0b0d10';
+    ctx.beginPath(); ctx.moveTo(bx, by+6); ctx.lineTo(bx-4.5, by-1.5); ctx.lineTo(bx+4.5, by-1.5);
     ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#4ade80';
+    ctx.beginPath(); ctx.moveTo(bx, by+4.5); ctx.lineTo(bx-3.5, by-1); ctx.lineTo(bx+3.5, by-1);
+    ctx.closePath(); ctx.fill();
+  }
+
+  /* Where you are meant to be. On screen it sits on the tile; off screen it
+     pins to the edge and points, so an objective across the floor is still
+     findable instead of a name in a toast you already missed. */
+  const objv = objectiveTarget();
+  if (objv){
+    const [mx,my] = objv.pos;
+    const tx0 = mx*TILE - cx + 8, ty0 = my*TILE - cy + 8;
+    const onScreen = tx0 > 6 && tx0 < VW-6 && ty0 > 14 && ty0 < VH-6;
+    const bob = Math.sin(performance.now()/180)*2;
+    if (onScreen){
+      const sy2 = ty0 - 14 + bob;
+      ctx.fillStyle = '#0b0d10';
+      ctx.beginPath(); ctx.moveTo(tx0, sy2+7); ctx.lineTo(tx0-6, sy2-2); ctx.lineTo(tx0+6, sy2-2);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ffb02e';
+      ctx.beginPath(); ctx.moveTo(tx0, sy2+5.5); ctx.lineTo(tx0-4.5, sy2-1.5); ctx.lineTo(tx0+4.5, sy2-1.5);
+      ctx.closePath(); ctx.fill();
+      txtPlate(objv.label, clamp(tx0, 40, VW-40), sy2-7, '#ffb02e', 6, 'center');
+    } else {
+      const ex = clamp(tx0, 16, VW-16), ey = clamp(ty0, 26, VH-16);
+      const a = Math.atan2(ty0-ey, tx0-ex);
+      ctx.save(); ctx.translate(ex, ey); ctx.rotate(a);
+      ctx.fillStyle = '#0b0d10';
+      ctx.beginPath(); ctx.moveTo(9,0); ctx.lineTo(-6,-6); ctx.lineTo(-6,6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ffb02e';
+      ctx.beginPath(); ctx.moveTo(7,0); ctx.lineTo(-4.5,-4.5); ctx.lineTo(-4.5,4.5); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      const steps = Math.abs(mx - player.tx) + Math.abs(my - player.ty);
+      txtPlate(objv.label + ' · ' + steps, clamp(ex, 44, VW-44), clamp(ey + 17, 36, VH-8), '#ffb02e', 6, 'center');
+    }
   }
   /* facing-cell interaction hint */
   if (typeof G !== 'undefined' && G.state === 'work'){
@@ -1381,6 +1461,23 @@ function drawWorld(){
       }
     }
   }
+}
+/* One source of truth for "where should I be going", shared by the in-world
+   arrow, the off-screen compass and the HUD objective line. */
+function objectiveTarget(){
+  if (typeof run === 'undefined' || !run || !W2.W) return null;
+  if (run.marker) return { pos: run.marker, label: run.markerLabel || 'GO HERE' };
+  if ((run.queue.length || (run.day === 1 && !run.taughtQueue)) && W2.anchors.TERMINAL)
+    return { pos: W2.anchors.TERMINAL, label: 'YOUR DESK' };
+  return null;
+}
+function objectiveText(){
+  if (!run) return '';
+  if (run.marker) return 'GO TO ' + (run.markerLabel || 'THE MARKER') + ' — FOLLOW THE ARROW';
+  if (run.queue.length)
+    return run.queue.length + (run.queue.length === 1 ? ' TICKET WAITING' : ' TICKETS WAITING') + ' — PRESS TAB TO OPEN THE QUEUE';
+  if (run.clock < 4) return 'FIND YOUR DESK — THE ONE WITH THE GREEN SCREEN';
+  return 'QUEUE CLEAR — TALK TO PEOPLE, GET A COFFEE, BREATHE';
 }
 const DIRV = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
 function faceCell(){
@@ -1437,36 +1534,49 @@ function rollDay(){
   if (!elig.length) elig = Object.keys(TICKETS);
   const bag = [];
   for (const id of elig) for (let i=0;i<TICKETS[id].weight;i++) bag.push(id);
-  const n = Math.max(3, Math.round(role.queue.ratePerHr * 8 * (0.85 + R('world')*0.3)));
+  /* Day one is your first day: a lighter queue, and the first ticket is a
+     hand-picked one that teaches the loop (read it, walk somewhere, come
+     back) without a minigame on top. */
+  const first = run.day === 1;
+  const load = first ? .55 : 1;
+  const n = Math.max(3, Math.round(role.queue.ratePerHr * 8 * load * (0.85 + R('world')*0.3)));
   const arrivals = [];
   let last = null;
   for (let i=0;i<n;i++){
     let id = bag[(R('world')*bag.length)|0];
     if (id === last && bag.length > TICKETS[id].weight) id = bag[(R('world')*bag.length)|0];
     last = id;
-    const T = TICKETS[id];
-    const fills = {};
-    const need = (T.title.match(/\{(\w+)\}/g) || []).map(s=>s.slice(1,-1));
-    for (const st of T.steps){
-      const node = DIALOGUE[st.say || st.choice];
-      if (node) for (const line of node.t)
-        for (const m of (line.match(/\{(\w+)\}/g) || [])) need.push(m.slice(1,-1));
-    }
-    for (const tok of new Set(need)){
-      const pool = (T.fills && T.fills[tok]) || FILLS[tok];
-      if (pool) fills[tok] = pool[(R('world')*pool.length)|0];
-    }
-    arrivals.push({
-      at: 6 + R('world')*(DAY_MIN-70), id, uid: run.uid++,
-      title: fill(T.title, fills), fills,
-      sla: Math.round(T.sla * role.queue.slaScale), stress: T.stress
-    });
+    arrivals.push(makeArrival(id, 6 + R('world')*(DAY_MIN-70), role));
   }
   arrivals.sort((a,b)=>a.at-b.at);
+  if (first){
+    /* nothing lands before the standup is over and they have found the desk */
+    for (const a of arrivals) if (a.at < 34) a.at = 34 + (a.at % 9);
+    arrivals.sort((a,b)=>a.at-b.at);
+    if (TICKETS['coffee-derek']) arrivals.unshift(makeArrival('coffee-derek', 20, role));
+  }
   const events = [];
   for (const id in EVENTS) if (R('world') < EVENTS[id].when.chance) events.push({ at:EVENTS[id].when.at, id });
   events.sort((a,b)=>a.at-b.at);
   run.plan = { arrivals, events, ai:0, ei:0 };
+}
+/* One arrival: template id, minute, role scaling — and every {token} in its
+   title and dialogue resolved from the world stream. */
+function makeArrival(id, at, role){
+  const T = TICKETS[id];
+  const fills = {};
+  const need = (T.title.match(/\{(\w+)\}/g) || []).map(s => s.slice(1,-1));
+  for (const st of T.steps){
+    const node = DIALOGUE[st.say || st.choice];
+    if (node) for (const line of node.t)
+      for (const m of (line.match(/\{(\w+)\}/g) || [])) need.push(m.slice(1,-1));
+  }
+  for (const tok of new Set(need)){
+    const pool = (T.fills && T.fills[tok]) || FILLS[tok];
+    if (pool) fills[tok] = pool[(R('world')*pool.length)|0];
+  }
+  return { at, id, uid: run.uid++, title: fill(T.title, fills), fills,
+           sla: Math.round(T.sla * role.queue.slaScale), stress: T.stress };
 }
 function fill(s, fills){ return s.replace(/\{(\w+)\}/g, (_,t) => fills[t] !== undefined ? fills[t] : '{'+t+'}'); }
 
@@ -1474,6 +1584,7 @@ function startCommute(){
   run.phase = 'work';
   run.clock = 0; run.queue = []; run.active = null; run.marker = null;
   run.scores = []; run.breaches = 0; run.resolved = 0; run.aces = 0;
+  run.speedSum = 0; run.qualSum = 0;
   run.coffee = 0; run.crashes = []; run.satOn = {}; run.pendingEvents = [];
   rollDay();
   presentCommute();
@@ -1517,9 +1628,12 @@ function clockIn(){
   cam.x = clamp(player.tx*TILE - VW/2, 0, W2.W*TILE - VW);
   cam.y = clamp(player.ty*TILE - VH/2, 0, W2.H*TILE - VH);
   G.state = 'work'; show(null); clearInput();
-  document.getElementById('hud').style.display = 'flex';
+  hudShow(true);
   audioInit(); view.focus();
-  if (run.day === 1) toast('HOLD A DOOR. MAKE EYE CONTACT. FIND YOUR DESK.', 'corp', 4200);
+  if (run.day === 1 && !run.introDone){
+    run.introDone = true;
+    (run.pendingScenes = run.pendingScenes || []).push('i.day1');
+  }
 }
 
 /* -------------------------------- the step -------------------------------- */
@@ -1559,6 +1673,10 @@ function arrivalsTick(){
     run.stress = Math.min(100, run.stress + 1);
     sfx('ticket');
     toast('NEW TICKET — ' + a.title.toUpperCase().slice(0, 44), 'amber', 2600);
+    if (run.day === 1 && !run.taughtQueue){
+      run.taughtQueue = true;
+      (run.pendingScenes = run.pendingScenes || []).push('i.firstticket');
+    }
   }
 }
 function eventsTick(){
@@ -1754,9 +1872,9 @@ function advanceStep(){
   if (st.goto){
     const a = anchorPos(st.goto);
     if (!a){ t.si++; advanceStep(); return; }
-    run.marker = a;
+    run.marker = a; run.markerLabel = ANCHOR_NAMES[st.goto] || st.goto;
     if (G.modal) closeModalToWork();
-    toast('GO TO: ' + st.goto, 'corp', 1800);
+    toast('GO TO: ' + (ANCHOR_NAMES[st.goto] || st.goto) + ' — FOLLOW THE AMBER ARROW', 'corp', 2600);
     return;
   }
   if (st.say){ openDlg(st.say, t.fills, () => { t.si++; advanceStep(); }); return; }
@@ -1778,6 +1896,8 @@ function resolveTicket(t){
   const gameAvg = t.gameScores.length
     ? t.gameScores.reduce((a,b)=>a+b,0) / t.gameScores.length : .75;
   const score = clamp(.30 + .40*r + .25*gameAvg + .12*t.bonus, 0, 1);
+  run.speedSum = (run.speedSum || 0) + r;
+  run.qualSum = (run.qualSum || 0) + gameAvg;
   run.scores.push(score); run.resolved++;
   if (score >= .8) run.aces++;
   /* work costs something: each ticket leaves residue, heavier as the stakes
@@ -1793,7 +1913,7 @@ function resolveTicket(t){
 /* ------------------------------- end of day ------------------------------- */
 function endDay(){
   if (G.modal) closeModalToWork();
-  document.getElementById('hud').style.display = 'none';
+  hudShow(false);
   /* crashes still pending at 17:00 come due tonight — a 4:45pm cup was free
      otherwise, since the day ends before its crash ever lands */
   if (run.crashes.length) run.stress = clamp(run.stress + run.crashes.length * BURN.crashStress, 0, 100);
@@ -1843,12 +1963,22 @@ function perfName(p){
 function reviewScreen(dayPerf, eod, promo){
   document.getElementById('r-eyebrow').textContent = 'end of day ' + run.day;
   document.getElementById('r-title').textContent = promo ? 'PROMOTED.' : 'DAILY PERFORMANCE REVIEW';
+  const role0 = ROLES[run.rung];
+  const speed = run.resolved ? Math.round(run.speedSum / run.resolved * 100) : 0;
+  const qual  = run.resolved ? Math.round(run.qualSum / run.resolved * 100) : 0;
+  const gate  = role0.gates.nextAt;
   document.getElementById('r-stats').innerHTML =
     '<dt>Tickets resolved</dt><dd>' + run.resolved + ' (' + run.aces + ' aced)</dd>' +
-    '<dt>SLA breaches</dt><dd style="color:' + (run.breaches ? 'var(--alert)' : 'var(--ok)') + '">' + run.breaches + '</dd>' +
+    '<dt>SLA breaches</dt><dd style="color:' + (run.breaches ? 'var(--alert)' : 'var(--ok)') + '">' +
+      run.breaches + (run.breaches ? ' — each scores zero' : '') + '</dd>' +
+    '<dt>Speed</dt><dd>' + speed + '% SLA left when you closed them</dd>' +
+    '<dt>Craft</dt><dd>' + qual + '% on the hands-on bits</dd>' +
     '<dt>Performance</dt><dd>' + Math.round(dayPerf*100) + '% — ' + perfName(dayPerf) + '</dd>' +
+    (gate ? '<dt>Promotion needs</dt><dd>' + Math.round(gate.perf*100) + '% for ' + gate.days +
+      ' days running — streak ' + Math.min(run.gateStreak, gate.days) + '/' + gate.days + '</dd>' : '') +
     '<dt>End-of-day stress</dt><dd>' + Math.round(eod) + '%</dd>' +
-    '<dt>Burnout</dt><dd style="color:' + (run.burnout > 60 ? 'var(--alert)' : 'inherit') + '">' + Math.round(run.burnout) + '%</dd>' +
+    '<dt>Burnout</dt><dd style="color:' + (run.burnout > 60 ? 'var(--alert)' : 'inherit') + '">' +
+      Math.round(run.burnout) + '% — permanent</dd>' +
     (promo ? '<dt>New title</dt><dd style="color:var(--amber)">' + ROLES[run.rung+1].title + '</dd>' : '');
   document.getElementById('r-note').textContent = promo
     ? 'Linda shook your hand for exactly one pump. There is a cake with someone else\'s name crossed out. You have made it.'
@@ -1914,6 +2044,7 @@ function serializeRun(){
     rep:run.rep, uid:run.uid, scores:run.scores, breaches:run.breaches,
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
+    introDone: !!run.introDone,
     phase:run.phase || 'work', activeUid: run.active ? run.active.uid : null,
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
     queue: queue.map(t => ({ uid:t.uid, id:t.id, title:t.title, fills:t.fills, at:t.at,
@@ -1941,7 +2072,7 @@ function resumeRun(s){
     gateStreak:r.gateStreak, firedStreak:r.firedStreak, stress:r.stress,
     coffee:r.coffee, crashes:r.crashes, burnout:r.burnout, rep:r.rep,
     queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
-    pendingEvents:[], pendingScenes:r.pendingScenes || [], scores:r.scores,
+    pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone, scores:r.scores,
     breaches:r.breaches, resolved:r.resolved,
     aces:r.aces, daysAtTop:r.daysAtTop, satOn:r.satOn || {}, promoted:r.promoted,
     phase:r.phase || 'work' };
@@ -1957,7 +2088,7 @@ function resumeRun(s){
   loadMap('office1');
   spawnPeople(run.clock, (r.px !== null && r.px !== undefined) ? [r.px, r.py] : null);
   G.state = 'work'; show(null); clearInput();
-  document.getElementById('hud').style.display = 'flex';
+  hudShow(true);
   /* pick the interrupted ticket back up where it was, rather than stranding it
      mid-chain in the queue with its SLA burning */
   run.active = r.activeUid ? (run.queue.find(t => t.uid === r.activeUid) || null) : null;
@@ -2029,6 +2160,10 @@ function dlgPaint(){
   if (last && full && dlg.opts && !dlg.optsShown){
     dlg.optsShown = true;
     const box = document.getElementById('d-opts');
+    const tip = document.createElement('div');
+    tip.className = 'pick';
+    tip.textContent = 'Press ' + (dlg.opts.length > 1 ? '1–' + dlg.opts.length : '1') + ' or click. There is no right answer, only consequences.';
+    box.appendChild(tip);
     dlg.opts.forEach((o, i) => {
       const b = document.createElement('button');
       b.className = 'opt';
@@ -2148,8 +2283,11 @@ const GAMES = {
     const right = cols.map((c,i)=>({c, i}));
     for (let i=n-1;i>0;i--){ const j = Ri('game', i+1); [right[i], right[j]] = [right[j], right[i]]; }
     return { kind:'cable', n, left, right, cur:0, side:0, pickL:-1,
-      linked:new Array(n).fill(-1), mistakes:0, hint:'MATCH THE CABLES · ↑↓ + E',
+      linked:new Array(n).fill(-1), mistakes:0, hint:'PICK A CABLE — ↑↓ TO MOVE, E TO GRAB',
       step(dt){
+        this.hint = this.side === 0
+          ? 'PICK A CABLE — ↑↓ TO MOVE, E TO GRAB'
+          : 'NOW ITS PORT — ↑↓ TO MOVE, E TO PLUG IN';
         if (press.up) this.cur = (this.cur + this.n - 1) % this.n;
         if (press.down) this.cur = (this.cur + 1) % this.n;
         if (press.use){
@@ -2299,6 +2437,15 @@ function txt(s, x, y, col, size, align){
   ctx.fillStyle = '#000'; ctx.fillText(s, x+1, y+1);
   ctx.fillStyle = col; ctx.fillText(s, x, y);
 }
+/* Canvas labels land on top of furniture and people; give them a ground. */
+function txtPlate(str, x, y, col, size, align){
+  ctx.font = Math.max(6, size||6) + 'px "Press Start 2P", monospace';
+  const w = ctx.measureText(str).width;
+  const ax = align === 'center' ? x - w/2 : align === 'right' ? x - w : x;
+  ctx.fillStyle = 'rgba(8,10,13,.86)';
+  ctx.fillRect(Math.round(ax) - 3, Math.round(y) - (size||6) - 2, Math.round(w) + 6, (size||6) + 6);
+  txt(str, x, y, col, size, align);
+}
 function wrapTxt(s, cx, y, w, col, size){
   ctx.font = Math.max(6, size) + 'px "Press Start 2P", monospace';
   const words = s.split(' ');
@@ -2321,6 +2468,13 @@ function modalTick(dt){
 }
 
 /* ----------------------------------- HUD ---------------------------------- */
+function hudShow(on){
+  document.getElementById('hud').style.display = on ? 'flex' : 'none';
+  if (!on){
+    document.getElementById('obj').style.display = 'none';
+    document.getElementById('keyhint').style.display = 'none';
+  }
+}
 function hudUpdate(){
   if (!run) return;
   const h = Math.floor(run.clock/60) + 9;
@@ -2337,6 +2491,13 @@ function hudUpdate(){
   sm.firstElementChild.style.width = Math.round(run.stress) + '%';
   sm.className = 'meter' + (run.stress > 75 ? ' bad' : run.stress > 45 ? ' warn' : '');
   document.getElementById('h-coffee').textContent = '☕' + run.coffee;
+  const ot = objectiveText();
+  const obj = document.getElementById('obj');
+  document.getElementById('obj-t').textContent = ot;
+  obj.style.display = ot ? 'flex' : 'none';
+  /* the controls stay up for the first two days, then get out of the way */
+  document.getElementById('keyhint').style.display =
+    (run.day <= 2 && G.state === 'work') ? 'flex' : 'none';
 }
 
 /* --------------------------------- screens -------------------------------- */
@@ -2359,7 +2520,7 @@ function screenForState(){
 }
 function toTitle(){
   G.state = 'title';
-  document.getElementById('hud').style.display = 'none';
+  hudShow(false);
   const s = loadGame();
   const btn = document.getElementById('b-continue');
   btn.disabled = !(s && s !== 'future' && s.run);
@@ -2443,7 +2604,7 @@ function pauseGame(){
   }
   if (G.state !== 'work') return;
   G.state = 'pause';
-  document.getElementById('hud').style.display = 'none';
+  hudShow(false);
   document.getElementById('p-title').textContent = 'DAY ' + run.day + ' — ' + ROLES[run.rung].title;
   document.getElementById('p-meta').innerHTML =
     '<dt>Clock</dt><dd>' + document.getElementById('h-clock').textContent + '</dd>' +
@@ -2457,7 +2618,7 @@ function pauseGame(){
 function resumeWork(){
   if (G.state !== 'pause') return;
   G.state = 'work'; show(null); clearInput(); view.focus();
-  document.getElementById('hud').style.display = 'flex';
+  hudShow(true);
   if (run && run.resumePending && run.active){
     run.resumePending = false;
     advanceStep();                       // re-open the interrupted step
@@ -2869,8 +3030,7 @@ function selfTest(runSim){
     }
     A.sfxVol = saved.sfx; QUIET = saved.quiet;
     SAVE_SUSPEND = false;
-    document.getElementById('hud').style.display =
-      (G.state === 'work' || G.state === 'modal') ? 'flex' : 'none';
+    hudShow(G.state === 'work' || G.state === 'modal');
   }
 
   G.tests = Rres;
@@ -2945,6 +3105,11 @@ function render(){
     cam.x = 40 + Math.sin(idleT*.1)*36 + 140;
     cam.y = 60 + Math.cos(idleT*.07)*30;
     drawWorld();
+  }
+  if ((G.state === 'work' || G.state === 'modal' || G.state === 'pause') && !document.hasFocus()){
+    ctx.fillStyle = 'rgba(8,10,13,.82)';
+    ctx.fillRect(0, VH/2 - 16, VW, 32);
+    txt('CLICK THE GAME TO TAKE CONTROL', VW/2, VH/2 + 3, '#ffb02e', 8, 'center');
   }
   if (G.showTests) drawTestReport();
 }
