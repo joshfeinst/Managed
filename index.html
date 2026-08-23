@@ -1573,6 +1573,20 @@ function rollDay(){
   events.sort((a,b)=>a.at-b.at);
   run.plan = { arrivals, events, ai:0, ei:0 };
 }
+/* Roughly the minutes a careful player needs for a ticket: walking legs and
+   minigames dominate, reading is not free, and the clock runs through all of
+   it. Measured against real play — the tutorial ticket used to want 47
+   minutes inside a 45-minute SLA, i.e. it breached no matter what you did. */
+function ticketWork(T){
+  let m = 6;
+  for (const st of T.steps){
+    if (st.goto) m += 14;
+    else if (st.game) m += 14;
+    else if (st.choice) m += 7;
+    else if (st.say) m += 4 * ((DIALOGUE[st.say] && DIALOGUE[st.say].t.length) || 1);
+  }
+  return m;
+}
 /* One arrival: template id, minute, role scaling — and every {token} in its
    title and dialogue resolved from the world stream. */
 function makeArrival(id, at, role){
@@ -1588,8 +1602,13 @@ function makeArrival(id, at, role){
     const pool = (T.fills && T.fills[tok]) || FILLS[tok];
     if (pool) fills[tok] = pool[(R('world')*pool.length)|0];
   }
+  /* first day gets a longer leash: a new player reads every line, and the
+     clock does not care that they are new */
+  const dayEase = run.day === 1 ? 1.4 : 1;
+  const workMin = ticketWork(T) * 1.4;              // headroom over the work itself
+  const sla = Math.max(T.sla, workMin) * role.queue.slaScale * dayEase;
   return { at, id, uid: run.uid++, title: fill(T.title, fills), fills,
-           sla: Math.round(T.sla * role.queue.slaScale), stress: T.stress };
+           sla: Math.round(sla), stress: T.stress };
 }
 function fill(s, fills){ return s.replace(/\{(\w+)\}/g, (_,t) => fills[t] !== undefined ? fills[t] : '{'+t+'}'); }
 
@@ -2696,6 +2715,7 @@ function onKey(e){
   if (e.code === 'Escape'){
     if (G.state === 'work') pauseGame();
     else if (G.state === 'modal' && G.modal && G.modal.kind === 'tix') closeModalToWork();
+    else if (G.state === 'modal') pauseGame();      // dialogue or minigame: still a way out
     else if (G.state === 'pause') resumeWork();
     else if (G.state === 'menu') act('back');
     else if (G.state === 'setup') act('back');
@@ -2860,6 +2880,17 @@ function selfTest(runSim){
       if (T.from && !NPCS[T.from]) bad.push(id + ':from');
     }
     ok('every ticket is resolvable (nodes, games, fills)', !bad.length, bad.slice(0,4).join(' '));
+    /* the window has to fit the work: walking legs and minigames cost real
+       minutes and the clock never stops for them */
+    const tight = [];
+    for (const id in TICKETS){
+      const T = TICKETS[id], need = ticketWork(T);
+      for (let rung = T.tiers[0]; rung <= T.tiers[1] && rung < ROLES.length; rung++){
+        const win = Math.max(T.sla, need * 1.4) * ROLES[rung].queue.slaScale;
+        if (win < need * 1.15) tight.push(id + '@' + ROLES[rung].id + ' ' + Math.round(win) + '<' + need);
+      }
+    }
+    ok('every ticket fits its SLA at every rung that deals it', !tight.length, tight.slice(0,3).join(' '));
     bad = [];
     for (const id in NPCS) if (!DIALOGUE[NPCS[id].talk]) bad.push(id);
     for (const id in EVENTS) if (!DIALOGUE[EVENTS[id].scene]) bad.push(id);
