@@ -1737,6 +1737,7 @@ const DAY_OVERRUN = 20;        // how far past 17:00 a meeting can hold the day 
 const MIN_SLACK = 18;          // minutes you always get to notice a ticket exists
 const ACE = .95;               // what actually counts as a job well done
 const EVENT_WARN = 12;         // minutes of notice a meeting gives you
+const DUCK_DEBT = .55;         // burnout per point of stress dodged rather than spent
 /* what the calendar invite is actually called */
 const EV_NAMES = {
   standup:'morning standup', allhands:'all-hands', pizza:'pizza in the kitchen',
@@ -2795,7 +2796,18 @@ function pickOpt(i){
 }
 function applyFx(fx, ticket){
   if (!fx) return;
-  if (fx.stress) run.stress = clamp(run.stress + fx.stress, 0, 100);
+  if (fx.stress){
+    run.stress = clamp(run.stress + fx.stress, 0, 100);
+    /* Relief you buy by ducking the work is a loan, and it is the loan this
+       game is about. Measured, taking the laziest option on every ticket ran
+       careers 51 days against 15 and climbed twice as far up the ladder,
+       because those options handed back stress for free and stress is what
+       burns you down. The calm is real in the moment and it comes back at
+       night. Relief from an EVENT — pizza in the kitchen, someone's birthday —
+       is genuine and costs nothing, which is why this only touches tickets. */
+    if (fx.stress < 0 && ticket)
+      run.burnout = clamp(run.burnout + (-fx.stress) * DUCK_DEBT, 0, 100);
+  }
   if (fx.rep) run.rep = Math.max(0, run.rep + fx.rep);
   if (fx.time) run.clock += fx.time;               // the day shrinks; that was the price
   if (fx.bonus && ticket) ticket.bonus += fx.bonus;
@@ -4067,6 +4079,25 @@ function selfTest(runSim){
       }
       ok('a meeting announces itself before it starts', !ev || warned,
          ev ? 'no calendar warning for ' + ev.id : 'no events today');
+      run = null;
+    }
+    /* Ducking the work must not be a way to outlive the people who do it. The
+       lazy options handed stress back for free, and stress is the whole burnout
+       economy — measured, taking the laziest option every time ran careers 51
+       days against 15 and climbed twice as far. */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const b0 = run.burnout, s0 = run.stress;
+      const t = { id:'mouse-batteries', bonus:0 };
+      applyFx({ stress:-4 }, t);
+      const ducked = run.burnout - b0;
+      run.burnout = b0; run.stress = s0;
+      applyFx({ stress:-4 }, null);              // an event: pizza is just pizza
+      const given = run.burnout - b0;
+      ok('stress dodged on a ticket is borrowed, not saved',
+         ducked > 0 && Math.abs(ducked - 4*DUCK_DEBT) < 1e-9,
+         'got ' + ducked.toFixed(2));
+      ok('relief from an event costs nothing', given === 0, 'got ' + given.toFixed(2));
       run = null;
     }
     /* every ticket carries stakes, and they are the triage decision */
