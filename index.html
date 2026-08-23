@@ -1488,7 +1488,8 @@ function objectiveText(){
   if (run.marker) return 'GO TO ' + (run.markerLabel || 'THE MARKER') + ' — FOLLOW THE ARROW';
   if (run.queue.length)
     return run.queue.length + (run.queue.length === 1 ? ' TICKET WAITING' : ' TICKETS WAITING') + ' — PRESS TAB TO OPEN THE QUEUE';
-  if (run.clock < 4) return 'FIND YOUR DESK — THE ONE WITH THE GREEN SCREEN';
+  if (run.day === 1 && !run.taughtQueue)
+    return 'FIND YOUR DESK — FOLLOW THE AMBER ARROW';
   return 'QUEUE CLEAR — TALK TO PEOPLE, GET A COFFEE, BREATHE';
 }
 const DIRV = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
