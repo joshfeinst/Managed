@@ -795,7 +795,9 @@ const FILLS = {
   excuse: ["it worked yesterday","nothing was changed","IT did something","the storm did it",
            "my grandson set it up","it's probably the firewall"],
   swear:  ['sugar','fudge','dagnabbit','golly'],
-  mtg:    ['9:15 standup','the client call','all-hands','the QBR','a "quick sync"']
+  /* each entry carries its own article, because the sentence around a token
+     cannot know which one fits: "before the the client call" shipped */
+  mtg:    ['the 9:15 standup','the client call','the all-hands','the QBR','a "quick sync"']
 };
 
 /* ------------------------------- the office ------------------------------ */
@@ -925,7 +927,7 @@ const DIALOGUE = {
   'g.resolve':{ who:'sys', t:['Resolved. CSAT survey sent — it will be ignored until it is a 1-star.'] },
 
   /* per-ticket scenes */
-  't.cof.a':  { who:'derek', t:['Intern. Coffee. Black. The {mtg} starts in nine minutes. Go.'] },
+  't.cof.a':  { who:'derek', t:['Intern. Coffee. Black. {Mtg} starts in nine minutes. Go.'] },
   't.cof.b':  { who:'sys', t:['The machine gurgles like a dying NAS. A paper cup of something coffee-adjacent is produced.'] },
   't.cof.c':  { who:'derek', t:['...Acceptable. One day I will teach you the ways of the espresso shot. Not today.'] },
   't.jam.a':  { who:'client', t:['{client} here — the printer will not stop printing {doc}. It\'s at copy 240. We tried {excuse}.'] },
@@ -1044,7 +1046,7 @@ const DIALOGUE = {
    from: npc originator (else a client from FILLS is stamped on). */
 const TICKETS = {
   'coffee-derek': { tiers:[0,0], weight:3, sla:30, pri:4, stress:4, from:'derek',
-    title:'Coffee for DEREK before the {mtg}',
+    title:'Coffee for DEREK before {mtg}',
     steps:[{say:'t.cof.a'},{goto:'COFFEE'},{say:'t.cof.b'},{goto:'n1'},{say:'t.cof.c'}] },
   'printer-jam': { tiers:[0,2], weight:3, sla:40, pri:3, stress:8,
     title:'{client}: printer is printing {doc} forever',
@@ -1602,11 +1604,15 @@ const DAY_MIN = 480;
    it; it exists so play feedback can be about real events ("day 3, the CFO
    ticket, I picked the second option and it felt unfair") instead of memory. */
 const SLOG = [];
+/* SLOG is capped and shifts, so its indices slide out from under anyone
+   holding one. Tools that want "the lines since X" need a monotonic count. */
+let SLOG_TOTAL = 0;
 function slog(msg){
   if (typeof run === 'undefined' || !run) return;
   const h = Math.floor(run.clock/60) + 9, m = Math.floor(run.clock % 60);
   SLOG.push('D' + run.day + ' ' + (h > 12 ? h-12 : h) + ':' + (m<10?'0':'') + m +
             (h >= 12 ? 'p' : 'a') + '  ' + msg);
+  SLOG_TOTAL++;
   if (SLOG.length > 400) SLOG.shift();
 }                       // 9:00 -> 17:00, 1 game-minute per real second
 let run = null;
@@ -1692,11 +1698,11 @@ function ticketWork(T){
 function makeArrival(id, at, role){
   const T = TICKETS[id];
   const fills = {};
-  const need = (T.title.match(/\{(\w+)\}/g) || []).map(s => s.slice(1,-1));
+  const need = (T.title.match(/\{(\w+)\}/g) || []).map(s => fillKey(s.slice(1,-1)));
   for (const st of T.steps){
     const node = DIALOGUE[st.say || st.choice];
     if (node) for (const line of node.t)
-      for (const m of (line.match(/\{(\w+)\}/g) || [])) need.push(m.slice(1,-1));
+      for (const m of (line.match(/\{(\w+)\}/g) || [])) need.push(fillKey(m.slice(1,-1)));
   }
   for (const tok of new Set(need)){
     const pool = (T.fills && T.fills[tok]) || FILLS[tok];
@@ -1710,7 +1716,18 @@ function makeArrival(id, at, role){
   return { at, id, uid: run.uid++, title: fill(T.title, fills), fills,
            sla: Math.round(sla), stress: T.stress };
 }
-function fill(s, fills){ return s.replace(/\{(\w+)\}/g, (_,t) => fills[t] !== undefined ? fills[t] : '{'+t+'}'); }
+/* {token} substitutes the pool entry as written; {Token} capitalises it, for
+   the start of a sentence. Pool entries carry their own articles, so the text
+   around a token must never supply one — "before the the client call" is what
+   happens when it does, and a content lint below now refuses it. */
+function fillKey(t){ return t.charAt(0).toLowerCase() + t.slice(1); }
+function fill(s, fills){
+  return s.replace(/\{(\w+)\}/g, (_,t) => {
+    const v = fills[fillKey(t)];
+    if (v === undefined) return '{'+t+'}';
+    return /^[A-Z]/.test(t) ? String(v).charAt(0).toUpperCase() + String(v).slice(1) : v;
+  });
+}
 
 function startCommute(){
   /* a career that ended yesterday does not get another morning */
@@ -3160,10 +3177,10 @@ function selfTest(runSim){
         if (st.choice && DIALOGUE[st.choice] && !DIALOGUE[st.choice].opts) bad.push(id + ':choice-no-opts');
         if (st.game && !GAMES[st.game]) bad.push(id + ':game:' + st.game);
       }
-      const toks = new Set((T.title.match(/\{(\w+)\}/g) || []).map(s => s.slice(1,-1)));
+      const toks = new Set((T.title.match(/\{(\w+)\}/g) || []).map(s => fillKey(s.slice(1,-1))));
       for (const st of T.steps){
         const n = DIALOGUE[st.say || st.choice];
-        if (n) for (const l of n.t) for (const m2 of (l.match(/\{(\w+)\}/g) || [])) toks.add(m2.slice(1,-1));
+        if (n) for (const l of n.t) for (const m2 of (l.match(/\{(\w+)\}/g) || [])) toks.add(fillKey(m2.slice(1,-1)));
       }
       for (const tok of toks) if (!((T.fills && T.fills[tok]) || FILLS[tok])) bad.push(id + ':fill:' + tok);
       if (T.from && !NPCS[T.from]) bad.push(id + ':from');
@@ -3273,6 +3290,29 @@ function selfTest(runSim){
          shown ? 'choice did not register' : 'options never appeared');
       dlg = savedDlg; G.state = savedState; G.modal = savedModal; run = savedRun;
       document.getElementById('dlg').style.display = 'none';
+    }
+    /* Pool entries carry their own articles, so no sentence may supply one:
+       "Coffee for DEREK before the {mtg}" shipped as "before the the client
+       call". Scan every authored string, not just the ones with tickets. */
+    {
+      const strings = [];
+      for (const id in TICKETS) strings.push([id, TICKETS[id].title]);
+      for (const id in DIALOGUE){
+        const n = DIALOGUE[id];
+        (n.t || []).forEach(l => strings.push([id, l]));
+        (n.opts || []).forEach(o => strings.push([id, o.t]));
+      }
+      const bad = strings.filter(([, t]) => /\b(?:the|a|an)\s+\{[a-zA-Z]+\}/i.test(t))
+                         .map(([id]) => id);
+      ok('content: no article is glued in front of a fill token',
+         !bad.length, [...new Set(bad)].join(','));
+      /* and every token still has to resolve, in either case form */
+      const unres = strings.filter(([, t]) =>
+        (t.match(/\{(\w+)\}/g) || []).some(m => {
+          const k = fillKey(m.slice(1,-1));
+          return !FILLS[k] && !Object.keys(TICKETS).some(i => TICKETS[i].fills && TICKETS[i].fills[k]);
+        })).map(([id]) => id);
+      ok('content: every fill token has a pool', !unres.length, [...new Set(unres)].join(','));
     }
     /* every ticket carries stakes, and they are the triage decision */
     {
