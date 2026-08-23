@@ -754,31 +754,31 @@ function bakePortrait(look){
    ladder is real data so the systems and tests see the whole shape. */
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
-    gates:{ nextAt:{perf:0.58, days:3}, firedBelow:0.28, cert:null },
+    gates:{ nextAt:{perf:0.68, days:3}, firedBelow:0.28, cert:null },
     queue:{ ratePerHr:3.0, slaScale:1.0 }, deskAnchor:'TERMINAL' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
-    gates:{ nextAt:{perf:0.54, days:3}, firedBelow:0.3, cert:null },
+    gates:{ nextAt:{perf:0.62, days:3}, firedBelow:0.3, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
-    gates:{ nextAt:{perf:0.56, days:3}, firedBelow:0.32, cert:null },
+    gates:{ nextAt:{perf:0.62, days:3}, firedBelow:0.32, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
-    gates:{ nextAt:{perf:0.55, days:3}, firedBelow:0.33, cert:null },
+    gates:{ nextAt:{perf:0.63, days:3}, firedBelow:0.33, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
-    gates:{ nextAt:{perf:0.57, days:3}, firedBelow:0.34, cert:null },
+    gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.34, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
-    gates:{ nextAt:{perf:0.575, days:3}, firedBelow:0.34, cert:null },
+    gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.34, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.575, days:3}, firedBelow:0.35, cert:null },
+    gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.35, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
-    gates:{ nextAt:{perf:0.578, days:3}, firedBelow:0.36, cert:null },
+    gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.36, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'vcio',   title:'vCIO',          pay:135000,
-    gates:{ nextAt:{perf:0.58, days:3}, firedBelow:0.37, cert:null },
+    gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.37, cert:null },
     queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
     gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.38, cert:null },
@@ -1056,85 +1056,85 @@ const DIALOGUE = {
    sla in game-minutes (scaled by role slaScale). weight biases the draw.
    from: npc originator (else a client from FILLS is stamped on). */
 const TICKETS = {
-  'coffee-derek': { tiers:[0,0], weight:3, sla:30, pri:4, stress:4, from:'derek',
+  'coffee-derek': { tiers:[0,0], weight:3, sla:30, slaMult:1.4, pri:4, stress:4, from:'derek',
     title:'Coffee for DEREK before {mtg}',
     steps:[{say:'t.cof.a'},{goto:'COFFEE'},{say:'t.cof.b'},{goto:'n1'},{say:'t.cof.c'}] },
-  'printer-jam': { tiers:[0,2], weight:3, sla:40, pri:3, stress:8,
+  'printer-jam': { tiers:[0,2], weight:3, sla:40, slaMult:1.4, pri:3, stress:8,
     title:'{client}: printer is printing {doc} forever',
     steps:[{say:'t.jam.a'},{goto:'PRINTER'},{game:'cable',diff:1},{say:'t.jam.b'},{choice:'t.jam.c'}] },
-  'mouse-batteries': { tiers:[0,1], weight:3, sla:34, pri:2, stress:3,
+  'mouse-batteries': { tiers:[0,1], weight:3, sla:34, slaMult:1.9, pri:2, stress:3,
     title:'{User}\'s mouse is "broken"',
     steps:[{say:'t.mouse.a'},{choice:'t.mouse.b'}] },
-  'monitor-input': { tiers:[0,2], weight:3, sla:26, pri:3, stress:6,
+  'monitor-input': { tiers:[0,2], weight:3, sla:26, slaMult:1.4, pri:3, stress:6,
     title:'{client}: monitor shows NO SIGNAL, business halted',
     steps:[{say:'t.mon.a'},{choice:'t.mon.b'}] },
-  'cable-bin': { tiers:[0,0], weight:2, sla:65, pri:1, stress:3, from:'brenda',
+  'cable-bin': { tiers:[0,0], weight:2, sla:65, slaMult:3.2, pri:1, stress:3, from:'brenda',
     title:'Untangle the supply-closet cable bin',
     steps:[{say:'t.tangle.a'},{goto:'SHELF'},{game:'cable',diff:1},{say:'t.tangle.b'}] },
-  'password-reset': { tiers:[0,2], weight:4, sla:30, pri:3, stress:4,
+  'password-reset': { tiers:[0,2], weight:4, sla:30, slaMult:1.9, pri:3, stress:4,
     title:'{User} is locked out (attempt 3 of 3)',
     steps:[{say:'t.pw.a'},{game:'pw',diff:1},{choice:'t.pw.b'}] },
-  'label-printer': { tiers:[0,2], weight:2, sla:44, pri:2, stress:5,
+  'label-printer': { tiers:[0,2], weight:2, sla:44, slaMult:1.9, pri:2, stress:5,
     title:'{client}: label printer speaks only wingdings',
     steps:[{say:'t.label.a'},{game:'jargon',diff:1}] },
-  'shadow-raj': { tiers:[0,0], weight:2, sla:55, pri:1, stress:2, from:'raj',
+  'shadow-raj': { tiers:[0,0], weight:2, sla:55, slaMult:3.2, pri:1, stress:2, from:'raj',
     title:'Shadow RAJ on a live T1 call',
     steps:[{goto:'n2'},{say:'t.shadow.a'},{game:'jargon',diff:1},{say:'t.shadow.b'}] },
-  'asset-tags': { tiers:[0,0], weight:2, sla:75, pri:1, stress:2, from:'linda',
+  'asset-tags': { tiers:[0,0], weight:2, sla:75, slaMult:3.2, pri:1, stress:2, from:'linda',
     title:'Asset-tag 14 new laptops',
     steps:[{goto:'SHELF'},{say:'t.tags.a'}] },
-  'fax-machine': { tiers:[0,3], weight:2, sla:36, pri:3, stress:7,
+  'fax-machine': { tiers:[0,3], weight:2, sla:36, slaMult:1.9, pri:3, stress:7,
     title:'{client}: THE FAX MACHINE (yes, still)',
     steps:[{say:'t.fax.a'},{game:'cable',diff:2},{say:'t.fax.b'}] },
-  'ceo-kid': { tiers:[0,3], weight:1, sla:65, pri:4, stress:6,
+  'ceo-kid': { tiers:[0,3], weight:1, sla:65, slaMult:1.9, pri:4, stress:6,
     title:'CEO\'s kid\'s laptop: 47 toolbars',
     steps:[{choice:'t.kid.a'},{game:'pw',diff:2}] },
-  'crm-update': { tiers:[0,2], weight:2, sla:85, pri:1, stress:5, from:'linda',
+  'crm-update': { tiers:[0,2], weight:2, sla:85, slaMult:3.2, pri:1, stress:5, from:'linda',
     title:'Update the CRM ("all of it")',
     steps:[{choice:'t.crm.a'}] },
-  'donut-run': { tiers:[0,0], weight:2, sla:26, pri:2, stress:3, from:'brenda',
+  'donut-run': { tiers:[0,0], weight:2, sla:26, slaMult:1.4, pri:2, stress:3, from:'brenda',
     title:'Donuts before the client tour',
     steps:[{say:'t.donut.a'},{goto:'VEND'},{say:'t.donut.b'},{goto:'n6'}] },
-  'water-cooler': { tiers:[0,2], weight:2, sla:48, pri:1, stress:3,
+  'water-cooler': { tiers:[0,2], weight:2, sla:48, slaMult:3.2, pri:1, stress:3,
     title:'The water cooler is making The Noise',
     steps:[{goto:'COOLER'},{say:'t.cool.a'},{game:'cable',diff:1},{say:'t.cool.b'}] },
-  'quick-question': { tiers:[0,3], weight:3, sla:33, pri:2, stress:5,
+  'quick-question': { tiers:[0,3], weight:3, sla:33, slaMult:1.9, pri:2, stress:5,
     title:'{User} has a "quick question"',
     steps:[{choice:'t.quick.a'}] },
-  'conference-tv': { tiers:[0,3], weight:2, sla:24, pri:4, stress:9, from:'mackenzie',
+  'conference-tv': { tiers:[0,3], weight:2, sla:24, slaMult:1.4, pri:4, stress:9, from:'mackenzie',
     title:'Conference TV won\'t mirror — demo in 5',
     steps:[{say:'t.tv.a'},{goto:'CONF'},{game:'cable',diff:2},{say:'t.tv.b'}] },
-  'spam-filter': { tiers:[0,3], weight:2, sla:52, pri:2, stress:5,
+  'spam-filter': { tiers:[0,3], weight:2, sla:52, slaMult:1.9, pri:2, stress:5,
     title:'{client}: spam filter has chosen chaos',
     steps:[{say:'t.spam.a'},{game:'jargon',diff:2}] },
-  'server-shelf': { tiers:[0,2], weight:2, sla:44, pri:1, stress:3, from:'derek',
+  'server-shelf': { tiers:[0,2], weight:2, sla:44, slaMult:3.2, pri:1, stress:3, from:'derek',
     title:'Restock the server-room shelf (touch NOTHING)',
     steps:[{say:'t.shelf.a'},{goto:'SERVERS'},{say:'t.shelf.b'}] },
-  'onboard-newhire': { tiers:[0,2], weight:2, sla:60, pri:3, stress:6, from:'linda',
+  'onboard-newhire': { tiers:[0,2], weight:2, sla:60, slaMult:1.9, pri:3, stress:6, from:'linda',
     title:'New hire Monday; nothing is provisioned',
     steps:[{say:'t.onb.a'},{game:'pw',diff:2}] },
-  'thermostat': { tiers:[0,2], weight:2, sla:56, pri:2, stress:4,
+  'thermostat': { tiers:[0,2], weight:2, sla:56, slaMult:1.9, pri:2, stress:4,
     title:'Floor is 61°F; accounting is mutinous',
     steps:[{say:'t.therm.a'},{goto:'n6'},{choice:'t.therm.b'}] },
-  'boat-email': { tiers:[0,3], weight:2, sla:30, pri:3, stress:7,
+  'boat-email': { tiers:[0,3], weight:2, sla:30, slaMult:1.4, pri:3, stress:7,
     title:'{client}: the owner cannot get email. On his boat.',
     steps:[{say:'t.vip.a'},{choice:'t.vip.b'}] },
-  'comms-cupboard': { tiers:[0,2], weight:2, sla:50, pri:2, stress:6, from:'derek',
+  'comms-cupboard': { tiers:[0,2], weight:2, sla:50, slaMult:3.2, pri:2, stress:6, from:'derek',
     title:'{client} "tidied" the comms cupboard. With scissors.',
     steps:[{say:'t.wire.a'},{goto:'SERVERS'},{game:'cable',diff:2},{say:'t.wire.b'}] },
-  'shared-drive': { tiers:[0,3], weight:3, sla:34, pri:4, stress:8,
+  'shared-drive': { tiers:[0,3], weight:3, sla:34, slaMult:1.4, pri:4, stress:8,
     title:'{User} deleted the shared drive. The shared one.',
     steps:[{say:'t.share.a'},{game:'pw',diff:1},{choice:'t.share.b'}] },
-  'mfa-off': { tiers:[0,3], weight:2, sla:40, pri:1, stress:6,
+  'mfa-off': { tiers:[0,3], weight:2, sla:40, slaMult:1.9, pri:1, stress:6,
     title:'{client} would like MFA turned off, please',
     steps:[{say:'t.mfa.a'},{goto:'n8'},{choice:'t.mfa.b'}] },
-  'scanner-ghost': { tiers:[0,2], weight:2, sla:36, pri:2, stress:4, from:'brenda',
+  'scanner-ghost': { tiers:[0,2], weight:2, sla:36, slaMult:1.9, pri:2, stress:4, from:'brenda',
     title:'The scanner emails PDFs to someone who left in 2019',
     steps:[{say:'t.scan.a'},{game:'jargon',diff:1},{say:'t.scan.b'}] },
-  'ups-beeping': { tiers:[0,3], weight:2, sla:38, pri:2, stress:5,
+  'ups-beeping': { tiers:[0,3], weight:2, sla:38, slaMult:1.9, pri:2, stress:5,
     title:'Something in the cage is beeping (nobody knows how long)',
     steps:[{say:'t.ups.a'},{goto:'SERVERS'},{say:'t.ups.b'},{game:'cable',diff:1}] },
-  'arcade-dark': { tiers:[0,1], weight:1, sla:65, pri:1, stress:2,
+  'arcade-dark': { tiers:[0,1], weight:1, sla:65, slaMult:3.2, pri:1, stress:2,
     title:'Break-room arcade is dark; morale -3%',
     steps:[{say:'t.arc.a'},{goto:'ARCADE'},{game:'cable',diff:1},{say:'t.arc.b'}] }
 };
@@ -1720,6 +1720,25 @@ function rollDay(){
    minigames dominate, reading is not free, and the clock runs through all of
    it. Measured against real play — the tutorial ticket used to want 47
    minutes inside a 45-minute SLA, i.e. it breached no matter what you did. */
+/* What a ticket actually LETS you show. A template with no minigame can never
+   earn the craft term and one with no bonus-granting choice can never earn the
+   bonus term, so grading every ticket against the same three weights handed
+   the lucky templates a ceiling the others could not reach — measured, a 0.24
+   spread between the best and worst template, wider than the entire skill
+   range. Each ticket is graded out of what it offers instead. */
+const OFFERS = {};
+function ticketOffers(id){
+  if (OFFERS[id]) return OFFERS[id];
+  const T = TICKETS[id];
+  let game = false, bonus = 0;
+  for (const st of T.steps){
+    if (st.game) game = true;
+    const node = DIALOGUE[st.choice];
+    if (node && node.opts)
+      for (const o of node.opts) bonus = Math.max(bonus, (o.fx && o.fx.bonus) || 0);
+  }
+  return (OFFERS[id] = { game, bonus });
+}
 function ticketWork(T){
   let m = 6;
   for (const st of T.steps){
@@ -1747,9 +1766,19 @@ function makeArrival(id, at, role){
   }
   /* first day gets a longer leash: a new player reads every line, and the
      clock does not care that they are new */
-  const dayEase = run.day === 1 ? 1.4 : 1;
-  const workMin = ticketWork(T) * 1.4;              // headroom over the work itself
-  const sla = Math.max(T.sla, workMin) * role.queue.slaScale * dayEase;
+  const dayEase = run.day === 1 ? 1.2 : 1;
+  /* A ticket's window is its OWN WORK plus authored slack. The old form took
+     max(authored, work*1.4), which silently overrode the author on half the
+     table and pinned those tickets' best reachable promptness to exactly
+     1 - 1/1.4 = 0.286 while a two-minute ticket kept a six-fold window. Which
+     template the queue dealt you then decided more of your score than anything
+     you did — measured, a 0.245 gap between the luckiest and unluckiest
+     template against a 0.11 range for the whole skill spectrum. It also
+     inverted the fiction: the ticket that says "demo in five minutes" shipped
+     with the most generous deadline on the board. slaMult is the slack, in
+     multiples of the work: 1.4 rush, 1.9 routine, 3.2 backlog. */
+  const workMin = ticketWork(T);
+  const sla = workMin * (T.slaMult || 1.9) * role.queue.slaScale * dayEase;
   return { at, id, uid: run.uid++, title: fill(T.title, fills), fills,
            sla: Math.round(sla), stress: T.stress };
 }
@@ -2111,7 +2140,13 @@ function resolveTicket(t){
     return;
   }
   run.queue.splice(i,1);
-  const r = clamp((t.deadline - run.clock) / t.sla, 0, 1);
+  /* Promptness is measured against the ticket's SLACK, not its whole window —
+     the work itself is not negotiable and every template demands a different
+     amount of it. Picking a ticket up when it lands and working it straight
+     through scores full marks on any template; the clock you are racing is the
+     one you spend LETTING IT WAIT, which is the decision the day is about. */
+  const slack = Math.max(1, t.sla - ticketWork(TICKETS[t.id]));
+  const r = clamp((t.deadline - run.clock) / slack, 0, 1);
   const gameAvg = t.gameScores.length
     ? t.gameScores.reduce((a,b)=>a+b,0) / t.gameScores.length : .75;
   /* Promptness SATURATES. Grading on raw SLA-remaining paid you to skim the
@@ -2119,7 +2154,13 @@ function resolveTicket(t){
      out-scored earliest-deadline-first. Anything finished with half its window
      to spare is equally "on time"; only cutting it fine costs you. */
   const prompt = clamp(r * 2, 0, 1);
-  const score = clamp(.28 + .14*prompt + .38*gameAvg + .20*clamp(t.bonus,0,1), 0, 1);
+  const offers = ticketOffers(t.id);
+  const W = { prompt:.14, craft:.38, bonus:.20 }, BASE = .28;
+  const avail = W.prompt + (offers.game ? W.craft : 0) + (offers.bonus ? W.bonus : 0);
+  const got   = W.prompt * prompt
+              + (offers.game  ? W.craft * gameAvg : 0)
+              + (offers.bonus ? W.bonus * clamp(t.bonus / offers.bonus, 0, 1) : 0);
+  const score = clamp(BASE + (1 - BASE) * (got / avail), 0, 1);
   const stakes = stakesOf(t.id);
   run.speedSum = (run.speedSum || 0) + r;
   run.qualSum = (run.qualSum || 0) + gameAvg;
