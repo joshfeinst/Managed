@@ -24,7 +24,7 @@ lives in this game's break room.
 
 | Channel | How |
 |---|---|
-| **Hosted (PWA)** | `https://joshfeinst.github.io/managed/` — live once this repo is public (Pages doesn't publish from private repos on a free plan; the deploy workflow is committed and fires on the next push after visibility changes). |
+| **Hosted (PWA)** | `https://joshfeinst.github.io/Managed/` — needs Pages switching on once: **Settings → Pages → Build and deployment → Source: GitHub Actions**. The deploy workflow is committed and fires on every push to `main`; until that switch is flipped it fails at `configure-pages`, because the Actions token is not allowed to create a Pages site by itself. |
 | **Single file** | Download `index.html`, double-click. That's the game. |
 | **Local server** | `python3 -m http.server` in the repo → `http://localhost:8000`. |
 
