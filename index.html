@@ -671,10 +671,14 @@ function bakeAtlas(){
   /* 27 manager carpet (they get the nicer one) */
   T(27, g=>{ Rt(g,0,0,16,16,'#6d5a6d'); for (let i=0;i<7;i++) Rt(g,(i*5.9)%16,(i*6.3)%16,1,1,'#7a667a');
     for (let i=0;i<4;i++) Rt(g,(i*7.3+2)%16,(i*5.1+4)%16,1,1,'#5f4e5f'); });
-  /* 28 wall clock (it is always almost 5) */
+  /* 28 wall clock — FACE ONLY. The hands were baked into the tile, so the
+     office clock read the same time all day, every day, forever, in a game
+     whose entire subject is the clock. drawWorld paints live hands over it. */
   T(28, g=>{ Rt(g,0,0,16,16,'#c9c0ad'); Rt(g,0,0,16,3,'#8d857a');
     g.fillStyle='#f2efe9'; g.beginPath(); g.arc(8,8,5,0,7); g.fill();
-    g.fillStyle='#23241f'; Rt(g,8,5,1,3); Rt(g,8,8,3,1); Rt(g,0,13,16,3,'#b1a894'); });
+    g.fillStyle='#c9c0ad'; g.beginPath(); g.arc(8,8,5,0,7); g.stroke();
+    g.fillStyle='#8d857a'; Rt(g,8,3.5,.6,1); Rt(g,8,11.9,.6,1); Rt(g,3.5,8,1,.6); Rt(g,11.9,8,1,.6);
+    Rt(g,0,13,16,3,'#b1a894'); });
   /* 29 sad motivational poster */
   T(29, g=>{ Rt(g,0,0,16,16,'#c9c0ad'); Rt(g,0,0,16,3,'#8d857a');
     Rt(g,3,4,10,9,'#2f4858'); Rt(g,4,5,8,4,'#4a7ba6'); Rt(g,5,10,6,1,'#e8e4da');
@@ -935,6 +939,161 @@ const NPCS = {
     sched:[[150,'LOBBY'],[240,'HALL'],[330,'LOBBY']],
     talk:'sm.gary', visitor:true }
 };
+
+
+/* ------------------------------- small talk ------------------------------- */
+/* Two lines per person meant the whole office contained fourteen sentences and
+   you had heard all of them by 9:20. Each person now has a pool, plus lines
+   that only fire when the day has earned them, so the room reacts to the shift
+   you are actually having: your stress, your queue, your breaches, the hour.
+
+   `when` is scanned in order and the FIRST match wins its line into the pool
+   alongside a couple of general ones — so a bad afternoon sounds like a bad
+   afternoon without the person becoming a single broken record. Picking is a
+   pure hash of (who, day, how many times you have talked to them), so it
+   consumes no RNG stream: chatting can never shift the seeded content of the
+   day, and the same posting still plays the same office twice. */
+const CHAT = {
+  derek: {
+    when: [
+      { if:r => r.stress > 72, t:'You have the face. I had that face in 2016. I still have the 2016 face, it just moved in.' },
+      { if:r => r.queue.length >= 5, t:'Five open? Rookie numbers. I once had eleven and a wedding to get to.' },
+      { if:r => r.breaches >= 3, t:'Breaches are fine. Breaches are DATA. That is what I tell Linda and she has stopped believing me.' },
+      { if:r => r.clock > 420, t:'Anything you start now is tomorrow’s problem wearing today’s ticket number.' },
+      { if:r => r.coffee >= 3, t:'Third cup. I can hear it from here. Sit down before you vibrate through the floor.' }
+    ],
+    any: [
+      'The documentation exists. It is in my head, which is a wiki with one user and no search.',
+      'If a ticket says "it was working yesterday", the word doing the lying is "yesterday".',
+      'Never fix it fully on the first visit. Fix it fully on the second. That is called a relationship.',
+      'I have a folder called MISC that is load-bearing for four clients.',
+      'Rule one: reboot. Rule two: ask what changed. Rule three: they lied about rule two.',
+      'That server has an uptime I am not proud of and will not be interrupting.',
+      'Escalation is just delegation with a worse name and a paper trail.',
+      'I know a shortcut for that. No, I am not writing it down. That is my pension.',
+      'Half this job is knowing which cable to be afraid of.'
+    ]
+  },
+  raj: {
+    when: [
+      { if:r => r.stress > 72, t:'Are you okay? You look how I feel and I have had six coffees and a bad phone call.' },
+      { if:r => r.breaches >= 2, t:'Mine are breaching too. Is that normal? Please say it is normal. Kayla just laughed.' },
+      { if:r => r.day === 1, t:'You’re new! Okay. Do not touch the fax machine. That is the whole orientation.' },
+      { if:r => r.clock < 90, t:'Morning queue is the good queue. Nothing has gone wrong on purpose yet.' },
+      { if:r => r.resolved >= 4, t:'You’ve closed FOUR? I’ve been on hold with a vendor since ten.' }
+    ],
+    any: [
+      'I told a client to turn it off and on again and they asked me to put that in writing.',
+      'Somebody named a folder "final_FINAL_v3_USE THIS". I have to go into it every day.',
+      'Do you ever just... look at the ticket, and then look at the wall, and then look at the ticket again?',
+      'I keep a spreadsheet of things Derek says. Nobody has asked for it yet but they will.',
+      'Someone called about a printer that is not ours. I fixed it. I do not know why.',
+      'My password expired again. I have run out of things that mean something to me.',
+      'I answered the phone once with "hello, IT, have you tried" and just trailed off.',
+      'Is it a red flag that the client knows my voice now?'
+    ]
+  },
+  kayla: {
+    when: [
+      { if:r => r.queue.length >= 5, t:'Your queue is a hallway now. Pick the loudest one and let the rest be sad.' },
+      { if:r => r.breaches >= 4, t:'You are dropping the wrong ones. Drop the P4. Nobody has ever been fired over a P4.' },
+      { if:r => r.stress > 72, t:'Go outside. I am serious. The queue will be exactly this bad in four minutes.' },
+      { if:r => r.aces >= 2, t:'Two clean closes. Do not tell Linda or she will find you more of them.' },
+      { if:r => r.clock > 400, t:'It is nearly five. Everything after this is either heroism or a mistake.' }
+    ],
+    any: [
+      'Eleven tickets before lunch. The trick is to stop having feelings.',
+      'If Derek offers to "show you something real quick", block out your afternoon.',
+      'I close tickets in the order that makes the phone stop. That is the whole method.',
+      'Never say "queue zero" out loud. The phones can hear you.',
+      'The trick to a status update is enough words that it sounds like progress.',
+      'You will get faster. Not better. Faster.',
+      'I have a macro for "as per my previous email" and I am not ashamed.',
+      'Everything is a P1 to the person who filed it. That is the job, emotionally.',
+      'Nobody thanks you for the outage that did not happen.'
+    ]
+  },
+  mackenzie: {
+    when: [
+      { if:r => r.breaches >= 3, t:'Hey — quick thing — is the queue okay? A client mentioned. I said it was fine. Make it fine.' },
+      { if:r => r.clock > 400, t:'Before you go! Tiny ask. It is not tiny. I will send it tonight.' },
+      { if:r => r.resolved >= 3, t:'You are FAST. I am going to start promising things at your speed.' },
+      { if:r => r.day === 1, t:'New hire! Perfect. You have no idea yet what we do not do. Let’s keep that.' }
+    ],
+    any: [
+      'Great news! I told Cortland Dental we support their fish tank thermometer. We do now!',
+      'Between us? The demo tomorrow is for software we have not technically... built.',
+      'I sold them "unlimited support". Contextually unlimited. Spiritually unlimited.',
+      'The client asked if it was secure and I said "absolutely" and then wrote you a ticket.',
+      'What if — hear me out — what if we said yes and figured it out after?',
+      'I described your job on a call today and I want you to know I got two words right.',
+      'Renewal is Thursday so nothing can be broken until Friday. I have decided this.',
+      'I put "AI-powered" in the proposal. It is a scheduled task. It is powered by a schedule.'
+    ]
+  },
+  brenda: {
+    when: [
+      { if:r => r.coffee >= 3, t:'That is your third. The machine is not a friendship and it is not free, spiritually.' },
+      { if:r => r.stress > 72, t:'You are grey. Drink water. I am not asking, I am the office manager.' },
+      { if:r => r.clock > 420, t:'The cleaners come at six and they will hoover around you. They have before.' },
+      { if:r => r.day >= 3, t:'You have lasted three days. I have started learning your name. Do not waste that.' }
+    ],
+    any: [
+      'The thermostat is set where it is set for reasons that predate you.',
+      'If the supply closet is a mess again I am labeling YOU next.',
+      'Someone microwaved fish. I know who. I am biding my time.',
+      'The good pens are not missing. The good pens are allocated.',
+      'There is cake in the kitchen. It is for Sandra. You may have a small piece and say her name.',
+      'Do not put your mug on the windowsill. That is how it starts.',
+      'I ordered the ergonomic chairs. Facilities returned them. We are in a dispute.',
+      'The plant in reception is plastic and it is still dying, which I find upsetting.'
+    ]
+  },
+  linda: {
+    when: [
+      { if:r => r.breaches >= 5, t:'I am seeing a lot of red on the board. I am choosing to see it as a busy day.' },
+      { if:r => r.stress > 80, t:'You are working late in your face. Go home on time and I will pretend I did not say that.' },
+      { if:r => r.aces >= 3, t:'Three clean ones. That goes in the review. Quietly. Do not make it weird.' },
+      { if:r => r.clock > 430, t:'Wrap it up. Anything still open at five is tomorrow’s standup, not tonight’s hero moment.' },
+      { if:r => r.day === 1, t:'Day one. Nobody expects anything. Enjoy that — it is the only day it is true.' }
+    ],
+    any: [
+      'Numbers look... adequate. Keep the queue moving and we’ll talk at review time.',
+      'Don’t burn out. The paperwork when someone burns out is unbelievable.',
+      'I have a meeting about the meeting. Then the meeting. Then a recap email nobody reads.',
+      'Corporate wants a dashboard. I have shown them four. They want a fifth one that is green.',
+      'If a client asks for me, I am in a meeting. I will be in a meeting by the time you finish saying it.',
+      'We are hiring, apparently. Not for your team. For a role I cannot describe.',
+      'Your CSAT is fine. CSAT is mostly a measurement of whether somebody had lunch.',
+      'I used to do your job. I was worse at it. That is not encouragement, it is context.'
+    ]
+  },
+  gary: {
+    when: [
+      { if:r => r.queue.length >= 4, t:'You look busy! I’ll be quick. It’s about my home printer. It’s not quick.' },
+      { if:r => r.clock > 400, t:'Still here? Me too! I find the end of the day is when people have time.' }
+    ],
+    any: [
+      'Oh good, you work here! Quick question — it’s about my home printer.',
+      'I was just in the area. I’m always just in the area. I live forty minutes away.',
+      'My nephew says we’re paying too much. My nephew builds gaming PCs.',
+      'I read an article about the cloud. I have some concerns and a printout.',
+      'Is there a way to make the internet faster but not, you know, pay for it?',
+      'I wrote my password down but I wrote it down somewhere clever.',
+      'Do you do phones? My phone’s doing a thing. Not now. But do you?'
+    ]
+  }
+};
+/* A pure hash of who / which day / how many times you have spoken. No RNG
+   stream is touched, so talking to people can never shift the seeded content
+   of the day — the office is chatty AND the posting is still reproducible. */
+function chatPick(id, day, count, n){
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++){ h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= Math.imul(day, 7919) + Math.imul(count, 104729); h = Math.imul(h, 16777619);
+  h ^= h >>> 15;
+  return (h >>> 0) % Math.max(1, n);
+}
 
 /* -------------------------------- dialogue -------------------------------- */
 /* Node: { who:npcId|'client'|'sys', t:[lines], opts:[{t, fx:{stress,rep,time,
@@ -1723,9 +1882,28 @@ function drawWorld(){
   const x0 = Math.max(0, (cx/TILE)|0), y0 = Math.max(0, (cy/TILE)|0);
   const x1 = Math.min(W2.W-1, ((cx+VW)/TILE)|0), y1 = Math.min(W2.H-1, ((cy+VH)/TILE)|0);
   ctx.fillStyle = '#0b0c0e'; ctx.fillRect(0,0,VW,VH);
+  const clocks = [];
   for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){
     const c = cellIx(x,y);
     ctx.drawImage(atlas, W2.base[c]*TILE, 0, TILE, TILE, x*TILE-cx, y*TILE-cy, TILE, TILE);
+    if (W2.base[c] === 28) clocks.push([x*TILE-cx, y*TILE-cy]);
+  }
+  /* Live hands on every wall clock. Off-shift it sits at the joke time it
+     always used to show; during a shift it is the honest answer to "how much
+     of this day is left", readable from across the room. */
+  if (clocks.length){
+    const mins = run ? run.clock : 475;                 // 4:55pm, the eternal almost-five
+    const hr = ((9 + mins/60) % 12) / 12 * 6.2832 - 1.5708;
+    const mn = ((mins % 60) / 60) * 6.2832 - 1.5708;
+    ctx.lineCap = 'butt';
+    for (const [bx, by] of clocks){
+      const ox = bx + 8.5, oy = by + 8.5;
+      ctx.strokeStyle = '#3b3d38'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + Math.cos(hr)*2.6, oy + Math.sin(hr)*2.6); ctx.stroke();
+      ctx.strokeStyle = '#23241f'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + Math.cos(mn)*3.9, oy + Math.sin(mn)*3.9); ctx.stroke();
+      ctx.fillStyle = '#23241f'; ctx.fillRect(ox - .7, oy - .7, 1.4, 1.4);
+    }
   }
   /* y-sorted pass: objects sort by their cell bottom, entities by feet */
   const draws = [];
@@ -2538,9 +2716,27 @@ function workInput(){
 }
 function smalltalk(e){
   const N = NPCS[e.id];
-  const node = DIALOGUE[N.talk];
-  const line = node.t[(run.day + (run.satOn[e.id]||0)) % node.t.length];
-  run.satOn[e.id] = (run.satOn[e.id]||0) + 1;
+  const count = run.satOn[e.id] || 0;
+  const C = CHAT[e.id];
+  /* the day's own state first, then the general pool */
+  const pool = [];
+  let hit = null;
+  if (C){
+    hit = (C.when || []).find(w => { try { return w.if(run); } catch(_){ return false; } });
+    if (hit) pool.push(hit.t);
+    pool.push(...(C.any || []));
+  }
+  if (!pool.length){ const node = DIALOGUE[N.talk]; pool.push(...node.t); }
+  let i = chatPick(e.id, run.day, count, pool.length);
+  /* When the day HAS earned a reaction, say it about half the time. Simply
+     dropping it in the pool made it one option in fourteen, so a 4pm office
+     with six breaches on the board still mostly talked about printers. */
+  if (hit && chatPick(e.id, run.day + 977, count, 2) === 0) i = 0;
+  /* never the same sentence twice running from the same person */
+  if (pool.length > 1 && pool[i] === (run.lastChat || {})[e.id]) i = (i + 1) % pool.length;
+  const line = pool[i];
+  (run.lastChat = run.lastChat || {})[e.id] = line;
+  run.satOn[e.id] = count + 1;
   if (run.satOn[e.id] === 1) run.stress = Math.max(0, run.stress - 1);
   openDlg(null, {}, null, { who:N.name, role:N.role, text:line, portrait:e.portrait });
   const [pdx,pdy] = DIRV[player.dir];
@@ -3049,6 +3245,7 @@ function serializeRun(){
        missing taughtQueue replayed the first-ticket tutorial on every day-1
        arrival after a quit. */
     warned: run.warned || {}, taughtQueue: !!run.taughtQueue,
+    lastChat: run.lastChat || {},
     phase:run.phase || 'work', activeUid: run.active ? run.active.uid : null,
     pendingEnd: run.pendingEnd || null,
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
@@ -3079,7 +3276,7 @@ function resumeRun(s){
     coffee:r.coffee, crashes:r.crashes, burnout:r.burnout, rep:r.rep,
     queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
     pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone,
-    warned: r.warned || {}, taughtQueue: !!r.taughtQueue,
+    warned: r.warned || {}, taughtQueue: !!r.taughtQueue, lastChat: r.lastChat || {},
     seen: r.seen || {}, scores:r.scores,
     burned: r.burned || [], earned: r.earned || 0, stakesDone: r.stakesDone || 0,
     speedSum: r.speedSum || 0, qualSum: r.qualSum || 0, qualN: r.qualN || 0,
@@ -5102,6 +5299,149 @@ function selfTest(runSim){
       const m = normalizeMeta({ certs:['aplus'], rep:4, runsPlayed:2 });
       ok('pace: an older save normalizes rather than breaking',
          m.pace === null && m.seenGames && typeof m.seenGames === 'object' && m.certs[0] === 'aplus');
+    }
+
+    /* the office has more than a fortnight of things to say, every person
+       reacts to the day, and chatting consumes no RNG stream */
+    {
+      const thin = [], missing = [];
+      let total = 0;
+      for (const id in NPCS){
+        const C = CHAT[id];
+        if (!C){ missing.push(id); continue; }
+        const n = (C.any || []).length, w = (C.when || []).length;
+        total += n + w;
+        /* an ABSOLUTE floor. Deriving it from the pool's own length, which
+           the first draft of this test did, moves with any trim and so can
+           never catch one. */
+        if (n < 7) thin.push(id + ':' + n + ' general');
+        if (w < 2) thin.push(id + ':' + w + ' reactive');
+        const seen = new Set([...(C.any||[]), ...(C.when||[]).map(x=>x.t)]);
+        if (seen.size !== n + w) thin.push(id + ':duplicate line');
+        for (const l of [...(C.any||[]), ...(C.when||[]).map(x=>x.t)])
+          if (typeof l !== 'string' || l.length < 12 || l.length > 190) thin.push(id + ':bad line');
+      }
+      ok('office: everybody has a small-talk pool', missing.length === 0, missing.join(','));
+      ok('office: nobody is a two-line broken record', thin.length === 0, thin.join(' '));
+      ok('office: the room has plenty to say', total >= 85, total + ' lines');
+    }
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      G.state = 'work';
+      /* twenty visits to one person must not be four sentences on a loop */
+      const heard = [];
+      const target = npcs.derek || npcs[Object.keys(npcs)[0]];
+      for (let i = 0; i < 20; i++){
+        smalltalk(target);
+        heard.push(dlg.lines[0]);
+        closeModalToWork();
+      }
+      let repeats = 0;
+      for (let i = 1; i < heard.length; i++) if (heard[i] === heard[i-1]) repeats++;
+      /* and FORCE the collision rather than hoping the hash produces one:
+         plant the exact line the next pick will land on */
+      run.satOn[target.id] = 3; run.lastChat = {};
+      smalltalk(target); const due = dlg.lines[0]; closeModalToWork();
+      run.satOn[target.id] = 3; run.lastChat[target.id] = due;
+      smalltalk(target); const served = dlg.lines[0]; closeModalToWork();
+      ok('office: talking twice never repeats the same sentence',
+         repeats === 0 && served !== due,
+         repeats + ' repeats' + (served === due ? ' / served the planted repeat' : ''));
+      ok('office: twenty visits are not four lines on a loop',
+         new Set(heard).size >= 6, new Set(heard).size + ' distinct in 20');
+      /* a trimmed pool shows up here: enough visits to exhaust it */
+      const wide = new Set();
+      run.satOn = {}; run.lastChat = {};
+      for (let i = 0; i < 60; i++){ smalltalk(target); wide.add(dlg.lines[0]); closeModalToWork(); }
+      const poolN = (CHAT[target.id].any || []).length;
+      ok('office: sixty visits reach most of a person\'s pool',
+         wide.size >= Math.max(6, poolN - 1), wide.size + ' of ' + poolN);
+      /* the day's state changes what people say */
+      /* A single sample passes on luck. Count how often the day's own line
+         actually comes out over many visits: in the pool but unweighted it
+         was one option in fourteen, so a 4pm office with six breaches still
+         mostly talked about printers. */
+      const reactRate = (mut) => {
+        run.stress = 5; run.queue = []; run.breaches = 0; run.clock = 30; run.coffee = 0;
+        mut(); run.satOn = {}; run.lastChat = {};
+        const want = (CHAT[target.id].when || [])
+          .find(w => { try { return w.if(run); } catch(_){ return false; } });
+        if (!want) return -1;
+        let n = 0;
+        for (let i = 0; i < 40; i++){
+          smalltalk(target);
+          if (dlg.lines[0] === want.t) n++;
+          closeModalToWork();
+          run.satOn[target.id] = i + 1;
+        }
+        return n / 40;
+      };
+      const fried = reactRate(() => { run.stress = 90; });
+      const calm  = reactRate(() => {});
+      /* calm returns -1: a good morning has no condition to match, which is
+         the point — the reaction is earned, not ambient */
+      ok('office: the day you are having colours what people say',
+         fried >= 0.25 && fried <= 0.75 && calm <= 0,
+         'reactive ' + Math.round(fried*100) + '% when fried, ' +
+         (calm < 0 ? 'nothing to react to' : Math.round(calm*100) + '%') + ' when calm');
+      /* ...and a bad day must not turn somebody INTO a broken record: always
+         leading with the reaction just alternates two lines forever, which is
+         the failure this whole pool exists to fix */
+      run.stress = 90; run.satOn = {}; run.lastChat = {};
+      const badDay = new Set();
+      for (let i = 0; i < 40; i++){
+        smalltalk(target); badDay.add(dlg.lines[0]); closeModalToWork();
+        run.satOn[target.id] = i + 1;
+      }
+      ok('office: a bad day does not flatten somebody to two lines',
+         badDay.size >= 6, badDay.size + ' distinct across 40 visits at 90% stress');
+      /* and chatting must not consume a seeded stream */
+      const before = rngState();
+      for (let i = 0; i < 8; i++){ smalltalk(target); closeModalToWork(); }
+      ok('office: chatting never shifts the seeded day',
+         JSON.stringify(rngState()) === JSON.stringify(before));
+      run = null; G.state = 'title';
+    }
+
+    /* the wall clock is drawn live, not baked at a single time */
+    {
+      const bake = document.createElement('canvas'); bake.width = bake.height = TILE;
+      const bg = bake.getContext('2d');
+      bg.drawImage(atlas, 28*TILE, 0, TILE, TILE, 0, 0, TILE, TILE);
+      const px = bg.getImageData(0, 0, TILE, TILE).data;
+      /* the face is pale; baked-in hands are dark pixels inside the dial */
+      let darkInDial = 0;
+      for (let y = 4; y < 13; y++) for (let x = 4; x < 13; x++){
+        if ((x-8)*(x-8) + (y-8)*(y-8) > 16) continue;
+        const o = (y*TILE + x) * 4;
+        if (px[o] < 90 && px[o+1] < 90 && px[o+2] < 90) darkInDial++;
+      }
+      ok('office: the wall clock has no hands baked into its tile',
+         darkInDial === 0, darkInDial + ' dark pixels in the dial');
+      /* and the map has one, and the hands actually reach the SCREEN: draw
+         the same frame at two times of day and demand the pixels differ.
+         Nothing else moves inside drawWorld, so any difference is the clock. */
+      loadMap('office1'); spawnPeople();
+      let clockAt = null, clockTiles = 0;
+      for (let i = 0; i < W2.base.length; i++)
+        if (W2.base[i] === 28){ clockTiles++; if (!clockAt) clockAt = [i % W2.W, (i / W2.W) | 0]; }
+      ok('office: the floor has a wall clock on it', clockTiles > 0, clockTiles + ' clocks');
+      let moved = 0;
+      if (clockAt){
+        QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+        cam.x = clamp(clockAt[0]*TILE - VW/2, 0, W2.W*TILE - VW);
+        cam.y = clamp(clockAt[1]*TILE - VH/2, 0, W2.H*TILE - VH);
+        const sx = Math.round(clockAt[0]*TILE - Math.round(cam.x));
+        const sy = Math.round(clockAt[1]*TILE - Math.round(cam.y));
+        run.clock = 0;   drawWorld(); const a = ctx.getImageData(sx, sy, TILE, TILE).data;
+        run.clock = 300; drawWorld(); const b = ctx.getImageData(sx, sy, TILE, TILE).data;
+        for (let i = 0; i < a.length; i += 4) if (a[i] !== b[i]) moved++;
+        run = null;
+      }
+      ok('office: the wall clock hands move with the shift', moved > 0,
+         moved + ' pixels changed between 9:00 and 2:00');
     }
 
     /* --- what the first playtest fleet caught (wave 1, six players) --- */
