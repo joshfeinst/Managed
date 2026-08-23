@@ -274,10 +274,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
       <p class="hint">Your terminal (the glowing one at your desk) opens the <b>service queue</b>. Tickets breach their
       SLA whether or not you are watching them — the clock only stops when you clock out. The printer is possessed.
       Welcome aboard.</p>
-      <p class="hint"><b>Coffee</b> takes 12 off your stress now and gives 8 back when it crashes 90 minutes later.
-      The third and fourth cups also give you the jitters — hands-on work gets harder — and cost you sleep, which
-      is burnout you keep. <b>Stress</b> mostly washes off overnight; anything above
-      <b>55</b> at 5pm converts into <b>burnout</b>, which never washes off and ends the career at 100%.</p>
+      <p class="hint" id="hb-burn"></p>
       <div class="row"><button class="btn ghost" data-act="back">◀ BACK</button></div>
     </div>
 
@@ -2031,15 +2028,20 @@ function slaTick(){
          at 100 by lunchtime. What it costs tracks what you dropped, exactly
          like the score does: letting the P4 burn is cheap in both currencies. */
       run.stress = clamp(run.stress + t.stress * (.30 + .25*pri), 0, 100);
-      slog('BREACHED (P' + (5-pri) + '): ' + t.title);
+      const pn = 5 - pri;
+      slog('BREACHED (P' + pn + '): ' + t.title);
       /* the first one of a career explains itself, once — a new player reads a
          breach as failure, and here it is the mechanic */
       if (!run.seen.firstBreach){
         run.seen.firstBreach = 1;
         (run.pendingScenes = run.pendingScenes || []).push('i.firstbreach');
       }
-      sfx('breach');
-      toast('SLA BREACH P' + (5-pri) + ' — ' + t.title.toUpperCase().slice(0,38), 'red', 3400);
+      /* The day is oversubscribed on purpose, so about four tickets in ten
+         burn — and shouting about every one of them makes a designed rhythm
+         read as a failing afternoon. It shouts about the ones the office would
+         actually shout about. */
+      if (pn <= 2){ sfx('breach'); toast('SLA BREACH P' + pn + ' — ' + t.title.toUpperCase().slice(0,38), 'red', 3400); }
+      else { sfx('blip'); toast('aged out (P' + pn + ') — ' + t.title.slice(0,40), 'corp', 1800); }
     }
   }
 }
@@ -2732,6 +2734,11 @@ function openGame(id, diff, onDone){
   const cert = meta.certs.includes('aplus');
   let d = diff + (cert ? -1 : 0);
   if (run && run.coffee >= 3) d += 1;          // the jitters: cup four was a choice
+  /* A meter that ten systems write to and nothing ever reads is decoration.
+     Stress is what the hands-on work is supposed to cost you, so past the
+     evening threshold it costs you: the work gets harder, which is the reason
+     to walk to the kitchen before the queue makes the decision for you. */
+  if (run && run.stress > BURN.thresh + 15) d += 1;
   MG = GAMES[id].init(Math.max(1, d));
   /* on the easiest games there is no difficulty left to remove, so the cert
      pays out as one forgiven slip instead of doing nothing at all */
@@ -3306,7 +3313,10 @@ function simDay(skill, policy){
       }
       else if (st.game){
         run.clock += 12;
-        const jitter = run.coffee >= 3 ? .08 : 0;     // mirrors the real jitters penalty
+        /* mirrors the real penalties: cup four, and hands that have stopped
+           cooperating. Without both the sim overstates craft all afternoon. */
+        const jitter = (run.coffee >= BURN.freeCups ? .08 : 0)
+                     + (run.stress > BURN.thresh + 15 ? .08 : 0);
         t.gameScores.push(clamp(skill - jitter + Rr('game', -.08, .08), 0, 1));
       }
       t.si++;
@@ -3711,6 +3721,30 @@ function selfTest(runSim){
       if (run){ run.pendingEnd = null; }
       G.modal = null;
     }
+    /* Anything the game tells the player about its own arithmetic has to BE
+       that arithmetic. The handbook promised stress converted above 55 while
+       the economy used 60, and nothing noticed for as long as it was true. */
+    {
+      writeHandbook();
+      const t = (document.getElementById('hb-burn') || {}).textContent || '';
+      ok('the handbook quotes the live burnout numbers',
+         t.indexOf(String(BURN.thresh)) >= 0 && t.indexOf(String(BURN.crashStress)) >= 0 &&
+         t.indexOf(String(BURN.freeCups)) >= 0,
+         t ? 'missing a constant' : 'handbook empty');
+    }
+    /* Stress has to DO something in the minute you are in, or it is decoration
+       that ten systems write to and nothing reads. */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const savedState = G.state, savedModal = G.modal;
+      run.stress = 10; run.coffee = 0;
+      openGame('cable', 1, () => {}); const calm = MG.n;
+      run.stress = BURN.thresh + 20;
+      openGame('cable', 1, () => {}); const frayed = MG.n;
+      MG = null; G.state = savedState; G.modal = savedModal;
+      ok('stress makes the hands-on work harder', frayed > calm,
+         'cable ports ' + calm + ' calm vs ' + frayed + ' stressed');
+    }
     /* every ticket carries stakes, and they are the triage decision */
     {
       const bad = Object.keys(TICKETS).filter(id => {
@@ -3976,6 +4010,22 @@ function drawTestReport(){
 }
 
 /* ------------------------------- boot + loop ------------------------------ */
+/* The handbook quoted its numbers by hand and had already drifted — it promised
+   stress converted above 55 while the economy used 60. Anything the game tells
+   the player about its own arithmetic is written FROM that arithmetic. */
+function writeHandbook(){
+  const el = document.getElementById('hb-burn');
+  if (!el) return;
+  el.innerHTML =
+    '<b>Coffee</b> takes 12 off your stress now and gives ' + BURN.crashStress +
+    ' back when it crashes 90 minutes later. Past ' + BURN.freeCups +
+    ' cups it also gives you the jitters — hands-on work gets harder — and costs you sleep, ' +
+    'which is burnout you keep. So does <b>stress</b> itself: above ' + (BURN.thresh + 15) +
+    ' your hands stop cooperating, and the walk to the kitchen stops being a break and ' +
+    'starts being the job. <b>Stress</b> mostly washes off overnight; anything above <b>' +
+    BURN.thresh + '</b> at 5pm converts into <b>burnout</b>, which never washes off and ends ' +
+    'the career at 100%.';
+}
 const BOOTLINES = [
   'MANAGED SERVICES KERNEL v2.6 (EOL)',
   'MOUNTING SHARED DRIVE ......... EVENTUALLY',
@@ -3987,6 +4037,7 @@ const BOOTLINES = [
 ];
 let bootI = 0, bootT = null;
 function bootDone(){
+  writeHandbook();
   if (bootT){ clearInterval(bootT); bootT = null; }
   toTitle();
 }
