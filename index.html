@@ -1012,7 +1012,7 @@ const DIALOGUE = {
     'The SLA clock starts when the ticket lands, not when you notice it. That is the entire job, philosophically.',
     'You will not clear the queue. Nobody clears the queue. Bill did once in 2019 and we still talk about it, mostly to explain that it was a reporting error.',
     'So: tickets are tagged P1 to P4. Work the P1s, let the P4s age gracefully, and nobody counts the P4s. They do, obviously. Just not as loudly — which is what priority means here.',
-    'Coffee is in the kitchen. It helps, and then it stops helping. Welcome to 360.'] },
+    'Coffee is in the kitchen. It helps, and then it stops helping. Welcome to Proactive.'] },
   'i.firstticket': { who:'sys', t:[
     'Your first ticket. Open the queue (TAB), pick it, and do what it says — the arrow will point wherever you need to be.'] },
   'i.firstbreach': { who:'raj', t:[
@@ -1747,6 +1747,26 @@ function drawWorld(){
   const objv = objectiveTarget();
   if (objv){
     const [mx,my] = objv.pos;
+    /* THE ROUTE, not the bearing. The arrow used to point straight at the
+       target through whatever walls were in the way, and quote a straight-line
+       distance — which in an office with three internal walls is not
+       navigation, it is a compass in a maze. The game already has A*; this
+       draws the path it finds, so "go to the server room" is followable. */
+    const pk = player.tx + ',' + player.ty + '>' + mx + ',' + my;
+    if (PATHHINT.key !== pk){
+      PATHHINT.key = pk;
+      PATHHINT.path = (player.tx === mx && player.ty === my) ? [] : (astar(player.tx, player.ty, mx, my) || []);
+    }
+    const path = PATHHINT.path;
+    for (let i = 0; i < path.length - 1; i++){
+      const [px, py] = path[i];
+      const dx0 = px*TILE - cx + 8, dy0 = py*TILE - cy + 8;
+      if (dx0 < -8 || dx0 > VW+8 || dy0 < -8 || dy0 > VH+8) continue;
+      const fade = .30 + .45 * (1 - i / Math.max(1, path.length - 1));
+      const puls = (performance.now()/90 - i) % 12 < 1.6 ? 2.6 : 1.7;
+      ctx.fillStyle = 'rgba(255,176,46,' + fade.toFixed(2) + ')';
+      ctx.beginPath(); ctx.arc(dx0, dy0, puls, 0, 6.283); ctx.fill();
+    }
     const tx0 = mx*TILE - cx + 8, ty0 = my*TILE - cy + 8;
     const onScreen = tx0 > 6 && tx0 < VW-6 && ty0 > 14 && ty0 < VH-6;
     const bob = Math.sin(performance.now()/180)*2;
@@ -1761,14 +1781,18 @@ function drawWorld(){
       txtPlate(objv.label, clamp(tx0, 40, VW-40), sy2-7, '#ffb02e', 6, 'center');
     } else {
       const ex = clamp(tx0, 16, VW-16), ey = clamp(ty0, 26, VH-16);
-      const a = Math.atan2(ty0-ey, tx0-ex);
+      /* aim down the path a few tiles, so the arrow points at the doorway you
+         actually have to walk through rather than at the wall behind it */
+      const lead = PATHHINT.path[Math.min(6, PATHHINT.path.length - 1)];
+      const ax = lead ? lead[0]*TILE - cx + 8 : tx0, ay = lead ? lead[1]*TILE - cy + 8 : ty0;
+      const a = Math.atan2(ay-ey, ax-ex);
       ctx.save(); ctx.translate(ex, ey); ctx.rotate(a);
       ctx.fillStyle = '#0b0d10';
       ctx.beginPath(); ctx.moveTo(9,0); ctx.lineTo(-6,-6); ctx.lineTo(-6,6); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#ffb02e';
       ctx.beginPath(); ctx.moveTo(7,0); ctx.lineTo(-4.5,-4.5); ctx.lineTo(-4.5,4.5); ctx.closePath(); ctx.fill();
       ctx.restore();
-      const steps = Math.abs(mx - player.tx) + Math.abs(my - player.ty);
+      const steps = PATHHINT.path.length || (Math.abs(mx - player.tx) + Math.abs(my - player.ty));
       txtPlate(objv.label + ' · ' + steps, clamp(ex, 44, VW-44), clamp(ey + 17, 36, VH-8), '#ffb02e', 6, 'center');
     }
   }
@@ -1788,6 +1812,9 @@ function drawWorld(){
     }
   }
 }
+/* the walking route to the current objective, recomputed only when the player
+   changes tile or the target moves */
+const PATHHINT = { key:'', path:[] };
 /* One source of truth for "where should I be going", shared by the in-world
    arrow, the off-screen compass and the HUD objective line. */
 function objectiveTarget(){
@@ -2895,8 +2922,12 @@ function toast(text, kind, ms){
     'padding:7px 11px;background:rgba(10,13,17,.94);border:1px solid '+c+';color:'+c+
     ';box-shadow:0 6px 20px rgba(0,0,0,.6);max-width:84%;text-align:center;line-height:1.5';
   wrap.appendChild(d);
+  /* Long enough to actually read: a fixed 2.4s expired mid-sentence on the
+     longer lines. ~55ms a character on top of a floor, which is a comfortable
+     reading pace, and never less than the caller asked for. */
+  const dur = Math.max(ms || 0, 2600 + text.length * 55);
   setTimeout(() => { d.style.transition='opacity .35s'; d.style.opacity='0';
-    setTimeout(() => d.remove(), 400); }, ms || 2400);
+    setTimeout(() => d.remove(), 400); }, dur);
 }
 function clearToasts(){ const w = document.getElementById('toasts'); if (w) w.textContent=''; }
 function mkBtn(parent, label, fn, ghost){
@@ -3212,13 +3243,8 @@ const GAMES = {
         /* the policy on screen IS the rule list the generator enforces, wrapped
            to fit — a hand-written copy drifts and then the game marks you
            against something nobody told you */
-        let line = 'POLICY: ', row = 0;
-        for (let i = 0; i < PW_RULES.length; i++){
-          const next = line + (line.endsWith(': ') ? '' : ' · ') + PW_RULES[i];
-          if (next.length > 78){ txt(line, 240, 68 + row*9, '#8b93a0', 6, 'center'); row++; line = PW_RULES[i]; }
-          else line = next;
-        }
-        if (line) txt(line, 240, 68 + row*9, '#8b93a0', 6, 'center');
+        const pol = wrapPx(PW_RULES, ' · ', 336, 6);
+        pol.forEach((l, i) => txt(l, 240, 68 + i*9, '#8b93a0', 6, 'center'));
         if (this.at < this.items.length){
           const it = this.items[this.at];
           ctx.fillStyle = '#10141a'; ctx.fillRect(140, 100, 200, 34);
@@ -3284,6 +3310,21 @@ function mgPanel(title, hint){
   ctx.fillStyle = '#ffb02e'; ctx.fillRect(60, 26, 360, 2);
   txt(title, 240, 44, '#ffb02e', 8, 'center');
   txt(hint, 240, 56, '#8b93a0', 6, 'center');
+}
+/* Wrap to a MEASURED width. Wrapping by character count guessed 78 characters
+   for a 360-pixel panel and the password policy ran off both edges of the box
+   on screen — measuring is the only way this stays inside its panel when the
+   text changes. */
+function wrapPx(parts, sep, maxPx, size){
+  ctx.font = Math.max(6, size||8) + 'px "Press Start 2P", monospace';
+  const lines = []; let cur = '';
+  for (const part of parts){
+    const next = cur ? cur + sep + part : part;
+    if (cur && ctx.measureText(next).width > maxPx){ lines.push(cur); cur = part; }
+    else cur = next;
+  }
+  if (cur) lines.push(cur);
+  return lines;
 }
 /* Canvas text helpers — the agent360 discipline: shadow not bold, never below
    6px, round the origin. */
@@ -3386,12 +3427,24 @@ function toTitle(){
   hudShow(false);
   const s = loadGame();
   const btn = document.getElementById('b-continue');
-  btn.disabled = !(s && s !== 'future' && s.run);
-  document.getElementById('t-meta').textContent = meta.runsPlayed
+  const saved = s && s !== 'future' && s.run ? s.run : null;
+  btn.disabled = !saved;
+  /* This used to say "No careers on file" whenever no career had ENDED — so a
+     player who saved mid-career came back, read that, and reasonably concluded
+     the save was gone. It is the first line on the screen; it has to describe
+     what is actually on disk. */
+  const lived = meta.runsPlayed
     ? 'Careers lived: ' + meta.runsPlayed + ' · Banked reputation: ' + meta.rep +
       ' · Best: day ' + meta.best.days + ', ' + ROLES[meta.best.rung].title +
       (meta.certs.length ? ' · Certs: ' + meta.certs.join(', ').toUpperCase() : '')
-    : 'No careers on file. The industry awaits, unenthusiastically.';
+    : '';
+  const inProgress = saved
+    ? 'Saved career: ' + (ROLES[saved.rung] ? ROLES[saved.rung].title : 'INTERN') +
+      ', day ' + saved.day + ' — posting ' + saved.seed + '. Press CONTINUE.'
+    : '';
+  document.getElementById('t-meta').textContent =
+    [inProgress, lived].filter(Boolean).join('  ·  ') ||
+    'No careers on file. The industry awaits, unenthusiastically.';
   show('s-title');
   clearToasts();
 }
@@ -4706,11 +4759,32 @@ function fit(){
   const w = Math.min(innerWidth || 1e9, vv && vv.width || 1e9);
   const h = Math.min(innerHeight || 1e9, vv && vv.height || 1e9);
   let s = Math.min(w/VW, h/VH);
-  if (s >= 1) s = Math.floor(s);            // integer scale keeps pixels square
+  /* Quarter steps, not whole ones. Flooring to an integer threw away most of a
+     scale step on any window that is not an exact multiple of 480x270 — a
+     1884-wide window computed 3.7 and then rendered at 3, so a third of the
+     available size went to margins and everything looked half a size too small.
+     Quarters keep sprite edges on clean half-pixels and gain that back. */
+  if (s >= 1) s = Math.floor(s * 4) / 4;
   view.style.width = Math.floor(VW*s)+'px';
   view.style.height = Math.floor(VH*s)+'px';
 }
 addEventListener('resize', fit);
+
+/* Clicking a dialogue box to advance it is what every game with a dialogue box
+   does, and the game only listened to the keyboard. A click anywhere over the
+   world or the box now means the same as E — except on a control that has its
+   own job (a choice, a button), which handles itself. */
+function clickAdvance(ev){
+  const t = ev.target;
+  if (t && t.closest && t.closest('button, .row, .opt, a, input, select')) return;
+  if (G.state === 'modal' && G.modal){
+    const k = G.modal.kind;
+    if (k === 'dlg' || k === 'game'){ press.use = true; return; }
+    return;                                   // the queue panel has its own rows
+  }
+  if (G.state === 'work'){ press.use = true; }
+}
+addEventListener('pointerdown', clickAdvance);
 
 function boot(){
   if (matchMedia('(hover:none) and (pointer:coarse)').matches){
