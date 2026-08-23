@@ -44,7 +44,8 @@ together bad ones and Linda "pops a meeting on your calendar."
 ## Controls
 
 Walk **WASD/arrows** · talk/use/advance **E / Space / Enter** · choices
-**1–3** · queue **Tab** · pause **Esc** · mute **M** · self-test **F4**.
+**1–3** · queue **Tab** · pause **Esc** · mute **M** · session log **F1** ·
+self-test **F4**.
 
 ## The numbers are refereed, not guessed
 
