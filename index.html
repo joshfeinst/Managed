@@ -1733,6 +1733,7 @@ const FIRE_GRACE = 3;          // days at the very start of a career that cannot
 const REP = { perPoint:.008, maxHelp:.07 };
 function repHelp(){ return Math.min(REP.maxHelp, Math.max(0, (run.rep || 0) * REP.perPoint)); }
 const ACTIVE_GRACE = 10;       // minutes a ticket you are actively working may run over
+const ACTIVE_GRACE_MAX = 26;   // ...and the most that grace can ever be worth
 const DAY_OVERRUN = 20;        // how far past 17:00 a meeting can hold the day open
 const MIN_SLACK = 18;          // minutes you always get to notice a ticket exists
 const ACE = .95;               // what actually counts as a job well done
@@ -1875,6 +1876,19 @@ function rollDay(){
   }
   events.sort((a,b)=>a.at-b.at);
   run.plan = { arrivals, events, ai:0, ei:0 };
+}
+/* What is LEFT of a ticket from the step it is on — the same model as
+   ticketWork, from here rather than from the beginning. */
+function workLeft(t){
+  const steps = TICKETS[t.id].steps;
+  let m = 0;
+  for (let i = t.si; i < steps.length; i++){
+    const st = steps[i];
+    if (st.goto) m += 14; else if (st.game) m += 14;
+    else if (st.choice) m += 7;
+    else if (st.say) m += 4 * ((DIALOGUE[st.say] && DIALOGUE[st.say].t.length) || 1);
+  }
+  return m;
 }
 /* Roughly the minutes a careful player needs for a ticket: walking legs and
    minigames dominate, reading is not free, and the clock runs through all of
@@ -2102,12 +2116,15 @@ function openEvent(id){
 function slaTick(){
   for (let i=run.queue.length-1; i>=0; i--){
     const t = run.queue[i];
-    /* A ticket in hand does not breach SILENTLY — but it does breach. The
-       immunity was total, so parking a P1 in the active slot and walking away
-       held it past its deadline all afternoon for free, which is both an
-       exploit and the opposite of what the ticket is for. It gets a short
-       grace to finish what is on screen, and then it goes like any other. */
-    if (run.active === t && run.clock <= t.deadline + ACTIVE_GRACE) continue;
+    /* A ticket in hand does not breach SILENTLY — but it does breach. Total
+       immunity let you park a P1 in the active slot and walk away, holding it
+       past its deadline all afternoon for free. A flat ten minutes went too far
+       the other way: measured, 1.5 tickets a day died with the player mid-way
+       through them, which reads as the game taking work back rather than as a
+       deadline. The grace is enough to finish what is actually left — bounded,
+       so parking still cannot outlast the afternoon. */
+    if (run.active === t &&
+        run.clock <= t.deadline + clamp(workLeft(t), ACTIVE_GRACE, ACTIVE_GRACE_MAX)) continue;
     if (run.clock > t.deadline){
       run.queue.splice(i,1);
       const pri = TICKETS[t.id].pri || 2;
@@ -2290,10 +2307,19 @@ function renderQueue(){
   view.forEach((t, i) => {
     const row = tixRows.get(t.uid);
     if (!row) return;
+    /* The countdown alone hid the number triage actually needs. Sixty minutes
+       is comfortable on a ten-minute job and already lost on a fifty-minute
+       one, and measured, one and a half tickets a day were being started too
+       late to finish — work spent for nothing. The column answers the question
+       the player is actually asking: how long can this keep waiting? */
     const left = Math.round(t.deadline - run.clock);
+    const slack = Math.round(left - workLeft(t));
     const sla = row.querySelector('.sla');
-    sla.textContent = left <= 0 ? 'BREACHING' : left + 'm';
-    sla.className = 'sla ' + (left < 5 ? 'bad' : left < 12 ? 'warn' : '');
+    sla.textContent = left <= 0 ? 'BREACHING'
+                    : slack <= 0 ? 'too late · ' + left + 'm'
+                    : slack <= 20 ? 'start in ' + slack + 'm'
+                    : left + 'm';
+    sla.className = 'sla ' + (left <= 0 || slack <= 0 ? 'bad' : slack <= 20 ? 'warn' : '');
     row.classList.toggle('sel', i === sel);
     /* Enter works the selected row, so the selected row has to be on screen.
        The panel scrolls past eight tickets and the cursor used to walk off the
@@ -3796,7 +3822,9 @@ function selfTest(runSim){
       run.queue.push(held); run.active = held;
       run.clock = 100 + ACTIVE_GRACE - 1; slaTick();
       const survivedGrace = run.queue.includes(held);
-      run.clock = 100 + ACTIVE_GRACE + 1; slaTick();
+      /* however much is left to do, the grace is bounded — parking cannot
+         outlast the afternoon */
+      run.clock = 100 + ACTIVE_GRACE_MAX + 1; slaTick();
       const breachedAfter = !run.queue.includes(held);
       run.active = null;
       ok('SLA: the ticket in your hands gets a grace, not immunity',
