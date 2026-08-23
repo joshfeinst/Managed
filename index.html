@@ -758,31 +758,31 @@ function bakePortrait(look){
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
     gates:{ nextAt:{perf:0.68, days:3}, firedBelow:0.28, cert:null },
-    queue:{ ratePerHr:3.0, slaScale:1.0 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.75, slaScale:1.0 }, deskAnchor:'TERMINAL' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
     gates:{ nextAt:{perf:0.62, days:3}, firedBelow:0.3, cert:null },
-    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
     gates:{ nextAt:{perf:0.62, days:3}, firedBelow:0.32, cert:null },
-    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
     gates:{ nextAt:{perf:0.63, days:3}, firedBelow:0.33, cert:null },
-    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
     gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.34, cert:null },
-    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
     gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.34, cert:null },
-    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
     gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.35, cert:null },
-    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
     gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.36, cert:null },
-    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'vcio',   title:'vCIO',          pay:135000,
     gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.37, cert:null },
-    queue:{ ratePerHr:3.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
     gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.38, cert:null },
     queue:{ ratePerHr:2.2, slaScale:1.05 }, deskAnchor:'TERMINAL' }
@@ -1038,6 +1038,41 @@ const DIALOGUE = {
            {t:'Escalate to Linda and go get a coffee', fx:{stress:-3}} ] },
   't.scan.a': { who:'brenda', t:['The scanner emails PDFs to a person who left in 2019. Nobody has questioned this until today. Today is your fault.'] },
   't.scan.b': { who:'sys', t:['You point it at the right mailbox. Somewhere, a dormant inbox finally stops receiving invoices.'] },
+  't.guest.a':{ who:'client', t:['{client} would like the guest wifi password. They had it this morning. They have written it down somewhere safe.'] },
+  't.guest.b':{ who:'sys', t:['You could rotate it monthly like the policy says, or you could accept what this is.'],
+    opts:[ {t:'Print it on a card for the front desk', fx:{rep:1, time:5}},
+           {t:'Read it out slowly. Again.', fx:{stress:2}},
+           {t:'Tell them it is on the router. It is on the router.', fx:{stress:-2, rep:-1}} ] },
+  't.macro.a':{ who:'sys', t:['{User} has broken the spreadsheet. Not a spreadsheet — THE spreadsheet, the one with the macro nobody has understood since 2014, which quietly does payroll.'] },
+  't.macro.b':{ who:'sys', t:['There is no backup. There is a file called "copy of copy FINAL".'],
+    opts:[ {t:'Rebuild the macro properly and document it', fx:{time:16, rep:2, stress:5, bonus:1}},
+           {t:'Restore "copy of copy FINAL" and never speak of it', fx:{time:4, stress:2}},
+           {t:'Declare it working and leave the building', fx:{stress:-3, rep:-2}} ] },
+  't.phish.a':{ who:'sys', t:['An email from the CEO, from an address that is nearly his, asking for gift cards for a client thing he cannot discuss right now. He is, per the calendar, in a plane.'] },
+  't.phish.b':{ who:'sys', t:['You are now the only person who has noticed.'],
+    opts:[ {t:'Block the sender and warn the whole company', fx:{time:8, rep:2, stress:3, bonus:1}},
+           {t:'Reply "is this really you?" to the fake address', fx:{stress:3, rep:-1}},
+           {t:'Forward it to Linda and go very quiet', fx:{stress:-2}} ] },
+  't.toner.a':{ who:'sys', t:['The printer reports 0% toner. The cartridge was replaced on Tuesday. The printer has opinions and no evidence.'] },
+  't.toner.b':{ who:'brenda', t:['Take it out, shake it, put it back. I know. I KNOW. Do it anyway.'] },
+  't.swim.a':{ who:'client', t:['{User} would like you to know {device} has never been near water, and also to ignore the rice.'] },
+  't.swim.b':{ who:'sys', t:['The board is a small salt lake. There is a receipt for a hot tub weekend.'],
+    opts:[ {t:'Tell them exactly what happened, kindly', fx:{rep:1, stress:2, time:5}},
+           {t:'"Liquid damage is not covered." Nothing else.', fx:{stress:1}},
+           {t:'Say it was a manufacturing fault and file the claim', fx:{bonus:1, rep:-2, stress:2}} ] },
+  't.vpn.a':{ who:'client', t:['{client} says the VPN drops every time they work from the good coffee place. They have moved offices to be nearer the good coffee place.'] },
+  't.vpn.b':{ who:'raj', t:['Captive portal. It is always the captive portal. Tell them to click the thing that says "click here to connect" and then never mention it again.'] },
+  't.mon4.a':{ who:'sys', t:['{User} has requested a fourth monitor. Attached is a business case. It is two pages. It mentions "cognitive throughput".'] },
+  't.mon4.b':{ who:'sys', t:['There are two spare monitors in the closet and one of them works.'],
+    opts:[ {t:'Ask what the other three are currently showing', fx:{rep:1, time:5}},
+           {t:'Approve it. Life is short.', fx:{stress:-1, rep:-1}},
+           {t:'Send the procurement form. All nine pages.', fx:{time:6, stress:2}} ] },
+  't.dom.a':{ who:'sys', t:['{client}\'s domain expires at midnight. The registrar account is in the name of a contractor who left in 2018 and whose email was, naturally, at that domain.'] },
+  't.dom.b':{ who:'sys', t:['You have found a password on a sticky note in a photo in a ticket from 2019.'],
+    opts:[ {t:'Recover it properly, then move the registrar in-house', fx:{time:18, rep:2, stress:6, bonus:1}},
+           {t:'Use the sticky-note password and say nothing', fx:{time:4, stress:4, bonus:1, rep:-1}},
+           {t:'Let it lapse and see who notices', fx:{stress:-2, rep:-2}} ] },
+
   't.ups.a':  { who:'sys', t:['The UPS in the cage is beeping. It has been beeping for, per the sticky note, "a while".'] },
   't.ups.b':  { who:'derek', t:['That beep means the battery died in 2021 and it has been running on optimism. Do not unplug anything yet.'] },
 
@@ -1058,6 +1093,12 @@ const DIALOGUE = {
     opts:[ {t:'Ignore it like a professional', fx:{stress:1}},
            {t:'Read the whole thing twice in the bathroom', fx:{stress:-4}},
            {t:'Reply asking the salary band', fx:{stress:-2, rep:-1}} ] },
+  'e.onboard':{ who:'linda', t:['New starter today. Nobody told anybody. They are in reception with a lanyard and a hopeful expression.'] },
+  'e.sales':  { who:'mackenzie', t:['Quick one — I may have told Riverbend we already do that. We do do that, right? Broadly? I have put it in writing.'],
+    opts:[ {t:'Explain, in writing, what we actually do', fx:{time:8, rep:2, stress:3}},
+           {t:'"We will make it work."', fx:{stress:5, bonus:1}},
+           {t:'Forward it to Linda without comment', fx:{stress:-2, rep:-1}} ] },
+  'e.printerq':{ who:'sys', t:['A queue has formed at the printer. Not for the printer — for you. Three people are holding pieces of paper and eye contact.'] },
   'e.outage': { who:'sys', t:['Half the internet is down — some cloud region has fallen over. Every phone lights up. None of it is yours to fix, and all of it is your problem.'] }
 };
 
@@ -1146,7 +1187,32 @@ const TICKETS = {
     steps:[{say:'t.ups.a'},{goto:'SERVERS'},{say:'t.ups.b'},{game:'cable',diff:1}] },
   'arcade-dark': { tiers:[0,1], weight:1, sla:65, slaMult:3.2, pri:1, stress:2,
     title:'Break-room arcade is dark; morale -3%',
-    steps:[{say:'t.arc.a'},{goto:'ARCADE'},{game:'cable',diff:1},{say:'t.arc.b'}] }
+    steps:[{say:'t.arc.a'},{goto:'ARCADE'},{game:'cable',diff:1},{say:'t.arc.b'}] },
+
+  'wifi-guest': { tiers:[0,2], weight:3, sla:34, slaMult:1.9, pri:2, stress:3,
+    title:'{client}: guest wifi password, again, for the fourth time today',
+    steps:[{say:'t.guest.a'},{choice:'t.guest.b'}] },
+  'excel-macro': { tiers:[0,3], weight:2, sla:52, slaMult:1.9, pri:2, stress:5,
+    title:'{User} broke the spreadsheet that runs the company',
+    steps:[{say:'t.macro.a'},{game:'jargon',diff:1},{choice:'t.macro.b'}] },
+  'ceo-phishing': { tiers:[0,3], weight:2, sla:30, slaMult:1.9, pri:4, stress:6,
+    title:'"CEO" needs gift cards. Urgently. From his personal email.',
+    steps:[{say:'t.phish.a'},{game:'pw',diff:2},{choice:'t.phish.b'}] },
+  'printer-toner': { tiers:[0,1], weight:2, sla:44, slaMult:1.9, pri:1, stress:3,
+    title:'The printer says it is out of toner. The printer is lying.',
+    steps:[{say:'t.toner.a'},{goto:'PRINTER'},{say:'t.toner.b'}] },
+  'laptop-swim': { tiers:[0,2], weight:2, sla:48, slaMult:1.9, pri:3, stress:4,
+    title:'{User} explains that {device} "has never been near water"',
+    steps:[{say:'t.swim.a'},{choice:'t.swim.b'}] },
+  'vpn-cafe': { tiers:[0,3], weight:2, sla:36, slaMult:1.9, pri:3, stress:4,
+    title:'{client}: VPN drops whenever they are at the good coffee place',
+    steps:[{say:'t.vpn.a'},{game:'jargon',diff:1},{say:'t.vpn.b'}] },
+  'monitor-count': { tiers:[0,1], weight:2, sla:60, slaMult:3.2, pri:1, stress:3,
+    title:'{User} would like a fourth monitor. There is a business case.',
+    steps:[{say:'t.mon4.a'},{choice:'t.mon4.b'}] },
+  'domain-expiry': { tiers:[0,3], weight:1, sla:28, slaMult:1.9, pri:4, stress:6,
+    title:'{client}\'s domain expires today. Nobody knows the registrar login.',
+    steps:[{say:'t.dom.a'},{game:'pw',diff:2},{choice:'t.dom.b'},{goto:'SERVERS'}] }
 };
 
 /* --------------------------------- events --------------------------------- */
@@ -1164,7 +1230,10 @@ const EVENTS = {
   'thermo':   { when:{at:350, chance:.25}, scene:'e.thermo', fx:{time:4, stress:2} },
   'audit':    { when:{at:265, chance:.16}, scene:'e.audit', fx:{time:14, stress:4} },
   'recruiter':{ when:{at:395, chance:.28}, scene:'e.recruiter', fx:{time:3} },
-  'outage':   { when:{at:110, chance:.12}, scene:'e.outage', fx:{time:9, stress:6} }
+  'outage':   { when:{at:110, chance:.12}, scene:'e.outage', fx:{time:9, stress:6} },
+  'onboard':  { when:{at:75,  chance:.18}, scene:'e.onboard', fx:{time:7, stress:3} },
+  'salesguy': { when:{at:225, chance:.22}, scene:'e.sales', fx:{time:6, stress:5} },
+  'printerq': { when:{at:320, chance:.2},  scene:'e.printerq', fx:{time:5, stress:2} }
 };
 
 /* minigame flavour data */
@@ -1744,7 +1813,9 @@ const EV_NAMES = {
   standup:'morning standup', allhands:'all-hands', pizza:'pizza in the kitchen',
   firedrill:'fire drill', birthday:'a birthday card', tour:'client tour',
   vending:'the vending machine incident', thermo:'thermostat dispute',
-  audit:'security audit', recruiter:'a recruiter call', outage:'client outage'
+  audit:'security audit', recruiter:'a recruiter call', outage:'client outage',
+  onboard:'a new starter nobody mentioned', salesguy:'whatever Mackenzie has promised',
+  printerq:'the queue at the printer'
 };
 const DAY_MIN = 480;
 /* A plain-language record of what actually happened this session. F1 shows
@@ -1821,6 +1892,9 @@ function rollDay(){
      day once the fills happened to match. A repeated client with a different
      printer reads as a busy day; the same sentence twice reads as a bug. */
   const perDay = {}, titlesToday = new Set();
+  /* day one force-feeds the tutorial ticket after the roll, so reserve its slot
+     up front — otherwise it can be dealt twice and then handed to you a third */
+  if (run.day === 1 && TICKETS['coffee-derek']) perDay['coffee-derek'] = 1;
   /* A template with no fill tokens reads the same every single time, so it gets
      one slot a day; one that names a different client each time can carry two. */
   const capOf = id => /\{\w+\}/.test(TICKETS[id].title) ? 2 : 1;
