@@ -1730,6 +1730,14 @@ const ACTIVE_GRACE = 10;       // minutes a ticket you are actively working may 
 const DAY_OVERRUN = 20;        // how far past 17:00 a meeting can hold the day open
 const MIN_SLACK = 18;          // minutes you always get to notice a ticket exists
 const ACE = .95;               // what actually counts as a job well done
+const EVENT_WARN = 12;         // minutes of notice a meeting gives you
+/* what the calendar invite is actually called */
+const EV_NAMES = {
+  standup:'morning standup', allhands:'all-hands', pizza:'pizza in the kitchen',
+  firedrill:'fire drill', birthday:'a birthday card', tour:'client tour',
+  vending:'the vending machine incident', thermo:'thermostat dispute',
+  audit:'security audit', recruiter:'a recruiter call', outage:'client outage'
+};
 const DAY_MIN = 480;
 /* A plain-language record of what actually happened this session. F1 shows
    it; it exists so play feedback can be about real events ("day 3, the CFO
@@ -1769,7 +1777,7 @@ function runInit(seed){
           stress:20, coffee:0, crashes:[], burnout:0, rep:meta.certs.length ? 1 : 0,
           queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[], pendingScenes:[], seen:{},
           scores:[], breaches:0, resolved:0, aces:0, daysAtTop:0, satOn:{}, promoted:false,
-          burned:[], earned:0, stakesDone:0, rungSince:0 };
+          burned:[], earned:0, stakesDone:0, rungSince:0, warned:{} };
   for (const p in PERKS) if (metaHasPerk(p)) run.rep += PERKS[p].fx.rep || 0;
 }
 function newRun(seed){
@@ -1952,7 +1960,7 @@ function startCommute(){
   run.phase = 'work';
   run.clock = 0; run.queue = []; run.active = null; run.marker = null;
   run.scores = []; run.breaches = 0; run.resolved = 0; run.aces = 0;
-  run.burned = []; run.earned = 0; run.stakesDone = 0;
+  run.burned = []; run.earned = 0; run.stakesDone = 0; run.warned = {};
   run.speedSum = 0; run.qualSum = 0; run.qualN = 0;
   run.coffee = 0; run.crashes = []; run.satOn = {}; run.pendingEvents = [];
   rollDay();
@@ -2060,9 +2068,21 @@ function eventsTick(){
     openDlg(run.pendingScenes.shift(), {}, null); return;
   }
   if (run.pendingEvents.length){ openEvent(run.pendingEvents.shift()); return; }
-  if (P2.ei < P2.events.length && run.clock >= P2.events[P2.ei].at){
-    const e = P2.events[P2.ei++];
-    openEvent(e.id);
+  /* Meetings used to appear out of nothing and take up to half an hour off a
+     day you could not plan around. They are on a calendar in real life, and
+     seeing one coming is the difference between a cost and an ambush: you get
+     to finish what is in your hands first. */
+  if (P2.ei < P2.events.length){
+    const next = P2.events[P2.ei];
+    const away = next.at - run.clock;
+    if (away <= EVENT_WARN && away > 0 && !run.warned[next.id]){
+      run.warned[next.id] = 1;
+      const h = Math.floor(next.at/60) + 9, mm = Math.floor(next.at % 60);
+      toast('CALENDAR: ' + (EV_NAMES[next.id] || next.id).toUpperCase() + ' AT ' +
+            (h > 12 ? h-12 : h) + ':' + (mm<10?'0':'') + mm + (h >= 12 ? 'PM' : 'AM') +
+            ' — ' + Math.round(away) + ' MIN', 'corp', 2800);
+    }
+    if (run.clock >= next.at){ P2.ei++; openEvent(next.id); }
   }
 }
 function openEvent(id){
@@ -4008,6 +4028,31 @@ function selfTest(runSim){
       }
       ok('every ticket leaves time to notice it',
          worst >= MIN_SLACK * .9, 'tightest is ' + worstId + ' at ' + Math.round(worst) + ' min');
+      run = null;
+    }
+    /* Every meeting must be announced before it happens, and named. An event
+       that arrives out of nothing and eats half an hour is a cost you cannot
+       plan around; the same event with twelve minutes of notice is a decision
+       about what to finish first. */
+    {
+      const missing = Object.keys(EVENTS).filter(id => !EV_NAMES[id]);
+      ok('every meeting has a name the calendar can show', !missing.length, missing.join(','));
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      G.state = 'work';
+      const ev = run.plan.events[0];
+      let warned = false;
+      if (ev){
+        run.clock = ev.at - EVENT_WARN + 1;
+        const seenToasts = [];
+        const origToast = window.toast;
+        window.toast = function(t){ seenToasts.push(String(t)); };
+        eventsTick();
+        window.toast = origToast;
+        warned = seenToasts.some(t => /CALENDAR/.test(t));
+      }
+      ok('a meeting announces itself before it starts', !ev || warned,
+         ev ? 'no calendar warning for ' + ev.id : 'no events today');
       run = null;
     }
     /* every ticket carries stakes, and they are the triage decision */
