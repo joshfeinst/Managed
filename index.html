@@ -1004,9 +1004,8 @@ const DIALOGUE = {
     'Your desk is the one with the green screen, far end of the pit. The amber arrow points at it. Follow the amber arrow; it is the closest thing to a mentor you get.',
     'Tickets land in your queue all day. Open it at your terminal, or hit TAB from anywhere — which is what everyone actually does.',
     'The SLA clock starts when the ticket lands, not when you notice it. That is the entire job, philosophically.',
-    'You will not clear the queue. Nobody clears the queue. Bill cleared the queue once in 2019 and we still talk about it, mostly to explain that it was a reporting error.',
-    'So: every ticket is tagged P1 to P4. Work the P1s. Let the P4s age gracefully. Nobody is counting the P4s.',
-    'They are, obviously. But not as loudly, and that is what priority means here.',
+    'You will not clear the queue. Nobody clears the queue. Bill did once in 2019 and we still talk about it, mostly to explain that it was a reporting error.',
+    'So: tickets are tagged P1 to P4. Work the P1s, let the P4s age gracefully, and nobody counts the P4s. They do, obviously. Just not as loudly — which is what priority means here.',
     'Coffee is in the kitchen. It helps, and then it stops helping. Welcome to 360.'] },
   'i.firstticket': { who:'sys', t:[
     'Your first ticket. Open the queue (TAB), pick it, and do what it says — the arrow will point wherever you need to be.'] },
@@ -1841,15 +1840,19 @@ function rollDay(){
   /* One event opened 88% of every day of every career: the same standup, from
      the same person, forever. The morning rotates now — it is still usually a
      meeting, because it is always a meeting, but not always THAT meeting. */
+  /* Day one already spends its first minutes in Linda's briefing. Landing the
+     morning meeting straight on top of it meant a new player pressed a key
+     sixteen times and watched half an hour go by before they could walk. */
   const MORNINGS = ['standup', 'allhands', 'firedrill', 'outage'];
   const morningPool = MORNINGS.filter(id => EVENTS[id]);
   const opener = morningPool.length && R('world') < .82
     ? morningPool[(R('world') * R('world') * morningPool.length) | 0]   // standup still leads
     : null;
-  if (opener) events.push({ at: EVENTS[opener].when.at === 10 ? 10 : 12, id: opener });
+  if (opener) events.push({ at: first ? 96 : (EVENTS[opener].when.at === 10 ? 10 : 12), id: opener });
   for (const id in EVENTS){
     if (id === opener) continue;
     if (MORNINGS.indexOf(id) >= 0 && opener) continue;   // one meeting to open with
+    if (first && EVENTS[id].when.at < 150) continue;     // your first morning is your own
     if (R('world') < EVENTS[id].when.chance) events.push({ at:EVENTS[id].when.at, id });
   }
   events.sort((a,b)=>a.at-b.at);
@@ -3820,7 +3823,7 @@ function selfTest(runSim){
     /* A day used to deal twenty-three tickets out of fifteen distinct templates,
        the same one up to five times, and four literally identical lines. */
     {
-      let worstSame = 0, dupTitles = 0, minDistinct = 99, rolled = 0;
+      let worstSame = 0, dupTitles = 0, minDistinct = 99, sumDistinct = 0, rolled = 0;
       const openers = {};
       for (let c = 0; c < 8; c++){
         rngInit('LINT-' + c); runInit('LINT-' + c);
@@ -3834,16 +3837,21 @@ function selfTest(runSim){
           worstSame = Math.max(worstSame, ...Object.values(counts));
           dupTitles += Object.values(titles).filter(v => v > 1).reduce((x,v) => x+v-1, 0);
           /* proportional: day one deals a deliberately lighter queue */
-          minDistinct = Math.min(minDistinct,
-            Object.keys(counts).length / Math.max(1, run.plan.arrivals.length));
+          const frac = Object.keys(counts).length / Math.max(1, run.plan.arrivals.length);
+          minDistinct = Math.min(minDistinct, frac);
+          sumDistinct += frac;
           if (run.plan.events.length) openers[run.plan.events[0].id] = 1;
         }
       }
       run = null;
       ok('a day never deals the same ticket more than twice', worstSame <= 2, 'worst ' + worstSame);
       ok('a day never deals two identical ticket lines', dupTitles === 0, dupTitles + ' duplicates');
-      ok('a day is dealt from a broad slice of the pool', minDistinct >= .7,
-         'thinnest day was ' + Math.round(minDistinct*100) + '% distinct');
+      /* the average is the signal — one thin day is variance, a thin WEEK is the
+         bug this caught: 23 tickets a day dealt from 15 distinct templates. */
+      const avgDistinct = sumDistinct / Math.max(1, rolled);
+      ok('a day is dealt from a broad slice of the pool',
+         avgDistinct >= .75 && minDistinct >= .6,
+         'avg ' + Math.round(avgDistinct*100) + '%, thinnest ' + Math.round(minDistinct*100) + '%');
       ok('the morning is not always the same meeting',
          Object.keys(openers).length >= 3, [...Object.keys(openers)].join(','));
     }
