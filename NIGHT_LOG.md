@@ -23,11 +23,29 @@ the `main` build. Every cycle ends with the full battery green and a push.
 | 14 | **Coffee was strictly bad and "aced" meant nothing.** Stress bites in two steps, a cup pulls back further, ACE moved to .95. | Never touching the machine beat every drinking policy (0.732 vs 0.719) with identical burnout. Per-ticket median 0.89 meant **four resolved tickets in five** got a gold star. | Moderate coffee now trades a little score for real burnout relief; habitual is worse on both. |
 | 15 | **Five bugs from the third review**, four of them introduced during the night: the log printed five-minus-*stakes* so no P2 existed anywhere; a promotion earned on the day burnout ended the career vanished, taking a rung of meta progress with it; fixing that read one past the end of the ladder and threw; Craft averaged a fabricated 0.75 over tickets with no hands-on work; the promptness label still said "SLA left". Plus a minimum pickup window, and a queue panel that now sorts P1-first instead of teaching earliest-deadline-first. | Two adversarial review workflows (35 + 85 agents) plus a career-sequence harness that caught the throw within the hour. | Every one guarded, and each guard **mutation-verified** — bug reintroduced, test watched to fail. |
 | 16 | **Meetings go on the calendar** — twelve minutes of notice, by name. | Events cost up to half an hour, were pre-rolled, and arrived out of nothing. | Same cost, now a decision about what to finish first. |
+| 17 | **Nothing floats over a panel you opened to read.** Toasts restacked and dimmed while a panel is up; the queue scrolls its selection into view. | Toasts covered the top four rows of the queue exactly when the queue was busiest, and drew across every minigame board. Past eight tickets the cursor walked off the panel while Enter kept working it. | Measured overlap area with two toasts and eleven rows: **zero**; selection 11-of-11 on screen. |
+| 18 | **The dominant strategy was not playing.** Stress dodged on a ticket is a burnout loan; relief from an event stays free. | Ducking every dialogue choice ran careers **51 days against 15** and climbed to rung 8.3 against 4.1, for four points of day score. | Ducking now gives 12.3 days and rung 3.4 — engaging is better on every axis. |
+| 19 | **The queue answers the question you are asking.** Rows show how long a ticket can keep waiting, not just its countdown; a ticket in hand gets grace enough to finish what is left. | "60m" looks identical on a ten-minute job and a fifty-minute one, and **1.5 tickets a day** were started too late to finish. | `120m` · `start in 17m` · `too late · 20m` — the last is the case the panel was hiding. |
+| 20 | **The cable rack is playable without colour vision.** Every cable and port carries its tag, A1–G7. | Pure hue matching with red against green and blue against purple — and it is half the minigames in the game. | First attempt put dark 6px tags *on* the cables, which the screenshot showed was no better than none. |
+| 21 | **Burnout is nights that stop working**, and day one admits it is a half-load. | Burnout did nothing at all until the moment it ended the career — invisible on every day it was ruining. Day one ran at ~half load with a longer leash and never said so, so day two read as your play collapsing. | Careers 14.2 → 12.6 days as it compounds; meta arc still ~6 careers. |
 
 ## Standing numbers
 
-- Self-tests: **75** (F4 in-game, `tools/verify.js` headless)
+- Self-tests: **80** (F4 in-game, `tools/verify.js` headless)
 - Battery: verify · visual · smoke · exploits · npc · marathon · timing · playtest · dials · ceiling · templates · burn · meta · trace
-- Triage spread **0.014 → 0.142** · skill spread **0.057 → 0.132** · template luck **0.245 → 0.145**
+- Triage spread **0.014 → 0.149** · skill spread **0.057 → 0.128** · template luck **0.245 → 0.145**
 - Retirement: unreachable → ~5 careers at skill .85, ~9 at .60, never at bad play
 - Careers run ~14 days for careful play, ~11 priority-blind, 4 for a slacker (fired)
+
+## How the night worked
+
+Three adversarial review workflows (35, 85 and 85 agents) against frozen
+snapshots, each finding independently re-verified, plus continuous measurement
+from eleven headless harnesses. Roughly half of everything fixed tonight was
+introduced tonight — the reviews caught four of my own bugs in the last cycle
+alone, including one where fixing a critical introduced a crash at the top of
+the ladder within the hour.
+
+Every guard added was **mutation-verified**: the bug reintroduced, the test
+watched to fail, the bug removed again. A test that passes on broken code is
+worth nothing, and two of them started out that way.
