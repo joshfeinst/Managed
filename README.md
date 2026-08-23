@@ -80,7 +80,7 @@ false. A sample of what measuring found and fixed:
 
 - The central decision was **inert**: across ten triage rules the day score
   spread **0.014**, and playing at skill .95 instead of .45 moved it 0.57 to
-  0.63. It is **0.142** and **0.132** now, and the priority-aware rule is the
+  0.63. It is **0.128** and **0.138** now, and the priority-aware rule is the
   best one while its inverse is the worst.
 - The **win condition was unreachable**: 464 simulated careers, none retired,
   none past rung 6 of 9. Expert career-sequences now retire in about 5 careers,
@@ -106,7 +106,7 @@ Tools, all headless, all exit non-zero on failure:
 
 | | |
 |---|---|
-| `tools/verify.js` | the 73-invariant in-game suite (also **F4** while playing) |
+| `tools/verify.js` | the 82-invariant in-game suite (also **F4** while playing) |
 | `tools/visual.js` | where glyphs actually paint, screen by screen |
 | `tools/timing.js` | can a human finish each ticket inside its window, walking included |
 | `tools/playtest.js` | four bot personas across whole careers |
@@ -117,6 +117,7 @@ Tools, all headless, all exit non-zero on failure:
 | `tools/burn.js` | the burnout curve, day by day |
 | `tools/marathon.js` | the real frame loop and real input path, whole careers |
 | `tools/trace.js` | readable career transcripts, for reviewing play not code |
+| `tools/save.js` | play, save, **reload the page**, resume — does the afternoon survive |
 
 `npm i playwright` first; each takes the file path as its first argument.
 
@@ -132,7 +133,9 @@ because both had already silently drifted away from them.
 
 ## Roadmap
 
-- **v0.2+ — content packs up the ladder**: each rung gets its own ticket pool,
+- **v0.3+ — deeper content packs up the ladder**: every rung now has its own
+  eligible pool, but the senior desks are eight tickets deep against the
+  intern's thirty-five. More of each, plus
   minigames (subnetting at Project Team, quote Tetris at Procurement, budget
   defense at vCIO), events, and promotion scenes. The engine needs nothing new
   — rungs are data.
