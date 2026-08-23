@@ -978,6 +978,28 @@ const DIALOGUE = {
   'i.firstticket': { who:'sys', t:[
     'Your first ticket. Open the queue (TAB), pick it, and do what it says — the arrow will point wherever you need to be.'] },
 
+  't.vip.a':  { who:'client', t:['{client}: the owner cannot get email on his boat. He is on the boat. He would like this solved from the boat.'] },
+  't.vip.b':  { who:'sys', t:['Marina wifi. It is marina wifi. It has always been marina wifi.'],
+    opts:[ {t:'Explain, gently, that it is the boat', fx:{rep:1, time:6}},
+           {t:'"Let me remote in and check the server" (the server is fine)', fx:{time:9, bonus:1, stress:2}},
+           {t:'Blame the phone carrier and move on', fx:{stress:-2, rep:-1}} ] },
+  't.wire.a': { who:'derek', t:['Somebody at {client} "tidied" the comms cupboard. With scissors. Photos attached; you may want to sit down.'] },
+  't.wire.b': { who:'sys', t:['You rebuild the patch panel from memory and vibes. Two ports remain unexplained. They always will.'] },
+  't.share.a':{ who:'client', t:['{user} deleted the shared drive folder. Not their copy. The shared one. For everyone. On a Friday.'] },
+  't.share.b':{ who:'sys', t:['The backup restores clean. Nobody will ever know how close this was.'],
+    opts:[ {t:'Tell them exactly what happened, kindly', fx:{rep:1, stress:2, time:5}},
+           {t:'Say "recovered from backup" and let the legend grow', fx:{bonus:1}},
+           {t:'Mention it loudly at standup', fx:{rep:-1, stress:-2}} ] },
+  't.mfa.a':  { who:'client', t:['{client} wants MFA turned off. Their words: "it keeps asking who I am, and I know who I am."'] },
+  't.mfa.b':  { who:'linda', t:['We do not turn off MFA. We do, however, write a very polite email explaining that we do not turn off MFA.'],
+    opts:[ {t:'Write the polite email', fx:{rep:2, time:10}},
+           {t:'Offer a 30-day exception nobody will ever revoke', fx:{rep:-2, stress:3, bonus:1}},
+           {t:'Escalate to Linda and go get a coffee', fx:{stress:-3}} ] },
+  't.scan.a': { who:'brenda', t:['The scanner emails PDFs to a person who left in 2019. Nobody has questioned this until today. Today is your fault.'] },
+  't.scan.b': { who:'sys', t:['You point it at the right mailbox. Somewhere, a dormant inbox finally stops receiving invoices.'] },
+  't.ups.a':  { who:'sys', t:['The UPS in the cage is beeping. It has been beeping for, per the sticky note, "a while".'] },
+  't.ups.b':  { who:'derek', t:['That beep means the battery died in 2021 and it has been running on optimism. Do not unplug anything yet.'] },
+
   /* events */
   'e.standup':{ who:'linda', t:['Standup. Yesterday: tickets. Today: tickets. Blockers: morale. Same time tomorrow.'] },
   'e.allhands':{ who:'sys', t:['ALL-HANDS: 45 slides on "synergizing the customer journey". Slide 32 is just a stock photo of a lighthouse.'] },
@@ -989,7 +1011,13 @@ const DIALOGUE = {
            {t:'Illegible scribble (untraceable)', fx:{stress:-1}} ] },
   'e.tour':   { who:'brenda', t:['Client tour passing through. Look busy. Not "panicked" busy. Competent busy. There is a difference.'] },
   'e.vend':   { who:'sys', t:['The vending machine has eaten Raj\'s dollar and is displaying "E-7". Raj is staring at it like it owes him more than a dollar.'] },
-  'e.thermo': { who:'sys', t:['The thermostat war has entered a new phase. Someone has brought in a space heater. Brenda has noticed.'] }
+  'e.thermo': { who:'sys', t:['The thermostat war has entered a new phase. Someone has brought in a space heater. Brenda has noticed.'] },
+  'e.audit':  { who:'linda', t:['Surprise: the client wants our documentation. All of it. The documentation is, generously, aspirational.'] },
+  'e.recruiter':{ who:'sys', t:['A recruiter messages you about an "exciting opportunity" at an MSP exactly like this one, for the same money.'],
+    opts:[ {t:'Ignore it like a professional', fx:{stress:1}},
+           {t:'Read the whole thing twice in the bathroom', fx:{stress:-4}},
+           {t:'Reply asking the salary band', fx:{stress:-2, rep:-1}} ] },
+  'e.outage': { who:'sys', t:['Half the internet is down — some cloud region has fallen over. Every phone lights up. None of it is yours to fix, and all of it is your problem.'] }
 };
 
 /* --------------------------------- tickets -------------------------------- */
@@ -1057,6 +1085,24 @@ const TICKETS = {
   'thermostat': { tiers:[0,1], weight:2, sla:56, stress:4,
     title:'Floor is 61°F; accounting is mutinous',
     steps:[{say:'t.therm.a'},{goto:'n6'},{choice:'t.therm.b'}] },
+  'boat-email': { tiers:[0,2], weight:2, sla:30, stress:7,
+    title:'{client}: the owner cannot get email. On his boat.',
+    steps:[{say:'t.vip.a'},{choice:'t.vip.b'}] },
+  'comms-cupboard': { tiers:[0,1], weight:2, sla:50, stress:6, from:'derek',
+    title:'{client} "tidied" the comms cupboard. With scissors.',
+    steps:[{say:'t.wire.a'},{goto:'SERVERS'},{game:'cable',diff:2},{say:'t.wire.b'}] },
+  'shared-drive': { tiers:[0,2], weight:3, sla:34, stress:8,
+    title:'{user} deleted the shared drive. The shared one.',
+    steps:[{say:'t.share.a'},{game:'pw',diff:1},{choice:'t.share.b'}] },
+  'mfa-off': { tiers:[0,2], weight:2, sla:40, stress:6,
+    title:'{client} would like MFA turned off, please',
+    steps:[{say:'t.mfa.a'},{goto:'n8'},{choice:'t.mfa.b'}] },
+  'scanner-ghost': { tiers:[0,1], weight:2, sla:36, stress:4, from:'brenda',
+    title:'The scanner emails PDFs to someone who left in 2019',
+    steps:[{say:'t.scan.a'},{game:'jargon',diff:1},{say:'t.scan.b'}] },
+  'ups-beeping': { tiers:[0,1], weight:2, sla:38, stress:5,
+    title:'Something in the cage is beeping (nobody knows how long)',
+    steps:[{say:'t.ups.a'},{goto:'SERVERS'},{say:'t.ups.b'},{game:'cable',diff:1}] },
   'arcade-dark': { tiers:[0,1], weight:1, sla:65, stress:2,
     title:'Break-room arcade is dark; morale -3%',
     steps:[{say:'t.arc.a'},{goto:'ARCADE'},{game:'cable',diff:1},{say:'t.arc.b'}] }
@@ -1074,7 +1120,10 @@ const EVENTS = {
   'birthday': { when:{at:130, chance:.3},  scene:'e.bday', fx:{time:4} },
   'tour':     { when:{at:300, chance:.2},  scene:'e.tour', fx:{time:6, stress:2} },
   'vending':  { when:{at:210, chance:.15}, scene:'e.vend', fx:{time:4, stress:1} },
-  'thermo':   { when:{at:350, chance:.25}, scene:'e.thermo', fx:{time:4, stress:2} }
+  'thermo':   { when:{at:350, chance:.25}, scene:'e.thermo', fx:{time:4, stress:2} },
+  'audit':    { when:{at:265, chance:.16}, scene:'e.audit', fx:{time:14, stress:4} },
+  'recruiter':{ when:{at:395, chance:.28}, scene:'e.recruiter', fx:{time:3} },
+  'outage':   { when:{at:110, chance:.12}, scene:'e.outage', fx:{time:9, stress:6} }
 };
 
 /* minigame flavour data */
