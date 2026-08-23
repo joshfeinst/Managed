@@ -948,13 +948,13 @@ const DIALOGUE = {
            {t:'Spend 10 minutes on the laptop anyway', fx:{time:10, stress:3, bonus:1}} ] },
   't.mouse.a':{ who:'client', t:['{User} says the mouse is broken. The cursor "won\'t go".'] },
   't.mouse.b':{ who:'sys', t:['It is the batteries. It is always the batteries.'],
-    opts:[ {t:'Swap them silently, log 0.25 hours', fx:{bonus:1}},
-           {t:'Teach {user} about batteries', fx:{time:8, rep:1, stress:2}},
+    opts:[ {t:'Swap them silently, log 0.25 hours', fx:{bonus:1, rep:-1}},
+           {t:'Teach {user} about batteries', fx:{time:5, rep:1, stress:2}},
            {t:'"Have you tried turning the mouse off and on?"', fx:{stress:-1}} ] },
   't.mon.a':  { who:'client', t:['{client}: a monitor shows NO SIGNAL. They are "dead in the water". All hands on deck.'] },
   't.mon.b':  { who:'sys', t:['It is on HDMI 2. The computer is on HDMI 1. This outage lasted 40 minutes and generated 3 emails to your boss.'],
     opts:[ {t:'Explain input sources, kindly', fx:{rep:1, time:5}},
-           {t:'Press one button and accept legend status', fx:{bonus:1}} ] },
+           {t:'Press one button and accept legend status', fx:{bonus:1, rep:-1}} ] },
   't.tangle.a':{ who:'brenda', t:['The cable bin has achieved sentience. Untangle it, tag it, and nobody mentions this again.'] },
   't.tangle.b':{ who:'sys', t:['Somewhere in there is a serial cable from 1997. It has outlasted four CEOs.'] },
   't.pw.a':   { who:'client', t:['{User} is locked out again. Third time this week. They are "positive" they typed it right.'] },
@@ -1024,11 +1024,11 @@ const DIALOGUE = {
   't.share.a':{ who:'client', t:['{User} deleted the shared drive folder. Not their copy. The shared one. For everyone. On a Friday.'] },
   't.share.b':{ who:'sys', t:['The backup restores clean. Nobody will ever know how close this was.'],
     opts:[ {t:'Tell them exactly what happened, kindly', fx:{rep:1, stress:2, time:5}},
-           {t:'Say "recovered from backup" and let the legend grow', fx:{bonus:1}},
+           {t:'Say "recovered from backup" and let the legend grow', fx:{bonus:1, rep:-1}},
            {t:'Mention it loudly at standup', fx:{rep:-1, stress:-2}} ] },
   't.mfa.a':  { who:'client', t:['{client} wants MFA turned off. Their words: "it keeps asking who I am, and I know who I am."'] },
   't.mfa.b':  { who:'linda', t:['We do not turn off MFA. We do, however, write a very polite email explaining that we do not turn off MFA.'],
-    opts:[ {t:'Write the polite email', fx:{rep:2, time:10}},
+    opts:[ {t:'Write the polite email', fx:{rep:2, time:6}},
            {t:'Offer a 30-day exception nobody will ever revoke', fx:{rep:-2, stress:3, bonus:1}},
            {t:'Escalate to Linda and go get a coffee', fx:{stress:-3}} ] },
   't.scan.a': { who:'brenda', t:['The scanner emails PDFs to a person who left in 2019. Nobody has questioned this until today. Today is your fault.'] },
@@ -1718,6 +1718,14 @@ function stakesOf(id){ return STAKES[(TICKETS[id] && TICKETS[id].pri) || 2] || 2
 const FORGIVEN = .25;
 const BREACH_TOLERANCE = .12;
 const FIRE_GRACE = 3;          // days at the very start of a career that cannot end it
+/* Reputation used to be a write-only currency: ten dialogue options bought
+   nothing but rep, rep did nothing until the career was already over, and so
+   every one of those options was strictly worse than the alternative. Being
+   the person who explains it kindly has to be worth something WHILE you are
+   still there. Goodwill is what makes the gate a little kinder — Linda has
+   heard good things, and Linda decides. */
+const REP = { perPoint:.008, maxHelp:.07 };
+function repHelp(){ return Math.min(REP.maxHelp, Math.max(0, (run.rep || 0) * REP.perPoint)); }
 const ACTIVE_GRACE = 10;       // minutes a ticket you are actively working may run over
 const DAY_OVERRUN = 20;        // how far past 17:00 a meeting can hold the day open
 const DAY_MIN = 480;
@@ -2390,12 +2398,14 @@ function endDay(){
        above T2. An average rewards the same consistency without letting one
        bad Tuesday delete a good week, and is what a review actually looks at. */
     const need = role.gates.nextAt;
+    const bar = need.perf - repHelp();
     const since = run.rungSince || 0;
     const win = run.perfHist.slice(Math.max(since, run.perfHist.length - need.days));
     run.gateWin = win.length;
     run.gateAvg = win.length ? win.reduce((a,b) => a+b, 0) / win.length : 0;
     run.gateStreak = win.length;                       // what the review counts up
-    if (win.length >= need.days && run.gateAvg >= need.perf) promo = true;
+    run.gateBar = bar;
+    if (win.length >= need.days && run.gateAvg >= bar) promo = true;
   } else run.daysAtTop++;
   /* A career ending still gets its day explained first: the review is built
      either way, and its button leads to the exit interview instead of the
@@ -2458,9 +2468,15 @@ function reviewScreen(dayPerf, eod, promo, ending){
     '<dt>Speed</dt><dd>' + speed + '% SLA left when you closed them</dd>' +
     '<dt>Craft</dt><dd>' + qual + '% on the hands-on bits</dd>' +
     '<dt>Performance</dt><dd>' + Math.round(dayPerf*100) + '% — ' + perfName(dayPerf) + '</dd>' +
-    (gate ? '<dt>Promotion needs</dt><dd>' + Math.round(gate.perf*100) + '% averaged over ' + gate.days +
-      ' days — your last ' + Math.min(run.gateWin || 0, gate.days) + ' average ' +
-      Math.round((run.gateAvg || 0)*100) + '%</dd>' : '') +
+    (gate ? '<dt>Promotion needs</dt><dd>' + Math.round((run.gateBar != null ? run.gateBar : gate.perf)*100) +
+      '% averaged over ' + gate.days + ' days — your last ' +
+      Math.min(run.gateWin || 0, gate.days) + ' average ' + Math.round((run.gateAvg || 0)*100) + '%' +
+      (run.rep ? ' <span style="color:var(--ok)">(' + Math.round(gate.perf*100) + '% before goodwill)</span>' : '') +
+      '</dd>' : '') +
+    '<dt>Goodwill</dt><dd>' + (run.rep || 0) + ' — ' +
+      (run.rep ? 'worth ' + (repHelp()*100).toFixed(1) + ' points off the bar' +
+                 (repHelp() >= REP.maxHelp ? ' (as much as it buys)' : '')
+               : 'nobody has mentioned you either way') + '</dd>' +
     '<dt>End-of-day stress</dt><dd>' + Math.round(eod) + '%</dd>' +
     '<dt>Burnout</dt><dd style="color:' + (run.burnout > 60 ? 'var(--alert)' : 'inherit') + '">' +
       Math.round(run.burnout) + '% — permanent</dd>' +
@@ -2658,8 +2674,18 @@ function openDlg(nodeId, fills, onDone, custom, ticket){
   if (!node && !custom){ if (onDone) onDone(); return; }
   G.state = 'modal'; G.modal = { kind:'dlg' };
   const lines = custom ? [custom.text] : node.t.map(l => fill(l, fills || {}));
-  const opts = (!custom && node.opts)
+  /* Options are shuffled per encounter, off the seeded dialogue stream. Written
+     in a fixed order they are also answered in a fixed order: measured, always
+     taking the second option beat every considered policy in the game, which a
+     player can learn without ever reading a line. Seeded, so the same posting
+     still deals the same conversation twice. */
+  let opts = (!custom && node.opts)
     ? node.opts.map(o => ({ t: fill(o.t, fills || {}), fx: o.fx || {} })) : null;
+  if (opts && opts.length > 1)
+    for (let i = opts.length - 1; i > 0; i--){
+      const j = Ri('dlg', i + 1);
+      const tmp = opts[i]; opts[i] = opts[j]; opts[j] = tmp;
+    }
   const [who, role] = whoOf(node || {}, fills || {}, custom);
   dlg = { lines, li:0, reveal:0, opts, onDone, ticket, scene:nodeId, done:false };
   document.getElementById('tix').style.display = 'none';   // never stack over the queue panel
@@ -3273,6 +3299,10 @@ function botPick(node, policy){
     return (y[0]-x[0]) || (y[1]-x[1]) || (y[2]-x[2]); };
   if (p === 'best')  return node.opts.slice().sort(cmp)[0];
   if (p === 'worst') return node.opts.slice().sort((a,b)=>cmp(b,a))[0];
+  /* the other way to play a conversation: buy goodwill instead of the bonus,
+     so the trade between them can be measured rather than assumed */
+  if (p === 'rep') return node.opts.slice().sort((a,b) =>
+    (((b.fx&&b.fx.rep)||0) - ((a.fx&&a.fx.rep)||0)) || cmp(a,b))[0];
   return node.opts[p || 0] || node.opts[0];
 }
 function simDay(skill, policy){
@@ -3816,6 +3846,51 @@ function selfTest(runSim){
          'thinnest day was ' + Math.round(minDistinct*100) + '% distinct');
       ok('the morning is not always the same meeting',
          Object.keys(openers).length >= 3, [...Object.keys(openers)].join(','));
+    }
+    /* Reputation has to be worth something while you are still there, or the
+       ten dialogue options that buy nothing else are strictly worse choices. */
+    {
+      const promoteAt = (repPoints, avg) => {
+        rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+        const need = ROLES[1].gates.nextAt;
+        run.rung = 1; run.rep = repPoints; run.rungSince = 0;
+        run.perfHist = new Array(need.days - 1).fill(avg);
+        run.day = 9; run.clock = DAY_MIN + 1; run.queue = []; run.crashes = [];
+        run.stress = 20; run.coffee = 0;
+        run.resolved = 6; run.stakesDone = 12; run.earned = 12 * avg;
+        run.scores = new Array(6).fill(avg); run.breaches = 0; run.burned = [];
+        endDay();
+        return run ? run.rung === 2 : false;
+      };
+      const need = ROLES[1].gates.nextAt;
+      const justUnder = need.perf - REP.maxHelp * .6;
+      ok('goodwill is worth something before the career is over',
+         !promoteAt(0, justUnder) && promoteAt(20, justUnder),
+         'bar ' + need.perf.toFixed(3) + ', tried ' + justUnder.toFixed(3));
+      /* and it is a nudge, not a bypass */
+      ok('goodwill cannot buy a promotion outright',
+         !promoteAt(9999, need.perf - REP.maxHelp - .05));
+    }
+    /* The options must not always appear in the order they were written, or the
+       optimal play is a key you press without reading. Seeded, so a posting
+       still deals the same conversation twice. */
+    {
+      const node = Object.keys(DIALOGUE).find(k => DIALOGUE[k].opts && DIALOGUE[k].opts.length >= 3);
+      const orderFor = seed => {
+        rngInit(seed); runInit(seed);
+        openDlg(node, {}, null);
+        const o = dlg.opts.map(x => x.t).join('|');
+        dlg = null; document.getElementById('dlg').style.display = 'none';
+        G.state = 'work'; G.modal = null;
+        return o;
+      };
+      const seen = new Set();
+      for (const sd of ['ORD-1','ORD-2','ORD-3','ORD-4','ORD-5','ORD-6']) seen.add(orderFor(sd));
+      ok('dialogue options are not always in the order they were written',
+         seen.size > 1, seen.size + ' distinct orders in 6 seeds');
+      ok('the same posting still deals the same conversation',
+         orderFor('ORD-1') === orderFor('ORD-1'));
+      run = null;
     }
     /* every ticket carries stakes, and they are the triage decision */
     {
