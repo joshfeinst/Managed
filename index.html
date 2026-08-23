@@ -214,6 +214,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
         <div class="ctl"><span>Dialogue choices</span><span>1 – 3 · click</span></div>
         <div class="ctl"><span>Service queue</span><span>Tab</span></div>
         <div class="ctl"><span>Mute music</span><span>M</span></div>
+        <div class="ctl"><span>Session log</span><span>F1</span></div>
         <div class="ctl"><span>Self test</span><span>F4</span></div>
       </div>
       <div class="row">
@@ -251,6 +252,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
         <div class="ctl"><span>Service queue</span><span>Tab · or use your terminal</span></div>
         <div class="ctl"><span>Pause</span><span>Esc</span></div>
         <div class="ctl"><span>Mute music</span><span>M</span></div>
+        <div class="ctl"><span>Session log (for feedback)</span><span>F1</span></div>
         <div class="ctl"><span>Run self test</span><span>F4</span></div>
       </div>
       <p class="hint">Your terminal (the glowing one at your desk) opens the <b>service queue</b>. Tickets breach their
@@ -1506,7 +1508,18 @@ const G = { state:'boot', screenId:'s-boot', textSpeed:1, faults:0, tests:null, 
    17:00. The self-tests assert endDay against THESE, so retuning can never
    silently drift from the invariants that guard it. */
 const BURN = { entropy:1.1, thresh:55, rate:.35, sleepDebt:2.2, freeCups:2, crashStress:8 };
-const DAY_MIN = 480;                       // 9:00 -> 17:00, 1 game-minute per real second
+const DAY_MIN = 480;
+/* A plain-language record of what actually happened this session. F1 shows
+   it; it exists so play feedback can be about real events ("day 3, the CFO
+   ticket, I picked the second option and it felt unfair") instead of memory. */
+const SLOG = [];
+function slog(msg){
+  if (typeof run === 'undefined' || !run) return;
+  const h = Math.floor(run.clock/60) + 9, m = Math.floor(run.clock % 60);
+  SLOG.push('D' + run.day + ' ' + (h > 12 ? h-12 : h) + ':' + (m<10?'0':'') + m +
+            (h >= 12 ? 'p' : 'a') + '  ' + msg);
+  if (SLOG.length > 400) SLOG.shift();
+}                       // 9:00 -> 17:00, 1 game-minute per real second
 let run = null;
 let meta = { certs:[], rep:0, conn:0, runsPlayed:0, best:{ days:0, rung:0 } };
 
@@ -1673,6 +1686,7 @@ function arrivalsTick(){
     run.stress = Math.min(100, run.stress + 1);
     sfx('ticket');
     toast('NEW TICKET — ' + a.title.toUpperCase().slice(0, 44), 'amber', 2600);
+    slog('ticket in: ' + a.title);
     if (run.day === 1 && !run.taughtQueue){
       run.taughtQueue = true;
       (run.pendingScenes = run.pendingScenes || []).push('i.firstticket');
@@ -1693,6 +1707,7 @@ function eventsTick(){
 }
 function openEvent(id){
   const E = EVENTS[id];
+  slog('event: ' + id + (E.fx.time ? ' (-' + E.fx.time + ' min)' : ''));
   run.clock += E.fx.time || 0;                       // meetings eat the day, atomically
   if (E.fx.stress) run.stress = clamp(run.stress + E.fx.stress, 0, 100);
   openDlg(E.scene, {}, null);
@@ -1705,6 +1720,7 @@ function slaTick(){
       run.queue.splice(i,1);
       run.scores.push(0); run.breaches++;
       run.stress = clamp(run.stress + t.stress, 0, 100);
+      slog('BREACHED: ' + t.title);
       sfx('breach');
       toast('SLA BREACH — ' + t.title.toUpperCase().slice(0,40), 'red', 3400);
     }
@@ -1757,6 +1773,7 @@ function interact(act){
       if (run.coffee >= 4){ toast('YOUR HANDS ARE ALREADY VIBRATING. THE MACHINE REFUSES.', 'red', 2600); sfx('err'); break; }
       run.coffee++; run.stress = Math.max(0, run.stress - 12);
       run.crashes.push(run.clock + 90); run.crashes.sort((a,b)=>a-b);
+      slog('coffee #' + run.coffee + ' (stress ' + Math.round(run.stress) + ')');
       sfx('coffee'); toast('COFFEE ' + run.coffee + ' OF 4 — STRESS DOWN, FUTURE MORTGAGED', 'corp', 2400);
       break;
     case 'couch':
@@ -1903,6 +1920,8 @@ function resolveTicket(t){
   /* work costs something: each ticket leaves residue, heavier as the stakes
      rise with rank — this is what eventually burns a career down */
   run.stress = clamp(run.stress + t.stress*(.45 + run.rung*.10) - 2.2, 0, 100);
+  slog('resolved ' + Math.round(score*100) + '%: ' + t.title +
+       (t.gameScores.length ? ' (craft ' + Math.round(gameAvg*100) + '%)' : ''));
   run.active = null; run.marker = null;
   if (G.modal) closeModalToWork();
   sfx('done');
@@ -1923,6 +1942,8 @@ function endDay(){
   const dayPerf = run.scores.length
     ? run.scores.reduce((a,b)=>a+b,0) / run.scores.length : .5;
   run.perfHist.push(dayPerf);
+  slog('END OF DAY — perf ' + Math.round(dayPerf*100) + '%, ' + run.resolved + ' resolved, ' +
+       run.breaches + ' breached, stress ' + Math.round(run.stress) + ', burnout ' + Math.round(run.burnout) + '%');
   const eod = run.stress;
   /* burnout = the bad evenings, plus plain career entropy: even a perfect run
      ends eventually — promotion outraces it or it wins. That's the roguelite. */
@@ -1943,7 +1964,8 @@ function endDay(){
   reviewScreen(dayPerf, eod, promo);
   if (run.firedStreak >= 2){ careerOver('fired'); return; }
   if (run.burnout >= 100){ careerOver('burnout'); return; }
-  if (promo){ run.rung++; run.rep += 2; run.gateStreak = 0; run.promoted = true; sfx('promo'); }
+  if (promo){ run.rung++; run.rep += 2; run.gateStreak = 0; run.promoted = true;
+    slog('PROMOTED to ' + ROLES[run.rung].title); sfx('promo'); }
   if (!role.gates.nextAt && run.daysAtTop >= role.gates.retireAfterDays){ careerOver('retired'); return; }
   G.state = 'review';
   show('s-review');
@@ -1994,6 +2016,7 @@ function reviewLine(p){
   return 'Linda has "popped a meeting on your calendar for first thing". Sleep well.';
 }
 function careerOver(kind){
+  slog('CAREER OVER: ' + kind);
   G.state = 'over';
   meta.runsPlayed++;
   meta.rep += Math.floor(run.rep / 2) + (kind === 'retired' ? 5 : 0);
@@ -2176,6 +2199,7 @@ function dlgPaint(){
 function pickOpt(i){
   if (!dlg || !dlg.opts || !dlg.optsShown || i >= dlg.opts.length) return;
   const fx = dlg.opts[i].fx;
+  slog('chose: "' + dlg.opts[i].t + '"');
   applyFx(fx, dlg.ticket);
   sfx('ui');
   dlgFinish();
@@ -2514,7 +2538,7 @@ function screenForState(){
     case 'review':  return 's-review';
     case 'over':    return 's-over';
     case 'pause':   return 's-pause';
-    case 'menu':    return G.testReturn || G.screenId || 's-title';
+    case 'menu':    return G.testReturn || G.logReturn || G.screenId || 's-title';
     default:        return null;
   }
 }
@@ -2637,8 +2661,23 @@ function onKey(e){
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)){
     if (e.code !== 'F4') return;
   }
+  if (e.code === 'F1'){
+    e.preventDefault();
+    if (G.showLog){                      // closing: put the player back
+      G.showLog = false;
+      show(screenForState());
+      return;
+    }
+    /* never leave the day running behind the log, and never let a DOM screen
+       sit on top of it — it draws on the canvas */
+    if (G.state === 'work' || G.state === 'modal') pauseGame();
+    G.logReturn = G.screenId;
+    G.showLog = true; show(null);
+    return;
+  }
   if (e.code === 'F4'){
     e.preventDefault();
+    if (G.showLog){ G.showLog = false; show(screenForState()); }
     if (G.showTests){
       G.showTests = false;
       show(screenForState());          // the CURRENT state's screen — never a stale one
@@ -3039,6 +3078,23 @@ function selfTest(runSim){
   fails.forEach(f => console.error('[managed self-test] FAIL ' + f.name + ' ' + f.detail));
   return Rres;
 }
+/* F1 — the session so far, in plain language. */
+function drawSessionLog(){
+  ctx.fillStyle = 'rgba(8,10,13,.94)'; ctx.fillRect(0,0,VW,VH);
+  const seed = run ? run.seed : (meta.runsPlayed ? '(between careers)' : '(no career yet)');
+  txt('SESSION LOG — ' + seed, 8, 14, '#ffb02e', 7);
+  if (run) txt('day ' + run.day + ' · ' + ROLES[run.rung].title + ' · burnout ' +
+               Math.round(run.burnout) + '%', 8, 26, '#8b93a0', 6);
+  const rows = SLOG.slice(-21);
+  rows.forEach((l, i) => {
+    const col = /BREACHED|CAREER OVER/.test(l) ? '#ff8a7d'
+              : /PROMOTED|END OF DAY/.test(l) ? '#4ade80'
+              : /chose:/.test(l) ? '#8be6ff' : '#9aa3b0';
+    txt(l.slice(0, 74), 8, 40 + i*9, col, 5);
+  });
+  if (!rows.length) txt('nothing yet — clock in and do something regrettable', 8, 44, '#8b93a0', 6);
+  txt('F1 CLOSES', VW-8, VH-8, '#8b93a0', 6, 'right');
+}
 function drawTestReport(){
   const Rt = G.tests; if (!Rt) return;
   const fails = Rt.filter(r => !r.pass).length;
@@ -3111,6 +3167,7 @@ function render(){
     ctx.fillRect(0, VH/2 - 16, VW, 32);
     txt('CLICK THE GAME TO TAKE CONTROL', VW/2, VH/2 + 3, '#ffb02e', 8, 'center');
   }
+  if (G.showLog) drawSessionLog();
   if (G.showTests) drawTestReport();
 }
 function fit(){
