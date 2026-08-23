@@ -106,7 +106,7 @@ Tools, all headless, all exit non-zero on failure:
 
 | | |
 |---|---|
-| `tools/verify.js` | the 82-invariant in-game suite (also **F4** while playing) |
+| `tools/verify.js` | the 83-invariant in-game suite (also **F4** while playing) |
 | `tools/visual.js` | where glyphs actually paint, screen by screen |
 | `tools/timing.js` | can a human finish each ticket inside its window, walking included |
 | `tools/playtest.js` | four bot personas across whole careers |

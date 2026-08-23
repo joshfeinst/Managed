@@ -30,13 +30,15 @@ the `main` build. Every cycle ends with the full battery green and a push.
 | 21 | **Burnout is nights that stop working**, and day one admits it is a half-load. | Burnout did nothing at all until the moment it ended the career — invisible on every day it was ruining. Day one ran at ~half load with a longer leash and never said so, so day two read as your play collapsing. | Careers 14.2 → 12.6 days as it compounds; meta arc still ~6 careers. |
 | 22 | **Sixteen more tickets and three more meetings**, eight of them written for senior desks — scope creep, three quotes for a decision already made, a renewal up 40%, last quarter's QBR deck with the dates changed, defending a security budget to a board that has never been breached, a resignation you spot first, an auditor wanting evidence, and ninety minutes each way to a switch somebody unplugged to charge a phone. | **Six of the ten rungs had no authored tickets at all** and silently re-dealt the intern's day; climbing bought a number on a badge. | Every rung now has 17-35 of its own eligible tickets, lint-enforced. Gates re-derived again, because giving the upper ladder real work made it unwinnable a second time. |
 | 23 | **Save/resume proved through a real reload.** | Seven fields added during the night were covered only by in-page assertions; none had been through save, close the tab, come back. | `tools/save.js`: green — and it had to be taught not to lie about a backlog it caused itself. |
+| 24 | **The cup can outrun the walk.** Crash cost 8 → 4, so a cup nets −11; the coffee toast generated from the record like the handbook. | A verifier measured the machine at 31 tiles from the desk — a 15-minute round trip causing **+0.68 breaches per 2.25 cups**, where one breach undoes one cup. "The item cannot outrun its own delivery cost." | Moderate use now costs 1.3 points of score and buys **29 points of burnout**; habitual and too-late are both worse. The overcaffeinated persona survives longest and promotes slowest. |
+| 25 | **The T3 cliff, closed by content rather than tuning.** | The same review called it the most important progression problem in the build: rung 3 drew **9 templates with 44% less slack** than every other rung. | Mean slack now runs **35.7 / 30.3 / 28.7 / 26.2** across intern→T3 — the monotone ramp it asked for — with no rung falling back to another's pool. |
 
 ## Standing numbers
 
-- Self-tests: **82** (F4 in-game, `tools/verify.js` headless)
+- Self-tests: **83** (F4 in-game, `tools/verify.js` headless)
 - Battery: verify · visual · smoke · exploits · npc · marathon · timing · playtest · dials · ceiling · templates · burn · meta · trace
 - Triage spread **0.014 → 0.128** · skill spread **0.057 → 0.138** · template luck **0.245 → 0.145**
-- Retirement: unreachable → **6/6 expert sequences in ~9 careers**; a weak player 2/6, otherwise stalling at Solutions Architect
+- Retirement: unreachable → **6/6 expert sequences in ~9.3 careers**; a weak player 2/6, otherwise stalling at Solutions Architect
 - Careers run ~10.6 days for careful play, ~9.5 priority-blind, 4 for a slacker (fired)
 - Content: **43 tickets · 14 events · 18 jargon rounds · a generated password game**
 
