@@ -1176,15 +1176,106 @@ const JARGON = [
     no:['Dinner will be served on the roadmap.','The table is at stake.'] },
   { j:'We\'re pivoting to a proactive posture on patch cadence.',
     ok:'We will start installing updates on time.',
-    no:['Everyone must now stand proactively.','The patches will march in rhythm.'] }
+    no:['Everyone must now stand proactively.','The patches will march in rhythm.'] },
+  { j:'Let\'s socialise the deck with stakeholders before we go firm.',
+    ok:'Show the slides around before deciding anything.',
+    no:['The slides are lonely and need friends.','Stakeholders will be introduced to each other.'] },
+  { j:'There\'s no appetite for that spend in this fiscal.',
+    ok:'No. There is no money.',
+    no:['Nobody is hungry until January.','The budget is on a diet, briefly.'] },
+  { j:'We should double-click on that in a separate forum.',
+    ok:'Stop talking about it in this meeting.',
+    no:['Someone will click twice, later.','A forum will be constructed for clicking.'] },
+  { j:'Directionally, that\'s aligned with where we want to land.',
+    ok:'Roughly right. I have not read it.',
+    no:['The plane knows where it is going.','We are facing the correct way now.'] },
+  { j:'Can we get a swim lane on who owns the runbook refresh?',
+    ok:'Write down who is doing it.',
+    no:['The pool has been divided by department.','Runbooks must be refreshed while swimming.'] },
+  { j:'This is a P1 for optics, not for impact.',
+    ok:'It does not matter, but someone important is watching.',
+    no:['The monitor is broken again.','Glasses have been escalated.'] },
+  { j:'We\'ll take that as an action and close the loop async.',
+    ok:'Nobody will do this, but it is written down now.',
+    no:['The loop will be closed with a padlock.','Actions are stored asynchronously in the cupboard.'] },
+  { j:'The client wants us to be more strategic and also more responsive.',
+    ok:'The client wants two opposite things.',
+    no:['The client has joined the strategy team.','Responsiveness is now a strategy.'] },
+  { j:'Let\'s park that and revisit at the QBR.',
+    ok:'Never.',
+    no:['It will be left in the car park.','The QBR has a designated parking bay.'] },
+  { j:'We need a single pane of glass across the estate.',
+    ok:'One dashboard for everything, please.',
+    no:['The windows on the property need replacing.','A very large window is being installed.'] },
+  { j:'That\'s a people process problem, not a technology problem.',
+    ok:'It is broken because of us, not the software.',
+    no:['The people are being processed.','Technology has been cleared of all charges.'] },
+  { j:'Ballpark it for me — I just need a number to socialise upward.',
+    ok:'Guess, so I can tell my boss something.',
+    no:['A number will be taken to the stadium.','The estimate must be thrown upward.'] }
 ];
-const PW_RULES = [
-  'No password may contain the word "password".',
-  'Must include at least one number that is not 1.',
-  'Must NOT be the company name plus the year.',
-  'No pet names (see attached list of known pets).',
-  'Cannot be the previous password with one more exclamation mark.'
+/* Password triage GENERATES its candidates. A fixed table of twelve strings is
+   a memory test: a review measured that both memory minigames together held
+   eighteen answers, which a player has by day two, after which the craft term —
+   the largest single weight in a ticket's score — is free. These build fresh
+   strings every time from the rules that actually make a password bad, so the
+   game asks whether you know the RULE, which is the thing an intern is supposed
+   to be learning. Everything is drawn from the seeded 'game' stream. */
+const PW_SEASONS = ['Spring','Summer','Autumn','Winter','Fall'];
+const PW_PETS    = ['Fluffy','Rex','Mittens','Biscuit','Waffles','Bandit','Noodle','Pickles'];
+const PW_WORDS   = ['correct','battery','stapler','tuesday','marmalade','lantern','otter',
+                    'bramble','quiet','trombone','gravel','pumice'];
+const PW_SYM     = '!@#$%&*?';
+const PW_BAD = [
+  { rule:'no season + year',
+    why:'a season plus a year is not a password',
+    make:() => PW_SEASONS[Ri('game',PW_SEASONS.length)] + (2018 + Ri('game',10)) + '!' },
+  { rule:'no company name + year',
+    why:'company name plus a year',
+    make:() => '360Smart' + (2018 + Ri('game',10)) },
+  { rule:'no pet names',
+    why:'known pet — it is on the list',
+    make:() => PW_PETS[Ri('game',PW_PETS.length)] + '_' + ['goodboy','4ever','2024','love'][Ri('game',4)] },
+  { rule:'nothing with "password" in it',
+    why:'contains "password"',
+    make:() => ['password','Password','PASSWORD'][Ri('game',3)] + '!'.repeat(1+Ri('game',3)) },
+  { rule:'not the onboarding default',
+    why:'it is the default we set on their first day',
+    make:() => 'Welcome' + (1 + Ri('game',9)) },
+  { rule:'not last time\'s plus another "!"',
+    why:'the previous password with another ! on the end',
+    make:() => PW_SEASONS[Ri('game',PW_SEASONS.length)] + (2018 + Ri('game',8)) + '!!' },
+  { rule:'not a walk across the keyboard',
+    why:'that is just the keyboard',
+    make:() => ['Qwerty','qwerty123','asdfghjk','zxcvbnm'][Ri('game',4)] + (Ri('game',2) ? '1' : '') },
+  { rule:'not their name + birth year',
+    why:'their own name and their own birth year',
+    make:() => ['Janet','Dale','Sharon','Doug'][Ri('game',4)] + (1970 + Ri('game',40)) }
 ];
+function pwStrong(){
+  const U='ABCDEFGHJKLMNPQRSTUVWXYZ', L='abcdefghijkmnpqrstuvwxyz', D='23456789';
+  if (Ri('game',3) === 0){
+    /* the long passphrase — genuinely fine, and the one people argue about */
+    const w = [];
+    while (w.length < 3){ const x = PW_WORDS[Ri('game',PW_WORDS.length)]; if (!w.includes(x)) w.push(x); }
+    return w.join('-') + (Ri('game',2) ? '-' + (10 + Ri('game',89)) : '');
+  }
+  let out = '';
+  const pool = U + L + D + PW_SYM;
+  for (let i = 0; i < 10 + Ri('game',3); i++) out += pool[Ri('game', pool.length)];
+  /* guarantee it really is mixed, so "strong" is never a lie */
+  return out.slice(0,-3) + U[Ri('game',U.length)] + D[Ri('game',D.length)] + PW_SYM[Ri('game',PW_SYM.length)];
+}
+function pwItem(){
+  if (Ri('game',2) === 0) return { pw: pwStrong(), ok:true };
+  const made = PW_BAD[Ri('game', PW_BAD.length)];
+  return { pw: made.make(), ok:false, why: made.why };
+}
+/* The policy the player is held to is built from the rules the generator
+   actually enforces — a hand-written list drifts, and then the game is marking
+   you against something nobody told you. */
+const PW_RULES = PW_BAD.map(b => b.rule);
+
 </script>
 
 <script>
@@ -2665,20 +2756,7 @@ function cableScore(g){
   return clamp(1 - miss*.18 - over*.035, .2, 1);
 }
 const CABLE_COLS = ['#d64541','#2f7fbe','#ffb02e','#4ade80','#c084fc','#39d7ff','#ff8ad1'];
-const PW_ITEMS = [
-  { pw:'Summer2024!', ok:false, why:'a season plus a year is not a password' },
-  { pw:'xK9#mQ2$vL', ok:true },
-  { pw:'password!!!', ok:false, why:'contains "password"' },
-  { pw:'Fluffy4ever', ok:false, why:'that is the CFO\'s cat' },
-  { pw:'correct-horse-battery', ok:true },
-  { pw:'360Smart2026', ok:false, why:'company name + year' },
-  { pw:'Tr0ub4dor&3', ok:true },
-  { pw:'Password1', ok:false, why:'it is THE password' },
-  { pw:'j#8Lq!pv2N', ok:true },
-  { pw:'Winter2019!!', ok:false, why:'previous password plus !' },
-  { pw:'9mX!ee#40z', ok:true },
-  { pw:'Rex_goodboy', ok:false, why:'known pet (see attached list)' }
-];
+
 const GAMES = {
   cable: { init(diff){
     const n = 3 + diff;
@@ -2749,14 +2827,16 @@ const GAMES = {
   pw: { init(diff){
     const k = 2 + diff;
     const items = [];
-    const used = new Set();
-    while (items.length < k){
-      const i = Ri('game', PW_ITEMS.length);
-      if (used.has(i)) continue;
-      used.add(i); items.push(PW_ITEMS[i]);
+    const seen = new Set();
+    let guard = 0;
+    while (items.length < k && guard++ < 60){
+      const it = pwItem();
+      if (seen.has(it.pw)) continue;          // never the same string twice in one round
+      seen.add(it.pw); items.push(it);
     }
+    while (items.length < k) items.push(pwItem());   // pathological seeds still finish
     return { kind:'pw', items, at:0, right:0, flash:0, flashTxt:'',
-      hint:'PASSWORD TRIAGE · 1 APPROVE · 2 REJECT',
+      hint:'1 APPROVE  ·  2 REJECT',
       step(dt){
         this.flash = Math.max(0, this.flash - dt);
         if (this.at >= this.items.length){
@@ -2779,8 +2859,16 @@ const GAMES = {
       },
       draw(){
         mgPanel('PASSWORD TRIAGE', this.hint);
-        txt('POLICY: no "password" · no season or company + year · no pet names', 240, 62, '#8b93a0', 6, 'center');
-        txt('· nothing that is last time\'s password with another "!" on it', 240, 72, '#8b93a0', 6, 'center');
+        /* the policy on screen IS the rule list the generator enforces, wrapped
+           to fit — a hand-written copy drifts and then the game marks you
+           against something nobody told you */
+        let line = 'POLICY: ', row = 0;
+        for (let i = 0; i < PW_RULES.length; i++){
+          const next = line + (line.endsWith(': ') ? '' : ' · ') + PW_RULES[i];
+          if (next.length > 78){ txt(line, 240, 68 + row*9, '#8b93a0', 6, 'center'); row++; line = PW_RULES[i]; }
+          else line = next;
+        }
+        if (line) txt(line, 240, 68 + row*9, '#8b93a0', 6, 'center');
         if (this.at < this.items.length){
           const it = this.items[this.at];
           ctx.fillStyle = '#10141a'; ctx.fillRect(140, 100, 200, 34);
@@ -3324,7 +3412,34 @@ function selfTest(runSim){
     const elig0 = Object.keys(TICKETS).filter(id => TICKETS[id].tiers[0] <= 0 && 0 <= TICKETS[id].tiers[1]);
     ok('the intern queue has enough variety', elig0.length >= 12, elig0.length + ' templates');
     ok('jargon rounds each offer 3 options', JARGON.every(j => j.no.length === 2 && j.ok));
-    ok('password pool is big enough', PW_ITEMS.length >= 10 && PW_ITEMS.some(i=>i.ok) && PW_ITEMS.some(i=>!i.ok));
+    /* deep enough that a career does not exhaust it. A six-round pool meant a
+       player had every answer by day one and the craft term went free. */
+    ok('jargon pool is deep enough to outlast a career', JARGON.length >= 16, JARGON.length + ' rounds');
+    ok('jargon translations are all distinct', new Set(JARGON.map(j=>j.j)).size === JARGON.length);
+    /* the generated pool has to be varied AND honest: a strong password must
+       never be dealt as a rejection, and every rejection must say why */
+    {
+      rngInit('JOB-TEST');
+      const seen = new Set(); let good = 0, bad = 0, noWhy = 0;
+      for (let i = 0; i < 400; i++){
+        const it = pwItem();
+        seen.add(it.pw);
+        if (it.ok) good++; else { bad++; if (!it.why) noWhy++; }
+      }
+      ok('password triage generates, it does not recite',
+         seen.size >= 200, seen.size + ' distinct in 400 draws');
+      ok('password triage deals both verdicts', good > 60 && bad > 60, good + ' ok / ' + bad + ' bad');
+      ok('every rejected password says what is wrong with it', noWhy === 0, noWhy + ' silent');
+      /* and a generated round never repeats a string to the player */
+      rngInit('JOB-TEST');
+      let dupes = 0;
+      for (let r = 0; r < 60; r++){
+        const g = GAMES.pw.init(2);
+        const set = new Set(g.items.map(x => x.pw));
+        if (set.size !== g.items.length) dupes++;
+      }
+      ok('a password round never shows the same string twice', dupes === 0, dupes + ' rounds with a repeat');
+    }
     ok('fill pools have variety', Object.values(FILLS).every(p => p.length >= 3));
   }
 
