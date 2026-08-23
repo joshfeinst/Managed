@@ -999,9 +999,15 @@ const DIALOGUE = {
     'Your desk is the one with the green screen, far end of the pit. The amber arrow points at it. Follow the amber arrow; it is the closest thing to a mentor you get.',
     'Tickets land in your queue all day. Open it at your terminal, or hit TAB from anywhere — which is what everyone actually does.',
     'The SLA clock starts when the ticket lands, not when you notice it. That is the entire job, philosophically.',
+    'You will not clear the queue. Nobody clears the queue. Bill cleared the queue once in 2019 and we still talk about it, mostly to explain that it was a reporting error.',
+    'So: every ticket is tagged P1 to P4. Work the P1s. Let the P4s age gracefully. Nobody is counting the P4s.',
+    'They are, obviously. But not as loudly, and that is what priority means here.',
     'Coffee is in the kitchen. It helps, and then it stops helping. Welcome to 360.'] },
   'i.firstticket': { who:'sys', t:[
     'Your first ticket. Open the queue (TAB), pick it, and do what it says — the arrow will point wherever you need to be.'] },
+  'i.firstbreach': { who:'raj', t:[
+    'Relax. You just breached one. Everybody does, every day — the queue is built to arrive faster than one person can work it.',
+    'The review does not count your first few. What it counts is WHICH ones. Burn a P4 and nobody notices. Burn a P1 and Linda notices, and Linda has a spreadsheet.'] },
 
   't.vip.a':  { who:'client', t:['{client}: the owner cannot get email on his boat. He is on the boat. He would like this solved from the boat.'] },
   't.vip.b':  { who:'sys', t:['Marina wifi. It is marina wifi. It has always been marina wifi.'],
@@ -1870,6 +1876,12 @@ function slaTick(){
          like the score does: letting the P4 burn is cheap in both currencies. */
       run.stress = clamp(run.stress + t.stress * (.30 + .25*pri), 0, 100);
       slog('BREACHED (P' + (5-pri) + '): ' + t.title);
+      /* the first one of a career explains itself, once — a new player reads a
+         breach as failure, and here it is the mechanic */
+      if (!run.seen.firstBreach){
+        run.seen.firstBreach = 1;
+        (run.pendingScenes = run.pendingScenes || []).push('i.firstbreach');
+      }
       sfx('breach');
       toast('SLA BREACH P' + (5-pri) + ' — ' + t.title.toUpperCase().slice(0,38), 'red', 3400);
     }
@@ -3276,6 +3288,39 @@ function selfTest(runSim){
       }
     } catch(e){ mig = String(e).slice(0,40); }
     ok('save: future versions are detected, not crashed on', mig === 'ok', mig);
+
+    /* The migration CHAIN itself, not just the version check. MIGRATIONS[1]
+       rebuilds the stakes ledger the day score was rewritten to use; an
+       untested migration is a bug that only ever fires on a real player's
+       save, on the one build where it matters. Runs against the real
+       loadGame() path through the real key, stashing whatever is there. */
+    {
+      let verdict = 'ok', stash = null, had = false;
+      try {
+        try { stash = localStorage.getItem(SAVE_KEY); had = true; } catch(_){ verdict = 'skip'; }
+        if (verdict === 'ok'){
+          rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+          run.resolved = 5; run.breaches = 2; run.scores = [.8,.6,.7,.5,.9];
+          const v1 = { v:1, meta: meta, run: serializeRun() };
+          delete v1.run.burned; delete v1.run.earned; delete v1.run.stakesDone;
+          localStorage.setItem(SAVE_KEY, JSON.stringify(v1));
+          const loaded = loadGame();
+          if (loaded === null) verdict = 'chain returned null';
+          else if (loaded === 'future') verdict = 'read as future';
+          else if (loaded.v !== SAVE_V) verdict = 'stopped at v' + loaded.v;
+          else {
+            const r = loaded.run;
+            if (!Array.isArray(r.burned)) verdict = 'burned not rebuilt';
+            else if (r.burned.length !== 2) verdict = 'burned length ' + r.burned.length;
+            else if (r.stakesDone !== 10) verdict = 'stakesDone ' + r.stakesDone;
+            else if (Math.abs(r.earned - 7) > 1e-9) verdict = 'earned ' + r.earned;
+          }
+        }
+      } catch(e){ verdict = String(e).slice(0,48); }
+      try { if (had){ if (stash === null) localStorage.removeItem(SAVE_KEY);
+                      else localStorage.setItem(SAVE_KEY, stash); } } catch(_){}
+      ok('save: a v1 save migrates to the current schema', verdict === 'ok' || verdict === 'skip', verdict);
+    }
 
     /* Number keys must actually take a dialogue choice. Nothing covered this
        path — the bots set the press latches directly and the day-sim never
