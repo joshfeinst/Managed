@@ -3933,10 +3933,13 @@ function selfTest(runSim){
     {
       writeHandbook();
       const t = (document.getElementById('hb-burn') || {}).textContent || '';
-      ok('the handbook quotes the live burnout numbers',
-         t.indexOf(String(BURN.thresh)) >= 0 && t.indexOf(String(BURN.crashStress)) >= 0 &&
-         t.indexOf(String(BURN.freeCups)) >= 0,
-         t ? 'missing a constant' : 'handbook empty');
+      /* every number the paragraph quotes has to come from the record it is
+         describing — the first version of this still hardcoded the cup size and
+         drifted the moment coffee was retuned */
+      const quoted = [BURN.thresh, BURN.crashStress, BURN.freeCups, BURN.cup, BURN.frayed];
+      const absent = quoted.filter(v => t.indexOf(String(v)) < 0);
+      ok('the handbook quotes the live burnout numbers', t && !absent.length,
+         t ? 'missing ' + absent.join(',') : 'handbook empty');
     }
     /* Stress has to DO something in the minute you are in, or it is decoration
        that ten systems write to and nothing reads. */
@@ -4452,14 +4455,15 @@ function writeHandbook(){
   const el = document.getElementById('hb-burn');
   if (!el) return;
   el.innerHTML =
-    '<b>Coffee</b> takes 12 off your stress now and gives ' + BURN.crashStress +
+    '<b>Coffee</b> takes ' + BURN.cup + ' off your stress now and gives ' + BURN.crashStress +
     ' back when it crashes 90 minutes later. Past ' + BURN.freeCups +
     ' cups it also gives you the jitters — hands-on work gets harder — and costs you sleep, ' +
     'which is burnout you keep. So does <b>stress</b> itself: above ' + BURN.frayed +
     ' your hands stop cooperating, and the walk to the kitchen stops being a break and ' +
     'starts being the job. <b>Stress</b> mostly washes off overnight; anything above <b>' +
     BURN.thresh + '</b> at 5pm converts into <b>burnout</b>, which never washes off and ends ' +
-    'the career at 100%.';
+    'the career at 100%. And burnout is not just a countdown: the more of it you ' +
+    'carry, the less each night gives back, so it compounds.';
 }
 const BOOTLINES = [
   'MANAGED SERVICES KERNEL v2.6 (EOL)',
