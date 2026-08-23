@@ -41,6 +41,9 @@ async function launch() {
      the same held[]/press[] latches the keyboard does, and it deliberately
      never touches sim internals except to read them. */
   await page.evaluate(() => {
+    /* the real loop at the tuned pace, so a run here is comparable to the last
+       one and to what the numbers were balanced against */
+    meta.pace = 'standard';
     window.__M = { log: [], daysSeen: 0, stallTicks: 0, lastSig: '', reviews: 0, modalTicks: 0,
                    speed: +(new URLSearchParams(location.search).get('speed') || 40) };
     window.__drive = function(){

@@ -292,7 +292,9 @@ input[type=range]{accent-color:var(--corp); width:150px}
         <div class="ctl"><span>Sound effects</span><span><input type="range" id="o-sfx" min="0" max="100" value="70"></span></div>
         <div class="ctl"><span>Music</span><span><input type="range" id="o-mus" min="0" max="100" value="35"></span></div>
         <div class="ctl"><span>Text speed</span><span><button class="btn ghost" id="o-tspd" data-act="textspeed" style="padding:4px 9px;font-size:8px">NORMAL</button></span></div>
+        <div class="ctl"><span>Shift pace</span><span><button class="btn ghost" id="o-pace" data-act="pace" style="padding:4px 9px;font-size:8px">RELAXED</button></span></div>
       </div>
+      <p class="hint" id="o-pace-note" style="margin:10px 0 0">The shift is the same eight hours at every pace &mdash; the same tickets, the same deadlines, the same score. Only how fast those hours pass in the real world changes.</p>
       <div class="row"><button class="btn ghost" data-act="back">◀ BACK</button></div>
     </div>
   </div>
@@ -1910,6 +1912,32 @@ const EV_NAMES = {
   printerq:'the queue at the printer'
 };
 const DAY_MIN = 480;
+/* How much of the shift one real second buys.
+
+   The day is 480 game-minutes at every setting, and every number the sim
+   measures — SLA windows, arrival times, stress, burnout, the score — is in
+   game-minutes. So the balance is identical at all three. What changes is only
+   how much real-world room you get to read a ticket, walk to the server room
+   and think about it, which is a comfort dial and not a difficulty one.
+
+   STANDARD is what the day was tuned against. It is also eight real minutes to
+   learn a game and play it at the same time, which is not enough, so a profile
+   that has never finished a career starts on RELAXED. */
+const PACES = [
+  { id:'relaxed',  label:'RELAXED',  rate:0.62, blurb:'~13 minute shift. Room to read.' },
+  { id:'standard', label:'STANDARD', rate:1,    blurb:'8 minute shift. As designed.' },
+  { id:'crunch',   label:'CRUNCH',   rate:1.5,  blurb:'~5 minute shift. Managed service.' }
+];
+function paceIdx(){
+  const want = meta && meta.pace;
+  const i = PACES.findIndex(p => p.id === want);
+  if (i >= 0) return i;
+  return (meta && meta.runsPlayed) ? 1 : 0;   // unset: gentle until you have finished one
+}
+function pace(){ return PACES[paceIdx()]; }
+/* Real seconds -> game minutes. Anything measured in game-minutes multiplies
+   by this; anything measured in real seconds (walking, the camera) must not. */
+function paceRate(){ return pace().rate; }
 /* A plain-language record of what actually happened this session. F1 shows
    it; it exists so play feedback can be about real events ("day 3, the CFO
    ticket, I picked the second option and it felt unfair") instead of memory. */
@@ -1926,7 +1954,23 @@ function slog(msg){
   if (SLOG.length > 400) SLOG.shift();
 }                       // 9:00 -> 17:00, 1 game-minute per real second
 let run = null;
-let meta = { certs:[], rep:0, conn:0, runsPlayed:0, carry:0, best:{ days:0, rung:0 } };
+let meta = { certs:[], rep:0, conn:0, runsPlayed:0, carry:0, best:{ days:0, rung:0 }, pace:null, seenGames:{} };
+/* Saves written before a field existed are not corrupt, they are just older.
+   Fill the gaps on the way in rather than version-bumping for every additive
+   option — a missing `pace` is a preference nobody has expressed yet, and a
+   missing `seenGames` is a player who has not been shown anything. */
+function normalizeMeta(m){
+  if (!m || typeof m !== 'object') m = {};
+  if (!Array.isArray(m.certs)) m.certs = [];
+  if (typeof m.rep !== 'number') m.rep = 0;
+  if (typeof m.conn !== 'number') m.conn = 0;
+  if (typeof m.runsPlayed !== 'number') m.runsPlayed = 0;
+  if (typeof m.carry !== 'number') m.carry = 0;
+  if (!m.best || typeof m.best !== 'object') m.best = { days:0, rung:0 };
+  if (m.pace !== null && !PACES.some(p => p.id === m.pace)) m.pace = null;
+  if (!m.seenGames || typeof m.seenGames !== 'object') m.seenGames = {};
+  return m;
+}
 
 /* ------------------------------- run + days ------------------------------- */
 /* You do not come back at the level you left. Nine rungs cannot fit inside one
@@ -2212,7 +2256,14 @@ let simAcc = 0;
 function sim(dt){
   if (G.state !== 'work' && G.state !== 'modal') return;
   /* the clock does not care what you are doing */
-  run.clock += dt;
+  /* Everything measured in GAME MINUTES advances by the paced delta; walking,
+     the camera and the NPCs stay on real seconds, because the pace setting is
+     about how much room you get inside the day, not about moving in syrup.
+     A how-to-play card holds the clock outright: the shift bills you for the
+     work, not for being told what the work is. */
+  const held = !!(G.modal && G.modal.kind === 'game' && MG && MG.brief);
+  const cdt = held ? 0 : dt * paceRate();
+  run.clock += cdt;
   slaTick();
   arrivalsTick();
   crashTick();
@@ -2220,7 +2271,7 @@ function sim(dt){
     eventsTick();
     /* an event just seized the frame: nothing below may clobber its scene */
     if (G.state === 'work'){
-      run.stress = clamp(run.stress - dt*0.02*(1 - run.queue.length*0.12), 0, 100);
+      run.stress = clamp(run.stress - cdt*0.02*(1 - run.queue.length*0.12), 0, 100);
       playerMove(dt);
       for (const id in npcs) npcUpdate(npcs[id], dt, run.clock);
       camUpdate(dt);
@@ -2866,7 +2917,7 @@ function loadGame(){
   return s;
 }
 function resumeRun(s){
-  meta = s.meta;
+  meta = normalizeMeta(s.meta);
   const r = s.run;
   rngInit(r.seed, r.rng);
   run = { seed:r.seed, day:r.day, rung:r.rung, clock:r.clock, perfHist:r.perfHist,
@@ -3109,8 +3160,36 @@ function openGame(id, diff, onDone){
      pays out as one forgiven slip instead of doing nothing at all */
   MG.forgive = cert ? 1 : 0;
   MG.gid = id; MG.onDone = onDone;
+  /* Held open on first sight, one keypress away forever after. The clock is
+     paused behind it either way: reading the rules is not the shift. */
+  MG.brief = GAME_BRIEF[id] ? { t:0, first: !meta.seenGames[id] } : null;
+  /* the board draws on the canvas; a leftover DOM prose box would sit on top */
+  document.getElementById('dlg').style.display = 'none';
+}
+/* Re-open the card mid-board. Nothing is lost — the board is untouched and the
+   par clock stops with everything else. */
+function briefReopen(){
+  if (MG && !MG.brief && GAME_BRIEF[MG.gid]) { MG.brief = { t:0, first:false }; sfx('ui'); }
 }
 function gameTick(dt){
+  /* The card holds EVERYTHING: the board, the par clock, and the shift clock
+     out on the floor (sim() reads MG.brief). Reading how to play a thing is
+     not a thing you should be billed for. */
+  if (MG.brief){
+    MG.brief.t += dt;
+    /* a short grace, or the same keypress that opened the ticket closes the
+       card before it has finished appearing */
+    if (MG.brief.t > .3 && (press.use || press.one || press.two || press.three || press.back)){
+      if (MG.brief.first){ meta.seenGames[MG.gid] = true; saveGame(); }
+      MG.brief = null; MG.click = null; clearInput(); sfx('ui');
+    }
+    MG.click = null;
+    return;
+  }
+  /* The par clock inside a minigame is a real-time dexterity measure, so it
+     rides the same dial: RELAXED buys you the same extra room here that it
+     buys you out on the floor. */
+  dt *= paceRate();
   MG.step(dt);
   if (MG.finished){
     const cap = run && run.active ? (run.active.gameCap ?? 1) : 1;
@@ -3134,6 +3213,51 @@ const CABLE_COLS = ['#d64541','#2f7fbe','#ffb02e','#4ade80','#c084fc','#39d7ff',
    port tag is how you would actually trace a patch panel anyway. */
 const CABLE_TAGS = ['A1','B2','C3','D4','E5','F6','G7'];
 
+/* --------------------------- how to play each one -------------------------
+   A minigame that opens straight into a live board with a six-pixel hint bar
+   is a game assuming you have already played it. Every one of these now opens
+   on a card that says what the thing IS, which keys do what, and what will
+   cost you marks — in full sentences, in the DOM-sized text, with the clock
+   held. It is shown in full the first time a profile ever meets that game and
+   is one keypress away for good after that (H, or the ? on the panel).
+
+   `keys` is [binding, what it does]; a binding of '' is a plain note. */
+const GAME_BRIEF = {
+  cable: {
+    what: 'Somebody re-patched this rack from memory. Every cable on the left ' +
+          'belongs in exactly one port on the right. Put them all back.',
+    keys: [
+      ['UP / DOWN', 'move along the cables'],
+      ['E or SPACE', 'grab the highlighted one'],
+      ['UP / DOWN', 'now find its port'],
+      ['E or SPACE', 'plug it in'],
+      ['CLICK', 'or click the cable, then the port']
+    ],
+    watch: 'Match by colour, or by the tag beside it — A1 goes to A1. ' +
+           'A wrong port costs marks, and so does taking longer than par.'
+  },
+  pw: {
+    what: 'Password reset requests, one at a time. The policy is printed above ' +
+          'them, and it is the same policy you are marked against. Approve the ' +
+          'ones that meet it. Reject the ones that do not.',
+    keys: [
+      ['1', 'APPROVE this one'],
+      ['2', 'REJECT this one'],
+      ['CLICK', 'or click either button']
+    ],
+    watch: 'Each password is either clean or breaks exactly one rule, and you are ' +
+           'told which rule you missed when you get one wrong.'
+  },
+  jargon: {
+    what: 'Somebody in the meeting has said a sentence made entirely of words. ' +
+          'Three translations are offered. One is what they meant.',
+    keys: [
+      ['1 2 3', 'pick a translation'],
+      ['CLICK', 'or click the one you want']
+    ],
+    watch: 'The right answer is the unflattering one. It is always the unflattering one.'
+  }
+};
 const GAMES = {
   cable: { init(diff){
     const n = 3 + diff;
@@ -3142,14 +3266,32 @@ const GAMES = {
     const right = cols.map((c,i)=>({c, i}));
     for (let i=n-1;i>0;i--){ const j = Ri('game', i+1); [right[i], right[j]] = [right[j], right[i]]; }
     return { kind:'cable', n, left, right, cur:0, side:0, pickL:-1, t:0, par: n * 2.4,
-      linked:new Array(n).fill(-1), mistakes:0, buzz:0, hint:'PICK A CABLE — ↑↓ TO MOVE, E TO GRAB',
+      linked:new Array(n).fill(-1), mistakes:0, buzz:0, click:null,
+      hint:'PICK A CABLE — UP/DOWN TO MOVE, E TO GRAB',
+      /* row pitch, shared by the renderer and the hit test so they can never
+         disagree about where a cable is */
+      rowDy(){ return Math.min(24, 130/this.n); },
       step(dt){
         this.t += dt; this.buzz = Math.max(0, this.buzz - dt);
         this.hint = this.side === 0
-          ? 'PICK A CABLE — ↑↓ TO MOVE, E TO GRAB'
-          : 'NOW ITS PORT — ↑↓ TO MOVE, E TO PLUG IN';
+          ? 'PICK A CABLE — UP/DOWN TO MOVE, E TO GRAB'
+          : 'NOW ITS PORT — UP/DOWN TO MOVE, E TO PLUG IN';
         if (press.up) this.cur = (this.cur + this.n - 1) % this.n;
         if (press.down) this.cur = (this.cur + 1) % this.n;
+        /* A click on a row selects that row and then acts on it, which is what
+           clicking a thing means everywhere else. A click on neither column is
+           not a blind confirm of whatever happened to be highlighted. */
+        if (this.click){
+          const pt = this.click; this.click = null;
+          const dy = this.rowDy(), col = this.side === 0 ? 0 : 1;
+          let row = -1;
+          for (let i = 0; i < this.n; i++){
+            if (col === 0 && inRect(pt, 112, 68 + i*dy, 54, 14)) row = i;
+            if (col === 1 && inRect(pt, 316, 64 + i*dy, 54, 18)) row = i;
+          }
+          if (row < 0) press.use = false;          // a miss is a miss
+          else { this.cur = row; press.use = true; }
+        }
         if (press.use){
           if (this.side === 0){
             if (this.linked[this.left[this.cur].i] < 0){ this.pickL = this.cur; this.side = 1; this.cur = 0; sfx('blip'); }
@@ -3169,7 +3311,7 @@ const GAMES = {
       },
       draw(){
         mgPanel('CABLE MANAGEMENT', this.hint);
-        const y0 = 70, dy = Math.min(24, 130/this.n);
+        const y0 = 70, dy = this.rowDy();
         for (let i=0;i<this.n;i++){
           const sel = (this.side===0 && this.cur===i);
           const y = y0 + i*dy;
@@ -3216,8 +3358,11 @@ const GAMES = {
       seen.add(it.pw); items.push(it);
     }
     while (items.length < k) items.push(pwItem());   // pathological seeds still finish
-    return { kind:'pw', items, at:0, right:0, flash:0, flashTxt:'',
-      hint:'1 APPROVE  ·  2 REJECT',
+    return { kind:'pw', items, at:0, right:0, flash:0, flashTxt:'', click:null,
+      hint:'DOES IT MEET THE POLICY ABOVE?',
+      /* one place both the renderer and the hit test read */
+      btns: [ { x:146, y:186, w:88, h:20, ok:true,  cap:'1  APPROVE' },
+              { x:246, y:186, w:88, h:20, ok:false, cap:'2  REJECT'  } ],
       step(dt){
         this.flash = Math.max(0, this.flash - dt);
         if (this.at >= this.items.length){
@@ -3228,6 +3373,10 @@ const GAMES = {
         let pick = null;
         if (press.one) pick = true;
         if (press.two) pick = false;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (const b of this.btns) if (inRect(pt, b.x, b.y, b.w, b.h)) pick = b.ok;
+        }
         if (pick !== null){
           const correct = (pick === it.ok);
           if (correct){ this.right++; sfx('ui'); }
@@ -3253,7 +3402,16 @@ const GAMES = {
           txt('RESET REQUEST ' + (this.at+1) + ' OF ' + this.items.length, 240, 150, '#8b93a0', 6, 'center');
         } else txt('FILED. HR HAS BEEN CCED FOR NO REASON.', 240, 120, '#4ade80', 7, 'center');
         if (this.flash > 0) txt(this.flashTxt.toUpperCase(), 240, 176, this.flashTxt==='CORRECT' ? '#4ade80' : '#d64541', 6, 'center');
-        txt('SCORE ' + this.right + '/' + this.items.length, 240, 216, '#8b93a0', 7, 'center');
+        /* The two things you can do were a six-pixel hint bar at the top of the
+           screen. They are buttons now, where the decision is, labelled with the
+           key that also works. */
+        if (this.at < this.items.length) for (const b of this.btns){
+          ctx.fillStyle = '#1b2129'; ctx.fillRect(b.x, b.y, b.w, b.h);
+          ctx.strokeStyle = b.ok ? '#4ade80' : '#d64541';
+          ctx.strokeRect(b.x + .5, b.y + .5, b.w - 1, b.h - 1);
+          txt(b.cap, b.x + b.w/2, b.y + 13, b.ok ? '#4ade80' : '#d64541', 7, 'center');
+        }
+        txt('SCORE ' + this.right + '/' + this.items.length, 240, 230, '#8b93a0', 7, 'center');
       } };
   }},
   jargon: { init(diff){
@@ -3269,8 +3427,9 @@ const GAMES = {
       for (let a=2;a>0;a--){ const b = Ri('game', a+1); [opts[a], opts[b]] = [opts[b], opts[a]]; }
       rounds.push({ j:J.j, opts });
     }
-    return { kind:'jargon', rounds, at:0, right:0, flash:0, ok:false,
-      hint:'TRANSLATE THE MEETING · PRESS 1 – 3',
+    return { kind:'jargon', rounds, at:0, right:0, flash:0, ok:false, click:null,
+      hint:'WHAT DID THEY ACTUALLY MEAN? · 1 – 3 OR CLICK',
+      optRect(i){ return [90, 120 + i*28, 300, 22]; },
       step(dt){
         this.flash = Math.max(0, this.flash - dt);
         if (this.at >= this.rounds.length){
@@ -3278,6 +3437,11 @@ const GAMES = {
           return;
         }
         let pick = press.one ? 0 : press.two ? 1 : press.three ? 2 : -1;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (let i = 0; i < this.rounds[this.at].opts.length; i++)
+            if (inRect(pt, ...this.optRect(i))) pick = i;
+        }
         if (pick >= 0){
           this.ok = !!this.rounds[this.at].opts[pick].ok;
           if (this.ok){ this.right++; sfx('ui'); }
@@ -3292,8 +3456,9 @@ const GAMES = {
           const r = this.rounds[this.at];
           wrapTxt('"' + r.j + '"', 240, 74, 340, '#e8e4da', 7);
           r.opts.forEach((o, i) => {
-            ctx.fillStyle = '#161b21'; ctx.fillRect(90, 120 + i*28, 300, 22);
-            ctx.strokeStyle = '#343b44'; ctx.strokeRect(90.5, 120.5 + i*28, 299, 21);
+            const [rx, ry, rw, rh] = this.optRect(i);
+            ctx.fillStyle = '#161b21'; ctx.fillRect(rx, ry, rw, rh);
+            ctx.strokeStyle = '#343b44'; ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
             txt((i+1) + '.', 100, 134 + i*28, '#2f7fbe', 7);
             wrapTxt(o.t, 246, 130 + i*28, 270, '#c9c4b8', 6);
           });
@@ -3303,6 +3468,48 @@ const GAMES = {
       } };
   }}
 };
+
+/* The how-to-play card. Full-bleed over the dimmed board, so the first thing
+   you read is what the board in front of you is for. Everything is measured
+   against the real panel width — the password policy already taught us what
+   guessing a character count does to a box. */
+function drawBrief(g){
+  const B = GAME_BRIEF[g.gid]; if (!B) return;
+  const L = 46, R = 434, W = R - L, CX = (L + R) / 2, PAD = 16;
+  ctx.fillStyle = 'rgba(6,8,11,.93)'; ctx.fillRect(0, 0, VW, VH);
+  ctx.fillStyle = '#12161b'; ctx.fillRect(L, 14, W, 242);
+  ctx.strokeStyle = '#ffb02e'; ctx.strokeRect(L + .5, 14.5, W - 1, 241);
+  ctx.fillStyle = '#ffb02e'; ctx.fillRect(L, 14, W, 2);
+
+  txt(g.brief.first ? 'NEW — HOW THIS ONE WORKS' : 'HOW THIS ONE WORKS',
+      CX, 32, '#ffb02e', 7, 'center');
+  txt(MG_TITLES[g.gid] || g.gid.toUpperCase(), CX, 46, '#e8e4da', 8, 'center');
+
+  /* Every block is CENTRED and measured against the panel's own inner width.
+     Left-aligning a centred x is how the password policy ran off its box the
+     first time; it is not going to be how this one does. */
+  wrapPx(B.what.split(' '), ' ', W - PAD*2, 6).slice(0, 4)
+    .forEach((l, i) => txt(l, CX, 64 + i*10, '#c9c4b8', 6, 'center'));
+
+  const boxTop = 104, boxH = B.keys.length * 13 + 8;
+  ctx.fillStyle = '#0d1014'; ctx.fillRect(L + PAD, boxTop, W - PAD*2, boxH);
+  B.keys.forEach(([k, what], i) => {
+    const y = boxTop + 14 + i*13;
+    txt(k, L + PAD + 10, y, '#39d7ff', 6);
+    txt(what, L + PAD + 96, y, '#c9c4b8', 6);
+  });
+
+  const wy = boxTop + boxH + 14;
+  wrapPx(B.watch.split(' '), ' ', W - PAD*2, 6).slice(0, 3)
+    .forEach((l, i) => txt(l, CX, wy + i*10, '#8b93a0', 6, 'center'));
+
+  /* the way out is the one thing on here that must never be missed, so it
+     pulses rather than blinking off the screen entirely */
+  const on = (performance.now() % 1200) < 800;
+  txt('PRESS E OR CLICK TO START', CX, 236, on ? '#4ade80' : '#2f6b45', 7, 'center');
+  txt('H reopens this', R - PAD, 250, '#5c646e', 6, 'right');
+}
+const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE', jargon:'JARGON TRANSLATION' };
 function mgPanel(title, hint){
   ctx.fillStyle = 'rgba(8,10,13,.88)'; ctx.fillRect(0,0,VW,VH);
   ctx.fillStyle = '#12161b'; ctx.fillRect(60, 26, 360, 214);
@@ -3310,6 +3517,7 @@ function mgPanel(title, hint){
   ctx.fillStyle = '#ffb02e'; ctx.fillRect(60, 26, 360, 2);
   txt(title, 240, 44, '#ffb02e', 8, 'center');
   txt(hint, 240, 56, '#8b93a0', 6, 'center');
+  txt('H = RULES', 414, 36, '#5c646e', 6, 'right');
 }
 /* Wrap to a MEASURED width. Wrapping by character count guessed 78 characters
    for a 360-pixel panel and the password policy ran off both edges of the box
@@ -3355,6 +3563,7 @@ function wrapTxt(s, cx, y, w, col, size){
   }
   if (line) lines.push(line);
   lines.forEach((l, i) => txt(l, cx, y + i*10, col, size, 'center'));
+  return y + lines.length*10;            // where the next block can start
 }
 
 /* --------------------------------- modal hub ------------------------------ */
@@ -3497,7 +3706,7 @@ function act(a){
       break;
     }
     case 'controls': G.state = 'menu'; show('s-controls'); break;
-    case 'options': G.state = 'menu'; show('s-options'); break;
+    case 'options': G.state = 'menu'; paintPace(); show('s-options'); break;
     case 'back': toTitle(); break;
     case 'resume': resumeWork(); break;
     case 'quitsave': saveGame(); toTitle(); break;
@@ -3506,7 +3715,19 @@ function act(a){
       document.getElementById('o-tspd').textContent = ['SLOW','NORMAL','LUDICROUS'][G.textSpeed];
       break;
     }
+    case 'pace': {
+      meta.pace = PACES[(paceIdx() + 1) % PACES.length].id;
+      paintPace();
+      saveGame();
+      break;
+    }
   }
+}
+function paintPace(){
+  const b = document.getElementById('o-pace'), n = document.getElementById('o-pace-note');
+  if (b) b.textContent = pace().label;
+  if (n) n.textContent = pace().blurb +
+    ' The shift is the same eight hours at every pace \u2014 same tickets, same deadlines, same score. Only how fast those hours pass in the real world changes.';
 }
 function pauseGame(){
   if (G.modal){
@@ -3533,7 +3754,8 @@ function pauseGame(){
     '<dt>Open tickets</dt><dd>' + run.queue.length + '</dd>' +
     '<dt>Stress</dt><dd>' + Math.round(run.stress) + '%</dd>' +
     '<dt>Burnout</dt><dd>' + Math.round(run.burnout) + '%</dd>' +
-    '<dt>Job posting</dt><dd>' + run.seed + '</dd>';
+    '<dt>Job posting</dt><dd>' + run.seed + '</dd>' +
+    '<dt>Pace</dt><dd>' + pace().label.toLowerCase() + '</dd>';
   show('s-pause');
   saveGame();
 }
@@ -3590,6 +3812,9 @@ function onKey(e){
     return;
   }
   if (G.showTests) return;
+  if (e.code === 'KeyH' && G.state === 'modal' && G.modal && G.modal.kind === 'game'){
+    e.preventDefault(); briefReopen(); return;
+  }
   if (e.code === 'KeyM'){ A.musOn = !A.musOn; toast(A.musOn ? 'MUZAK ON' : 'MUZAK OFF (BLESSED SILENCE)', 'corp', 1600); }
   if (e.code === 'Escape'){
     if (G.state === 'work') pauseGame();
@@ -4550,6 +4775,71 @@ function selfTest(runSim){
       run.active = null; run.queue = []; G.state = 'work'; run.resumePending = false;
     }
 
+    /* every minigame explains itself, and every card FITS the panel it is
+       drawn in — the password policy already ran off this exact box once */
+    {
+      const missing = Object.keys(GAMES).filter(g => !GAME_BRIEF[g]);
+      ok('minigame: every game has a how-to-play card', missing.length === 0, missing.join(','));
+      const over = [];
+      for (const g in GAME_BRIEF){
+        const B = GAME_BRIEF[g];
+        if (!B.keys.length || !B.what || !B.watch) over.push(g + ':empty');
+        if (wrapPx(B.what.split(' '), ' ', 356, 6).length > 4) over.push(g + ':what');
+        if (wrapPx(B.watch.split(' '), ' ', 356, 6).length > 3) over.push(g + ':watch');
+        if (B.keys.length > 5) over.push(g + ':keys');
+        ctx.font = '6px "Press Start 2P", monospace';
+        for (const [k, w] of B.keys)
+          if (ctx.measureText(k).width > 84 || ctx.measureText(w).width > 240) over.push(g + ':row');
+        if (!MG_TITLES[g]) over.push(g + ':title');
+      }
+      ok('minigame: no how-to-play card overflows its panel', over.length === 0, over.join(' '));
+    }
+
+    /* the card holds the shift clock — reading the rules is not billable */
+    {
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      meta.seenGames = {};
+      run.clock = 60; G.state = 'work';
+      openGame('pw', 2, () => {});
+      const first = !!(MG.brief && MG.brief.first);
+      const t0 = run.clock;
+      for (let i = 0; i < 30; i++) sim(STEP);
+      const heldFor = run.clock - t0;
+      MG.brief.t = 1; press.use = true; gameTick(STEP);
+      const dismissed = !MG.brief;
+      const t1 = run.clock;
+      for (let i = 0; i < 30; i++) sim(STEP);
+      ok('minigame: a first sighting opens on its card', first);
+      ok('minigame: the card holds the shift clock, and only the card',
+         heldFor === 0 && dismissed && run.clock - t1 > 0,
+         'held ' + heldFor.toFixed(3) + ' then ran ' + (run.clock - t1).toFixed(2));
+      if (G.modal) closeModalToWork();
+      run.active = null; run.queue = []; G.state = 'work';
+    }
+
+    /* the pace dial moves real time only: same day, same everything else */
+    {
+      const seen = PACES.map(p => p.id);
+      ok('pace: three settings, standard among them and rated 1:1',
+         seen.length === 3 && PACES[1].id === 'standard' && PACES[1].rate === 1, seen.join(','));
+      const before = meta.pace, runs = meta.runsPlayed;
+      meta.pace = null; meta.runsPlayed = 0;
+      const fresh = pace().id;
+      meta.runsPlayed = 3;
+      const veteran = pace().id;
+      meta.pace = 'crunch';
+      const explicit = paceRate();
+      meta.pace = before; meta.runsPlayed = runs;
+      ok('pace: a profile that has never finished a career starts gentle',
+         fresh === 'relaxed' && veteran === 'standard', fresh + ' -> ' + veteran);
+      ok('pace: an explicit choice outranks the default', explicit === 1.5, String(explicit));
+      /* a save from before the dial existed is a preference nobody expressed */
+      const m = normalizeMeta({ certs:['aplus'], rep:4, runsPlayed:2 });
+      ok('pace: an older save normalizes rather than breaking',
+         m.pace === null && m.seenGames && typeof m.seenGames === 'object' && m.certs[0] === 'aplus');
+    }
+
     /* NPC day: schedules complete without the teleport fallback */
     rngInit('JOB-TEST');
     loadMap('office1'); spawnPeople();
@@ -4737,7 +5027,10 @@ let idleT = 0;
 function render(){
   if (G.state === 'work' || G.state === 'modal' || G.state === 'pause'){
     drawWorld();
-    if (G.state === 'modal' && G.modal && G.modal.kind === 'game' && MG) MG.draw();
+    if (G.state === 'modal' && G.modal && G.modal.kind === 'game' && MG){
+      MG.draw();
+      if (MG.brief) drawBrief(MG);     // over the real board, so you see what is coming
+    }
     if (G.state !== 'pause') hudUpdate();
   } else if (W2.W){
     /* menus idle over a slow pan of the office */
@@ -4774,12 +5067,29 @@ addEventListener('resize', fit);
    does, and the game only listened to the keyboard. A click anywhere over the
    world or the box now means the same as E — except on a control that has its
    own job (a choice, a button), which handles itself. */
+/* Where a click landed in the world's own 480x270 coordinates, or null if it
+   missed the canvas. The canvas is letterboxed and scaled, so client pixels
+   mean nothing to anything that draws. */
+function canvasPoint(ev){
+  const r = view.getBoundingClientRect();
+  if (!r.width || !r.height) return null;
+  const x = (ev.clientX - r.left) * VW / r.width;
+  const y = (ev.clientY - r.top)  * VH / r.height;
+  if (x < 0 || y < 0 || x > VW || y > VH) return null;
+  return { x, y };
+}
+function inRect(pt, x, y, w, h){
+  return !!pt && pt.x >= x && pt.x <= x + w && pt.y >= y && pt.y <= y + h;
+}
 function clickAdvance(ev){
   const t = ev.target;
   if (t && t.closest && t.closest('button, .row, .opt, a, input, select')) return;
   if (G.state === 'modal' && G.modal){
     const k = G.modal.kind;
-    if (k === 'dlg' || k === 'game'){ press.use = true; return; }
+    /* A minigame gets the POINT as well as the press. Telling a first-timer to
+       click and then only listening for keys is worse than not offering it. */
+    if (k === 'game'){ if (MG) MG.click = canvasPoint(ev); press.use = true; return; }
+    if (k === 'dlg'){ press.use = true; return; }
     return;                                   // the queue panel has its own rows
   }
   if (G.state === 'work'){ press.use = true; }
@@ -4797,7 +5107,7 @@ function boot(){
   loadMap('office1');
   spawnPeople();
   const s = loadGame();
-  if (s && s !== 'future' && s.meta) meta = s.meta;
+  if (s && s !== 'future' && s.meta) meta = normalizeMeta(s.meta);
   selfTest(false);                          // content lints, loudly, every boot
   const bl = document.getElementById('bootline');
   bootT = setInterval(() => {

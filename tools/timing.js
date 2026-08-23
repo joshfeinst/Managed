@@ -26,6 +26,10 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   for (const id of IDS){
     const res = await p.evaluate(async (tid) => {
       QUIET = true;
+      /* Measure against the pace the day was TUNED at. A fresh profile starts
+         on RELAXED, which buys a player 60% more real time per game-minute —
+         a strictness check run at that setting is not checking anything. */
+      meta.pace = 'standard';
       newRun('JOB-TIME'); run.introDone = true; clockIn(); run.introDone = true;
       if (G.modal) closeModalToWork();
       run.pendingScenes = []; run.plan.events = [];
