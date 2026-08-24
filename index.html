@@ -109,7 +109,16 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
    queue was busiest, and sat across every minigame board. While a panel is up
    the toasts move out from under it and dim. */
 #tix, #dlg{z-index:60}
-body.queueopen .toastwrap{top:auto; bottom:2%; opacity:.55}
+/* Moved, never dimmed. The queue panel is centred with max-height:88%, so a
+   full queue really can reach the top slot and the move earns its keep — but
+   dimming to .55 put half-transparent text over corridor tiles and filing
+   cabinets and made the message unreadable, which is the one thing a toast
+   must not be. */
+body.queueopen .toastwrap{top:auto; bottom:2%}
+/* A full-screen menu covers the world, so a toast ABOUT the world has nothing
+   to say over it — and the top slot is exactly where the pause card puts its
+   own title, so one landed squarely on "DAY 1 — INTERN". */
+body.screenopen .toastwrap{display:none}
 
 /* ---------------- full screens ---------------- */
 .screen{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -2946,8 +2955,14 @@ function advanceStep(){
     toast('GO TO: ' + (ANCHOR_NAMES[st.goto] || st.goto) + ' — FOLLOW THE AMBER ARROW', 'corp', 2600);
     return;
   }
-  /* charged once, up front, at the same price the balance model pays */
-  run.clock += stepCost(st);
+  /* Charged ONCE per step, at the same price the balance model pays.
+     advanceStep is also how an interrupted step is RE-OPENED — by resumeWork
+     after a pause and by resumeRun after a save — so charging unconditionally
+     re-billed the same work on every interruption: measured, five pause/
+     resumes on one minigame step cost 60 extra game-minutes, and so did five
+     save/continues. A player who tabbed away mid-puzzle watched the clock jump
+     twelve minutes with the board still on screen. */
+  if (t.paidStep !== t.si){ t.paidStep = t.si; run.clock += stepCost(st); }
   if (st.say){ openDlg(st.say, t.fills, () => { t.si++; advanceStep(); }); return; }
   if (st.choice){ openDlg(st.choice, t.fills, () => { t.si++; advanceStep(); }, null, t); return; }
   if (st.game){ openGame(st.game, st.diff, score => { t.gameScores.push(score); t.si++; advanceStep(); }); return; }
@@ -3294,7 +3309,8 @@ function serializeRun(){
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
     queue: queue.map(t => ({ uid:t.uid, id:t.id, title:t.title, fills:t.fills, at:t.at,
       deadline:t.deadline, sla:t.sla, stress:t.stress, si:t.si, bonus:t.bonus,
-      gameScores:t.gameScores, from:t.from, gameCap:t.gameCap })),
+      gameScores:t.gameScores, from:t.from, gameCap:t.gameCap,
+      paidStep: t.paidStep === undefined ? null : t.paidStep })),
     px:player ? player.tx : null, py:player ? player.ty : null,
     rng: rngState() };
 }
@@ -4026,6 +4042,7 @@ const SCREENS = ['s-boot','s-title','s-setup','s-pause','s-review','s-over','s-c
 function show(id){
   G.screenId = id;
   for (const s of SCREENS){ const el = document.getElementById(s); if (el) el.hidden = (s !== id); }
+  document.body.classList.toggle('screenopen', !!id);   // toasts stay off full screens
 }
 function screenForState(){
   switch (G.state){
@@ -5511,6 +5528,77 @@ function selfTest(runSim){
       }
       ok('office: the wall clock hands move with the shift', moved > 0,
          moved + ' pixels changed between 9:00 and 2:00');
+    }
+
+    /* --- what the third fleet caught (wave 3, five players) --- */
+
+    /* A step is charged ONCE. advanceStep is also how an interrupted step is
+       re-opened, so charging on every call re-billed the same work every time
+       the player paused, tabbed away or saved. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work'; meta.seenGames = {};
+      const mk = () => {
+        run.clock = 300;
+        const t = { uid:801, id:'printer-jam', title:'t', fills:{}, at:0, deadline:900,
+                    sla:80, stress:5, si:0, bonus:0, gameScores:[], from:null };
+        run.queue = [t]; run.active = t;
+        const steps = TICKETS[t.id].steps;
+        while (t.si < steps.length && !steps[t.si].game) t.si++;
+        return t;
+      };
+      mk();
+      const entry = run.clock; advanceStep();
+      const charged = run.clock - entry;
+      /* five pause/resume cycles on the SAME step */
+      const p0 = run.clock;
+      for (let i = 0; i < 5; i++){ pauseGame(); resumeWork(); }
+      const pauseCost = run.clock - p0;
+      if (G.modal) closeModalToWork();
+      /* and five save/resume cycles */
+      mk(); advanceStep();
+      const s0 = run.clock;
+      for (let i = 0; i < 5; i++){
+        const ser = serializeRun();
+        resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(ser)) });
+        /* resumeRun skips this while SAVE_SUSPEND is on — which it always is
+           in here — so without it the loop never touched the resume path at
+           all and the test passed no matter what. Real play always runs it. */
+        if (run.active) advanceStep();
+        if (G.modal) closeModalToWork();
+      }
+      const saveCost = run.clock - s0;
+      if (G.modal) closeModalToWork();
+      ok('clock: entering a step charges it once', charged === TALK.game, charged + ' min');
+      ok('clock: pausing and resuming never re-charges the step',
+         pauseCost === 0, pauseCost + ' extra minutes over 5 pause/resumes');
+      ok('clock: saving and resuming never re-charges the step',
+         saveCost === 0, saveCost + ' extra minutes over 5 save/resumes');
+      run = null; G.state = 'title';
+    }
+
+    /* toasts are never dimmed, and never float over a full-screen menu */
+    {
+      const rules = [...document.styleSheets]
+        .flatMap(sh => { try { return [...sh.cssRules]; } catch(_){ return []; } })
+        .filter(r => r.selectorText && /toastwrap/.test(r.selectorText));
+      const dimmed = rules.filter(r => {
+        const o = (r.style.opacity || '').trim();
+        return o && parseFloat(o) < 1;
+      });
+      ok('toasts: nothing dims a toast below full brightness',
+         dimmed.length === 0, dimmed.map(r => r.selectorText + '{opacity:' + r.style.opacity + '}').join(' '));
+      const hidden = rules.filter(r => /screenopen/.test(r.selectorText) && /none/.test(r.style.display || ''));
+      ok('toasts: a full-screen menu hides them', hidden.length === 1,
+         hidden.length + ' rules');
+      /* and show() actually applies the class it depends on */
+      show('s-pause');
+      const onScreen = document.body.classList.contains('screenopen');
+      show(null);
+      const offWorld = document.body.classList.contains('screenopen');
+      ok('toasts: show() flags full screens so the rule can fire',
+         onScreen && !offWorld, 'screen ' + onScreen + ' world ' + offWorld);
     }
 
     /* --- what the second fleet caught (wave 2, five players) --- */
