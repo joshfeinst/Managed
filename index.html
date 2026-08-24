@@ -97,12 +97,19 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
 
 .toastwrap{position:absolute; left:0; right:0; top:13%; display:flex; flex-direction:column;
   align-items:center; gap:6px; pointer-events:none; z-index:20}
-/* A panel is something you opened in order to read it, so nothing floats over
+/* Scoped to the QUEUE panel alone. Written for any panel, it also fired for
+   the dialogue box — which is itself bottom-anchored at bottom:4%, so "move
+   out from under it" moved the toast to bottom:2%, i.e. UNDERNEATH a z-60,
+   96%-opaque box, and dimmed the sliver that escaped. Day one fires the first
+   NEW TICKET toast in the same frame as the dispatch tutorial, so every player
+   lost the first toast of the game. The queue panel is the centred one that
+   actually needed this.
+   A panel is something you opened in order to read it, so nothing floats over
    it: toasts used to cover the top four rows of the queue exactly when the
    queue was busiest, and sat across every minigame board. While a panel is up
    the toasts move out from under it and dim. */
 #tix, #dlg{z-index:60}
-body.panelopen .toastwrap{top:auto; bottom:2%; opacity:.55}
+body.queueopen .toastwrap{top:auto; bottom:2%; opacity:.55}
 
 /* ---------------- full screens ---------------- */
 .screen{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -230,11 +237,12 @@ input[type=range]{accent-color:var(--corp); width:150px}
       <h2 class="ttl" id="p-title">PAUSED</h2>
       <div class="panel" style="width:min(520px,92vw)"><dl class="dl" id="p-meta"></dl></div>
       <div class="grid2 panel" style="width:min(520px,92vw)">
-        <div class="ctl"><span>Walk</span><span>WASD · Arrows</span></div>
+        <div class="ctl"><span>Walk</span><span>WASD · Arrows · click the floor</span></div>
         <div class="ctl"><span>Run</span><span>Hold Shift</span></div>
-        <div class="ctl"><span>Talk / use / advance</span><span>E · Space · Enter</span></div>
+        <div class="ctl"><span>Talk / use / advance</span><span>E · Space · Enter · click</span></div>
         <div class="ctl"><span>Dialogue choices</span><span>1 – 3 · click</span></div>
-        <div class="ctl"><span>Service queue</span><span>Tab</span></div>
+        <div class="ctl"><span>Service queue</span><span>Tab · click a row</span></div>
+        <div class="ctl"><span>Minigame rules</span><span>H</span></div>
         <div class="ctl"><span>Mute music</span><span>M</span></div>
         <div class="ctl"><span>Session log</span><span>F1</span></div>
         <div class="ctl"><span>Self test</span><span>F4</span></div>
@@ -268,19 +276,26 @@ input[type=range]{accent-color:var(--corp); width:150px}
       <div class="eyebrow">onboarding packet, page 1 of 214</div>
       <h2 class="ttl">EMPLOYEE HANDBOOK</h2>
       <div class="grid2 panel">
-        <div class="ctl"><span>Walk</span><span>WASD · Arrow keys</span></div>
+        <div class="ctl"><span>Walk</span><span>WASD · Arrow keys · <b>or click where you want to go</b></span></div>
         <div class="ctl"><span>Run (you will be running)</span><span>Hold Shift</span></div>
-        <div class="ctl"><span>Talk / use / advance</span><span>E · Space · Enter</span></div>
-        <div class="ctl"><span>Dialogue choices</span><span>1 – 3 · click</span></div>
-        <div class="ctl"><span>Service queue</span><span>Tab · or use your terminal</span></div>
+        <div class="ctl"><span>Talk / use / advance</span><span>E · Space · Enter · <b>or click it</b></span></div>
+        <div class="ctl"><span>Dialogue choices</span><span>1 – 3 · or click the line</span></div>
+        <div class="ctl"><span>Service queue</span><span>Tab · your terminal · or click a row</span></div>
+        <div class="ctl"><span>Minigames</span><span>keys shown on the card · or click the answer</span></div>
+        <div class="ctl"><span>How to play this minigame</span><span>H (while it is open)</span></div>
         <div class="ctl"><span>Pause</span><span>Esc</span></div>
         <div class="ctl"><span>Mute music</span><span>M</span></div>
         <div class="ctl"><span>Session log (for feedback)</span><span>F1</span></div>
         <div class="ctl"><span>Run self test</span><span>F4</span></div>
       </div>
-      <p class="hint">Your terminal (the glowing one at your desk) opens the <b>service queue</b>. The clock runs while
-      you work and walk; every job charges its minutes up front, so reading, menus and thinking are free — the shift
-      bills the work, not you. The printer is possessed. Welcome aboard.</p>
+      <p class="hint"><b>The mouse plays the whole game.</b> Click a patch of floor to walk there, click a machine or a
+      person to walk over and use them, click to advance anything. Nothing needs the keyboard except typing a job
+      posting ID.</p>
+      <p class="hint">Your terminal (the glowing one at your desk) opens the <b>service queue</b>. The shift clock runs
+      the whole time you are out on the floor — walking, or standing still deciding what to do next — and each job also
+      charges its own minutes the moment you start it. It stops only behind a panel: a conversation, the queue, a
+      minigame, the pause menu. So reading is free and dithering in the corridor is not. The printer is possessed.
+      Welcome aboard.</p>
       <p class="hint" id="hb-burn"></p>
       <div class="row"><button class="btn ghost" data-act="back">◀ BACK</button></div>
     </div>
@@ -1964,7 +1979,15 @@ function drawWorld(){
       ctx.fillStyle = 'rgba(255,176,46,' + fade.toFixed(2) + ')';
       ctx.beginPath(); ctx.arc(dx0, dy0, puls, 0, 6.283); ctx.fill();
     }
-    const tx0 = mx*TILE - cx + 8, ty0 = my*TILE - cy + 8;
+    /* The objective anchor is the walkable tile you STAND ON to use a prop —
+       one tile south of the prop itself. Everything below draws in the 22px
+       band above that origin, which is exactly the prop's own sprite: the
+       chevron covered its bottom half and the plate its top half, so the desk
+       you are told to find by its green screen had its green screen hidden by
+       the sign pointing at it. Lift the whole marker a tile when a prop is
+       what we are pointing at. */
+    const lift = markerLift(mx, my);
+    const tx0 = mx*TILE - cx + 8, ty0 = my*TILE - cy + 8 - lift;
     const onScreen = tx0 > 6 && tx0 < VW-6 && ty0 > 14 && ty0 < VH-6;
     const bob = Math.sin(performance.now()/180)*2;
     if (onScreen){
@@ -2018,6 +2041,16 @@ function drawWorld(){
 /* the walking route to the current objective, recomputed only when the player
    changes tile or the target moves */
 const PATHHINT = { key:'', path:[] };
+/* How far above the objective ANCHOR the sign floats. The anchor is the
+   walkable tile you stand on to use a prop — one tile south of the prop — and
+   the sign draws in the band above its origin, which is the prop's own sprite.
+   Lift it a whole tile plus the chevron's overhang and its ±2px bob, or the
+   tip still grazes the prop's top row. One function, so the renderer and the
+   test that guards it can never drift apart. */
+function markerLift(mx, my){
+  const overProp = inMap(mx, my-1) && (solidAt(mx, my-1) || !!W2.act[cellIx(mx, my-1)]);
+  return overProp ? TILE + 8 : 0;
+}
 /* One source of truth for "where should I be going", shared by the in-world
    arrow, the off-screen compass and the HUD objective line. */
 function objectiveTarget(){
@@ -2797,12 +2830,14 @@ function openQueue(){
   G.state = 'modal';
   G.modal = { kind:'tix', sel:0 };
   document.body.classList.add('panelopen');
+  document.body.classList.add('queueopen');
   renderQueue();
   document.getElementById('tix').style.display = 'block';
 }
 function closeModalToWork(){
   G.modal = null; G.state = 'work';
   document.body.classList.remove('panelopen');
+  document.body.classList.remove('queueopen');
   dlg = null; MG = null;
   document.getElementById('tix').style.display = 'none';
   document.getElementById('dlg').style.display = 'none';
@@ -3072,6 +3107,13 @@ function endDay(){
     run.stress = Math.round(run.stress * .6);
     run.burnout = Math.max(0, run.burnout - BURN.promoRelief);
   } else if (promo) promo = false;             // fired is fired
+  /* Everything the review screen needs to draw itself again, banked BEFORE the
+     day rolls over. Quitting while the review is on screen used to lose it for
+     good: the save already said "day N+1, phase review", and the resume path
+     deliberately jumps past a scored day, so the player never saw how they
+     did. The day still may not be re-scored — this replays the card, it does
+     not re-run endDay. */
+  run.reviewCard = { dayPerf, eod, promo, ending: ending || null, day: run.day };
   reviewScreen(dayPerf, eod, promo, ending);
   if (ending){
     /* the career is over the moment the day is scored; the exit interview is
@@ -3239,6 +3281,7 @@ function serializeRun(){
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
     introDone: !!run.introDone, seen: run.seen || {},
+    reviewCard: run.reviewCard || null,
     /* Both were memory-only, and both detonated on resume: a missing warned
        threw a TypeError per tick for the 12 minutes before every calendar
        event of every CONTINUEd career (input dead, FAULT banners), and a
@@ -3277,6 +3320,7 @@ function resumeRun(s){
     queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
     pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone,
     warned: r.warned || {}, taughtQueue: !!r.taughtQueue, lastChat: r.lastChat || {},
+    reviewCard: r.reviewCard || null,
     seen: r.seen || {}, scores:r.scores,
     burned: r.burned || [], earned: r.earned || 0, stakesDone: r.stakesDone || 0,
     speedSum: r.speedSum || 0, qualSum: r.qualSum || 0, qualN: r.qualN || 0,
@@ -3288,7 +3332,19 @@ function resumeRun(s){
   if (!run.plan){ startCommute(); return; }
   /* the day in this save was already scored at its review screen: go on to the
      next day rather than through endDay a second time */
-  if (run.phase === 'review'){ startCommute(); return; }
+  if (run.phase === 'review'){
+    const card = r.reviewCard;
+    if (card){
+      /* redraw the card for the day that was scored, then let the buttons
+         carry on into the next one exactly as they would have */
+      const realDay = run.day; run.day = card.day;
+      reviewScreen(card.dayPerf, card.eod, card.promo, card.ending);
+      run.day = realDay;
+      G.state = 'review'; show('s-review');
+      return;
+    }
+    startCommute(); return;
+  }
   /* saved past closing time (a modal held the clock past 17:00, then a blur
      autosave): score the day now rather than silently discarding it */
   if (run.clock >= DAY_MIN){ loadMap('office1'); endDay(); return; }
@@ -4011,6 +4067,12 @@ function toTitle(){
   document.getElementById('t-meta').textContent =
     [inProgress, lived].filter(Boolean).join('  ·  ') ||
     'No careers on file. The industry awaits, unenthusiastically.';
+  /* what Enter/Space should do here. The line above tells a returning player
+     to press CONTINUE, so Enter must not instead start a fresh career over
+     the top of the one they were told about. */
+  const menu = document.getElementById('titlemenu');
+  menu.querySelectorAll('[data-primary]').forEach(x => x.removeAttribute('data-primary'));
+  (saved ? btn : menu.querySelector('[data-act="newrun"]')).setAttribute('data-primary', '');
   show('s-title');
   clearToasts();
 }
@@ -4187,9 +4249,16 @@ function onKey(e){
   if ((e.code === 'Enter' || e.code === 'Space') &&
       ['title','menu','commute','review','over','setup'].includes(G.state)){
     const scr = G.screenId && document.getElementById(G.screenId);
-    const b = scr && Array.from(scr.querySelectorAll('.btn:not(.ghost)'))
-      .find(x => !x.disabled && x.offsetParent !== null);
-    if (b){ e.preventDefault(); b.click(); return; }
+    /* An explicit primary first. The title builds its rows as .mi, not .btn,
+       so a .btn-only lookup found nothing and Enter was dead on the one screen
+       whose own status line says "Press CONTINUE." — and simply widening the
+       selector would have fired APPLY FOR A JOB instead, starting a new career
+       over the top of a saved one. toTitle marks the right button. */
+    const vis = x => x && !x.disabled && x.offsetParent !== null;
+    let b = scr && scr.querySelector('[data-primary]');
+    if (!vis(b)) b = scr && Array.from(scr.querySelectorAll('.btn:not(.ghost), .mi'))
+      .find(vis);
+    if (vis(b)){ e.preventDefault(); b.click(); return; }
   }
   if (e.code === 'KeyH' && G.state === 'modal' && G.modal && G.modal.kind === 'game'){
     e.preventDefault(); briefReopen(); return;
@@ -5444,6 +5513,155 @@ function selfTest(runSim){
          moved + ' pixels changed between 9:00 and 2:00');
     }
 
+    /* --- what the second fleet caught (wave 2, five players) --- */
+
+    /* toasts must not be moved underneath a bottom-anchored dialogue box.
+       Only the CENTRED queue panel ever needed them relocated. */
+    {
+      const css = [...document.styleSheets].flatMap(sh => { try { return [...sh.cssRules]; } catch(_){ return []; } })
+        .filter(r => r.selectorText && /toastwrap/.test(r.selectorText));
+      const moved = css.filter(r => /bottom/.test(r.style.cssText || ''));
+      ok('toasts: only the queue panel relocates them',
+         moved.every(r => /queueopen/.test(r.selectorText)),
+         moved.map(r => r.selectorText).join(' / ') || 'none');
+      /* and the classes are actually applied where claimed */
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      openQueue();
+      const onQueue = document.body.classList.contains('queueopen');
+      closeModalToWork();
+      openDlg('i.day1', {}, null);
+      const onDlg = document.body.classList.contains('queueopen');
+      closeModalToWork();
+      const offAfter = document.body.classList.contains('queueopen');
+      ok('toasts: a dialogue never triggers the queue-panel move',
+         onQueue && !onDlg && !offAfter,
+         'queue ' + onQueue + ' dlg ' + onDlg + ' after ' + offAfter);
+      run = null; G.state = 'title';
+    }
+
+    /* the title screen answers the keyboard, and answers it CORRECTLY:
+       Enter must never start a fresh career over the top of a saved one */
+    {
+      const realRaw = localStorage.getItem(SAVE_KEY);
+      try {
+        SAVE_SUSPEND = false;
+        localStorage.removeItem(SAVE_KEY);
+        toTitle();
+        const menu = document.getElementById('titlemenu');
+        const cold = menu.querySelector('[data-primary]');
+        const coldOk = cold && cold.dataset.act === 'newrun';
+        /* now with a career on disk */
+        rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay(); saveGame();
+        run = null;
+        toTitle();
+        const warm = menu.querySelector('[data-primary]');
+        const warmOk = warm && warm.dataset.act === 'continue' && !warm.disabled;
+        ok('title: Enter has a button to press, and it is the right one',
+           coldOk && warmOk,
+           'cold ' + (cold && cold.dataset.act) + ' / warm ' + (warm && warm.dataset.act));
+        /* Press the key for real. The first version of this test re-ran the
+           handler's selector inline, so reverting the handler to .btn-only —
+           the actual shipped bug — sailed straight through it. */
+        let fired = null;
+        const realAct = act;
+        try {
+          act = a => { fired = a; };             // intercept, do not actually continue
+          G.state = 'title'; G.screenId = 's-title'; G.showTests = false;
+          onKey({ code:'Enter', preventDefault(){}, target:null });
+        } finally { act = realAct; }
+        ok('title: pressing Enter on the title actually presses CONTINUE',
+           fired === 'continue', 'Enter fired: ' + fired);
+      } finally {
+        SAVE_SUSPEND = true;
+        if (realRaw === null) localStorage.removeItem(SAVE_KEY);
+        else localStorage.setItem(SAVE_KEY, realRaw);
+      }
+      run = null; G.state = 'title';
+    }
+
+    /* the objective marker points at a prop from ABOVE it, never over it */
+    {
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      /* an anchor whose prop sits directly north of it — the coffee machine */
+      let anchor = null;
+      for (let y = 1; y < W2.H && !anchor; y++)
+        for (let x = 0; x < W2.W && !anchor; x++)
+          if (W2.act[cellIx(x,y)] === 'coffee' && solidAt(x,y) && !solidAt(x,y+1))
+            anchor = [x, y+1];
+      let clear = false, band = '';
+      if (anchor){
+        const [mx, my] = anchor;
+        const overProp = inMap(mx, my-1) && (solidAt(mx, my-1) || !!W2.act[cellIx(mx, my-1)]);
+        const lift = markerLift(mx, my);        // the renderer's own function
+        /* the marker occupies [origin-29, origin-7] and bobs ±2; the prop's
+           tile spans [propTop, propTop+16). They must never overlap. */
+        const origin = my*TILE + 8 - lift;
+        const markTop = origin - 29 - 2, markBot = origin - 7 + 2;
+        const propTop = (my-1)*TILE, propBot = propTop + TILE;
+        clear = overProp && markBot <= propTop;
+        band = 'marker[' + markTop + ',' + markBot + '] prop[' + propTop + ',' + propBot + ']';
+      }
+      ok('objective: the sign sits above the prop, not on it', clear,
+         anchor ? band : 'no coffee anchor found');
+      run = null; G.state = 'title';
+    }
+
+    /* the autosave heartbeat covers the screens people sit on longest */
+    {
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const t0 = 1e6;
+      const fired = {};
+      for (const st of ['work','modal','pause','review']){
+        G.state = st; G.lastAuto = 0;
+        fired[st] = autosaveTick(t0);            // the heartbeat the loop calls
+      }
+      G.state = 'work'; G.lastAuto = t0;
+      const tooSoon = autosaveTick(t0 + AUTOSAVE_MS - 1);
+      ok('save: the autosave heartbeat covers panels, not just the floor',
+         fired.work && fired.modal && !fired.pause && !fired.review && !tooSoon,
+         JSON.stringify(fired) + ' tooSoon ' + tooSoon);
+      run = null; G.state = 'title';
+    }
+
+    /* quitting while the review is on screen must not delete the review */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      run.clock = DAY_MIN; run.scores = [.6, .7]; run.resolved = 2;
+      run.earned = 4; run.stakesDone = 6;
+      endDay();
+      const onReview = G.state === 'review', card = run && run.reviewCard;
+      const ser = run ? serializeRun() : null;
+      let cameBack = false, sameDay = false;
+      if (ser){
+        resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(ser)) });
+        cameBack = G.state === 'review';
+        sameDay = run && run.day === ser.day;      // the resume must not re-score
+      }
+      ok('review: quitting on the review screen brings it back',
+         onReview && !!card && cameBack, 'onReview ' + onReview + ' card ' + !!card + ' back ' + cameBack);
+      ok('review: replaying the card never re-scores the day', sameDay);
+      run = null; G.state = 'title';
+    }
+
+    /* the handbook and the pause card admit the mouse exists */
+    {
+      const hb = document.getElementById('s-controls').textContent.toLowerCase();
+      const pz = document.getElementById('s-pause').textContent.toLowerCase();
+      ok('docs: the handbook tells you the mouse plays the game',
+         /click/.test(hb) && /click the floor|click where you want/.test(hb),
+         hb.includes('click') ? '' : 'no mouse anywhere in the handbook');
+      ok('docs: the pause card lists the mouse too', /click/.test(pz));
+      /* and the clock copy matches what the clock does */
+      ok('docs: the handbook no longer claims the shift bills only the work',
+         !/bills the work, not you|thinking are free/.test(hb),
+         'stale clock claim still present');
+    }
+
     /* --- what the first playtest fleet caught (wave 1, six players) --- */
 
     /* the file declares its own encoding: served without a charset header it
@@ -5835,11 +6053,7 @@ function render(){
       if (MG.brief) drawBrief(MG);     // over the real board, so you see what is coming
     }
     if (G.state !== 'pause') hudUpdate();
-    /* a quiet autosave while simply working, so the worst an abrupt close can
-       cost is ~25 seconds — pagehide is the front door, this is the deadbolt */
-    if (G.state === 'work' && run && performance.now() - (G.lastAuto || 0) > 25000){
-      G.lastAuto = performance.now(); saveGame();
-    }
+    autosaveTick(performance.now());
   } else if (W2.W){
     /* menus idle over a slow pan of the office */
     idleT += 1/60;
@@ -5854,6 +6068,18 @@ function render(){
   }
   if (G.showLog) drawSessionLog();
   if (G.showTests) drawTestReport();
+}
+/* A quiet autosave, the deadbolt behind pagehide's front door. Gated on
+   'work' alone it never fired on the screens players sit on longest — a
+   dialogue, a minigame board, a rules card — so the stated "worst case is 25
+   seconds" was void for exactly those. A modal save resumes the same way
+   pausing does: the active ticket's step is re-opened. */
+const AUTOSAVE_MS = 25000;
+function autosaveDue(state){ return state === 'work' || state === 'modal'; }
+function autosaveTick(now){
+  if (!run || !autosaveDue(G.state)) return false;
+  if (now - (G.lastAuto || 0) <= AUTOSAVE_MS) return false;
+  G.lastAuto = now; saveGame(); return true;
 }
 function fit(){
   const vv = window.visualViewport;
