@@ -5715,6 +5715,11 @@ function simDay(skill, policy){
   if (!W2.W) loadMap('office1');
   let pos = W2.spawn.slice();
   const walkTo = (a) => {
+    /* An anchor that does not resolve is a map problem, not a reason to take
+       the whole day down with a null dereference two thousand lines from the
+       cause. Walling the coffee machine in used to crash the suite here, which
+       reported a TypeError instead of the map invariant that knows why. */
+    if (!a) return;
     const path = astar(pos[0], pos[1], a[0], a[1]);
     run.clock += (path ? path.length : 24) / 4.2;
     pos = a.slice();
@@ -6791,6 +6796,35 @@ function selfTest(runSim){
       const orphans = Object.keys(GAMES).filter(g => !dealt.has(g));
       ok('every board the game can open is dealt by some ticket',
          orphans.length === 0, orphans.join(','));
+    }
+    /* NOTHING THE GAME ASKS YOU TO USE MAY BE WALLED IN. Every interactable is
+       reached by standing next to it and facing it, so an act tile with no
+       walkable neighbour is an act that cannot be performed — and it is
+       invisible in the map source, which is a wall of punctuation. The count is
+       also recorded per tile, because it is the thing that decides whether a
+       lever is findable: the arcade has four approaches and the coffee machine,
+       which is the game's whole answer to stress, has ONE. A tester spent forty
+       in-game minutes failing to find it while standing at the same counter. */
+    {
+      const rows = (MAPS.office1.rows || MAPS.office1.map || MAPS.office1);
+      const grid = Array.isArray(rows) ? rows : String(rows).split('\n');
+      const walled = [], sides = {};
+      grid.forEach((r, y) => [...String(r)].forEach((c, x) => {
+        const L = LEGEND[c];
+        if (!L || !L.act) return;
+        const free = [[0,-1],[0,1],[-1,0],[1,0]]
+          .filter(([dx,dy]) => inMap(x+dx, y+dy) && !solidAt(x+dx, y+dy)).length;
+        if (!free) walled.push(L.act + '@' + x + ',' + y);
+        sides[L.act] = Math.max(sides[L.act] || 0, free);
+      }));
+      ok('map: nothing you are told to use is walled in', walled.length === 0, walled.join(' '));
+      ok('map: and the stress lever is one of the things you are told to use',
+         (sides.coffee || 0) >= 1, 'coffee approachable from ' + (sides.coffee || 0) + ' side(s)');
+      /* recorded, not asserted: a one-sided approach is findable only if you
+         already know where to stand. This is a ratchet on the WORST case. */
+      const worst = Math.min(...Object.values(sides));
+      ok('map: no interactable got harder to walk up to than the coffee machine',
+         worst >= 1, Object.entries(sides).map(([k,v]) => k + ':' + v).join(' '));
     }
     /* Colour must never be the only way to read a puzzle: the cable rack pairs
        red against green and blue against purple, and it is half the minigames
