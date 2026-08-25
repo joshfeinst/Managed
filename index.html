@@ -395,7 +395,7 @@ const KEYMAP = {
   ShiftLeft:'sprint', ShiftRight:'sprint'
 };
 /* Latched single-press actions the sim consumes once per frame. */
-const press = { use:false, one:false, two:false, three:false, queue:false, back:false, up:false, down:false };
+const press = { use:false, one:false, two:false, three:false, four:false, queue:false, back:false, up:false, down:false };
 addEventListener('keydown', e => {
   const playing = typeof G !== 'undefined' && G && (G.state === 'work' || G.state === 'modal');
   const a = playing ? KEYMAP[e.code] : null;
@@ -408,6 +408,7 @@ addEventListener('keydown', e => {
     if (e.code==='Digit1') press.one = true;
     if (e.code==='Digit2') press.two = true;
     if (e.code==='Digit3') press.three = true;
+    if (e.code==='Digit4') press.four = true;
     if (e.code==='KeyW' || e.code==='ArrowUp') press.up = true;
     if (e.code==='KeyS' || e.code==='ArrowDown') press.down = true;
     if (e.code==='Tab'){ press.queue = true; e.preventDefault(); }
@@ -1777,10 +1778,10 @@ const TICKETS = {
     steps:[{say:'t1.big.a'},{choice:'t1.big.b'}] },
   'second-monitor-off': { tiers:[1,3], weight:3, sla:28, slaMult:1.6, pri:2, stress:6,
     title:'{User}: "the icon is gone" and cannot work',
-    steps:[{say:'t1.icon.a'},{choice:'t1.icon.b'}] },
+    steps:[{say:'t1.icon.a'},{game:'script',diff:2},{choice:'t1.icon.b'}] },
   'transfer-to-last-time': { tiers:[1,4], weight:3, sla:30, slaMult:1.7, pri:2, stress:7,
     title:'{client} wants "the person who fixed it last time"',
-    steps:[{say:'t1.xfer.a'},{choice:'t1.xfer.b'}] },
+    steps:[{say:'t1.xfer.a'},{game:'script',diff:1},{choice:'t1.xfer.b'}] },
   'mfa-approved-anyway': { tiers:[1,5], weight:3, sla:34, slaMult:1.6, pri:3, stress:9,
     title:'"My phone kept buzzing so I pressed yes and it stopped"',
     steps:[{say:'t1.mfa.a'},{choice:'t1.mfa.b'},{say:'t1.mfa.c'}] },
@@ -1801,10 +1802,10 @@ const TICKETS = {
     steps:[{say:'t1.shared.a'},{choice:'t1.shared.b'}] },
   'ticket-subject-hi': { tiers:[1,3], weight:2, sla:50, slaMult:2.4, pri:4, stress:3,
     title:'Ticket — subject: "hi" — no body, no name',
-    steps:[{say:'t1.hi.a'},{choice:'t1.hi.b'}] },
+    steps:[{say:'t1.hi.a'},{game:'script',diff:1},{choice:'t1.hi.b'}] },
   'user-fixed-it-themselves': { tiers:[1,4], weight:2, sla:48, slaMult:2.4, pri:4, stress:2,
     title:'"Please close, I sorted it myself"',
-    steps:[{say:'t1.self.a'},{choice:'t1.self.b'}] },
+    steps:[{say:'t1.self.a'},{game:'script',diff:1},{choice:'t1.self.b'}] },
 
   'coffee-derek': { tiers:[0,0], weight:3, sla:30, slaMult:1.4, pri:4, stress:4, from:'derek',
     title:'Coffee for DEREK before {mtg}',
@@ -2018,6 +2019,101 @@ const JARGON = [
     ok:'Guess, so I can tell my boss something.',
     no:['A number will be taken to the stadium.','The estimate must be thrown upward.'] }
 ];
+/* ------------------------- BY THE SCRIPT (the T1 board) --------------------
+   T1 is the only rung where somebody else wrote your words down and then
+   grades you on having said them. So the board is a call, and the two things
+   it measures are the two things the job measures, and they are enemies:
+   how fast you got the caller off the phone, and how much of the mandated
+   script you got through first.
+
+   The mandated lines are only true for as long as the caller has not already
+   told you the answer. "Have you tried restarting it" is a legitimate question
+   right up to the sentence where they say they restarted it twice — after that
+   it is a lie, QA ticks the box anyway, and the caller hears it. That is the
+   whole joke and it is also the whole strategy: bank each box at the earliest
+   instant it is not yet a lie.
+
+   NOT ON A WALL CLOCK. The caller advances one line per thing you say, not per
+   second — a turn, not a stopwatch. This board is scored on decisions for the
+   same reason the cable rack is scored on accuracy: a real-time dexterity tax
+   inside a panel that freezes the shift clock is the defect we removed from
+   CRAFT, and re-introducing it on a new board would be re-introducing it. */
+const QA_STEPS = [
+  { id:'ident',   box:'CONFIRM IDENTITY',    say:'Can I take your name and the company you are calling from?' },
+  { id:'restart', box:'ASK IF RESTARTED',    say:'And have you tried turning it off and on again?' },
+  { id:'checks',  box:'ANNOUNCE THE CHECKS', say:'I will just take you through a few quick checks.' },
+  { id:'else',    box:'OFFER FURTHER HELP',  say:'Is there anything else I can help you with today?' }
+];
+/* Filler. Says nothing, costs a turn, and every one of them is a real thing a
+   T1 says while reading a knowledge base article they do not believe. */
+const CALL_STALL = [
+  'Bear with me, the system is just thinking.',
+  'Sorry — it is loading. It does this.',
+  'Mmhm. Mmhm. Yes.',
+  'I am just pulling your account up now.'
+];
+/* `kills` on a line means: from this line on, the named mandated step is a lie.
+   `fixAt` is how many lines the caller has to get through before you could
+   possibly know what is actually wrong — the FIX card is dead until then. */
+const CALLS = [
+  { who:'{User} at {client}', sub:'cannot get into anything',
+    fixAt:2, fix:'Your account is locked from the failed attempts. Unlocking it now.',
+    lines:[
+      { t:'Hi, yes, it says my password is wrong but it is definitely not wrong.' },
+      { t:'I have typed it about nine times. Nine. So it is not that.', kills:'ident' },
+      { t:'And yes I rebooted, I rebooted twice, my son told me to.', kills:'restart' },
+      { t:'Is it the cloud? My neighbour said it is usually the cloud.' },
+      { t:'Hello? Are you still there? Hello?' }
+    ] },
+  { who:'{User} at {client}', sub:'printer, again',
+    fixAt:2, fix:'The print queue is jammed on a document from March. Clearing it.',
+    lines:[
+      { t:'The printer is not printing. It has the light on but nothing comes out.' },
+      { t:'It is the one by the kitchen, you know the one, the beige one.' },
+      { t:'I turned it off at the wall already, and on again, nothing.', kills:'restart' },
+      { t:'Sorry, this is {User}, I should have said, from {client}.', kills:'ident' },
+      { t:'Do you want me to hit it? I usually hit it.' }
+    ] },
+  { who:'{User} at {client}', sub:'"the internet is down"',
+    fixAt:3, fix:'Everyone else is online, so it is your machine — your cable is out of the wall.',
+    lines:[
+      { t:'The internet is down. The whole internet. For everybody.' },
+      { t:'Well — I have not asked anybody else. But it is down.' },
+      { t:'It is {User}, by the way, from {client}, we spoke in March.', kills:'ident' },
+      { t:'I restarted it, obviously, I am not an idiot.', kills:'restart' },
+      { t:'What checks? Nobody said anything about checks.', kills:'checks' },
+      { t:'Right, well, I will just work from my phone then, shall I.' }
+    ] },
+  { who:'{User} at {client}', sub:'a file that has moved',
+    fixAt:2, fix:'It is in the recycle bin. Somebody tidied. Restoring it now.',
+    lines:[
+      { t:'My file is gone. The one on the desktop. It was RIGHT THERE.' },
+      { t:'No, not that one. The important one. You know the one.' },
+      { t:'It might have been in a folder. There was a folder at one point.', kills:'checks' },
+      { t:'This is {User}. {client}. You have my number.', kills:'ident' },
+      { t:'If this is lost I will have to redo the whole quarter.' }
+    ] },
+  { who:'{User} at {client}', sub:'calling about a colleague',
+    fixAt:3, fix:'I cannot reset an account for someone who is not on the call, but I can call them.',
+    lines:[
+      { t:'Hi, I am calling on behalf of {User}, they are in a meeting.' },
+      { t:'They need their password reset and they need it in the next ten minutes.' },
+      { t:'No, I do not know their memorable word. I know their birthday?' },
+      { t:'It is fine, we sit together, just tell me and I will pass it on.' },
+      { t:'This is {client}, we are one of your bigger accounts, I would have thought.', kills:'ident' },
+      { t:'Fine. FINE. I will get them to call. This is why people leave.' }
+    ] },
+  { who:'{User} at {client}', sub:'has already fixed it',
+    fixAt:1, fix:'Then there is nothing to do — I will note it and close it.',
+    lines:[
+      { t:'Hi — quick one, my email stopped, but it has started again now.' },
+      { t:'So I do not need anything really. I already turned it off and on.', kills:'restart' },
+      { t:'It is {User} at {client}, in case you need it for the ticket.', kills:'ident' },
+      { t:'Anyway. That is all. Was there something else, or?', kills:'else' },
+      { t:'Right. Well. Bye then.' }
+    ] }
+];
+
 /* Password triage GENERATES its candidates. A fixed table of twelve strings is
    a memory test: a review measured that both memory minigames together held
    eighteen answers, which a player has by day two, after which the craft term —
@@ -4268,6 +4364,14 @@ function abandonScore(g){
     const left = g.rounds.length - g.at;
     return g.rounds.length ? (g.right + left) / g.rounds.length : 1;
   }
+  if (g.kind === 'script'){
+    /* the best it could still finish at: every remaining box banked honestly
+       and the call resolved, each of which costs one more turn */
+    const left = g.qa.filter(q => !q.banked).length;
+    const t2 = g.turns + left + (g.resolved ? 0 : 1);
+    const li = Math.max(0, g.lies - (g.forgive || 0));
+    return .5 + .5*clamp(1 - Math.max(0, t2 - g.par)*.12 - li*.15, .2, 1);
+  }
   return 0;
 }
 function openGame(id, diff, onDone){
@@ -4392,6 +4496,21 @@ const GAME_BRIEF = {
       ['CLICK', 'or click the one you want']
     ],
     watch: 'The right answer is the unflattering one. It is always the unflattering one.'
+  },
+  script: {
+    what: 'A live call. They keep talking whatever you say. On the right is the ' +
+          'script QA marks you against; card 4 is what is actually wrong, and it ' +
+          'ends the call the moment you know it.',
+    keys: [
+      ['1 2 3', 'say a scripted line'],
+      ['4', 'say the real answer — ends the call'],
+      ['CLICK', 'or click any card'],
+      ['', 'every card costs one turn, and they say the next thing']
+    ],
+    watch: 'A box only counts as honest while it is still true. Once they have ' +
+           'told you they restarted it, asking is a lie: QA ticks it, the caller ' +
+           'hears it, and it costs you. Half the marks are the script, half are ' +
+           'getting them off the phone.'
   }
 };
 const GAMES = {
@@ -4619,6 +4738,154 @@ const GAMES = {
         if (this.flash > 0 && this.at > 0)
           txt(this.ok ? 'CORRECT' : 'THAT IS NOT WHAT THAT MEANS', 240, 210, this.ok ? '#4ade80' : '#d64541', 6, 'center');
       } };
+  }},
+  /* --------------------------- BY THE SCRIPT (T1) -------------------------
+     Two scores that pull against each other. The caller advances one line per
+     thing you say — a TURN, not a second — so nothing on this board is a
+     reflex test. See the note above CALLS. */
+  script: { init(diff){
+    const F = Object.assign({ user:'the caller', User:'The caller', client:'the client' },
+                            (typeof run !== 'undefined' && run && run.active && run.active.fills) || {});
+    const call = CALLS[Ri('game', CALLS.length)];
+    const nQA = diff <= 1 ? 3 : 4;
+    return { kind:'script',
+      who: fill(call.who, F), sub: call.sub,
+      lines: call.lines.map(l => ({ t: fill(l.t, F), kills: l.kills })),
+      fixLine: fill(call.fix, F), fixAt: call.fixAt,
+      qa: QA_STEPS.slice(0, nQA).map(q => ({ id:q.id, box:q.box, say:q.say, banked:false, dead:false, lied:false })),
+      said: [], at:0, turns:0, lies:0, resolved:false, over:false,
+      par: nQA + 1, flash:0, flashTxt:'', flashOk:false, click:null, stall:0,
+      hint:'1-4 OR CLICK A CARD · THEY DO NOT WAIT FOR YOU',
+      cardRect(i){ return [66, 150 + i*20, 348, 18]; },
+      /* one place the renderer, the hit test and the keys all read, so a card
+         can never say one thing and do another */
+      /* Card 1 is the script in script order — which is a lie the moment the
+         caller has already answered it. Card 2 is the next line that is still
+         honest, i.e. the way to SKIP a dead box. Without card 2 the player
+         cannot decline a lie, and the whole decision is flavour text. */
+      cards(){
+        const un = this.qa.filter(q => !q.banked);
+        const nxt = un[0] || null;
+        const honest = un.find(q => !q.dead) || null;
+        /* two cards offering the identical sentence reads as a rendering bug.
+           When there is nothing to reach past, slot 2 is simply a DIFFERENT
+           way of saying nothing. */
+        const stall = k => CALL_STALL[(this.stall + k) % CALL_STALL.length];
+        const armed = this.at >= this.fixAt;
+        return [
+          nxt ? { k:'qa', q:nxt, t:nxt.say } : { k:'stall', t:stall(1) },
+          (honest && honest !== nxt) ? { k:'qa', q:honest, t:honest.say }
+                                     : { k:'stall', t:stall(2) },
+          { k:'stall', t:stall(0) },
+          { k:'fix', t: armed ? this.fixLine : 'You do not know what is wrong yet.', armed }
+        ];
+      },
+      /* The caller says the next thing whatever you said. A line can make a
+         mandated step untrue from here on. */
+      advance(){
+        this.at++;
+        const l = this.lines[this.at - 1];
+        if (l && l.kills){ const q = this.qa.find(q => q.id === l.kills); if (q) q.dead = true; }
+        if (this.at >= this.lines.length && !this.resolved){ this.over = true; }
+      },
+      play(i){
+        const c = this.cards()[i];
+        if (!c) return;
+        if (c.k === 'fix'){
+          if (!c.armed){ this.flash = .8; this.flashOk = false;
+                         this.flashTxt = 'YOU DO NOT KNOW WHAT IS WRONG YET'; sfx('err'); return; }
+          this.said.push({ me:true, t:c.t });
+          this.resolved = true; this.turns++; sfx('ui');
+          this.flash = .9; this.flashOk = true; this.flashTxt = 'CALL RESOLVED';
+          this.over = true; return;
+        }
+        this.turns++;
+        this.said.push({ me:true, t:c.t });
+        if (c.k === 'qa'){
+          c.q.banked = true;
+          if (c.q.dead){
+            /* QA ticks the box. It does not know, and would not care, that the
+               caller had already answered it two sentences ago. The caller
+               knows. They lose a line's worth of patience for it, which on a
+               tight call is the call — and on a slack one is affordable. That
+               it is SOMETIMES affordable is the point: this is a judgement,
+               not a rule. */
+            this.lies++; c.q.lied = true; sfx('err');
+            this.flash = .9; this.flashOk = false;
+            this.flashTxt = 'THEY ALREADY TOLD YOU THAT';
+            this.advance();
+          } else { sfx('ui'); this.flash = .7; this.flashOk = true; this.flashTxt = 'BOX TICKED'; }
+        } else { this.stall++; this.flash = .5; this.flashOk = true; this.flashTxt = '...'; }
+        this.advance();
+      },
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.over){
+          if (this.flash > 0) return;
+          const banked = this.qa.filter(q => q.banked).length;
+          const li = Math.max(0, this.lies - (this.forgive || 0));
+          const res = this.resolved
+            ? clamp(1 - Math.max(0, this.turns - this.par)*.12 - li*.15, .2, 1)
+            : .15;
+          this.score = .5*(banked/this.qa.length) + .5*res;
+          this.finished = true;
+          return;
+        }
+        let pick = press.one ? 0 : press.two ? 1 : press.three ? 2 : press.four ? 3 : -1;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (let i=0;i<4;i++) if (inRect(pt, ...this.cardRect(i))) pick = i;
+        }
+        if (pick >= 0) this.play(pick);
+      },
+      draw(){
+        mgPanel('BY THE SCRIPT', this.hint);
+        /* left: what they have said, newest at the bottom */
+        txt(this.who.toUpperCase() + ' — ' + this.sub.toUpperCase(), 66, 70, '#ffb02e', 6);
+        const rows = [];
+        for (let i=0;i<Math.min(this.at + 1, this.lines.length); i++)
+          for (const l of wrapPx(this.lines[i].t.split(' '), ' ', 168, 6))
+            rows.push({ t:l, me:false });
+        if (this.said.length){
+          const last = this.said[this.said.length-1];
+          for (const l of wrapPx(('YOU: ' + last.t).split(' '), ' ', 168, 6)) rows.push({ t:l, me:true });
+        }
+        /* eight rows at an eight-pixel pitch is exactly the gap between the
+           caller's name and the top card. A ninth row runs under card 1. */
+        rows.slice(-8).forEach((r, i) => txt(r.t, 66, 82 + i*8, r.me ? '#39d7ff' : '#c9c4b8', 6));
+        /* right: the checklist somebody else wrote */
+        txt('QA CHECKLIST', 250, 70, '#8b93a0', 6);
+        this.qa.forEach((q, i) => {
+          const y = 84 + i*15;
+          /* a box you ticked while it was still true stays green even after the
+             caller gets round to answering it — you were not lying then */
+          const col = q.banked ? (q.lied ? '#d64541' : '#4ade80') : (q.dead ? '#7a5a2a' : '#8b93a0');
+          txt(q.banked ? (q.lied ? 'X' : 'V') : '[ ]', 250, y, col, 6);
+          wrapPx(q.box.split(' '), ' ', 128, 6).slice(0,2)
+            .forEach((l, j) => txt(l, 272, y + j*8, col, 6));
+        });
+        txt(this.resolved ? 'CALL RESOLVED' : (this.over ? 'THEY HUNG UP' : 'ON THE CALL'),
+            250, 143, this.resolved ? '#4ade80' : this.over ? '#d64541' : '#8b93a0', 6);
+        /* bottom: the four things you are allowed to say */
+        if (!this.over) this.cards().forEach((c, i) => {
+          const [x,y,w,h] = this.cardRect(i);
+          const dead = c.k === 'fix' && !c.armed;
+          ctx.fillStyle = '#161b21'; ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = c.k === 'fix' ? (dead ? '#343b44' : '#4ade80') : '#343b44';
+          ctx.strokeRect(x + .5, y + .5, w - 1, h - 1);
+          txt((i+1) + '.', x + 6, y + 13, c.k === 'fix' ? (dead ? '#5c646e' : '#4ade80') : '#2f7fbe', 6);
+          txt(wrapPx(c.t.split(' '), ' ', 300, 6)[0] +
+              (wrapPx(c.t.split(' '), ' ', 300, 6).length > 1 ? '...' : ''),
+              x + 22, y + 13, dead ? '#5c646e' : '#c9c4b8', 6);
+        });
+        if (this.flash > 0)
+          txt(this.flashTxt, 240, 236, this.flashOk ? '#4ade80' : '#d64541', 6, 'center');
+        else
+          txt('TURNS ' + this.turns + ' / PAR ' + this.par +
+              '   BOXES ' + this.qa.filter(q=>q.banked).length + '/' + this.qa.length +
+              (this.lies ? '   LIES ' + this.lies : ''),
+              240, 236, '#8b93a0', 6, 'center');
+      } };
   }}
 };
 
@@ -4662,7 +4929,8 @@ function drawBrief(g){
   txt('PRESS E OR CLICK TO START', CX, 236, on ? '#4ade80' : '#2f6b45', 7, 'center');
   txt('H reopens this', R - PAD, 250, '#5c646e', 6, 'right');
 }
-const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE', jargon:'JARGON TRANSLATION' };
+const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
+                    jargon:'JARGON TRANSLATION', script:'BY THE SCRIPT' };
 function mgPanel(title, hint){
   ctx.fillStyle = 'rgba(8,10,13,.88)'; ctx.fillRect(0,0,VW,VH);
   ctx.fillStyle = '#12161b'; ctx.fillRect(60, 26, 360, 214);
@@ -5811,6 +6079,151 @@ function selfTest(runSim){
          'got ' + ducked.toFixed(2));
       ok('relief from an event costs nothing', given === 0, 'got ' + given.toFixed(2));
       run = null;
+    }
+    /* BY THE SCRIPT. The board's whole claim is that the two things it measures
+       fight each other, and that a mandated line stops being honest the moment
+       the caller answers it. Both have to be true in the arithmetic, or the
+       board is just four buttons. */
+    {
+      const savedState = G.state, savedModal = G.modal, savedMG = MG;
+      const board = () => { rngInit('JOB-TEST'); openGame('script', 1, () => {}); const g = MG; g.brief = null; return g; };
+
+      /* 1. every call is winnable at all: resolve it and the FIX card exists */
+      {
+        const g = board();
+        ok('every call has a real answer and a moment you could know it',
+           CALLS.every(c => c.fix && c.fixAt >= 0 && c.fixAt < c.lines.length &&
+                            c.lines.length > QA_STEPS.length),
+           CALLS.length + ' calls');
+        ok('the fix card is dead before you have heard enough',
+           g.cards()[3].k === 'fix' && !g.cards()[3].armed,
+           'fixAt ' + g.fixAt + ', at ' + g.at);
+      }
+      /* 2. banking a box the caller already answered is scored as a lie —
+            the box still ticks, which is the joke, but it costs you */
+      {
+        const honest = board();
+        while (honest.qa.some(q => !q.banked)) honest.play(0);
+        honest.play(3); honest.step(1); honest.step(1);
+        const clean = honest.score, cleanLies = honest.lies;
+
+        const liar = board();
+        /* let the caller talk first: stall until every step they answer is dead */
+        while (liar.at < liar.lines.length - 1 && !liar.qa.every(q => q.dead || q.banked)) liar.play(2);
+        const anyDead = liar.qa.some(q => q.dead);
+        while (liar.qa.some(q => !q.banked)) liar.play(0);
+        liar.play(3); liar.step(1); liar.step(1);
+
+        ok('the caller can answer a mandated question before you ask it', anyDead,
+           liar.qa.map(q => q.id + (q.dead ? '!' : '')).join(' '));
+        ok('asking it anyway ticks the QA box',
+           liar.qa.filter(q => q.banked).length === liar.qa.length,
+           liar.qa.filter(q => q.banked).length + '/' + liar.qa.length);
+        ok('asking it anyway is scored as a lie', liar.lies > 0 && cleanLies === 0,
+           'liar ' + liar.lies + ', honest ' + cleanLies);
+        ok('the honest run of the same call scores better', clean > liar.score,
+           clean.toFixed(3) + ' vs ' + liar.score.toFixed(3));
+      }
+      /* 3. the fix card really does end the call early, and doing so forfeits
+            every box you had not banked yet. That trade is the board. */
+      {
+        const rush = board();
+        while (rush.at < rush.fixAt) rush.play(2);
+        rush.play(3); rush.step(1); rush.step(1);
+        const full = board();
+        while (full.qa.some(q => !q.banked)) full.play(0);
+        full.play(3); full.step(1); full.step(1);
+        ok('rushing the call banks fewer boxes than working the script',
+           rush.qa.filter(q=>q.banked).length < full.qa.filter(q=>q.banked).length,
+           rush.qa.filter(q=>q.banked).length + ' vs ' + full.qa.filter(q=>q.banked).length);
+        ok('and the boxes you skipped are gone — the call is over',
+           rush.finished && rush.resolved && rush.score < 1,
+           'rushed to ' + rush.score.toFixed(3));
+      }
+      /* 4. THE LIVE DECISION, and it has to be a real one. A caller with no
+            patience left hangs up, and ticking a box they already answered
+            costs a line of it — so on a TIGHT call the lie loses you the call
+            and skipping the box wins. */
+      {
+        /* one shared shape so that only the decision differs: four steps, a
+           caller with exactly enough left to hear the script and the answer,
+           and the second box already answered */
+        const tightBoard = () => {
+          const g = board();
+          g.qa = QA_STEPS.map(q => ({ id:q.id, box:q.box, say:q.say, banked:false, dead:false }));
+          g.par = g.qa.length + 1;
+          /* exactly enough patience for the whole script AND the answer, and
+             not one line more — so the extra line a lie costs is the call */
+          g.lines = CALLS[0].lines.concat(CALLS[1].lines).slice(0, g.qa.length + 2)
+                      .map(l => ({ t:l.t }));
+          g.fixAt = 1; g.at = 1; g.qa[1].dead = true;
+          return g;
+        };
+        const lie = tightBoard();
+        let guard = 0;
+        while (lie.qa.some(q => !q.banked) && !lie.over && guard++ < 20) lie.play(0);
+        if (!lie.over) lie.play(3);
+        lie.step(1); lie.step(1);
+
+        /* the same script, except that when the next line has become a lie the
+           player reaches past it for the next one that has not */
+        const skip = tightBoard();
+        guard = 0;
+        while (skip.qa.some(q => !q.banked && !q.dead) && !skip.over && guard++ < 20){
+          const c = skip.cards();
+          skip.play(c[0].k === 'qa' && c[0].q.dead ? 1 : 0);
+        }
+        if (!skip.over) skip.play(3);
+        skip.step(1); skip.step(1);
+
+        ok('card 2 is how you decline a lie',
+           skip.lies === 0 && lie.lies > 0 &&
+           skip.qa.filter(q => q.banked).length === skip.qa.length - 1,
+           'skipping banked ' + skip.qa.filter(q => q.banked).length + '/' + skip.qa.length +
+           ' with ' + skip.lies + ' lies; the script told ' + lie.lies);
+        ok('on a tight call the lie costs you the caller',
+           skip.resolved && !lie.resolved,
+           'skip resolved ' + skip.resolved + ', lie resolved ' + lie.resolved);
+        ok('so the box you skipped was worth less than ticking it',
+           skip.score > lie.score,
+           'skipped ' + skip.score.toFixed(3) + ' vs lied ' + lie.score.toFixed(3));
+      }
+      /* 5. and the patience is real: a caller with nothing left to say hangs
+            up, so a wasted turn on a tight call really does cost the call. */
+      {
+        const tight = board();
+        tight.lines = CALLS[0].lines.slice(0, tight.qa.length + 1).map(l => ({ t:l.t }));
+        tight.fixAt = 1; tight.at = 0;
+        let guard = 0;
+        while (tight.qa.some(q => !q.banked) && !tight.over && guard++ < 20) tight.play(0);
+        const banked = tight.qa.filter(q => q.banked).length;
+        tight.play(2);                                  /* one stall too many */
+        ok('a wasted turn on a tight call loses it',
+           banked === tight.qa.length && tight.over && !tight.resolved,
+           'banked ' + banked + '/' + tight.qa.length + ', resolved ' + tight.resolved);
+      }
+      /* 6. a call you never resolve is the worst outcome available */
+      {
+        const dead = board();
+        let guard = 0;
+        while (!dead.over && guard++ < 40) dead.play(2);
+        dead.step(1); dead.step(1);
+        ok('letting them hang up scores below every finished call',
+           dead.finished && !dead.resolved && dead.score < .5,
+           'score ' + dead.score.toFixed(3));
+      }
+      /* 7. nothing on this board is on a stopwatch — the caller moves when you
+            speak, never when time passes. This is the CRAFT defect, and it must
+            not come back in on a new board. */
+      {
+        const idle = board();
+        const at0 = idle.at, turns0 = idle.turns;
+        for (let i=0;i<200;i++) idle.step(1/30);
+        ok('the caller does not advance while you think',
+           idle.at === at0 && idle.turns === turns0 && !idle.finished,
+           'at ' + idle.at + ' turns ' + idle.turns);
+      }
+      MG = savedMG; G.state = savedState; G.modal = savedModal;
     }
     /* Colour must never be the only way to read a puzzle: the cable rack pairs
        red against green and blue against purple, and it is half the minigames
