@@ -3652,6 +3652,24 @@ function interact(act){
     case 'door': break;
   }
 }
+/* DERIVED, NEVER STORED. gateWin and gateAvg used to be computed once in
+   endDay and then read straight off `run` by the review. They are not in the
+   save — they cannot be, they are a view of perfHist — so a career resumed from
+   SAVE & QUIT rendered its review as "your last 0 average 0%" while perfHist
+   sat there intact with every day still in it. The promotion progress was never
+   lost; the screen simply could not see it, which is worse, because a player
+   who reads that reasonably concludes the career is ruined and starts another
+   one over a save that was fine. Everything here comes from perfHist and
+   rungSince, both of which DO survive. */
+function gateWindow(){
+  const need = run && ROLES[run.rung] && ROLES[run.rung].gates.nextAt;
+  if (!run || !need) return { win:0, avg:0, bar:0, need:null };
+  const bar = need.perf - repHelp();
+  const since = run.rungSince || 0;
+  const w = run.perfHist.slice(Math.max(since, run.perfHist.length - need.days));
+  return { win:w.length, avg: w.length ? w.reduce((a,b) => a+b, 0) / w.length : 0,
+           bar, need };
+}
 function gotoCheck(){
   if (!run.marker || !run.active) return;
   /* the marker must belong to the active ticket's CURRENT step — anything
@@ -3991,15 +4009,11 @@ function endDay(){
        an eight-day career, which is why the ladder measured as unclimbable
        above T2. An average rewards the same consistency without letting one
        bad Tuesday delete a good week, and is what a review actually looks at. */
-    const need = role.gates.nextAt;
-    const bar = need.perf - repHelp();
-    const since = run.rungSince || 0;
-    const win = run.perfHist.slice(Math.max(since, run.perfHist.length - need.days));
-    run.gateWin = win.length;
-    run.gateAvg = win.length ? win.reduce((a,b) => a+b, 0) / win.length : 0;
-    run.gateStreak = win.length;                       // what the review counts up
-    run.gateBar = bar;
-    if (win.length >= need.days && run.gateAvg >= bar) promo = true;
+    const g = gateWindow();
+    run.gateWin = g.win; run.gateAvg = g.avg;
+    run.gateStreak = g.win;                            // what the review counts up
+    run.gateBar = g.bar;
+    if (g.win >= role.gates.nextAt.days && g.avg >= g.bar) promo = true;
   } else run.daysAtTop++;
   /* A career ending still gets its day explained first: the review is built
      either way, and its button leads to the exit interview instead of the
@@ -4111,6 +4125,8 @@ function reviewScreen(dayPerf, eod, promo, ending){
     '<dt>Performance</dt><dd><b>' + Math.round(dayPerf*100) + '%</b> — ' + perfName(dayPerf) +
       (dPrev === null ? '' : ' <span style="color:' + (dPrev >= 0 ? 'var(--ok)' : 'var(--alert)') +
         '">(' + (dPrev >= 0 ? '+' : '') + dPrev + ' on yesterday)</span>') + '</dd>' +
+    (gate ? (() => { const gw = gateWindow(); run.gateWin = gw.win; run.gateAvg = gw.avg;
+                     run.gateBar = gw.bar; return ''; })() : '') +
     (gate ? '<dt>Promotion needs</dt><dd>' + Math.round((run.gateBar != null ? run.gateBar : gate.perf)*100) +
       '% averaged over ' + gate.days + ' days — your last ' +
       Math.min(run.gateWin || 0, gate.days) + ' average ' + Math.round((run.gateAvg || 0)*100) + '%' +
@@ -7700,6 +7716,39 @@ function selfTest(runSim){
       ok('review: it says whether you had started them',
          /never started|part-way in|never picked up/.test(html));
 
+      /* THE REVIEW MUST SURVIVE A RELOAD. gateWin and gateAvg are a VIEW of
+         perfHist, were computed once in endDay and read straight off `run`, and
+         are not in the save because they cannot be. So a career resumed from
+         SAVE & QUIT printed "your last 0 average 0%" over a perfHist with every
+         day still in it — the progress was intact and the screen could not see
+         it, which is worse than losing it, because a player who reads that
+         starts a new career over a save that was fine. */
+      {
+        const realRaw = localStorage.getItem(SAVE_KEY);
+        try {
+          SAVE_SUSPEND = false;
+          QUIET = true; rngInit('RESUME'); runInit('RESUME');
+          rollDay(); simDay(0.75, { order:'pridead' });
+          const liveDays = run.perfHist.length, liveWin = gateWindow().win,
+                liveAvg = gateWindow().avg;
+          saveGame();
+          const snap = loadGame();
+          run = null;
+          resumeRun(snap);
+          const back = gateWindow();
+          ok('the promotion window survives save and resume',
+             liveDays > 0 && liveWin > 0 && back.win === liveWin,
+             'before ' + liveWin + ' day(s) in the window, after ' + back.win);
+          ok('and the average with it',
+             Math.abs(back.avg - liveAvg) < 1e-9,
+             'before ' + (liveAvg*100).toFixed(1) + '%, after ' + (back.avg*100).toFixed(1) + '%');
+        } finally {
+          SAVE_SUSPEND = true;
+          if (realRaw === null) localStorage.removeItem(SAVE_KEY);
+          else localStorage.setItem(SAVE_KEY, realRaw);
+        }
+        run = null;
+      }
       /* THE LEDGER IS ABOUT TODAY. Every counter beside it in startCommute was
          reset and this one was not, so it grew for a whole career: the review's
          "What it cost you" block printed day one's three worst tickets every
