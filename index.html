@@ -114,7 +114,18 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
    dimming to .55 put half-transparent text over corridor tiles and filing
    cabinets and made the message unreadable, which is the one thing a toast
    must not be. */
-body.queueopen .toastwrap{top:auto; bottom:2%}
+body.queueopen .toastwrap, body.gameopen .toastwrap{top:auto; bottom:2%}
+/* gameopen, NOT panelopen. The comment above says toasts "sat across every
+   minigame board" and were fixed — but the rule that fixed it was scoped to
+   the queue alone, so they went on sitting across every board for as long as
+   that comment claimed otherwise. A playtester's screenshot has an SLA BREACH
+   toast printed straight over the words HOW THIS ONE WORKS on the how-to-play
+   card, with JARGON TRANSLATION bleeding through underneath it.
+   It cannot be body.panelopen either, and that is the trap the comment above
+   is warning about: the DIALOGUE box sets panelopen too, and it is
+   bottom-anchored, so bottom:2% would put the toast underneath it. The board
+   is canvas-drawn between y26 and y240 of 270 — the same geometry the queue
+   panel has — so it wants the queue's rule and its own class. */
 /* A full-screen menu covers the world, so a toast ABOUT the world has nothing
    to say over it — and the top slot is exactly where the pause card puts its
    own title, so one landed squarely on "DAY 1 — INTERN". */
@@ -3635,6 +3646,7 @@ function closeModalToWork(){
   G.modal = null; G.state = 'work';
   document.body.classList.remove('panelopen');
   document.body.classList.remove('queueopen');
+  document.body.classList.remove('gameopen');
   dlg = null; MG = null;
   document.getElementById('tix').style.display = 'none';
   document.getElementById('dlg').style.display = 'none';
@@ -4510,6 +4522,7 @@ function openGame(id, diff, onDone){
   if (run && run.stress > BURN.wrecked) d += 1;
   MG = GAMES[id].init(Math.max(1, d));
   document.body.classList.add('panelopen');
+  document.body.classList.add('gameopen');
   /* on the easiest games there is no difficulty left to remove, so the cert
      pays out as one forgiven slip instead of doing nothing at all */
   MG.forgive = cert ? 1 : 0;
@@ -7289,6 +7302,78 @@ function selfTest(runSim){
       const hidden = rules.filter(r => /screenopen/.test(r.selectorText) && /none/.test(r.style.display || ''));
       ok('toasts: a full-screen menu hides them', hidden.length === 1,
          hidden.length + ' rules');
+
+      /* MEASURED, NOT ASSERTED FROM THE STYLESHEET. The rule above claimed for
+         weeks that toasts had been moved off "every minigame board" while
+         being scoped to the queue alone, and a stylesheet-reading test would
+         have agreed with the comment. This one opens a real board, fires a
+         real toast, and compares the two boxes on screen. The board is drawn
+         on the canvas at y26..y240 of 270, so its rectangle is computed from
+         the canvas, not from the DOM. */
+      {
+        const savedState = G.state, savedModal = G.modal, savedMG = MG;
+        const savedScreen = document.querySelector('.screen[style*="flex"]');
+        /* The title screen sets body.screenopen, which display:none's the whole
+           toast rail — measure through that and every rectangle is 0x0, every
+           comparison is null, and the test passes on a build where the toast
+           lands squarely on the board. That is exactly how the first version of
+           this test passed two mutations that put the bug straight back. */
+        show(null);
+        /* toast() is a no-op while QUIET, which earlier blocks leave set. The
+           first version of this test measured a rail that never got a child
+           and reported null, which both comparisons treated as "fine". */
+        const savedQuiet = QUIET; QUIET = false;
+        const overlaps = () => {
+          const t = document.getElementById('toasts').firstChild;
+          const cb = view.getBoundingClientRect();
+          if (!t) return null;
+          const tb = t.getBoundingClientRect();
+          if (!tb.width || !cb.width) return null;
+          const sc = cb.height / VH;                 // the board is canvas y26..y240
+          return tb.bottom > cb.top + 26*sc && tb.top < cb.top + 240*sc;
+        };
+        clearToasts(); toast('SLA BREACH P2 - SOMEBODY IS LOCKED OUT', 'alert', 4000);
+        const looseHit = overlaps();
+        rngInit('JOB-TEST'); openGame('jargon', 1, () => {});
+        clearToasts(); toast('SLA BREACH P2 - SOMEBODY IS LOCKED OUT', 'alert', 4000);
+        const boardHit = overlaps();
+        ok('toasts: a toast never lands on the minigame board it interrupts',
+           boardHit === false,
+           boardHit === null ? 'NOT MEASURED — the rail had no box' : 'the toast overlaps the board');
+        /* and the guard is worth nothing unless the UNMOVED toast really does
+           hit, or it would pass on a build where the rail sat clear anyway */
+        ok('toasts: and that is a real move, not a coincidence of layout',
+           looseHit === true,
+           looseHit === null ? 'NOT MEASURED — the rail had no box'
+                             : 'the toast never overlapped the board area to begin with');
+        /* THE OTHER HALF, and the trap the CSS comment warns about. The naive
+           fix here is body.panelopen — but the DIALOGUE box sets panelopen too
+           and is bottom-anchored at bottom:4%, so bottom:2% would slide the
+           toast underneath a z-60, 96%-opaque box. That regression shipped once
+           already and nothing guarded it. */
+        clearToasts();
+        document.body.classList.remove('gameopen');
+        document.getElementById('dlg').style.display = 'block';
+        document.body.classList.add('panelopen');
+        toast('SLA BREACH P2 - SOMEBODY IS LOCKED OUT', 'alert', 4000);
+        const dlgHit = (() => {
+          const t = document.getElementById('toasts').firstChild;
+          const db = document.getElementById('dlg').getBoundingClientRect();
+          if (!t) return null;
+          const tb = t.getBoundingClientRect();
+          if (!tb.width || !db.width) return null;
+          return tb.bottom > db.top && tb.top < db.bottom;
+        })();
+        ok('toasts: and never underneath the dialogue box, which is bottom-anchored',
+           dlgHit === false,
+           dlgHit === null ? 'NOT MEASURED — no box' : 'the toast is behind the dialogue box');
+        document.getElementById('dlg').style.display = 'none';
+        clearToasts(); QUIET = savedQuiet;
+        MG = savedMG; G.state = savedState; G.modal = savedModal;
+        document.body.classList.remove('panelopen');
+        document.body.classList.remove('gameopen');
+        if (savedScreen) show(savedScreen.id);
+      }
       /* and show() actually applies the class it depends on */
       show('s-pause');
       const onScreen = document.body.classList.contains('screenopen');
@@ -7926,15 +8011,22 @@ function selfTest(runSim){
 
     /* --- what the second fleet caught (wave 2, five players) --- */
 
-    /* toasts must not be moved underneath a bottom-anchored dialogue box.
-       Only the CENTRED queue panel ever needed them relocated. */
+    /* toasts must not be moved underneath a bottom-anchored dialogue box. The
+       two CENTRED panels — the queue and the minigame board — are the only
+       things that ever needed them relocated, and bare .panelopen is the wrong
+       hook for it because the dialogue box sets that class too.
+       This used to read "only the queue panel relocates them" and passed the
+       board's rule purely because it was comma-joined onto the queue's
+       selector; split into its own rule it would have failed a correct build. */
     {
       const css = [...document.styleSheets].flatMap(sh => { try { return [...sh.cssRules]; } catch(_){ return []; } })
         .filter(r => r.selectorText && /toastwrap/.test(r.selectorText));
       const moved = css.filter(r => /bottom/.test(r.style.cssText || ''));
-      ok('toasts: only the queue panel relocates them',
-         moved.every(r => /queueopen/.test(r.selectorText)),
-         moved.map(r => r.selectorText).join(' / ') || 'none');
+      const scoped = r => r.selectorText.split(',').every(sel =>
+        !/toastwrap/.test(sel) || /queueopen|gameopen/.test(sel));
+      ok('toasts: only the two centred panels relocate them',
+         moved.every(scoped),
+         moved.filter(r => !scoped(r)).map(r => r.selectorText).join(' / ') || 'none');
       /* and the classes are actually applied where claimed */
       QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
       loadMap('office1'); spawnPeople(); G.state = 'work';
