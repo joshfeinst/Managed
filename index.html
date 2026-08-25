@@ -1663,7 +1663,7 @@ const TICKETS = {
      a request to do something you can technically do and probably should not. */
   'dl-blast-radius': { tiers:[2,4], weight:4, sla:26, slaMult:1.5, pri:1, stress:9,
     title:'"All Staff" list is going to all staff — please fix',
-    steps:[{say:'t2.dl.a'},{choice:'t2.dl.b'},{say:'t2.dl.c'}] },
+    steps:[{say:'t2.dl.a'},{game:'blast',diff:2},{choice:'t2.dl.b'},{say:'t2.dl.c'}] },
   'vendor-says-any-any': { tiers:[2,5], weight:3, sla:34, slaMult:1.7, pri:1, stress:8,
     title:'Firewall rule for the new app — vendor doc says "disable the firewall"',
     steps:[{say:'t2.fw.a'},{choice:'t2.fw.b'}] },
@@ -1672,7 +1672,7 @@ const TICKETS = {
     steps:[{say:'t2.wipe.a'},{choice:'t2.wipe.b'},{say:'t2.wipe.c'}] },
   'delegate-her-mailbox': { tiers:[2,6], weight:3, sla:30, slaMult:1.6, pri:1, stress:9,
     title:'Grant me full access to {user}\'s mailbox — approved by her manager',
-    steps:[{say:'t2.mbx.a'},{choice:'t2.mbx.b'}] },
+    steps:[{say:'t2.mbx.a'},{game:'blast',diff:1},{choice:'t2.mbx.b'}] },
   'payroll-print-window': { tiers:[2,4], weight:3, sla:24, slaMult:1.5, pri:1, stress:9,
     title:'Payroll cannot print and the run closes at 3pm',
     steps:[{say:'t2.pay.a'},{goto:'PRINTER'},{game:'cable',diff:2},{say:'t2.pay.b'}] },
@@ -1681,7 +1681,7 @@ const TICKETS = {
     steps:[{say:'t2.rst.a'},{choice:'t2.rst.b'}] },
   'rename-gandalf': { tiers:[2,6], weight:3, sla:52, slaMult:2.3, pri:2, stress:6,
     title:'Rename the file server GANDALF — the new CFO finds it unprofessional',
-    steps:[{say:'t2.gnd.a'},{choice:'t2.gnd.b'}] },
+    steps:[{say:'t2.gnd.a'},{game:'blast',diff:1},{choice:'t2.gnd.b'}] },
   'lockout-source-hunt': { tiers:[2,5], weight:3, sla:46, slaMult:2.1, pri:2, stress:7,
     title:'svc_backup keeps locking out every 32 minutes',
     steps:[{say:'t2.lock.a'},{game:'pw',diff:2},{choice:'t2.lock.b'}] },
@@ -1690,7 +1690,7 @@ const TICKETS = {
     steps:[{say:'t2.unfix.a'},{choice:'t2.unfix.b'}] },
   'offboard-maybe': { tiers:[2,6], weight:3, sla:38, slaMult:1.8, pri:3, stress:8,
     title:'Remove {user}\'s access. All of it. (Mackenzie: "he\'s still here?")',
-    steps:[{say:'t2.off.a'},{choice:'t2.off.b'}] },
+    steps:[{say:'t2.off.a'},{game:'blast',diff:2},{choice:'t2.off.b'}] },
   'vpn-except-her': { tiers:[2,4], weight:3, sla:42, slaMult:2.0, pri:3, stress:6,
     title:'VPN works for everyone except {user}',
     steps:[{say:'t2.vpn.a'},{game:'jargon',diff:2},{choice:'t2.vpn.b'}] },
@@ -2019,6 +2019,35 @@ const JARGON = [
     ok:'Guess, so I can tell my boss something.',
     no:['A number will be taken to the stadium.','The estimate must be thrown upward.'] }
 ];
+/* ---------------------------- BLAST RADIUS (T2) ---------------------------
+   T2 is the exact rung where you gain the ability to break things and find
+   out that nobody wrote down what is downstream of anything. So the board is
+   not "can you make the change" — you can, instantly, the button is right
+   there. It is "do you know who this lands on".
+
+   The rule the panel prints IS the rule it scores: a thing is affected if
+   every hop from the object you are changing down to it is a MEMBER hop.
+   A DENIED hop stops there and takes its whole subtree with it, STALE is a
+   leftover nobody has used since the year on the label, and a LINK is a
+   pointer back into something you have already looked at. Marking people the
+   change will not touch is its own sin here and is scored like one — warning
+   the whole company is not the same thing as knowing.
+
+   ACCURACY ONLY, like the rack. Digging costs you nothing but the flat charge
+   the ticket already paid to open the panel. */
+const BR_GROUPS = ['ALL-STAFF','ALL-STAFF-OLD','FINANCE','FINANCE-RO','SHAREPOINT-RW',
+                   'VPN-USERS','PAYROLL-DIGEST','MEETING-ROOMS','PRINTERS-3F','BOARD-PACK',
+                   'CONTRACTORS','LEAVERS-2019','APP-TIMESHEET','MAILBOX-DELEGATES'];
+const BR_LEAVES = ['j.okonkwo','p.almeida','the shared calendar','reception1','t.varga',
+                   'accounts@','m.blessing','the timesheet app','h.duval','scanner-3f',
+                   'k.ito','payroll@','r.singh (assistant)','noreply-alerts@','c.whitfield'];
+const BR_TAGS = {
+  member: { lab:'MEMBER',       col:'#c9c4b8', hits:true  },
+  deny:   { lab:'DENIED',       col:'#d64541', hits:false },
+  stale:  { lab:'STALE 2019',   col:'#7a5a2a', hits:false },
+  link:   { lab:'LINK BACK',    col:'#c084fc', hits:false }
+};
+
 /* ------------------------- BY THE SCRIPT (the T1 board) --------------------
    T1 is the only rung where somebody else wrote your words down and then
    grades you on having said them. So the board is a call, and the two things
@@ -4364,6 +4393,13 @@ function abandonScore(g){
     const left = g.rounds.length - g.at;
     return g.rounds.length ? (g.right + left) / g.rounds.length : 1;
   }
+  if (g.kind === 'blast'){
+    /* the best it could still finish at: everything left to find, found, and
+       nothing wrongly marked from here on — the marks already wrong stand */
+    const marked = g.all.filter(n => n.marked && !n.group);
+    const over = Math.max(0, marked.length - marked.filter(n => n.hits).length - (g.forgive || 0));
+    return clamp(1 - over*.25, 0, 1);
+  }
   if (g.kind === 'script'){
     /* the best it could still finish at: every remaining box banked honestly
        and the call resolved, each of which costs one more turn */
@@ -4511,6 +4547,21 @@ const GAME_BRIEF = {
            'told you they restarted it, asking is a lie: QA ticks it, the caller ' +
            'hears it, and it costs you. Half the marks are the script, half are ' +
            'getting them off the phone.'
+  },
+  blast: {
+    what: 'You can make this change. That was never the question. The question ' +
+          'is who it lands on — so open the groups underneath it and mark every ' +
+          'person the change actually reaches.',
+    keys: [
+      ['UP / DOWN', 'move down the tree'],
+      ['E or SPACE', 'open or close a group'],
+      ['1', 'mark or unmark a person'],
+      ['2', 'apply the change'],
+      ['CLICK', 'a row opens it, or marks it']
+    ],
+    watch: 'A MEMBER hop carries the change. DENIED stops it and everything under ' +
+           'it. STALE and LINK BACK never carried anything. Marking someone it ' +
+           'does not reach costs you more than missing them.'
   }
 };
 const GAMES = {
@@ -4886,6 +4937,143 @@ const GAMES = {
               (this.lies ? '   LIES ' + this.lies : ''),
               240, 236, '#8b93a0', 6, 'center');
       } };
+  }},
+  /* --------------------------- BLAST RADIUS (T2) -------------------------- */
+  blast: { init(diff){
+    /* the group you are changing is not also one of its own members: it comes
+       out of the pool before anything is built from it */
+    const objName = BR_GROUPS[Ri('game', BR_GROUPS.length)];
+    const POOL = BR_GROUPS.filter(g => g !== objName);
+    const gN = [...POOL], lN = [...BR_LEAVES];
+    const take = a => a.splice(Ri('game', a.length), 1)[0];
+    let uid = 0, deepest = 0;
+    /* A subtree is only ever as affected as the hop that reaches it: one
+       denied hop and nothing below it is in the blast radius, which is the
+       only thing on this board that rewards reading rather than clicking. */
+    const build = (depth, live) => {
+      const kids = [];
+      const n = depth === 0 ? 2 + Math.min(diff, 2) : (depth === 1 ? 2 + Ri('game', 2) : 1 + Ri('game', 2));
+      for (let i = 0; i < n; i++){
+        const group = depth < 2 && gN.length && Ri('game', 3) > 0;
+        /* one hop in four is something other than plain membership, and the
+           odds of that rise with the difficulty */
+        const roll = Ri('game', 10);
+        const tag = roll < (4 + diff) ? (roll % 3 === 0 ? 'deny' : roll % 3 === 1 ? 'stale' : 'link') : 'member';
+        const mine = live && BR_TAGS[tag].hits;
+        const node = { id:'n'+(uid++), depth, tag,
+                       name: group && gN.length ? take(gN) : (lN.length ? take(lN) : 'user-' + uid),
+                       group, open:false, marked:false, hits:mine, kids:[] };
+        if (group) node.kids = build(depth + 1, mine);
+        else if (mine) deepest = Math.max(deepest, depth);
+        kids.push(node);
+      }
+      return kids;
+    };
+    let root = null, guard = 0;
+    /* Every round hides one, three levels down, and it is always somebody's
+       assistant. A round that failed to grow one is not a round. */
+    /* A round has to be worth opening: somebody three levels down, and more
+       than one name to find — with a single target a stray mark is a quarter
+       of the board and the game is a coin toss. */
+    let live = 0;
+    do { uid = 0; deepest = 0; gN.length = 0; gN.push(...POOL); lN.length = 0; lN.push(...BR_LEAVES);
+         root = build(0, true);
+         live = 0; (function count(ns){ for (const n of ns){ if (n.hits && !n.group) live++; count(n.kids); } })(root);
+       } while ((deepest < 2 || live < 2) && guard++ < 60);
+    const flatAll = [];
+    (function walk(ns){ for (const n of ns){ flatAll.push(n); walk(n.kids); } })(root);
+    return { kind:'blast', root, all:flatAll, cur:0, top:0, applied:false,
+      total: flatAll.filter(n => n.hits && !n.group).length,
+      objName, obj: 'SECURITY GROUP ' + objName,
+      click:null, flash:0, flashTxt:'', flashOk:false,
+      hint:'MARK EVERYONE THIS LANDS ON, THEN APPLY',
+      rows(){
+        const out = [];
+        (function walk(ns){ for (const n of ns){ out.push(n); if (n.group && n.open) walk(n.kids); } })(this.root);
+        return out;
+      },
+      rowRect(i){ return [66, 72 + i*11, 348, 10]; },
+      btns: [ { x:76,  y:206, w:100, h:18, k:'mark',  cap:'1  MARK' },
+              { x:186, y:206, w:112, h:18, k:'open',  cap:'E  EXPAND' },
+              { x:308, y:206, w:100, h:18, k:'apply', cap:'2  APPLY' } ],
+      act(k){
+        const rs = this.rows(), n = rs[this.cur];
+        if (k === 'apply'){ this.applied = true; return; }
+        if (!n) return;
+        if (k === 'open'){
+          /* clicking a group OPENS it. It never counts as knowing. */
+          if (!n.group){ this.flash = .7; this.flashOk = false;
+                         this.flashTxt = 'THAT IS A PERSON, NOT A GROUP — MARK IT WITH 1'; sfx('err'); return; }
+          n.open = !n.open; sfx('ui'); return;
+        }
+        if (k === 'mark'){
+          if (n.group){ this.flash = .7; this.flashOk = false;
+                        this.flashTxt = 'A GROUP IS NOT AN ANSWER — OPEN IT'; sfx('err'); return; }
+          n.marked = !n.marked; sfx('ui');
+        }
+      },
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.applied){
+          if (this.flash > 0) return;
+          const marked = this.all.filter(n => n.marked && !n.group);
+          const found = marked.filter(n => n.hits).length;
+          const over  = Math.max(0, marked.length - found - (this.forgive || 0));
+          this.hit = found; this.over = over;
+          this.score = clamp((this.total ? found / this.total : 1) - over*.25, 0, 1);
+          this.finished = true;
+          return;
+        }
+        const rs = this.rows();
+        if (press.up)   this.cur = (this.cur + rs.length - 1) % rs.length;
+        if (press.down) this.cur = (this.cur + 1) % rs.length;
+        let k = press.use ? 'open' : press.one ? 'mark' : press.two ? 'apply' : null;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (const b of this.btns) if (inRect(pt, b.x, b.y, b.w, b.h)) k = b.k;
+          const vis = Math.min(rs.length - this.top, 12);
+          for (let i = 0; i < vis; i++) if (inRect(pt, ...this.rowRect(i))){
+            /* a click both selects the row and does the obvious thing to it */
+            this.cur = this.top + i; k = rs[this.cur].group ? 'open' : 'mark';
+          }
+        }
+        /* keep the selection on screen without a scrollbar nobody can grab */
+        if (this.cur < this.top) this.top = this.cur;
+        if (this.cur > this.top + 11) this.top = this.cur - 11;
+        if (k) this.act(k);
+      },
+      draw(){
+        mgPanel('BLAST RADIUS', this.hint);
+        txt('CHANGING: ' + this.obj, 66, 68, '#ffb02e', 6);
+        const rs = this.rows();
+        rs.slice(this.top, this.top + 12).forEach((n, i) => {
+          const [x, y] = this.rowRect(i);
+          const sel = (this.top + i) === this.cur;
+          if (sel){ ctx.fillStyle = '#1b2129'; ctx.fillRect(x - 2, y - 1, 352, 11); }
+          const ix = x + 6 + n.depth*10;
+          txt(n.group ? (n.open ? '-' : '+') : (n.marked ? '#' : '.'), ix, y + 8,
+              n.marked ? '#39d7ff' : n.group ? '#8b93a0' : '#5c646e', 6);
+          txt(n.name, ix + 12, y + 8, n.marked ? '#39d7ff' : n.group ? '#e8e4da' : '#c9c4b8', 6);
+          txt(BR_TAGS[n.tag].lab, 404, y + 8, BR_TAGS[n.tag].col, 6, 'right');
+        });
+        /* the row counter used to sit at y200, which is where the twelfth row
+           draws its text */
+        if (rs.length > 12)
+          txt((this.top + 1) + '-' + Math.min(rs.length, this.top + 12) + ' OF ' + rs.length,
+              404, 68, '#5c646e', 6, 'right');
+        for (const b of this.btns){
+          ctx.fillStyle = '#1b2129'; ctx.fillRect(b.x, b.y, b.w, b.h);
+          ctx.strokeStyle = b.k === 'apply' ? '#4ade80' : '#343b44';
+          ctx.strokeRect(b.x + .5, b.y + .5, b.w - 1, b.h - 1);
+          txt(b.cap, b.x + b.w/2, b.y + 12, b.k === 'apply' ? '#4ade80' : '#c9c4b8', 6, 'center');
+        }
+        if (this.flash > 0)
+          txt(this.flashTxt, 240, 236, this.flashOk ? '#4ade80' : '#d64541', 6, 'center');
+        else
+          txt('MARKED ' + this.all.filter(n => n.marked).length +
+              ' · A MEMBER HOP CARRIES THE CHANGE · DENIED, STALE AND LINK DO NOT',
+              240, 236, '#8b93a0', 6, 'center');
+      } };
   }}
 };
 
@@ -4930,7 +5118,8 @@ function drawBrief(g){
   txt('H reopens this', R - PAD, 250, '#5c646e', 6, 'right');
 }
 const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
-                    jargon:'JARGON TRANSLATION', script:'BY THE SCRIPT' };
+                    jargon:'JARGON TRANSLATION', script:'BY THE SCRIPT',
+                    blast:'BLAST RADIUS' };
 function mgPanel(title, hint){
   ctx.fillStyle = 'rgba(8,10,13,.88)'; ctx.fillRect(0,0,VW,VH);
   ctx.fillStyle = '#12161b'; ctx.fillRect(60, 26, 360, 214);
@@ -6222,6 +6411,114 @@ function selfTest(runSim){
         ok('the caller does not advance while you think',
            idle.at === at0 && idle.turns === turns0 && !idle.finished,
            'at ' + idle.at + ' turns ' + idle.turns);
+      }
+      MG = savedMG; G.state = savedState; G.modal = savedModal;
+    }
+    /* BLAST RADIUS. The board's claim is that clicking is not knowing: you can
+       always make the change, and the only thing being measured is whether you
+       worked out who it lands on. That has to survive contact with the two
+       strategies that would make it a non-game — mark everything, and mark
+       nothing. */
+    {
+      const savedState = G.state, savedModal = G.modal, savedMG = MG;
+      const board = seed => { rngInit(seed || 'JOB-TEST'); openGame('blast', 2, () => {});
+                              const g = MG; g.brief = null; return g; };
+      const openAll = g => { for (const n of g.all) if (n.group) n.open = true; };
+      const finish = g => { g.applied = true; g.step(1); g.step(1); return g.score; };
+
+      /* 1. the rule the panel prints is the rule that scores. Only a chain of
+            MEMBER hops carries the change; a DENIED hop takes its subtree. */
+      {
+        /* the sentence on the card, as a table lookup — if these ever drift the
+           board is marking people against a rule it never told them */
+        ok('the printed rule is the scored rule',
+           BR_TAGS.member.hits === true && !BR_TAGS.deny.hits &&
+           !BR_TAGS.stale.hits && !BR_TAGS.link.hits,
+           Object.keys(BR_TAGS).map(k => k + (BR_TAGS[k].hits ? '+' : '-')).join(' '));
+        const g = board();
+        const bad = [];
+        (function walk(ns, live){
+          for (const n of ns){
+            const mine = live && BR_TAGS[n.tag].hits;
+            if (n.hits !== mine) bad.push(n.name + ' ' + n.tag + ' hits=' + n.hits);
+            walk(n.kids, mine);
+          }
+        })(g.root, true);
+        ok('only an unbroken member chain carries the change', bad.length === 0,
+           bad.slice(0, 3).join(' / '));
+        const denied = g.all.filter(n => n.tag === 'deny');
+        ok('a denied hop takes its whole subtree with it',
+           denied.length > 0 && denied.every(n => !n.hits && n.kids.every(k => !k.hits)),
+           denied.length + ' denied hops');
+      }
+      /* 2. every round hides one three levels down — that IS the round */
+      {
+        const depths = [], totals = [], inside = [];
+        /* five seeds is not a sweep — with five, a generator that CAN deal a
+           one-name round simply did not, and the test said nothing */
+        for (let i = 0; i < 24; i++){
+          const seed = 'JOB-SWEEP-' + i;
+          const g = board(seed);
+          depths.push(Math.max(...g.all.filter(n => n.hits && !n.group).map(n => n.depth), -1));
+          totals.push(g.total);
+          /* exact, not substring: ALL-STAFF and ALL-STAFF-OLD are meant to be
+             two different groups whose names look alike, and that is the joke */
+          inside.push(g.all.some(n => n.name === g.objName));
+        }
+        ok('every round buries somebody at least three levels down',
+           depths.every(d => d >= 2), depths.join(','));
+        ok('and no round comes down to one name',
+           totals.every(t => t >= 2), totals.join(','));
+        ok('the group you are changing is not one of its own members',
+           inside.every(x => x === false), inside.join(','));
+      }
+      /* 3. a group is never an answer. Clicking it opens it. */
+      {
+        const g = board();
+        const grp = g.rows().find(n => n.group);
+        g.cur = g.rows().indexOf(grp);
+        g.act('mark');
+        ok('marking a group does nothing but tell you off',
+           !grp.marked && !g.flashOk, 'marked ' + grp.marked);
+        g.act('open');
+        ok('opening it is what the click is for', grp.open, 'open ' + grp.open);
+      }
+      /* 4. THE TWO NON-GAMES. Warning everybody must lose to knowing, and so
+            must committing on sight — otherwise there is nothing here to do. */
+      {
+        const know = board();  openAll(know);
+        for (const n of know.all) if (!n.group && n.hits) n.marked = true;
+        const knew = finish(know);
+
+        const all = board();   openAll(all);
+        for (const n of all.all) if (!n.group) n.marked = true;
+        const warnedEveryone = finish(all);
+
+        const blind = board();
+        const blindly = finish(blind);
+
+        ok('knowing scores full marks', knew > .99, knew.toFixed(3));
+        ok('warning everybody scores worse than knowing', warnedEveryone < knew,
+           'everybody ' + warnedEveryone.toFixed(3) + ' vs knowing ' + knew.toFixed(3));
+        ok('and so does applying it on sight', blindly < knew,
+           'on sight ' + blindly.toFixed(3));
+        ok('a wrong name costs more than a missing one',
+           warnedEveryone < blindly + 1e-9 || warnedEveryone < .5,
+           'everybody ' + warnedEveryone.toFixed(3) + ', on sight ' + blindly.toFixed(3));
+      }
+      /* 5. nothing here is on a stopwatch either */
+      {
+        /* opened and marked FIRST — a board that starts closed and stays closed
+           proves nothing about whether time can undo your work */
+        const idle = board();
+        openAll(idle);
+        const first = idle.all.find(n => !n.group);
+        if (first) first.marked = true;
+        const before = JSON.stringify(idle.all.map(n => [n.open, n.marked]));
+        for (let i=0;i<200;i++) idle.step(1/30);
+        ok('digging costs no time in blast radius',
+           !idle.finished && JSON.stringify(idle.all.map(n => [n.open, n.marked])) === before,
+           'finished ' + idle.finished);
       }
       MG = savedMG; G.state = savedState; G.modal = savedModal;
     }
