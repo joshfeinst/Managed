@@ -5559,8 +5559,16 @@ function pauseGame(){
       if (dlg && dlg.scene && !dlg.onDone)
         (run.pendingScenes = run.pendingScenes || []).push({ id: dlg.scene, li: dlg.li });
       if (run.active){
-        if (G.modal.kind === 'game' && MG)
+        if (G.modal.kind === 'game' && MG){
           run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
+          /* Say so on the pause card. Escape from a board you cannot solve DOES
+             let you walk away with what you had earned — but the only words on
+             screen were BACK TO WORK and SAVE & QUIT, neither of which mentions
+             the board. A tester read that as "there is no way out", went back
+             in, and logged 570 mistakes on a five-cable rack. */
+          G.leftBoard = { name: MG_TITLES[MG.gid] || MG.gid.toUpperCase(),
+                          worth: Math.round((run.active.gameCap ?? 1) * 100) };
+        }
         run.resumePending = true;
       }
     }
@@ -5576,11 +5584,18 @@ function pauseGame(){
     '<dt>Stress</dt><dd>' + Math.round(run.stress) + '%</dd>' +
     '<dt>Burnout</dt><dd>' + Math.round(run.burnout) + '%</dd>' +
     '<dt>Job posting</dt><dd>' + run.seed + '</dd>' +
-    '<dt>Pace</dt><dd>' + pace().label.toLowerCase() + '</dd>';
+    '<dt>Pace</dt><dd>' + pace().label.toLowerCase() + '</dd>' +
+    (G.leftBoard
+      ? '<dt>' + G.leftBoard.name + '</dt><dd>left at ' + G.leftBoard.worth +
+        '% — going back to work keeps that and moves the ticket on</dd>'
+      : '');
+  const rb = document.querySelector('[data-act="resume"]');
+  if (rb) rb.textContent = G.leftBoard ? 'LEAVE IT AND CARRY ON ▶' : 'BACK TO WORK ▶';
   show('s-pause');
   saveGame();
 }
 function resumeWork(){
+  G.leftBoard = null;
   if (G.state !== 'pause') return;
   G.state = 'work'; show(null); clearInput(); view.focus();
   hudShow(true);
@@ -6830,6 +6845,37 @@ function selfTest(runSim){
       const orphans = Object.keys(GAMES).filter(g => !dealt.has(g));
       ok('every board the game can open is dealt by some ticket',
          orphans.length === 0, orphans.join(','));
+    }
+    /* LEAVING A BOARD YOU CANNOT SOLVE. The exit has always worked — Escape
+       banks what you had earned and the ticket moves on — but the only words on
+       screen were BACK TO WORK and SAVE & QUIT, neither of which mentions the
+       board. A tester read that as "there is no way out", went back in, and
+       logged 570 mistakes on a five-cable rack. The exit is not a feature until
+       it says so. */
+    {
+      const savedRun = run, savedState = G.state, savedMG = MG, savedModal = G.modal;
+      QUIET = true; rngInit('LEAVE'); runInit('LEAVE'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      run.active = { uid:1, id:'printer-jam', title:'x', fills:{}, at:0, deadline:400,
+                     sla:40, stress:4, si:0, bonus:0, gameScores:[], from:null };
+      openGame('cable', 3, () => {}); MG.brief = null;
+      MG.mistakes = 4;                                   // a board going badly
+      pauseGame();
+      const card = document.getElementById('p-meta').textContent;
+      const btn = document.querySelector('[data-act="resume"]');
+      ok('the pause card says you can walk out of a board',
+         /CABLE MANAGEMENT/i.test(card) && /left at/i.test(card), card.slice(-90));
+      ok('and the button stops pretending it is just a pause',
+         !!btn && !/^BACK TO WORK/i.test(btn.textContent.trim()),
+         btn ? btn.textContent.trim() : 'no button');
+      resumeWork();
+      ok('leaving it really does put the board down', !MG, MG ? 'board still open' : '');
+      const btn2 = document.querySelector('[data-act="resume"]');
+      ok('and an ordinary pause still reads as a pause',
+         (pauseGame(), btn2 && /^BACK TO WORK/i.test(btn2.textContent.trim())),
+         btn2 ? btn2.textContent.trim() : 'no button');
+      G.leftBoard = null; run = savedRun; MG = savedMG;
+      G.state = savedState; G.modal = savedModal; show(null);
     }
     /* NOTHING THE GAME ASKS YOU TO USE MAY BE WALLED IN. Every interactable is
        reached by standing next to it and facing it, so an act tile with no
