@@ -192,7 +192,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
     </div>
 
     <div id="tix">
-      <header><span class="t">SERVICE QUEUE — PROACTIVE IT PARTNERS</span><span class="hint">sorted P1 first · ↑↓ pick · Enter work · Esc close</span></header>
+      <header><span class="t">SERVICE QUEUE — PROACTIVE IT PARTNERS</span><span class="hint" id="tix-rule"></span></header>
       <div id="tix-list"></div>
     </div>
 
@@ -318,6 +318,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
         <div class="ctl"><span>Music</span><span><input type="range" id="o-mus" min="0" max="100" value="35"></span></div>
         <div class="ctl"><span>Text speed</span><span><button class="btn ghost" id="o-tspd" data-act="textspeed" style="padding:4px 9px;font-size:8px">NORMAL</button></span></div>
         <div class="ctl"><span>Shift pace</span><span><button class="btn ghost" id="o-pace" data-act="pace" style="padding:4px 9px;font-size:8px">RELAXED</button></span></div>
+        <div class="ctl"><span>Music (M)</span><span><button class="btn ghost" id="o-mute" data-act="mute" style="padding:4px 9px;font-size:8px">ON</button></span></div>
       </div>
       <p class="hint" id="o-pace-note" style="margin:10px 0 0">The shift is the same eight hours at every pace &mdash; the same tickets, the same deadlines, the same score. Only how fast those hours pass in the real world changes.</p>
       <div class="row"><button class="btn ghost" data-act="back">◀ BACK</button></div>
@@ -2225,7 +2226,13 @@ function slog(msg){
   if (SLOG.length > 400) SLOG.shift();
 }                       // 9:00 -> 17:00, 1 game-minute per real second
 let run = null;
-let meta = { certs:[], rep:0, conn:0, runsPlayed:0, carry:0, best:{ days:0, rung:0 }, pace:null, seenGames:{} };
+/* `pace` was the only setting in here, so it was the only one that survived a
+   reload — a playtester set sound to 7, music to 100 and text speed to SLOW,
+   came back, and got 70/35/NORMAL. M-mute did not persist either, and Options
+   never even reflected it. Every setting lives here now. */
+let meta = { certs:[], rep:0, conn:0, runsPlayed:0, carry:0, best:{ days:0, rung:0 },
+             pace:null, seenGames:{},
+             sfx:0.7, mus:0.35, musOn:true, textSpeed:1 };
 /* Saves written before a field existed are not corrupt, they are just older.
    Fill the gaps on the way in rather than version-bumping for every additive
    option — a missing `pace` is a preference nobody has expressed yet, and a
@@ -2240,7 +2247,26 @@ function normalizeMeta(m){
   if (!m.best || typeof m.best !== 'object') m.best = { days:0, rung:0 };
   if (m.pace !== null && !PACES.some(p => p.id === m.pace)) m.pace = null;
   if (!m.seenGames || typeof m.seenGames !== 'object') m.seenGames = {};
+  const num = (v, d) => (typeof v === 'number' && v >= 0 && v <= 1) ? v : d;
+  m.sfx = num(m.sfx, 0.7); m.mus = num(m.mus, 0.35);
+  if (typeof m.musOn !== 'boolean') m.musOn = true;
+  if (![0,1,2].includes(m.textSpeed)) m.textSpeed = 1;
   return m;
+}
+/* Push saved settings into the live audio graph and UI. Called after any load
+   and whenever the Options screen opens. */
+function applySettings(){
+  A.sfxVol = meta.sfx; A.musVol = meta.mus; A.musOn = meta.musOn;
+  if (A.sfx) A.sfx.gain.value = A.sfxVol;
+  if (A.mus) A.mus.gain.value = A.musOn ? A.musVol : 0;
+  G.textSpeed = meta.textSpeed;
+  const sl = document.getElementById('o-sfx'), ml = document.getElementById('o-mus');
+  if (sl) sl.value = Math.round(meta.sfx*100);
+  if (ml) ml.value = Math.round(meta.mus*100);
+  const ts = document.getElementById('o-tspd');
+  if (ts) ts.textContent = ['SLOW','NORMAL','LUDICROUS'][G.textSpeed];
+  const mu = document.getElementById('o-mute');
+  if (mu) mu.textContent = meta.musOn ? 'ON' : 'MUTED';
 }
 
 /* ------------------------------- run + days ------------------------------- */
@@ -2527,9 +2553,7 @@ let simAcc = 0;
 function sim(dt){
   if (G.state !== 'work' && G.state !== 'modal') return;
   /* the clock does not care what you are doing */
-  /* Everything measured in GAME MINUTES advances by the paced delta; walking,
-     the camera and the NPCs stay on real seconds, because the pace setting is
-     about how much room you get inside the day, not about moving in syrup.
+  /* Everything measured in GAME MINUTES advances by the paced delta.
      A panel holds the clock outright. Reading is not the work; the work is
      priced by TALK and charged when it starts. See that record. */
   const cdt = G.state === 'modal' ? 0 : dt * paceRate();
@@ -2542,8 +2566,17 @@ function sim(dt){
     /* an event just seized the frame: nothing below may clobber its scene */
     if (G.state === 'work'){
       run.stress = clamp(run.stress - cdt*0.02*(1 - run.queue.length*0.12), 0, 100);
-      playerMove(dt);
-      for (const id in npcs) npcUpdate(npcs[id], dt, run.clock);
+      /* Walking is paced TOO. It was handed the raw real-time dt while the
+         shift clock ran at paceRate(), so a walk across the office cost 1.5x
+         more SLA at CRUNCH and 0.62x at RELAXED — the pace dial was a silent
+         difficulty dial, on a screen that promises "same tickets, same
+         deadlines, same score". Every wave-3 tester was told to use CRUNCH,
+         so the whole wave ran on an undeclared harder game. Scaling the walk
+         with the clock makes a tile cost the same game-minutes at every pace,
+         which is what the dial claims. The camera stays on real seconds so
+         the view never lurches. */
+      playerMove(dt * paceRate());
+      for (const id in npcs) npcUpdate(npcs[id], dt * paceRate(), run.clock);
       camUpdate(dt);
       workInput();
       if (G.state === 'work') gotoCheck();   // workInput may have opened a modal
@@ -3057,7 +3090,17 @@ function endDay(){
                     costly: costly.length,
                     worst: costly.length
                       ? 5 - (+Object.keys(STAKES).find(k => STAKES[k] === Math.max.apply(null, costly)) || 2)
-                      : null };
+                      : null,
+                    /* The two numbers the score is literally a ratio of. Five
+                       playtesters read this screen every night for twenty days
+                       between them and none could say how PERFORMANCE was
+                       computed — because the screen showed Speed, Craft and
+                       Goodwill, which are minor terms, and never showed this.
+                       A diligent bot promotes in 3 days; five humans managed
+                       zero, playing the way the screen implied. */
+                    earned: Math.round(run.earned || 0),
+                    burned: Math.round(burnedStakes),
+                    prev: run.perfHist.length ? run.perfHist[run.perfHist.length-1] : null };
   run.perfHist.push(dayPerf);
   slog('END OF DAY — perf ' + Math.round(dayPerf*100) + '%, ' + run.resolved + ' resolved, ' +
        run.breaches + ' breached (' + (run.breaches - Math.min(run.breaches, tolerance)) +
@@ -3149,11 +3192,16 @@ function endDay(){
   run.phase = 'review';
   saveGame();
 }
+/* A 39% day and a 0% day both read "SEE ME — LINDA", so four evenings of a
+   dying career were indistinguishable from each other. The bottom band is
+   split so the slide is visible while it is happening. */
 function perfName(p){
   return p >= .8 ? 'EXCEEDS EXPECTATIONS (SUSPICIOUS)' :
          p >= .62 ? 'MEETS EXPECTATIONS' :
          p >= .4 ? 'DEVELOPING (HR WORD FOR STRUGGLING)' :
-         'SEE ME — LINDA';
+         p >= .28 ? 'BELOW EXPECTATIONS' :
+         p >= .12 ? 'SEE ME — LINDA' :
+         'SEE ME. TODAY. — LINDA';
 }
 function reviewScreen(dayPerf, eod, promo, ending){
   document.getElementById('r-eyebrow').textContent = 'end of day ' + run.day;
@@ -3165,7 +3213,17 @@ function reviewScreen(dayPerf, eod, promo, ending){
   const qual  = run.qualN ? Math.round(run.qualSum / run.qualN * 100) : null;
   const gate  = role0.gates.nextAt;
   const ls    = run.lastScore;
+  /* THE NUMBER THE CAREER TURNS ON, first, in the terms it is actually made
+     of: priority weight you protected against priority weight that burned.
+     Everything below it is detail about how those two were earned. */
+  const den = (ls ? ls.earned + ls.burned : 0) || 1;
+  const dPrev = ls && ls.prev != null ? Math.round((dayPerf - ls.prev)*100) : null;
   document.getElementById('r-stats').innerHTML =
+    (ls ? '<dt>What the day was worth</dt><dd><b>' + ls.earned + '</b> of ' + den +
+      ' priority points protected — that ratio <b>is</b> your performance' +
+      '<br><span class="hint" style="margin:0">P1 is worth ' + STAKES[4] + ', P2 ' + STAKES[3] +
+      ', P3 ' + STAKES[2] + ', P4 ' + STAKES[1] +
+      '. Closing one P1 beats closing three P4s. That is the whole job.</span></dd>' : '') +
     '<dt>Tickets resolved</dt><dd>' + run.resolved + ' (' + run.aces + ' aced)</dd>' +
     '<dt>SLA breaches</dt><dd style="color:' + (run.breaches ? 'var(--alert)' : 'var(--ok)') + '">' +
       run.breaches + (ls && run.breaches
@@ -3174,30 +3232,50 @@ function reviewScreen(dayPerf, eod, promo, ending){
             (ls.worst ? ' (worst: a P' + ls.worst + ')' : '')
                       : ', none held against you')
         : '') + '</dd>' +
-    '<dt>Speed</dt><dd>' + speed + '% of the waiting-room left when you closed them</dd>' +
+    '<dt>Speed</dt><dd>' + speed + '% of each ticket\'s waiting room still unused — higher is better</dd>' +
     '<dt>Craft</dt><dd>' + (qual === null ? 'nothing hands-on today'
       : qual + '% across ' + run.qualN + ' hands-on job' + (run.qualN === 1 ? '' : 's')) + '</dd>' +
-    '<dt>Performance</dt><dd>' + Math.round(dayPerf*100) + '% — ' + perfName(dayPerf) + '</dd>' +
+    '<dt>Performance</dt><dd><b>' + Math.round(dayPerf*100) + '%</b> — ' + perfName(dayPerf) +
+      (dPrev === null ? '' : ' <span style="color:' + (dPrev >= 0 ? 'var(--ok)' : 'var(--alert)') +
+        '">(' + (dPrev >= 0 ? '+' : '') + dPrev + ' on yesterday)</span>') + '</dd>' +
     (gate ? '<dt>Promotion needs</dt><dd>' + Math.round((run.gateBar != null ? run.gateBar : gate.perf)*100) +
       '% averaged over ' + gate.days + ' days — your last ' +
       Math.min(run.gateWin || 0, gate.days) + ' average ' + Math.round((run.gateAvg || 0)*100) + '%' +
       (run.rep ? ' <span style="color:var(--ok)">(' + Math.round(gate.perf*100) + '% before goodwill)</span>' : '') +
       '</dd>' : '') +
     '<dt>Goodwill</dt><dd>' + (run.rep || 0) + ' — ' +
-      (run.rep ? 'worth ' + (repHelp()*100).toFixed(1) + ' points off the bar' +
-                 (repHelp() >= REP.maxHelp ? ' (as much as it buys)' : '')
-               : 'nobody has mentioned you either way') + '</dd>' +
+      (run.rep ? 'lowers the PROMOTION BAR by ' + (repHelp()*100).toFixed(1) + ' points' +
+                 (repHelp() >= REP.maxHelp ? ' (as much as it ever buys)' : '') +
+                 '; it does not change today\'s score'
+               : 'nobody has mentioned you either way. It never changes your score — only the promotion bar') + '</dd>' +
     '<dt>End-of-day stress</dt><dd>' + Math.round(eod) + '%</dd>' +
     '<dt>Burnout</dt><dd style="color:' + (run.burnout > 60 ? 'var(--alert)' : 'inherit') + '">' +
       Math.round(run.burnout) + '% — permanent</dd>' +
     (promo ? '<dt>New title</dt><dd style="color:var(--amber)">' + ROLES[run.rung].title + '</dd>' : '');
+  /* The note used to quote firedBelow alone — "two days under 28%" — while the
+     rule that fires you is three lines with a grace period, so it named a rule
+     its own four preceding evenings had already contradicted. And those four
+     evenings were byte-identical: a career slid from day 1 to fired with no
+     escalation at all. Both come from the real state now. */
+  const bar = Math.round(role0.gates.firedBelow*100);
+  const grace = run.day <= FIRE_GRACE;
+  const warn = !ending && dayPerf < role0.gates.firedBelow
+    ? (grace
+        ? 'Under ' + bar + '% — but nobody is counting yet. The first ' + FIRE_GRACE +
+          ' days are a grace period, and it ends after day ' + FIRE_GRACE + '.'
+        : run.firedStreak >= 1
+          ? 'That is ' + run.firedStreak + ' day' + (run.firedStreak === 1 ? '' : 's') +
+            ' running under ' + bar + '%. One more and Linda has the conversation. ' +
+            'Protect the P1s tomorrow; that is the whole of it.'
+          : 'Under ' + bar + '% today. Two in a row is where this ends — the grace period is over.')
+    : null;
   document.getElementById('r-note').textContent =
-    ending === 'fired' ? 'Two days under ' + Math.round(role0.gates.firedBelow*100) +
+    ending === 'fired' ? run.firedStreak + ' days running under ' + bar +
       '% and the conversation writes itself. Linda did not enjoy it either, she says.'
     : ending === 'burnout' ? 'Burnout hit 100%. You are not fired; you are simply finished, which is worse and quieter.'
     : ending === 'retired' ? 'You held the top of the ladder long enough to walk out on your own terms.'
     : promo ? 'Linda shook your hand for exactly one pump. There is a cake with someone else\'s name crossed out. You have made it.'
-    : reviewLine(dayPerf);
+    : warn || reviewLine(dayPerf);
   const act = document.getElementById('r-actions'); act.innerHTML = '';
   if (ending){
     mkBtn(act, 'EXIT INTERVIEW ▶', () => careerOver(ending));
@@ -3699,7 +3777,8 @@ const GAMES = {
         this.t += dt; this.buzz = Math.max(0, this.buzz - dt);
         this.hint = this.side === 0
           ? 'PICK A CABLE — UP/DOWN TO MOVE, E TO GRAB'
-          : 'NOW ITS PORT — UP/DOWN TO MOVE, E TO PLUG IN';
+          : 'HOLDING ' + CABLE_TAGS[this.left[this.pickL].i] +
+            ' — PICK ITS PORT, OR CLICK THE CABLES TO PUT IT BACK';
         if (press.up) this.cur = (this.cur + this.n - 1) % this.n;
         if (press.down) this.cur = (this.cur + 1) % this.n;
         /* A click on a row selects that row and then acts on it, which is what
@@ -3707,13 +3786,19 @@ const GAMES = {
            not a blind confirm of whatever happened to be highlighted. */
         if (this.click){
           const pt = this.click; this.click = null;
-          const dy = this.rowDy(), col = this.side === 0 ? 0 : 1;
-          let row = -1;
+          const dy = this.rowDy();
+          let row = -1, onLeft = false;
           for (let i = 0; i < this.n; i++){
-            if (col === 0 && inRect(pt, 112, 68 + i*dy, 54, 14)) row = i;
-            if (col === 1 && inRect(pt, 316, 64 + i*dy, 54, 18)) row = i;
+            if (inRect(pt, 112, 68 + i*dy, 54, 14)){ row = i; onLeft = true; }
+            if (inRect(pt, 316, 64 + i*dy, 54, 18)) row = i;
           }
-          if (row < 0) press.use = false;          // a miss is a miss
+          /* clicking back into the cable column while holding one puts it down
+             rather than doing nothing */
+          if (row >= 0 && onLeft && this.side === 1){
+            this.side = 0; this.cur = this.pickL; this.pickL = -1;
+            press.use = false; sfx('blip');
+          }
+          else if (row < 0 || (onLeft !== (this.side === 0))) press.use = false;   // a miss is a miss
           else { this.cur = row; press.use = true; }
         }
         if (press.use){
@@ -3722,10 +3807,18 @@ const GAMES = {
             else { this.buzz = .35; sfx('err'); }          // already plugged in — say so
           } else {
             const L = this.left[this.pickL], Rp = this.right[this.cur];
-            if (this.linked.includes(this.cur)){ this.buzz = .35; sfx('err'); }   // port taken
-            else if (L.i === Rp.i){ this.linked[L.i] = this.cur; sfx('ui'); }
-            else { this.mistakes++; this.buzz = .35; sfx('err'); }
-            this.side = 0; this.cur = this.pickL;
+            /* You are HOLDING a cable. A wrong port is a wrong port — it is not
+               a reason to drop it. Dropping on every outcome sent the cursor
+               back to the cable column while the player was still clicking
+               ports, and since the hit test follows `side`, every click after
+               one mistake landed on nothing at all: the board went dead and
+               the only tell was a red flash. Only a successful plug lets go. */
+            if (this.linked.includes(this.cur)){ this.buzz = .35; sfx('err'); }   // port taken, still holding
+            else if (L.i === Rp.i){
+              this.linked[L.i] = this.cur; sfx('ui');
+              this.side = 0; this.cur = this.pickL; this.pickL = -1;
+            }
+            else { this.mistakes++; this.buzz = .35; sfx('err'); }                // wrong port, still holding
           }
         }
         if (!this.linked.includes(-1)){
@@ -4093,10 +4186,18 @@ function toTitle(){
   show('s-title');
   clearToasts();
 }
+/* How long a confirmation to destroy a career stays good for. Long enough to
+   read the sentence, short enough that it cannot be sitting armed when you
+   come back to this screen with something else in mind. */
+const ABANDON_WINDOW = 8000;
+function disarmAbandon(){
+  G.abandonArmed = null; G.abandonAt = 0;
+  const w = document.getElementById('abandon-warn');
+  if (w) w.style.display = 'none';
+}
 function actSetup(){
   G.state = 'setup';
-  G.abandonArmed = false;
-  { const w = document.getElementById('abandon-warn'); if (w) w.style.display = 'none'; }
+  disarmAbandon();
   const box = document.getElementById('seedbox');
   if (!box.value) box.value = 'JOB-' + (1000 + (Math.random()*9000|0));
   /* one-time cert shop row */
@@ -4118,21 +4219,36 @@ function actSetup(){
 function act(a){
   switch(a){
     case 'newrun': actSetup(); break;
-    case 'reroll': document.getElementById('seedbox').value = 'JOB-' + (1000 + (Math.random()*9000|0)); break;
+    case 'reroll':
+      document.getElementById('seedbox').value = 'JOB-' + (1000 + (Math.random()*9000|0));
+      disarmAbandon();            // a different job is a different decision
+      break;
     case 'start': {
       const s = loadGame();
-      if (s && s !== 'future' && s.run &&
-          (!G.abandonArmed || performance.now() - (G.abandonAt || 0) < 600)){
-        G.abandonArmed = true; G.abandonAt = performance.now();
+      const live = s && s !== 'future' && s.run ? s.run : null;
+      const v = (document.getElementById('seedbox').value || 'JOB-1337').trim().toUpperCase().slice(0,18);
+      /* A live career is destroyed by this button, so the confirmation has to be
+         about THIS posting and it has to go stale. It used to be a 600ms
+         double-click debounce that never expired and survived NEW POSTING — so
+         arming on one job, browsing to another, and accepting once wiped a
+         day-2 career with no second warning, and the warning that HAD been
+         shown named a different job. A playtester lost a real career to it. */
+      if (live && !(G.abandonArmed === v && performance.now() - (G.abandonAt || 0) < ABANDON_WINDOW)){
+        G.abandonArmed = v; G.abandonAt = performance.now();
         const w = document.getElementById('abandon-warn');
-        if (w) w.style.display = 'block';
-        toast('A CAREER IS IN PROGRESS. ACCEPT AGAIN TO ABANDON IT.', 'red', 3800);
+        const who = (ROLES[live.rung] ? ROLES[live.rung].title : 'INTERN') +
+                    ', day ' + live.day + ' — posting ' + live.seed;
+        if (w){
+          w.textContent = 'This abandons your career in progress (' + who +
+            '). It cannot be undone. Click ACCEPT OFFER again within ' +
+            Math.round(ABANDON_WINDOW/1000) + ' seconds to confirm.';
+          w.style.display = 'block';
+        }
+        toast('ABANDON ' + who.toUpperCase() + '? ACCEPT AGAIN TO CONFIRM.', 'red', ABANDON_WINDOW);
         sfx('err');
         break;
       }
-      G.abandonArmed = false;
-      { const w = document.getElementById('abandon-warn'); if (w) w.style.display = 'none'; }
-      const v = (document.getElementById('seedbox').value || 'JOB-1337').trim().toUpperCase().slice(0,18);
+      disarmAbandon();
       newRun(v || 'JOB-1337');
       break;
     }
@@ -4142,13 +4258,21 @@ function act(a){
       break;
     }
     case 'controls': G.state = 'menu'; show('s-controls'); break;
-    case 'options': G.state = 'menu'; paintPace(); show('s-options'); break;
-    case 'back': toTitle(); break;
+    case 'options': G.state = 'menu'; paintPace(); applySettings(); show('s-options'); break;
+    case 'mute': {
+      meta.musOn = A.musOn = !A.musOn;
+      if (A.mus) A.mus.gain.value = A.musOn ? A.musVol : 0;
+      document.getElementById('o-mute').textContent = A.musOn ? 'ON' : 'MUTED';
+      saveGame();
+      break;
+    }
+    case 'back': disarmAbandon(); toTitle(); break;
     case 'resume': resumeWork(); break;
     case 'quitsave': saveGame(); toTitle(); break;
     case 'textspeed': {
-      G.textSpeed = (G.textSpeed + 1) % 3;
+      G.textSpeed = meta.textSpeed = (G.textSpeed + 1) % 3;
       document.getElementById('o-tspd').textContent = ['SLOW','NORMAL','LUDICROUS'][G.textSpeed];
+      saveGame();
       break;
     }
     case 'pace': {
@@ -4280,7 +4404,14 @@ function onKey(e){
   if (e.code === 'KeyH' && G.state === 'modal' && G.modal && G.modal.kind === 'game'){
     e.preventDefault(); briefReopen(); return;
   }
-  if (e.code === 'KeyM'){ A.musOn = !A.musOn; toast(A.musOn ? 'MUZAK ON' : 'MUZAK OFF (BLESSED SILENCE)', 'corp', 1600); }
+  if (e.code === 'KeyM'){
+    meta.musOn = A.musOn = !A.musOn;
+    if (A.mus) A.mus.gain.value = A.musOn ? A.musVol : 0;
+    const mu = document.getElementById('o-mute');
+    if (mu) mu.textContent = A.musOn ? 'ON' : 'MUTED';
+    saveGame();
+    toast(A.musOn ? 'MUZAK ON' : 'MUZAK OFF (BLESSED SILENCE)', 'corp', 1600);
+  }
   if (e.code === 'Escape'){
     if (G.state === 'work') pauseGame();
     else if (G.state === 'modal' && G.modal && G.modal.kind === 'tix') closeModalToWork();
@@ -4290,8 +4421,14 @@ function onKey(e){
     else if (G.state === 'setup') act('back');
   }
 }
-document.getElementById('o-sfx').oninput = e => { A.sfxVol = e.target.value/100; if (A.sfx) A.sfx.gain.value = A.sfxVol; };
-document.getElementById('o-mus').oninput = e => { A.musVol = e.target.value/100; if (A.mus) A.mus.gain.value = A.musVol; };
+document.getElementById('o-sfx').oninput = e => {
+  meta.sfx = A.sfxVol = e.target.value/100;
+  if (A.sfx) A.sfx.gain.value = A.sfxVol; saveGame();
+};
+document.getElementById('o-mus').oninput = e => {
+  meta.mus = A.musVol = e.target.value/100;
+  if (A.mus) A.mus.gain.value = A.musOn ? A.musVol : 0; saveGame();
+};
 </script>
 
 <script>
@@ -5601,6 +5738,194 @@ function selfTest(runSim){
          onScreen && !offWorld, 'screen ' + onScreen + ' world ' + offWorld);
     }
 
+    /* --- what the third fleet caught (wave 3, five players) --- */
+
+    /* A live career cannot be destroyed by a confirmation meant for a
+       different posting, and the confirmation goes stale. A playtester lost a
+       real day-2 career: arm on one job, browse to another, accept once. */
+    {
+      const realRaw = localStorage.getItem(SAVE_KEY);
+      try {
+        SAVE_SUSPEND = false;
+        QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+        run.day = 2; saveGame();
+        const liveSeed = run.seed;
+        run = null;
+        const box = document.getElementById('seedbox');
+        actSetup();
+        ok('careers: the setup screen opens disarmed', G.abandonArmed == null);
+        box.value = 'JOB-AAAA'; act('start');
+        const armed = G.abandonArmed === 'JOB-AAAA';
+        /* The ORIGINAL career, by seed. A first draft of this asked only
+           whether *a* career existed — but newRun writes a new save the
+           instant it destroys the old one, so every mutation that reinstated
+           the bug still passed. Identity, not existence. */
+        const stillThere = () => {
+          const g = loadGame();
+          return !!(g && g !== 'future' && g.run && g.run.seed === liveSeed);
+        };
+        ok('careers: the first accept only warns', armed && stillThere(),
+           'armed=' + G.abandonArmed);
+        /* the wave-3 repro: reroll to a different posting, then accept ONCE */
+        act('reroll'); box.value = 'JOB-BBBB'; act('start');
+        ok('careers: a confirm for one posting cannot abandon via another',
+           stillThere(), 'career destroyed by a warning about a different job');
+        /* and an arm that has gone stale does not carry */
+        G.abandonArmed = 'JOB-BBBB'; G.abandonAt = performance.now() - ABANDON_WINDOW - 50;
+        act('start');
+        ok('careers: a stale confirmation expires', stillThere());
+        /* leaving the screen disarms */
+        act('start'); act('back');
+        ok('careers: leaving the screen disarms', G.abandonArmed == null);
+        /* two accepts on the SAME posting, in time, still work */
+        actSetup(); box.value = 'JOB-CCCC'; act('start'); act('start');
+        ok('careers: a real double-confirm still starts the new career',
+           !!run && run.seed === 'JOB-CCCC', run ? run.seed : 'no run');
+      } finally {
+        SAVE_SUSPEND = true;
+        if (realRaw === null) localStorage.removeItem(SAVE_KEY);
+        else localStorage.setItem(SAVE_KEY, realRaw);
+      }
+      run = null; G.state = 'title';
+    }
+
+    /* the review prints the number the career actually turns on */
+    {
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      run.clock = DAY_MIN; run.resolved = 2; run.earned = 9; run.stakesDone = 11;
+      run.scores = [.8,.6];
+      endDay();
+      const html = document.getElementById('r-stats').innerHTML;
+      const ls = run && run.lastScore;
+      ok('review: the score ledger is banked with the day',
+         !!ls && typeof ls.earned === 'number' && typeof ls.burned === 'number',
+         JSON.stringify(ls && { e: ls.earned, b: ls.burned }));
+      ok('review: the screen shows priority points protected, not just a %',
+         /priority points protected/.test(html) && /that ratio/.test(html));
+      ok('review: the screen names the P1..P4 weighting',
+         html.indexOf('P1 is worth ' + STAKES[4]) >= 0);
+      ok('review: Speed says which direction is good', /higher is better/.test(html));
+      ok('review: Goodwill is not presented as a score input',
+         /does not change today/.test(html) || /only the promotion bar/.test(html));
+      run = null; G.state = 'title';
+    }
+    {
+      /* and a second day carries a delta against the first */
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      run.clock = DAY_MIN; run.earned = 2; run.stakesDone = 10; run.resolved = 1;
+      endDay();
+      startCommute(); rollDay();
+      run.clock = DAY_MIN; run.earned = 9; run.stakesDone = 10; run.resolved = 3;
+      endDay();
+      ok('review: the second evening compares itself to the first',
+         /on yesterday/.test(document.getElementById('r-stats').innerHTML));
+      run = null; G.state = 'title';
+    }
+
+    /* the rule is meetable BEFORE the review — queue header and handbook */
+    {
+      writeHandbook();
+      const q = (document.getElementById('tix-rule') || {}).textContent || '';
+      const hb = (document.getElementById('hb-burn') || {}).textContent || '';
+      ok('docs: the queue header states the priority weighting',
+         q.indexOf('P1=' + STAKES[4]) >= 0 && /points protected/.test(q), q.slice(0,60));
+      ok('docs: the handbook explains how the day is scored',
+         /How the day is scored/.test(hb) && hb.indexOf('P1 is worth ' + STAKES[4]) >= 0);
+      /* generated from STAKES, so it can never drift from the maths */
+      ok('docs: the stated rule is generated from STAKES',
+         stakesRule().indexOf(String(STAKES[4])) >= 0 &&
+         stakesRule().indexOf(String(STAKES[1])) >= 0);
+    }
+
+    /* the pace dial changes real time only — a tile costs the same shift
+       minutes at every setting, which is exactly what Options promises */
+    {
+      const cost = {};
+      for (const P of PACES){
+        meta.pace = P.id;
+        QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+        loadMap('office1'); spawnPeople(); G.state = 'work'; run.clock = 0;
+        for (const d of ['up','down','left','right']) held[d] = false;
+        held.right = true; dirPushed('right');
+        const x0 = player.tx;
+        let moved = 0;
+        for (let i = 0; i < 4000 && moved < 6; i++){ const b = player.tx; sim(1/30); if (player.tx !== b) moved++; }
+        held.right = false;
+        cost[P.id] = { tiles: player.tx - x0, mins: run.clock };
+        run = null;
+      }
+      meta.pace = null;
+      const vals = Object.values(cost);
+      const same = vals.every(v => v.tiles === vals[0].tiles) &&
+                   vals.every(v => Math.abs(v.mins - vals[0].mins) < 0.5);
+      ok('pace: walking costs the same shift minutes at every pace', same,
+         Object.entries(cost).map(([k,v]) => k + ' ' + v.tiles + 'tiles/' + v.mins.toFixed(1) + 'min').join('  '));
+      G.state = 'title';
+    }
+
+    /* a wrong port does not make you drop the cable, and the board stays live */
+    {
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      openGame('cable', 2, () => {});
+      MG.brief = null;
+      MG.side = 0; MG.cur = 0; press.use = true; MG.step(0.016);   // grab cable 0
+      const held0 = MG.side === 1 && MG.pickL === 0;
+      const right = MG.right.findIndex(r => r.i === MG.left[0].i);
+      const wrong = MG.right.findIndex((r,j) => j !== right);
+      MG.cur = wrong; press.use = true; MG.step(0.016);            // wrong port
+      const stillHolding = MG.side === 1 && MG.pickL === 0;
+      MG.cur = right; press.use = true; MG.step(0.016);            // now the right one
+      const connected = MG.linked[MG.left[0].i] === right;
+      ok('cable: grabbing a cable holds it', held0);
+      ok('cable: a wrong port does not drop the cable you are holding', stillHolding,
+         'side ' + MG.side + ' pickL ' + MG.pickL);
+      ok('cable: you can still plug it in after a mistake', connected,
+         'linked ' + MG.linked.join(','));
+      ok('cable: the mistake was still counted', MG.mistakes === 1, String(MG.mistakes));
+      if (G.modal) closeModalToWork();
+      run = null; G.state = 'title';
+    }
+
+    /* the firing note states the rule that actually fires you, and the
+       evenings before it are distinguishable */
+    {
+      /* one sample per band — 0% and 10% SHOULD read alike, both are a
+         catastrophe; what matters is that 39% no longer reads as 0% did */
+      const names = [0, .2, .35, .5, .7, .9].map(perfName);
+      ok('review: a 39% evening does not read the same as a 0% one',
+         new Set(names).size === names.length && perfName(.39) !== perfName(0),
+         names.join(' / '));
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      run.day = FIRE_GRACE + 1; run.firedStreak = 1;
+      run.clock = DAY_MIN; run.earned = 0; run.stakesDone = 0;
+      run.queue = []; run.breaches = 8; run.burned = [7,7,4,4,2,2,1,1];
+      endDay();
+      const note = document.getElementById('r-note').textContent;
+      ok('review: a second bad day warns before the last one',
+         /One more/.test(note) || /days running under/.test(note), note.slice(0,90));
+      run = null; G.state = 'title';
+    }
+
+    /* every setting survives a reload, not just the pace dial */
+    {
+      const before = JSON.parse(JSON.stringify(meta));
+      meta.sfx = .07; meta.mus = 1; meta.musOn = false; meta.textSpeed = 2; meta.pace = 'crunch';
+      const round = normalizeMeta(JSON.parse(JSON.stringify(meta)));
+      ok('settings: sound, music, mute, text speed and pace all persist',
+         round.sfx === .07 && round.mus === 1 && round.musOn === false &&
+         round.textSpeed === 2 && round.pace === 'crunch',
+         JSON.stringify({s:round.sfx,m:round.mus,on:round.musOn,t:round.textSpeed,p:round.pace}));
+      /* an older save without them gets sane defaults rather than undefined */
+      const old = normalizeMeta({ certs:[], rep:1, runsPlayed:1 });
+      ok('settings: an older save fills in defaults',
+         old.sfx === 0.7 && old.mus === 0.35 && old.musOn === true && old.textSpeed === 1);
+      meta = before; applySettings();
+    }
+
     /* --- what the second fleet caught (wave 2, five players) --- */
 
     /* toasts must not be moved underneath a bottom-anchored dialogue box.
@@ -6080,7 +6405,19 @@ function drawTestReport(){
 /* The handbook quoted its numbers by hand and had already drifted — it promised
    stress converted above 55 while the economy used 60. Anything the game tells
    the player about its own arithmetic is written FROM that arithmetic. */
+/* Generated from STAKES so the rule the game GRADES you on and the rule it
+   TELLS you can never drift. Playtesters read the review every night for a
+   week and could not work out what performance measured, because this
+   sentence existed only as a comment in the source. */
+function stakesRule(){
+  return 'A P1 is worth ' + STAKES[4] + ' points, a P2 ' + STAKES[3] + ', a P3 ' + STAKES[2] +
+         ', a P4 ' + STAKES[1] + '. Your day is scored on the share of those points you ' +
+         'protect — so one P1 outweighs ' + Math.ceil(STAKES[4]/STAKES[1]) + ' P4s.';
+}
 function writeHandbook(){
+  const q = document.getElementById('tix-rule');
+  if (q) q.textContent = 'P1=' + STAKES[4] + ' P2=' + STAKES[3] + ' P3=' + STAKES[2] +
+    ' P4=' + STAKES[1] + ' — you are scored on points protected · ↑↓ pick · Enter work · Esc close';
   const el = document.getElementById('hb-burn');
   if (!el) return;
   el.innerHTML =
@@ -6092,7 +6429,11 @@ function writeHandbook(){
     'starts being the job. <b>Stress</b> mostly washes off overnight; anything above <b>' +
     BURN.thresh + '</b> at 5pm converts into <b>burnout</b>, which never washes off and ends ' +
     'the career at 100%. And burnout is not just a countdown: the more of it you ' +
-    'carry, the less each night gives back, so it compounds.';
+    'carry, the less each night gives back, so it compounds.' +
+    '<br><br><b>How the day is scored.</b> ' + stakesRule() +
+    ' You cannot clear the queue — it is oversubscribed on purpose — so the only ' +
+    'question that matters is WHICH tickets you let burn. The first few casualties ' +
+    'are forgiven; after that, what you dropped is what you lose.';
 }
 const BOOTLINES = [
   'MANAGED SERVICES KERNEL v2.6 (EOL)',
@@ -6234,6 +6575,7 @@ function boot(){
   spawnPeople();
   const s = loadGame();
   if (s && s !== 'future' && s.meta) meta = normalizeMeta(s.meta);
+  applySettings();
   selfTest(false);                          // content lints, loudly, every boot
   const bl = document.getElementById('bootline');
   bootT = setInterval(() => {
