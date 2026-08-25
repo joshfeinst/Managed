@@ -2130,6 +2130,12 @@ function stakesOf(id){ return STAKES[(TICKETS[id] && TICKETS[id].pri) || 2] || 2
 const FORGIVEN = .25;
 const BREACH_TOLERANCE = .12;
 const FIRE_GRACE = 3;          // days at the very start of a career that cannot end it
+/* Ladder content debt, measured 2026-08-25 before the ladder build began:
+   six promotions deal nothing the rung below could not, and six pairs of rungs
+   deal an identical queue (Procurement, Relationship Mgr, Solutions Architect
+   and vCIO are one job wearing four titles). The self-test ratchets on these:
+   they may only go down, and both must reach 0. */
+const LADDER_DEBT = { thin: 6, twins: 6 };
 /* Reputation used to be a write-only currency: ten dialogue options bought
    nothing but rep, rep did nothing until the career was already over, and so
    every one of those options was strictly worse than the alternative. Being
@@ -2299,6 +2305,13 @@ function newRun(seed){
 function metaHasPerk(p){ return PERKS[p].need.runs !== undefined && meta.runsPlayed >= PERKS[p].need.runs; }
 
 function rollDay(){
+  /* The floor plan must exist before the day is priced, or an errand's SLA is
+     computed from the flat fallback at plan time and its live slack from the
+     real route at play time — two different numbers about the same walk, which
+     is precisely the guesswork this pricing replaced. Parsing the map is
+     cheap, idempotent and touches no RNG stream, so the day is planned against
+     the same office the player will walk. */
+  if (!W2.W) loadMap('office1');
   const role = ROLES[run.rung];
   let elig = Object.keys(TICKETS).filter(id =>
     TICKETS[id].tiers[0] <= run.rung && run.rung <= TICKETS[id].tiers[1]);
@@ -2386,12 +2399,51 @@ function rollDay(){
 }
 /* What is LEFT of a ticket from the step it is on — the same model as
    ticketWork, from here rather than from the beginning. */
+/* What a walked step actually COSTS, in game-minutes per tile. Measured on
+   real routes rather than assumed: desk -> coffee machine is 26 tiles and 7.8
+   game-minutes, identical at all three paces. (The engine walks 4.2 tiles a
+   second and the shift clock runs a game-minute a second at STANDARD, which
+   is 0.238 before the 0.07s turn delay on every direction change.)
+
+   Every walked step used to be priced at a flat 14 minutes regardless of
+   distance, in BOTH directions: the SLA a ticket was born with, and the live
+   "can I still make this" slack on its queue row. So the row said "too late"
+   about errands a player could comfortably land, and said nothing about ones
+   they could not — and errands are the high-priority tickets, so the whole
+   top of the queue was triaged on invented numbers. */
+const WALK_MIN_PER_TILE = 0.30;
+const WALK_FALLBACK = 14;          // no map parsed yet (headless planning)
+function tilesBetween(from, anchor){
+  const a = anchorPos(anchor);
+  if (!a || !W2.W || !from) return null;
+  const p = astar(from[0], from[1], a[0], a[1], true) || astar(from[0], from[1], a[0], a[1]);
+  return p ? p.length : null;
+}
+function walkCost(anchor, from){
+  const n = tilesBetween(from, anchor);
+  return n === null ? WALK_FALLBACK : Math.max(3, Math.round(n * WALK_MIN_PER_TILE));
+}
+/* The SLA a ticket is BORN with must be identical for a given seed, so it is
+   priced from the desk — a fixed point on the map — never from wherever the
+   player happens to be standing when it lands. */
+function walkCostFromDesk(anchor){
+  const role = (typeof run !== 'undefined' && run) ? ROLES[run.rung] : null;
+  const desk = role && anchorPos(role.deskAnchor || 'TERMINAL');
+  return walkCost(anchor, desk);
+}
 function workLeft(t){
   const steps = TICKETS[t.id].steps;
   let m = 0;
   for (let i = t.si; i < steps.length; i++){
     const st = steps[i];
-    if (st.goto) m += 14; else if (st.game) m += 14;
+    /* live: the NEXT leg is measured from where the player actually is; legs
+       after that are measured from the place they will be standing */
+    if (st.goto){
+      const from = (i === t.si && typeof player !== 'undefined' && player)
+        ? [player.tx, player.ty] : null;
+      m += from ? walkCost(st.goto, from) : walkCostFromDesk(st.goto);
+    }
+    else if (st.game) m += 14;
     else if (st.choice) m += 7;
     else if (st.say) m += 4 * ((DIALOGUE[st.say] && DIALOGUE[st.say].t.length) || 1);
   }
@@ -2423,7 +2475,7 @@ function ticketOffers(id){
 function ticketWork(T){
   let m = 6;
   for (const st of T.steps){
-    if (st.goto) m += 14;
+    if (st.goto) m += walkCostFromDesk(st.goto);      // deterministic per seed
     else if (st.game) m += 14;
     else if (st.choice) m += 7;
     else if (st.say) m += 4 * ((DIALOGUE[st.say] && DIALOGUE[st.say].t.length) || 1);
@@ -5752,6 +5804,119 @@ function selfTest(runSim){
       const offWorld = document.body.classList.contains('screenopen');
       ok('toasts: show() flags full screens so the rule can fire',
          onScreen && !offWorld, 'screen ' + onScreen + ' world ' + offWorld);
+    }
+
+    /* A walked step is priced by the ROUTE, not by a flat guess — and the two
+       numbers the player triages on (the SLA a ticket is born with, and the
+       live slack on its row) must be talking about the same walk. */
+    {
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const near = walkCostFromDesk('TERMINAL'), far = walkCostFromDesk('SERVERS');
+      ok('travel: an errand is priced by its actual distance',
+         near < far && near >= 3 && far > near + 3,
+         'desk ' + near + 'min vs server room ' + far + 'min');
+      /* different destinations must not all cost the same */
+      const spread = new Set(['COFFEE','PRINTER','SERVERS','CONF','COOLER']
+        .map(a => walkCostFromDesk(a)));
+      ok('travel: destinations do not all cost the same flat number',
+         spread.size >= 3, [...spread].join('/'));
+      /* and the consumer that MATTERS must use it: two errand templates whose
+         destinations are different distances away cannot cost the same to
+         work. Asserting on walkCostFromDesk alone let a mutation that reverted
+         ticketWork to the flat 14 sail straight through. */
+      /* Two templates identical but for their DESTINATION. Comparing real
+         templates was not enough — they differ in their other steps too, so
+         ticketWork still returned a spread with the flat price restored. This
+         isolates the one variable. */
+      const nearT = ticketWork({ steps: [{ goto:'TERMINAL' }] });
+      const farT  = ticketWork({ steps: [{ goto:'SERVERS'  }] });
+      ok('travel: ticketWork prices errands by distance, not a flat number',
+         farT > nearT + 3,
+         'same template, desk ' + nearT + 'min vs server room ' + farT + 'min');
+      /* workLeft is the OTHER consumer — it drives the queue row's live slack
+         and the in-hand breach grace, and it must measure from where the
+         player is actually standing. Walk the player to the server room and
+         the remaining work on a server-room errand has to collapse. */
+      const sv = anchorPos('SERVERS');
+      const tk = { uid:970, id:null, si:0, gameScores:[] };
+      const tmpl = { steps: [{ goto:'SERVERS' }] };
+      TICKETS.__probe = tmpl; tk.id = '__probe';
+      const atDesk = workLeft(tk);
+      const back = [player.tx, player.ty];
+      occ.delete(okey(player.tx, player.ty));
+      player.tx = sv[0]; player.ty = sv[1]; player.t = 1;
+      occ.add(okey(sv[0], sv[1]));
+      const atServers = workLeft(tk);
+      occ.delete(okey(player.tx, player.ty));
+      player.tx = back[0]; player.ty = back[1]; occ.add(okey(back[0], back[1]));
+      delete TICKETS.__probe;
+      ok('travel: the live slack measures from where you are standing',
+         atServers < atDesk - 3,
+         'from desk ' + atDesk + 'min, standing at the rack ' + atServers + 'min');
+      /* the day must be planned against a parsed floor, or SLA and slack
+         disagree about the same walk */
+      W2.W = 0;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      ok('travel: the day is planned against a real floor plan', W2.W > 0);
+      run = null; G.state = 'title';
+    }
+    /* Seeded determinism survives distance pricing: the SLA a ticket is born
+       with must not depend on where the player was standing, or on whether
+       the map happened to be parsed yet. */
+    {
+      const planOf = pre => {
+        QUIET = true; rngInit('DET-T'); runInit('DET-T');
+        if (pre){ loadMap('office1'); spawnPeople(); }
+        rollDay();
+        return run.plan.arrivals.map(a => a.id + ':' + a.sla).join('|');
+      };
+      const a = planOf(false), b = planOf(true);
+      ok('travel: distance pricing did not break seeded SLAs', a === b,
+         a === b ? '' : 'plan diverged with the map preloaded');
+      run = null; G.state = 'title';
+    }
+
+    /* CONTENT: a promotion has to hand you work you could not get below it.
+       Measured before any of this was written: T1 and T2 added ZERO new
+       tickets over INTERN and rungs 5-8 were identical to one another. A rung
+       that gives a player nothing new is a defect, so it fails here. */
+    {
+      const poolFor = r => new Set(Object.keys(TICKETS).filter(id =>
+        TICKETS[id].tiers[0] <= r && r <= TICKETS[id].tiers[1]));
+      const pools = ROLES.map((_, r) => poolFor(r));
+      const thin = [], twins = [];
+      for (let r = 1; r < ROLES.length; r++){
+        const fresh = [...pools[r]].filter(id => !pools[r-1].has(id));
+        if (!fresh.length) thin.push(ROLES[r].title + ' adds nothing over ' + ROLES[r-1].title);
+        /* and no two rungs may deal an identical pool */
+        for (let q = 0; q < r; q++){
+          if (pools[q].size !== pools[r].size) continue;
+          if ([...pools[r]].every(id => pools[q].has(id)))
+            twins.push(ROLES[q].title + ' == ' + ROLES[r].title);
+        }
+      }
+      /* A RATCHET, not a green light. These two started at 6 and 6 — the
+         measured state of the ladder before any of it was written — and the
+         numbers may only ever go DOWN. A red suite all night would mask real
+         regressions; a ratchet keeps the suite honest about everything else
+         while making this debt impossible to add to and impossible to forget.
+         Lower the budgets as rungs land. Both must reach 0. */
+      ok('ladder: promotions that deal nothing new (budget ' + LADDER_DEBT.thin + ')',
+         thin.length <= LADDER_DEBT.thin,
+         thin.length + '/' + LADDER_DEBT.thin + (thin.length ? ' — ' + thin.join(' · ') : ''));
+      ok('ladder: rungs dealing an identical queue (budget ' + LADDER_DEBT.twins + ')',
+         twins.length <= LADDER_DEBT.twins,
+         twins.length + '/' + LADDER_DEBT.twins + (twins.length ? ' — ' + twins.join(' · ') : ''));
+      /* A ratchet whose budget can be raised is not a ratchet. The budget
+         itself is pinned to the historical high-water mark, so loosening it
+         to hide new debt fails the suite. */
+      ok('ladder: the debt budget was never loosened',
+         LADDER_DEBT.thin <= 6 && LADDER_DEBT.twins <= 6,
+         JSON.stringify(LADDER_DEBT) + ' vs the 2026-08-25 high-water mark {thin:6,twins:6}');
+      if (thin.length < LADDER_DEBT.thin || twins.length < LADDER_DEBT.twins)
+        console.info('[managed] LADDER DEBT IMPROVED — lower LADDER_DEBT to ' +
+          JSON.stringify({ thin: thin.length, twins: twins.length }));
     }
 
     /* A walked errand must survive somebody standing in the corridor. Two
