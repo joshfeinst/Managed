@@ -34,6 +34,15 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
   text-shadow:0 1px 2px #000;}
 #obj{position:absolute; left:0; right:0; top:0; display:none; justify-content:center;
   pointer-events:none; margin-top:calc(clamp(10px,1.9vh,15px) + 14px);}
+/* An objective you cannot act on, printed over the thing you are reading. The
+   banner is anchored to the top of the viewport while the panels are drawn on
+   the canvas at y26..y240 of 270, so on a short window the two meet: at 400x300
+   it lands at y62 against a panel starting at y59, straight across the words
+   HOW THIS ONE WORKS. Nothing about the world is actionable from inside a
+   panel, so it waits. Same reasoning as the toast rules below, but hiding is
+   unambiguous here — unlike the toasts, there is no bottom-anchored box to
+   slide underneath. */
+body.panelopen #obj, body.screenopen #obj{display:none !important}
 #obj span{font-family:var(--pix); font-size:clamp(6px,1.15vh,9px); letter-spacing:.06em;
   color:var(--amber); background:rgba(8,10,13,.88); border:1px solid #4a3a18;
   padding:4px 9px; text-align:center; max-width:86%;}
@@ -115,6 +124,17 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
    cabinets and made the message unreadable, which is the one thing a toast
    must not be. */
 body.queueopen .toastwrap, body.gameopen .toastwrap{top:auto; bottom:2%}
+/* SHORT WINDOWS. The panel scales with the canvas; the toast does not — its
+   font bottoms out at the 6px clamp and its padding is fixed, so below about
+   420px tall a toast parked at bottom:2% still clips the bottom of the panel it
+   was moved out of. Measured at 400x300: toast top y232 against a panel ending
+   at y238. It goes all the way to the floor and slims down instead. The padding
+   needs !important because the toast div carries inline cssText. */
+@media (max-height:430px){
+  body.queueopen .toastwrap, body.gameopen .toastwrap{bottom:0}
+  body.queueopen .toastwrap > div, body.gameopen .toastwrap > div{
+    padding:2px 6px !important; line-height:1.25 !important;}
+}
 /* gameopen, NOT panelopen. The comment above says toasts "sat across every
    minigame board" and were fixed — but the rule that fixed it was scoped to
    the queue alone, so they went on sitting across every board for as long as
@@ -3224,6 +3244,12 @@ function startCommute(){
   run.clock = 0; run.queue = []; run.active = null; run.marker = null;
   run.scores = []; run.breaches = 0; run.resolved = 0; run.aces = 0;
   run.burned = []; run.earned = 0; run.stakesDone = 0; run.warned = {};
+  /* The ledger is about TODAY. Every other counter on this line was reset and
+     this one was not, so it accumulated for the whole career and the review's
+     "What it cost you" block printed day one's three worst tickets every
+     evening — on day three, naming tickets that no longer existed. A tester
+     called that block the best screen in the game and then caught it lying. */
+  run.burnLog = [];
   run.speedSum = 0; run.qualSum = 0; run.qualN = 0;
   run.coffee = 0; run.crashes = []; run.satOn = {}; run.pendingEvents = [];
   rollDay();
@@ -4607,8 +4633,12 @@ const GAME_BRIEF = {
       ['E or SPACE', 'plug it in'],
       ['CLICK', 'or click the cable, then the port']
     ],
+    /* The board's own footer says TAKE YOUR TIME — ACCURACY IS THE SCORE, and
+       has since the par clock was removed from cableScore. This card went on
+       saying the opposite, so the game contradicted itself across two panels a
+       keypress apart. */
     watch: 'Match by colour, or by the tag beside it — A1 goes to A1. ' +
-           'A wrong port costs marks, and so does taking longer than par.'
+           'A wrong port costs marks. Taking your time does not — be right.'
   },
   pw: {
     what: 'Password reset requests, one at a time. The policy is printed above ' +
@@ -5396,6 +5426,15 @@ function toTitle(){
    read the sentence, short enough that it cannot be sitting armed when you
    come back to this screen with something else in mind. */
 const ABANDON_WINDOW = 8000;
+/* And a MINIMUM. The window alone makes the arm go stale; it does nothing to
+   stop you confirming faster than you can read, and the confirm destroys a
+   career permanently. Enter activates the primary button, so two Enters — the
+   most natural thing a keyboard user does in a menu — armed and confirmed with
+   ~90ms between them and no warning was ever seen. A double-click did the same.
+   A press inside the dwell is treated as still-arming: it refreshes the clock
+   and leaves the warning up, so mashing can never destroy anything, and a
+   deliberate read-then-press still works on the first try. */
+const ABANDON_DWELL = 700;
 function disarmAbandon(){
   G.abandonArmed = null; G.abandonAt = 0;
   const w = document.getElementById('abandon-warn');
@@ -5439,7 +5478,9 @@ function act(a){
          arming on one job, browsing to another, and accepting once wiped a
          day-2 career with no second warning, and the warning that HAD been
          shown named a different job. A playtester lost a real career to it. */
-      if (live && !(G.abandonArmed === v && performance.now() - (G.abandonAt || 0) < ABANDON_WINDOW)){
+      const since = performance.now() - (G.abandonAt || 0);
+      const armed = G.abandonArmed === v && since < ABANDON_WINDOW;
+      if (live && !(armed && since >= ABANDON_DWELL)){
         G.abandonArmed = v; G.abandonAt = performance.now();
         const w = document.getElementById('abandon-warn');
         const who = (ROLES[live.rung] ? ROLES[live.rung].title : 'INTERN') +
@@ -5450,7 +5491,9 @@ function act(a){
             Math.round(ABANDON_WINDOW/1000) + ' seconds to confirm.';
           w.style.display = 'block';
         }
-        toast('ABANDON ' + who.toUpperCase() + '? ACCEPT AGAIN TO CONFIRM.', 'red', ABANDON_WINDOW);
+        toast(armed ? 'READ IT FIRST. ACCEPT AGAIN IN A MOMENT TO CONFIRM.'
+                    : 'ABANDON ' + who.toUpperCase() + '? ACCEPT AGAIN TO CONFIRM.',
+              'red', ABANDON_WINDOW);
         sfx('err');
         break;
       }
@@ -7364,6 +7407,23 @@ function selfTest(runSim){
           if (!tb.width || !db.width) return null;
           return tb.bottom > db.top && tb.top < db.bottom;
         })();
+        /* THE SAME FAMILY, one element over. The objective banner is anchored to
+           the top of the VIEWPORT while the panels are drawn on the CANVAS, so
+           on a short window they meet — at 400x300 it printed across the words
+           HOW THIS ONE WORKS. Measured, not read off the stylesheet. */
+        {
+          const obj = document.getElementById('obj');
+          document.getElementById('obj-t').textContent = 'FIND YOUR DESK';
+          document.body.classList.remove('panelopen');
+          obj.style.display = 'flex';
+          const looseBox = obj.getBoundingClientRect().height > 0;
+          document.body.classList.add('panelopen');
+          const panelBox = obj.getBoundingClientRect().height > 0;
+          ok('the objective banner stands down while a panel is open',
+             looseBox && !panelBox,
+             'loose=' + looseBox + ' panelopen=' + panelBox);
+          obj.style.display = 'none';
+        }
         ok('toasts: and never underneath the dialogue box, which is bottom-anchored',
            dlgHit === false,
            dlgHit === null ? 'NOT MEASURED — no box' : 'the toast is behind the dialogue box');
@@ -7526,6 +7586,28 @@ function selfTest(runSim){
       ok('review: it says whether you had started them',
          /never started|part-way in|never picked up/.test(html));
 
+      /* THE LEDGER IS ABOUT TODAY. Every counter beside it in startCommute was
+         reset and this one was not, so it grew for a whole career: the review's
+         "What it cost you" block printed day one's three worst tickets every
+         evening thereafter, naming tickets that no longer existed. The tests
+         around it all hand-set burnLog=[] before calling endDay, so not one of
+         them could ever have noticed. This one plays two real days. */
+      {
+        QUIET = true; rngInit('LEDGER'); runInit('LEDGER');
+        rollDay(); simDay(0.4, { order:'pridead' });
+        const d1 = (run && run.lastScore && run.lastScore.worst || []).map(w => w.t);
+        let d2 = [];
+        if (run && !run.pendingEnd){
+          startCommute(); rollDay(); simDay(0.4, { order:'pridead' });
+          d2 = (run && run.lastScore && run.lastScore.worst || []).map(w => w.t);
+        }
+        const carried = d1.filter(t => d2.indexOf(t) >= 0);
+        ok('review: the burn ledger is about today, not the whole career',
+           d1.length > 0 && d2.length > 0 && carried.length === 0,
+           'day1 [' + d1.join(', ') + '] day2 [' + d2.join(', ') + ']' +
+           (carried.length ? ' CARRIED: ' + carried.join(', ') : ''));
+        run = null;
+      }
       /* THE GENERAL LINT, and the reason it exists. `worst` was declared TWICE
          in run.lastScore's object literal — once as a priority number, once,
          forty lines later, as the burn ledger. The literal's last key wins, so
@@ -7844,10 +7926,27 @@ function selfTest(runSim){
         /* leaving the screen disarms */
         act('start'); act('back');
         ok('careers: leaving the screen disarms', G.abandonArmed == null);
-        /* two accepts on the SAME posting, in time, still work */
-        actSetup(); box.value = 'JOB-CCCC'; act('start'); act('start');
+        /* MASHING CANNOT DESTROY A CAREER. Enter activates the primary button,
+           so two Enters — the most natural keyboard action there is — used to
+           arm and confirm with 90ms between them, and the warning was never on
+           screen long enough to read. A double-click did the same. */
+        actSetup(); box.value = 'JOB-MASH';
+        for (let i = 0; i < 10; i++) act('start');
+        ok('careers: mashing accept cannot abandon a career',
+           stillThere() && (!run || run.seed !== 'JOB-MASH'),
+           run ? 'started ' + run.seed : 'no run started');
+
+        /* but a deliberate confirm — read it, then press again — still works on
+           the first real try. Backdating the arm past the dwell is what a human
+           pausing to read the warning actually does. */
+        actSetup(); box.value = 'JOB-CCCC'; act('start');
+        G.abandonAt = performance.now() - ABANDON_DWELL - 50;
+        act('start');
         ok('careers: a real double-confirm still starts the new career',
            !!run && run.seed === 'JOB-CCCC', run ? run.seed : 'no run');
+        ok('careers: and the dwell is shorter than the window it sits inside',
+           ABANDON_DWELL > 0 && ABANDON_DWELL < ABANDON_WINDOW,
+           ABANDON_DWELL + 'ms dwell inside a ' + ABANDON_WINDOW + 'ms window');
       } finally {
         SAVE_SUSPEND = true;
         if (realRaw === null) localStorage.removeItem(SAVE_KEY);

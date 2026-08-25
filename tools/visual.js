@@ -135,6 +135,42 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
     await p.waitForTimeout(300);
     bad += await audit('minigame: ' + g);
   }
+  /* SMALL WINDOWS. Every panel in this game is drawn on the CANVAS between y26
+     and y240 of 270, while the HUD, the objective banner and the toasts are DOM
+     anchored to the VIEWPORT. On a short window the two coordinate systems meet
+     and DOM text lands on top of a panel — which is how an SLA toast ended up
+     printed across a rules card's title, and how the objective banner ended up
+     across the words HOW THIS ONE WORKS at 400x300. Neither was visible at the
+     960x540 this harness used to test at, so neither was ever caught here. */
+  for (const [w, h] of [[400,300],[640,360],[900,420],[1280,720]]){
+    await p.setViewportSize({ width:w, height:h });
+    await p.waitForTimeout(350);
+    await p.evaluate(()=>{ if (G.modal) closeModalToWork(); openGame('jargon', 1, ()=>{});
+                           QUIET = false; clearToasts();
+                           toast('SLA BREACH P2 - SOMEBODY IS LOCKED OUT', 'alert', 6000); });
+    await p.waitForTimeout(350);
+    const over = await p.evaluate(() => {
+      const cb = view.getBoundingClientRect(), sc = cb.height / 270;
+      const band = { top: cb.top + 26*sc, bottom: cb.top + 240*sc, left: cb.left, right: cb.right };
+      const hits = [];
+      document.querySelectorAll('body *').forEach(el => {
+        if (el.children.length) return;                       // leaf text only
+        const t = (el.textContent || '').trim();
+        if (!t || t.length > 90) return;
+        const b = el.getBoundingClientRect();
+        if (!b.width || !b.height) return;
+        if (b.bottom > band.top && b.top < band.bottom && b.right > band.left && b.left < band.right)
+          hits.push((el.id || el.className || el.tagName) + ' "' + t.slice(0, 40) + '"');
+      });
+      return hits;
+    });
+    if (over.length){ bad++; console.log('  small window ' + w + 'x' + h + ': FAIL — DOM text over the panel: ' + over.join(' | ')); }
+    else console.log('  small window ' + w + 'x' + h + ': ok');
+    await p.evaluate(()=>{ clearToasts(); if (G.modal) closeModalToWork(); });
+  }
+  await p.setViewportSize({ width:960, height:540 });
+  await p.waitForTimeout(300);
+
   await p.evaluate(()=>{ if (G.modal) closeModalToWork(); pauseGame ? pauseGame() : act('pause'); });
   await p.waitForTimeout(300);
   bad += await audit('pause');
