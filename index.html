@@ -2998,6 +2998,24 @@ function queueView(){
   return run.queue.slice().sort((a, b) =>
     ((TICKETS[b.id].pri || 2) - (TICKETS[a.id].pri || 2)) || (a.deadline - b.deadline));
 }
+/* What the queue row says about travel. Named destinations, and the walk
+   priced by the same route maths the SLA uses — so "worth it?" is answerable
+   from the row instead of only in hindsight. */
+function legHint(t){
+  const steps = (TICKETS[t.id] || {}).steps || [];
+  const legs = steps.slice(t.si || 0).filter(st => st.goto);
+  if (!legs.length) return ' <span style="color:#5c646e">· at your desk</span>';
+  let at = (typeof player !== 'undefined' && player) ? [player.tx, player.ty] : null, mins = 0;
+  const names = [];
+  for (const st of legs){
+    mins += at ? walkCost(st.goto, at) : walkCostFromDesk(st.goto);
+    at = anchorPos(st.goto) || at;
+    names.push((ANCHOR_NAMES[st.goto] || st.goto).replace(/^THE /i, ''));
+  }
+  const far = mins >= 25;
+  return ' <span style="color:' + (far ? 'var(--alert)' : 'var(--corp)') + '">· ' +
+         names.join(' then ').toLowerCase() + ', ~' + mins + ' min walk</span>';
+}
 function renderQueue(){
   const list = document.getElementById('tix-list');
   /* rows belong to one career: uids restart, so the key alone is not identity */
@@ -3025,9 +3043,16 @@ function renderQueue(){
          the row — and it is the office's priority, not the technically
          correct one. That is the joke and also the skill. */
       const pn = 5 - (TICKETS[t.id].pri || 2);
+      /* WHERE IT SENDS YOU, before you commit to it. Walking is the real
+         currency of the day — a cross-office job can eat an hour of an
+         eight-hour shift — and the destination was invisible until after you
+         accepted the ticket. A gate tester spent 2h20m on a P4 water cooler
+         worth one point, and could not have known. */
       row.innerHTML = '<span class="id">#' + (10000 + t.uid) + '</span>' +
         '<span class="pri p' + pn + '">P' + pn + '</span>' +
-        '<span class="ttl">' + t.title + (t.si > 0 ? ' <span style="color:var(--corp)">(in progress)</span>' : '') + '</span>' +
+        '<span class="ttl">' + t.title +
+          (t.si > 0 ? ' <span style="color:var(--corp)">(in progress)</span>' : '') +
+          legHint(t) + '</span>' +
         '<span class="sla"></span>';
       row.onclick = () => {
         const at = view.indexOf(t);
@@ -3205,6 +3230,13 @@ function endDay(){
                        zero, playing the way the screen implied. */
                     earned: Math.round(run.earned || 0),
                     burned: Math.round(burnedStakes),
+                    /* the RAW stakes of what you closed. dayPerf divides by
+                       stakesDone + burned, not by earned + burned — printing
+                       the latter made the review's headline ratio disagree
+                       with its own Performance line by 8-13 points, every
+                       evening, which a gate tester caught and could not aim
+                       at. The gap between these two IS craft. */
+                    closed: Math.round(run.stakesDone || 0),
                     /* the three that cost the most, by name. A gate tester
                        had CRAFT 100% and SPEED 46% — both healthy — next to a
                        20% performance and no way to see what had eaten it. */
@@ -3325,7 +3357,10 @@ function reviewScreen(dayPerf, eod, promo, ending){
   /* THE NUMBER THE CAREER TURNS ON, first, in the terms it is actually made
      of: priority weight you protected against priority weight that burned.
      Everything below it is detail about how those two were earned. */
-  const den = (ls ? ls.earned + ls.burned : 0) || 1;
+  /* exactly the denominator dayPerf uses, so the ratio the screen prints and
+     the percentage beside it are the same number */
+  const den = (ls ? ls.closed + ls.burned : 0) || 1;
+  const lost = ls ? ls.closed - ls.earned : 0;
   const dPrev = ls && ls.prev != null ? Math.round((dayPerf - ls.prev)*100) : null;
   document.getElementById('r-stats').innerHTML =
     (ls && ls.worst && ls.worst.length
@@ -3335,7 +3370,12 @@ function reviewScreen(dayPerf, eod, promo, ending){
           .join('<br>') + '</dd>'
       : '') +
     (ls ? '<dt>What the day was worth</dt><dd><b>' + ls.earned + '</b> of ' + den +
-      ' priority points protected — that ratio <b>is</b> your performance' +
+      ' priority points banked — that ratio <b>is</b> your performance' +
+      (lost > 0
+        ? '<br><span class="hint" style="margin:0">You closed ' + ls.closed +
+          ' points of work and banked ' + ls.earned + '. The missing ' + lost +
+          ' is <b>craft</b> — work done badly still burns the ticket\'s value.</span>'
+        : '') +
       '<br><span class="hint" style="margin:0">P1 is worth ' + STAKES[4] + ', P2 ' + STAKES[3] +
       ', P3 ' + STAKES[2] + ', P4 ' + STAKES[1] +
       '. Closing one P1 beats closing three P4s. That is the whole job.</span></dd>' : '') +
@@ -5854,6 +5894,43 @@ function selfTest(runSim){
          onScreen && !offWorld, 'screen ' + onScreen + ' world ' + offWorld);
     }
 
+    /* The queue row has to say WHERE a ticket sends you before you take it.
+       Walking is the real currency of the day and it was invisible until after
+       you accepted: a gate tester spent 2h20m on a P4 water cooler worth one
+       point, and had no way to know. */
+    {
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const deskOnly = Object.keys(TICKETS).find(id => !(TICKETS[id].steps||[]).some(s => s.goto));
+      const walked   = Object.keys(TICKETS).find(id => (TICKETS[id].steps||[]).some(s => s.goto));
+      const hintOf = id => legHint({ id, si:0 });
+      const dh = deskOnly ? hintOf(deskOnly) : '', wh = walked ? hintOf(walked) : '';
+      ok('queue: a desk job says so', /at your desk/.test(dh), dh.slice(0,70));
+      ok('queue: a walked job names its destination and the walk',
+         /min walk/.test(wh) && wh.length > 20, wh.replace(/<[^>]*>/g,'').slice(0,80));
+      /* and the number must be the SAME route maths the SLA uses, not a guess */
+      TICKETS.__far = { steps: [{ goto:'SERVERS' }] };
+      TICKETS.__near = { steps: [{ goto:'TERMINAL' }] };
+      const fm = hintOf('__far').match(/~(\d+) min/), nm = hintOf('__near').match(/~(\d+) min/);
+      delete TICKETS.__far; delete TICKETS.__near;
+      ok('queue: the quoted walk tracks real distance',
+         fm && nm && (+fm[1]) > (+nm[1]) + 3,
+         (nm?nm[1]:'?') + ' min to the desk vs ' + (fm?fm[1]:'?') + ' min to the rack');
+      /* and it must reach the RENDERED ROW, not merely exist as a helper —
+         testing legHint() alone let a mutation that dropped it from the row
+         markup pass clean */
+      G.state = 'work';
+      run.queue = [{ uid:991, id: walked, title:'A walked job', fills:{}, at:0,
+                     deadline:400, sla:80, stress:4, si:0, bonus:0, gameScores:[], from:null }];
+      openQueue(); renderQueue();
+      const rowHtml = document.getElementById('tix-list').innerHTML;
+      closeModalToWork();
+      ok('queue: the row itself carries the destination',
+         /min walk|at your desk/.test(rowHtml),
+         rowHtml.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').slice(0,90));
+      run = null; G.state = 'title';
+    }
+
     /* A multi-stop errand's second leg starts where the first one ENDED.
        Pricing every leg from the desk made "fetch the coffee, then take it to
        Derek" look like two separate trips from your chair, and a gate tester
@@ -6197,8 +6274,24 @@ function selfTest(runSim){
       ok('review: the score ledger is banked with the day',
          !!ls && typeof ls.earned === 'number' && typeof ls.burned === 'number',
          JSON.stringify(ls && { e: ls.earned, b: ls.burned }));
-      ok('review: the screen shows priority points protected, not just a %',
-         /priority points protected/.test(html) && /that ratio/.test(html));
+      ok('review: the screen shows priority points banked, not just a %',
+         /priority points banked/.test(html) && /that ratio/.test(html));
+      /* THE RATIO MUST BE THE SCORE. It printed earned/(earned+burned) while
+         dayPerf divides by stakesDone+burned, so the headline disagreed with
+         the Performance line beside it by 8-13 points every evening. A gate
+         tester aimed at the ratio for eleven days and could not reach the bar,
+         because the ratio was not what the bar measured. */
+      {
+        const m = html.match(/<b>(\d+)<\/b> of (\d+)\s*priority points banked/);
+        const pm = html.match(/Performance<\/dt><dd><b>(\d+)%/);
+        const shown = m ? (+m[1]) / (+m[2]) : -1;
+        const said = pm ? (+pm[1]) / 100 : -2;
+        ok('review: the printed ratio IS the printed performance',
+           !!m && !!pm && Math.abs(shown - said) < 0.015,
+           m && pm ? m[1] + '/' + m[2] + ' = ' + Math.round(shown*100) +
+                     '% vs Performance ' + Math.round(said*100) + '%'
+                   : 'ratio ' + !!m + ' performance ' + !!pm + ' — not found on screen');
+      }
       ok('review: the screen names the P1..P4 weighting',
          html.indexOf('P1 is worth ' + STAKES[4]) >= 0);
       ok('review: Speed says which direction is good', /higher is better/.test(html));
