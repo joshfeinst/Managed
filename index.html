@@ -2728,25 +2728,37 @@ const LADDER_DEBT = { thin: 0, twins: 0 };
    state. Measured at 3 on 2026-08-25 — far too few for a game whose whole
    subject is how well you triage. Ratcheted UPWARD: it may only improve, and
    the floor cannot be lowered to hide a regression. */
-const SKILL_DEBT = 3;
-/* Why the INTERN bar is 0.70 and not the 0.76 it shipped at. Swept 2026-08-25
-   over 6 seeds x 8 days x 4 skill profiles, scoring the best 3-day window each
-   career reached:
+const SKILL_DEBT = 4;
+/* Why the INTERN bar is 0.70 and not the 0.76 it shipped at. The original
+   sweep, over 6 seeds, put it here because at 76% a flawless player could not
+   promote on a third of postings — five human testers played roughly twenty
+   days between them and none ever promoted — while below 68% the gate stopped
+   meaning anything.
 
-     bar    flawless  good  mediocre  sloppy   <- share of seeds that promote
-     76%         67%    17%       0%      0%   (shipped: flawless FAILS a third of seeds)
-     72%         67%    83%      17%      0%
-     70%        100%   100%      33%      0%   <- chosen
-     68%        100%   100%      67%     17%
-     66%        100%   100%     100%     50%
+   RE-MEASURED 2026-08-25 08:15 on the current build, 24 seeds x 8 days,
+   scoring the best 3-day window each career reached (tools/gate.js, which is
+   now the thing that measures this so the table cannot rot in a comment
+   again):
 
-   At 76% a flawless player could not promote on a third of postings, which
-   makes the ladder decoration; five human testers played roughly twenty days
-   between them and none ever promoted. At 70% skill decides it: flawless and
-   good always get there, mediocre a third of the time, sloppy never. Below 68%
-   the gate stops meaning anything. The rungs above intern were already 0.70
-   and below, so this also removes a difficulty spike at the very first gate,
-   which was the steepest in the game. */
+     profile            share of seeds that promote at the 70% bar
+     flawless  1.00                88%   (21/24)
+     good      0.85                83%   (20/24)
+     mediocre  0.60                42%   (10/24)
+     sloppy    0.35                25%   ( 6/24)
+
+   The gradient is real and monotone, and the original 6-seed table is not what
+   it said: it claimed flawless 100% and sloppy 0%, and the truth on this build
+   is 88% and 25%. BOTH ENDS ARE SOFTER THAN THE RECORD. A flawless player
+   misses the promotion on about one posting in eight, and a genuinely sloppy
+   one backs into it on one in four.
+
+   THE BAR IS NOT BEING MOVED FOR THIS. It has already been moved twice on bot
+   evidence, in a sweep whose definition of craft (`gameScores.push(skill ±
+   jitter)`) is exactly the assumption two human testers falsified. Moving it a
+   third time before something human-shaped has played the fixed build would be
+   tuning on broken evidence for the third time. The number above is recorded
+   so that whoever does move it is moving it against a measurement instead of
+   against a comment. */
 /* Reputation used to be a write-only currency: ten dialogue options bought
    nothing but rep, rep did nothing until the career was already over, and so
    every one of those options was strictly worse than the alternative. Being
@@ -7499,8 +7511,16 @@ function selfTest(runSim){
          '% — ' + spread + ' points apart');
       if (spread > SKILL_DEBT)
         console.info('[managed] SKILL SEPARATION IMPROVED — raise SKILL_DEBT to ' + spread);
-      ok('gate: the skill-separation debt was never loosened', SKILL_DEBT >= 3,
-         'floor is the 2026-08-25 measurement of 3 points');
+      ok('gate: the skill-separation debt was never loosened', SKILL_DEBT >= 4,
+         'floor is the 2026-08-25 08:15 measurement of 4 points, up from 3');
+      /* The gate has only ever been guarded at the top end — that a good player
+         CAN clear it. Nothing asserted that a bad one cannot, which is the half
+         that decides whether the promotion means anything, and the wide sweep
+         says a sloppy career backs into it on a quarter of postings. */
+      const bad = play(0.35, 6);
+      ok('gate: sloppy play does not clear the bar',
+         bestWindow(bad) < bar.perf,
+         'best ' + Math.round(bestWindow(bad)*100) + '% vs a ' + Math.round(bar.perf*100) + '% bar');
       G.state = 'title';
     }
 
