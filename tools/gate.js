@@ -13,6 +13,8 @@
  * approximates it.
  *
  *   node tools/gate.js /abs/path/index.html [seeds=12] [days=8] [rung=0]
+ *   node tools/gate.js /abs/path/index.html --ladder    (every gated rung,
+ *     checked against the GATE_DEBT recorded in the game — may only improve)
  */
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
@@ -27,6 +29,62 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
     if (fs.existsSync(p)) { try { return await chromium.launch({ executablePath:p }); } catch(_){} }
   }
   throw e; } }
+const LADDER = process.argv.includes('--ladder');
+
+/* Every gated rung, twelve seeds each, checked against the GATE_DEBT the game
+   records. Both rows may only come down: a flawless career that cannot promote
+   makes the rung decoration, and a sloppy one that can makes it a formality. */
+async function ladder(page){
+  const out = await page.evaluate(() => {
+    const play = (seed, skill, days, rung) => {
+      const o = [];
+      QUIET = true; rngInit(seed); runInit(seed);
+      if (run) run.rung = rung;
+      for (let d = 0; d < days && run && !run.pendingEnd; d++){
+        rollDay(); simDay(skill, { order:'pridead' });
+        if (!run) break;
+        o.push(run.perfHist[run.perfHist.length - 1]);
+        if (run.pendingEnd) break;
+        startCommute();
+      }
+      run = null; return o;
+    };
+    const seeds = Array.from({ length:12 }, (_, i) => 'GATE-' + i);
+    const rows = [];
+    for (let r = 0; r < ROLES.length; r++){
+      const bar = ROLES[r].gates.nextAt; if (!bar) continue;
+      const best = ds => { let b = 0;
+        for (let i = 0; i + bar.days <= ds.length; i++)
+          b = Math.max(b, ds.slice(i, i + bar.days).reduce((a,c)=>a+c,0) / bar.days);
+        return b; };
+      rows.push({ id:ROLES[r].id, bar:bar.perf,
+        tight: seeds.map(s => best(play(s, 1.0,  8, r))).filter(w => w <  bar.perf).length,
+        loose: seeds.map(s => best(play(s, 0.35, 8, r))).filter(w => w >= bar.perf).length });
+    }
+    return { rows, debt:GATE_DEBT, budget:GATE_DEBT_BUDGET };
+  });
+
+  console.log('LADDER GATE HEALTH — 12 seeds x 8 days per rung\n');
+  console.log('  rung       bar   flawless misses      sloppy clears');
+  let worse = [], sum = 0;
+  for (const r of out.rows){
+    const wantT = out.debt.tight[r.id] || 0, wantL = out.debt.loose[r.id] || 0;
+    sum += r.tight + r.loose;
+    const mark = (got, want) => got > want ? ' WORSE (was ' + want + ')'
+                              : got < want ? ' better (was ' + want + ')' : '';
+    if (r.tight > wantT) worse.push(r.id + ' tight ' + r.tight + '>' + wantT);
+    if (r.loose > wantL) worse.push(r.id + ' loose ' + r.loose + '>' + wantL);
+    console.log('  ' + r.id.padEnd(10) + (r.bar*100).toFixed(0) + '%   ' +
+      (r.tight + '/12' + mark(r.tight, wantT)).padEnd(21) +
+      r.loose + '/12' + mark(r.loose, wantL));
+  }
+  console.log('\n  total ' + sum + ' against a recorded budget of ' + out.budget);
+  if (worse.length){ console.log('\nGATE DEBT GREW: ' + worse.join(', ')); return 1; }
+  console.log('\nGATE DEBT HELD' + (sum < out.budget
+    ? ' — and IMPROVED to ' + sum + '. Lower GATE_DEBT_BUDGET and the rows that moved.' : '.'));
+  return 0;
+}
+
 (async () => {
   const browser = await launch();
   const page = await browser.newPage();
@@ -35,6 +93,13 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   await page.goto(target.startsWith('http') ? target : 'file://' + target);
   await page.waitForFunction(() => typeof simDay === 'function' && typeof ROLES !== 'undefined',
                              { timeout:20000 });
+
+  if (LADDER){
+    const code = await ladder(page);
+    if (errs.length) console.log('\npage errors:\n  ' + errs.join('\n  '));
+    await browser.close();
+    process.exit(code || (errs.length ? 1 : 0));
+  }
 
   const out = await page.evaluate(({ SEEDS, DAYS, RUNG }) => {
     const bar = ROLES[RUNG].gates.nextAt;
