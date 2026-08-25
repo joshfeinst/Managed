@@ -1125,6 +1125,91 @@ function chatPick(id, day, count, n){
    bonus}, next}], next } — no opts and no next ends the scene. Lines and
    option text may use {token} fills resolved at ticket build. */
 const DIALOGUE = {
+  /* ------------------------------ T1 dialogue ---------------------------- */
+  't1.cfo.a':   { who:'client', t:['{User} again. Third reset today. He is on a plane. He is always on a plane.',
+    'Policy says verify the caller. Policy has never met the CFO.'] },
+  't1.cfo.b':   { who:'sys', t:['Reset done. He will do this again on Thursday.'],
+    opts:[ {t:'Log it as a security event, quietly', fx:{time:6, rep:1, bonus:1}},
+           {t:'Reset it and say nothing', fx:{stress:2}},
+           {t:'Suggest a password manager to a man on a plane', fx:{time:4, rep:-1, stress:3}} ] },
+  't1.phones.a':{ who:'client', t:['{client} says every phone in the building is down.',
+    'Every phone in the building is one phone, on one desk, that a cleaner unplugged.'] },
+  't1.phones.b':{ who:'sys', t:['The handset cable is coiled neatly beside the socket. Neatly. Someone was proud of this.'] },
+  't1.phones.c':{ who:'sys', t:['Plugged in. Dial tone. The building is saved.'],
+    opts:[ {t:'Tell them exactly what it was', fx:{time:5, rep:2, bonus:1}},
+           {t:'"Network event. Resolved."', fx:{stress:1, bonus:1}},
+           {t:'Label the socket so it cannot happen again', fx:{time:9, rep:1, bonus:1, stress:2}} ] },
+  't1.onb.a':   { who:'mackenzie', t:['New starter! Monday. Well — today. In forty minutes.',
+    'HR sent a seating chart instead of a form. I have forwarded it. That is my part done.'] },
+  't1.onb.b':   { who:'sys', t:['You have a desk number and a first name. You need an account, a laptop and a phone.'],
+    opts:[ {t:'Build it properly and be late', fx:{time:22, rep:2, bonus:1, stress:5}},
+           {t:'Clone the account of whoever sat there before', fx:{time:6, stress:4}},
+           {t:'Give them the spare laptop and sort the rest after', fx:{time:10, rep:1, stress:2}} ] },
+  't1.onb.c':   { who:'sys', t:['The spare laptop has a sticker that says DO NOT USE — ASK DEREK. Derek is at lunch.'] },
+  't1.big.a':   { who:'client', t:['{User} wants the email bigger. Not the screen. Not everything. The email.',
+    'They have tried the thing you are about to suggest. They say it made everything bigger, which is not what they asked for.'] },
+  't1.big.b':   { who:'sys', t:['There is a zoom slider in the corner of the reading pane. It has always been there.'],
+    opts:[ {t:'Walk them to it over the phone, slowly', fx:{time:8, rep:2, bonus:1}},
+           {t:'Remote in and do it yourself', fx:{time:4, bonus:1}},
+           {t:'Send the knowledge-base article', fx:{rep:-1}} ] },
+  't1.icon.a':  { who:'client', t:['"The icon is gone and I cannot work."',
+    'Which icon is not information they intend to provide.'] },
+  't1.icon.b':  { who:'sys', t:['Their second monitor is off at the wall. The icon is on the second monitor.'],
+    opts:[ {t:'Ask them to describe their desk, patiently', fx:{time:7, rep:2, bonus:1}},
+           {t:'"Is anything on your desk switched off?"', fx:{time:3, bonus:1}},
+           {t:'Book a site visit for a power switch', fx:{time:14, rep:-1, stress:3}} ] },
+  't1.xfer.a':  { who:'client', t:['They want the person who fixed it last time. They do not remember the name.',
+    'They remember he was nice. It was Derek. Derek is not nice.'] },
+  't1.xfer.b':  { who:'sys', t:['You can read the last ticket in nine seconds and be that person yourself.'],
+    opts:[ {t:'Read the history and just fix it', fx:{time:9, rep:2, bonus:1}},
+           {t:'Transfer to Derek and enjoy the silence', fx:{time:3, rep:-2, stress:-2}},
+           {t:'"I can help with that"', fx:{time:6, rep:1, stress:2}} ] },
+  't1.mfa.a':   { who:'client', t:['"My phone kept buzzing all night so I pressed yes and then it stopped."',
+    'It stopped because somebody in another country got what they wanted.'] },
+  't1.mfa.b':   { who:'sys', t:['This is an incident. It is 11am and you are T1 and it is an incident.'],
+    opts:[ {t:'Escalate immediately, kill the session', fx:{time:12, rep:3, bonus:1, stress:6}},
+           {t:'Reset the password and move on', fx:{time:5, stress:8}},
+           {t:'Ask three more questions first', fx:{time:8, rep:1, stress:4}} ] },
+  't1.mfa.c':   { who:'linda', t:['Good catch. I mean that. Write it up before you forget the timestamps.'] },
+  't1.vm.a':    { who:'client', t:['Voicemail-to-email stopped working for {user} a fortnight ago.',
+    'They did not report it a fortnight ago because they assumed somebody could see it.'] },
+  't1.vm.b':    { who:'sys', t:['The mailbox is full. It is full of voicemails.'],
+    opts:[ {t:'Clear it and set a quota warning', fx:{time:10, rep:1, bonus:1}},
+           {t:'Clear it', fx:{time:4, bonus:1}},
+           {t:'Explain mailbox quotas to someone who did not ask', fx:{time:9, rep:-1, stress:2}} ] },
+  't1.rev.a':   { who:'client', t:['{User}\'s mouse has moved the wrong way since the presentation.',
+    'The presentation was on Tuesday. It is Friday.'] },
+  't1.rev.b':   { who:'sys', t:['Somebody enabled natural scrolling on a shared machine and left.'],
+    opts:[ {t:'Fix it and check the other shared machines', fx:{time:12, rep:2, bonus:1}},
+           {t:'Fix this one', fx:{time:3, bonus:1}},
+           {t:'Find out who did it', fx:{time:8, rep:-1, stress:3}} ] },
+  't1.scan.a':  { who:'client', t:['The scanner scans to a folder that does not exist.',
+    'It has scanned to that folder since 2021. Nobody has ever looked in it.'] },
+  't1.scan.b':  { who:'sys', t:['Four years of scans went to a share that was decommissioned. Nobody noticed. Consider what that says about the scans.'] },
+  't1.blank.a': { who:'client', t:['Every document comes out with one blank page after it. Since 2019.',
+    'They have been throwing the blank page away for six years. Today it became urgent.'] },
+  't1.blank.b': { who:'sys', t:['It is a form feed in a driver setting nobody has opened since Windows 7.'],
+    opts:[ {t:'Fix the driver on every machine that prints there', fx:{time:16, rep:2, bonus:1, stress:3}},
+           {t:'Fix theirs', fx:{time:4, bonus:1}},
+           {t:'Close it — six years is a working system', fx:{rep:-1, stress:-1}} ] },
+  't1.shared.a':{ who:'client', t:['Reception want the password for "reception1" reset.',
+    'Fourteen people use "reception1". Four of them no longer work here.'] },
+  't1.shared.b':{ who:'sys', t:['You can reset it, or you can open the conversation nobody wants.'],
+    opts:[ {t:'Reset it and raise the shared-account risk properly', fx:{time:14, rep:3, bonus:1, stress:4}},
+           {t:'Reset it and write the new one on the ticket', fx:{time:3, rep:-2, stress:2}},
+           {t:'Reset it and tell reception only', fx:{time:6, rep:1, bonus:1}} ] },
+  't1.hi.a':    { who:'sys', t:['A ticket. Subject: "hi". No body. No name. Sent from a shared mailbox.'] },
+  't1.hi.b':    { who:'sys', t:['Somewhere a person believes they have reported a problem.'],
+    opts:[ {t:'Reply asking what is wrong, and wait', fx:{time:5, rep:1}},
+           {t:'Close it as unactionable', fx:{time:2, rep:-1}},
+           {t:'Ring the mailbox owner and find out', fx:{time:11, rep:2, bonus:1, stress:2}} ] },
+  't1.self.a':  { who:'client', t:['"Please close, I sorted it myself."',
+    'They have not said what it was. They have not said what they did.'] },
+  't1.self.b':  { who:'sys', t:['Whatever they did is now the configuration of a machine you support.'],
+    opts:[ {t:'Ask what they changed, kindly', fx:{time:7, rep:2, bonus:1}},
+           {t:'Close it. They are happy. You are happy.', fx:{time:1, stress:-2}},
+           {t:'Remote in and look at what they did', fx:{time:9, bonus:1, stress:3}} ] },
+
   /* small talk */
   'sm.derek': { who:'derek', t:['Don\'t touch the blue switch. Not that one. The OTHER blue switch.',
     'You want to know what fixed it? Reading the error message. Revolutionary.'] },
@@ -1348,6 +1433,58 @@ const DIALOGUE = {
    sla in game-minutes (scaled by role slaScale). weight biases the draw.
    from: npc originator (else a client from FILLS is stamped on). */
 const TICKETS = {
+  /* ---------------------------- T1 HELPDESK (rung 1) ----------------------
+     The first rung anybody actually reaches, and it used to add NOTHING: T1
+     drew the intern's pool minus five tickets that had aged out of it, so the
+     hardest thing in the game bought you a worse queue and a new word in the
+     HUD. tiers start at 1 so none of this can leak down to the intern.
+
+     The register is authorship. At INTERN you watched; at T1 you are required
+     to say words a person in another building wrote, to a caller angrier than
+     the script anticipated. */
+  'cfo-third-reset': { tiers:[1,3], weight:4, sla:26, slaMult:1.6, pri:1, stress:7,
+    title:'Password reset — {User} (CFO) — third one today',
+    steps:[{say:'t1.cfo.a'},{game:'pw',diff:2},{choice:'t1.cfo.b'}] },
+  'phones-down-allegedly': { tiers:[1,3], weight:3, sla:24, slaMult:1.5, pri:1, stress:9,
+    title:'"THE PHONES ARE DOWN" — {client}',
+    steps:[{say:'t1.phones.a'},{goto:'n2'},{say:'t1.phones.b'},{choice:'t1.phones.c'}] },
+  'onboarding-by-seating-chart': { tiers:[1,4], weight:3, sla:52, slaMult:2.1, pri:1, stress:8,
+    title:'New starter needs everything — starts in 40 minutes',
+    steps:[{say:'t1.onb.a'},{choice:'t1.onb.b'},{goto:'SHELF'},{say:'t1.onb.c'}] },
+  'make-email-bigger': { tiers:[1,3], weight:3, sla:32, slaMult:1.8, pri:2, stress:4,
+    title:'Make the email bigger. Only the email.',
+    steps:[{say:'t1.big.a'},{choice:'t1.big.b'}] },
+  'second-monitor-off': { tiers:[1,3], weight:3, sla:28, slaMult:1.6, pri:2, stress:6,
+    title:'{User}: "the icon is gone" and cannot work',
+    steps:[{say:'t1.icon.a'},{choice:'t1.icon.b'}] },
+  'transfer-to-last-time': { tiers:[1,4], weight:3, sla:30, slaMult:1.7, pri:2, stress:7,
+    title:'{client} wants "the person who fixed it last time"',
+    steps:[{say:'t1.xfer.a'},{choice:'t1.xfer.b'}] },
+  'mfa-approved-anyway': { tiers:[1,5], weight:3, sla:34, slaMult:1.6, pri:3, stress:9,
+    title:'"My phone kept buzzing so I pressed yes and it stopped"',
+    steps:[{say:'t1.mfa.a'},{choice:'t1.mfa.b'},{say:'t1.mfa.c'}] },
+  'voicemail-mailbox-full': { tiers:[1,3], weight:3, sla:38, slaMult:1.9, pri:3, stress:4,
+    title:'Voicemail-to-email has stopped working for {user}',
+    steps:[{say:'t1.vm.a'},{choice:'t1.vm.b'}] },
+  'mouse-moves-backwards': { tiers:[1,2], weight:2, sla:36, slaMult:1.9, pri:3, stress:3,
+    title:'{User}\'s mouse moves the wrong way since the presentation',
+    steps:[{say:'t1.rev.a'},{choice:'t1.rev.b'}] },
+  'scan-to-nowhere': { tiers:[1,4], weight:3, sla:42, slaMult:2.0, pri:3, stress:5,
+    title:'Scanner scans to a folder that does not exist',
+    steps:[{say:'t1.scan.a'},{goto:'PRINTER'},{game:'cable',diff:1},{say:'t1.scan.b'}] },
+  'blank-page-tax': { tiers:[1,4], weight:2, sla:56, slaMult:2.6, pri:4, stress:2,
+    title:'Printer emits one blank page after every document (since 2019)',
+    steps:[{say:'t1.blank.a'},{choice:'t1.blank.b'}] },
+  'shared-login-everyone': { tiers:[1,5], weight:3, sla:44, slaMult:2.0, pri:4, stress:6,
+    title:'Reset the password for "reception1" — 14 people use it',
+    steps:[{say:'t1.shared.a'},{choice:'t1.shared.b'}] },
+  'ticket-subject-hi': { tiers:[1,3], weight:2, sla:50, slaMult:2.4, pri:4, stress:3,
+    title:'Ticket — subject: "hi" — no body, no name',
+    steps:[{say:'t1.hi.a'},{choice:'t1.hi.b'}] },
+  'user-fixed-it-themselves': { tiers:[1,4], weight:2, sla:48, slaMult:2.4, pri:4, stress:2,
+    title:'"Please close, I sorted it myself"',
+    steps:[{say:'t1.self.a'},{choice:'t1.self.b'}] },
+
   'coffee-derek': { tiers:[0,0], weight:3, sla:30, slaMult:1.4, pri:4, stress:4, from:'derek',
     title:'Coffee for DEREK before {mtg}',
     steps:[{say:'t.cof.a'},{goto:'COFFEE'},{say:'t.cof.b'},{goto:'n1'},{say:'t.cof.c'}] },
@@ -2135,7 +2272,7 @@ const FIRE_GRACE = 3;          // days at the very start of a career that cannot
    deal an identical queue (Procurement, Relationship Mgr, Solutions Architect
    and vCIO are one job wearing four titles). The self-test ratchets on these:
    they may only go down, and both must reach 0. */
-const LADDER_DEBT = { thin: 6, twins: 6 };
+const LADDER_DEBT = { thin: 5, twins: 3 };   // T1 built 2026-08-25: was {6,6}
 /* Points of day-score separation between flawless and mediocre play at steady
    state. Measured at 3 on 2026-08-25 — far too few for a game whose whole
    subject is how well you triage. Ratcheted UPWARD: it may only improve, and
@@ -6216,8 +6353,8 @@ function selfTest(runSim){
          itself is pinned to the historical high-water mark, so loosening it
          to hide new debt fails the suite. */
       ok('ladder: the debt budget was never loosened',
-         LADDER_DEBT.thin <= 6 && LADDER_DEBT.twins <= 6,
-         JSON.stringify(LADDER_DEBT) + ' vs the 2026-08-25 high-water mark {thin:6,twins:6}');
+         LADDER_DEBT.thin <= 5 && LADDER_DEBT.twins <= 3,
+         JSON.stringify(LADDER_DEBT) + ' vs the tightened mark {thin:5,twins:3}');
       if (thin.length < LADDER_DEBT.thin || twins.length < LADDER_DEBT.twins)
         console.info('[managed] LADDER DEBT IMPROVED — lower LADDER_DEBT to ' +
           JSON.stringify({ thin: thin.length, twins: twins.length }));
