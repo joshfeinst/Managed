@@ -122,9 +122,17 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   /* the minigames and the pause menu draw their own overlays too */
   await p.evaluate(()=>{ newRun('JOB-VIS2'); clockIn(); if (G.modal) closeModalToWork(); });
   await p.waitForTimeout(300);
-  for (const g of ['cable','pw','jargon']){
-    await p.evaluate((k)=>{ if (G.modal) closeModalToWork(); openGame(k, 1, ()=>{}); }, g);
+  /* every board the game can open, not a hand-kept subset — a new board that
+     draws nothing would otherwise sail through this harness */
+  const boards = await p.evaluate(() => Object.keys(GAMES));
+  for (const g of boards){
+    await p.evaluate((k)=>{ if (G.modal) closeModalToWork(); openGame(k, 2, ()=>{}); }, g);
     await p.waitForTimeout(400);
+    bad += await audit('minigame: ' + g + ' (card)');
+    /* and again with the how-to-play card dismissed, which is the state the
+       player spends the whole board in */
+    await p.evaluate(()=>{ if (MG) MG.brief = null; });
+    await p.waitForTimeout(300);
     bad += await audit('minigame: ' + g);
   }
   await p.evaluate(()=>{ if (G.modal) closeModalToWork(); pauseGame ? pauseGame() : act('pause'); });
