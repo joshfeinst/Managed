@@ -3880,7 +3880,14 @@ function endDay(){
   /* the review has to be able to explain the number it just showed you */
   run.lastScore = { tolerance, forgiven: Math.min(run.breaches, tolerance),
                     costly: costly.length,
-                    worst: costly.length
+                    /* worstPri, NOT worst. This was called `worst` and so was
+                       the burn ledger forty lines below it, in the same object
+                       literal — so the ledger silently won, this line was dead
+                       code from the day it was written, and the review printed
+                       "worst: a P[object Object],[object Object],[object Object]"
+                       to every player who breached past tolerance. Found in a
+                       playtester's leftover DOM log after their session died. */
+                    worstPri: costly.length
                       ? 5 - (+Object.keys(STAKES).find(k => STAKES[k] === Math.max.apply(null, costly)) || 2)
                       : null,
                     /* The two numbers the score is literally a ratio of. Five
@@ -4012,7 +4019,11 @@ function reviewScreen(dayPerf, eod, promo, ending){
     ending === 'fired' ? 'YOUR LAST DAY' : ending === 'burnout' ? 'YOU ARE DONE IN'
     : ending === 'retired' ? 'THE LAST FRIDAY' : promo ? 'PROMOTED.' : 'DAILY PERFORMANCE REVIEW';
   const role0 = ROLES[run.rung];
-  const speed = run.resolved ? Math.round(run.speedSum / run.resolved * 100) : 0;
+  /* `|| 0` on the sums, not just a guard on the divisor. A review screen that
+     prints NaN% at a player is never acceptable, and the two are set in
+     startCommute — which every real day goes through, and which a restored
+     save or a future entry point might not. */
+  const speed = run.resolved ? Math.round((run.speedSum || 0) / run.resolved * 100) : 0;
   const qual  = run.qualN ? Math.round(run.qualSum / run.qualN * 100) : null;
   const gate  = role0.gates.nextAt;
   const ls    = run.lastScore;
@@ -4046,7 +4057,7 @@ function reviewScreen(dayPerf, eod, promo, ending){
       run.breaches + (ls && run.breaches
         ? ' — ' + ls.forgiven + ' written off as triage' +
           (ls.costly ? ', ' + ls.costly + ' held against you' +
-            (ls.worst ? ' (worst: a P' + ls.worst + ')' : '')
+            (ls.worstPri ? ' (worst: a P' + ls.worstPri + ')' : '')
                       : ', none held against you')
         : '') + '</dd>' +
     '<dt>Speed</dt><dd>' + speed + '% of each ticket\'s waiting room still unused — higher is better</dd>' +
@@ -7429,6 +7440,54 @@ function selfTest(runSim){
          html.indexOf('Coffee for DEREK') >= 0 ? '' : 'ticket titles absent');
       ok('review: it says whether you had started them',
          /never started|part-way in|never picked up/.test(html));
+
+      /* THE GENERAL LINT, and the reason it exists. `worst` was declared TWICE
+         in run.lastScore's object literal — once as a priority number, once,
+         forty lines later, as the burn ledger. The literal's last key wins, so
+         the priority line was dead from the day it was written and the breach
+         row rendered "(worst: a P[object Object],[object Object],[object
+         Object])" for every player who breached past tolerance. 235 invariants
+         and not one of them looked at what the screen actually SAID. A
+         playtester's leftover DOM log found it in one line.
+
+         So: nothing the evening renders may be a stringified object, a
+         swallowed undefined, a NaN, or an unresolved {token}. This catches the
+         whole family, not the one instance. */
+      const junk = /\[object |undefined|NaN|\{[A-Za-z]\w*\}/;
+      const screenJunk = () => {
+        const parts = ['r-stats', 'r-note', 'r-title', 'r-eyebrow']
+          .map(id => { const e = document.getElementById(id); return e ? (e.innerHTML || '') : ''; });
+        const hit = parts.find(t => junk.test(t));
+        return hit ? hit.slice(Math.max(0, hit.search(junk) - 45), hit.search(junk) + 45) : '';
+      };
+      /* on a REAL day, played through the game's own simulation — a hand-built
+         run can manufacture holes the live path never has, and a lint that only
+         fires on synthetic state is a lint nobody can trust */
+      QUIET = true; rngInit('LINT-D'); runInit('LINT-D');
+      for (let d = 0; d < 2; d++){ rollDay(); simDay(0.55, { order:'pridead' });
+        if (!run || run.pendingEnd) break; startCommute(); }
+      ok('review: a real evening renders no object, undefined or NaN',
+         screenJunk() === '', screenJunk());
+
+      /* and a day that breaches PAST tolerance names the priority it lost —
+         which is the exact line the duplicate key was eating */
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      run.clock = DAY_MIN; run.earned = 2; run.stakesDone = 3; run.resolved = 1;
+      run.speedSum = .6; run.qualSum = .7; run.qualN = 1;
+      run.burned = []; run.burnLog = [];
+      run.queue = ['coffee-derek','printer-jam','wifi-guest','fax-machine','ups-beeping']
+        .map((id, i) => ({ uid:900+i, id, title:'Something that burned ' + i, fills:{}, at:0,
+          deadline:1, sla:40, stress:4, si:0, bonus:0, gameScores:[], from:null }));
+      endDay();
+      const brStats = document.getElementById('r-stats').innerHTML;
+      const row = (brStats.match(/SLA breaches<\/dt><dd[^>]*>([^<]*)/) || [])[1] || '';
+      ok('review: a day past tolerance really does hold some against you',
+         /\d+ held against you/.test(row), row || '(no breach row)');
+      ok('review: and the breach row names the priority it lost',
+         /worst: a P[1-4]\b/.test(row), row || '(no breach row)');
+      ok('review: nothing on that evening is an object or a NaN either',
+         screenJunk() === '', screenJunk());
       run = null; G.state = 'title';
     }
 
