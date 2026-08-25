@@ -4540,8 +4540,9 @@ const GAME_BRIEF = {
     keys: [
       ['1 2 3', 'say a scripted line'],
       ['4', 'say the real answer — ends the call'],
-      ['CLICK', 'or click any card'],
-      ['', 'every card costs one turn, and they say the next thing']
+      ['UP / DOWN', 'step through the cards'],
+      ['E or CLICK', 'say the one you are on'],
+      ['', 'every card costs a turn, and they say the next thing']
     ],
     watch: 'A box only counts as honest while it is still true. Once they have ' +
            'told you they restarted it, asking is a lie: QA ticks it, the caller ' +
@@ -4804,9 +4805,9 @@ const GAMES = {
       lines: call.lines.map(l => ({ t: fill(l.t, F), kills: l.kills })),
       fixLine: fill(call.fix, F), fixAt: call.fixAt,
       qa: QA_STEPS.slice(0, nQA).map(q => ({ id:q.id, box:q.box, say:q.say, banked:false, dead:false, lied:false })),
-      said: [], at:0, turns:0, lies:0, resolved:false, over:false,
+      said: [], at:0, turns:0, lies:0, resolved:false, over:false, cur:0,
       par: nQA + 1, flash:0, flashTxt:'', flashOk:false, click:null, stall:0,
-      hint:'1-4 OR CLICK A CARD · THEY DO NOT WAIT FOR YOU',
+      hint:'1-4, OR UP/DOWN AND E, OR CLICK · THEY DO NOT WAIT FOR YOU',
       cardRect(i){ return [66, 150 + i*20, 348, 18]; },
       /* one place the renderer, the hit test and the keys all read, so a card
          can never say one thing and do another */
@@ -4882,10 +4883,16 @@ const GAMES = {
           this.finished = true;
           return;
         }
-        let pick = press.one ? 0 : press.two ? 1 : press.three ? 2 : press.four ? 3 : -1;
+        /* Every other board in the game moves with UP/DOWN and commits with E.
+           Leaving those dead here makes two keys the game spent an hour
+           teaching you do nothing, on the board you have played least. */
+        if (press.up)   this.cur = (this.cur + 3) % 4;
+        if (press.down) this.cur = (this.cur + 1) % 4;
+        let pick = press.one ? 0 : press.two ? 1 : press.three ? 2 : press.four ? 3
+                 : press.use ? this.cur : -1;
         if (this.click){
           const pt = this.click; this.click = null;
-          for (let i=0;i<4;i++) if (inRect(pt, ...this.cardRect(i))) pick = i;
+          for (let i=0;i<4;i++) if (inRect(pt, ...this.cardRect(i))){ this.cur = i; pick = i; }
         }
         if (pick >= 0) this.play(pick);
       },
@@ -4921,8 +4928,10 @@ const GAMES = {
         if (!this.over) this.cards().forEach((c, i) => {
           const [x,y,w,h] = this.cardRect(i);
           const dead = c.k === 'fix' && !c.armed;
-          ctx.fillStyle = '#161b21'; ctx.fillRect(x, y, w, h);
-          ctx.strokeStyle = c.k === 'fix' ? (dead ? '#343b44' : '#4ade80') : '#343b44';
+          const sel = i === this.cur;
+          ctx.fillStyle = sel ? '#1b2129' : '#161b21'; ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = sel ? '#e8e4da'
+                          : c.k === 'fix' ? (dead ? '#343b44' : '#4ade80') : '#343b44';
           ctx.strokeRect(x + .5, y + .5, w - 1, h - 1);
           txt((i+1) + '.', x + 6, y + 13, c.k === 'fix' ? (dead ? '#5c646e' : '#4ade80') : '#2f7fbe', 6);
           txt(wrapPx(c.t.split(' '), ' ', 300, 6)[0] +
@@ -6396,6 +6405,15 @@ function selfTest(runSim){
         ok('a wasted turn on a tight call loses it',
            banked === tight.qa.length && tight.over && !tight.resolved,
            'banked ' + banked + '/' + tight.qa.length + ', resolved ' + tight.resolved);
+      }
+      /* 5b. the keys the rest of the game taught you have to work here too */
+      {
+        const g = board();
+        g.cur = 0; press.down = true; g.step(1/30); press.down = false;
+        const moved = g.cur === 1;
+        press.use = true; g.step(1/30); press.use = false;
+        ok('up/down and E work on the cards like they do everywhere else',
+           moved && g.turns === 1, 'cur moved ' + moved + ', turns ' + g.turns);
       }
       /* 6. a call you never resolve is the worst outcome available */
       {
