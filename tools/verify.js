@@ -27,6 +27,20 @@ async function launch() {
   await page.waitForFunction(() => typeof G !== 'undefined' && typeof selfTest === 'function', { timeout: 15000 });
   await page.waitForTimeout(400);
 
+  /* NO TIMED WALK CHECK HERE, DELIBERATELY. The walk is mispriced — the queue
+     promised 0.30 min/tile against a real 1.05, and simDay charged a bot 0.238
+     — and I tried three ways to guard it. Inside F4 a tight sim() loop races
+     the shift clock past a tween that waits on real time: 5.38 min/tile. Out
+     here, headless Chromium throttles requestAnimationFrame, and the clock and
+     the tween both ride it and distort differently: 0.39 min/tile on the same
+     build that measures 1.05 through real key events in a real career.
+     Three attempts, three different answers, none reproducible. A check that
+     reports a new number every run is worse than no check, because it gets
+     ignored and then it gets deleted. The constant is set from the two
+     measurements that agree and were taken under real play — a tester's 13
+     tiles in 13 game-minutes, and 6 tiles in 3.91 minutes at RELAXED — and
+     what IS guarded, exactly and cheaply in F4, is that the bot and the player
+     are priced off one constant instead of two. */
   const tests = await page.evaluate(() => selfTest(true).map(r => ({ name:r.name, pass:r.pass, detail:r.detail })));
   const fails = tests.filter(t => !t.pass);
   console.log('SELFTEST ' + (tests.length - fails.length) + '/' + tests.length + ' passed');
