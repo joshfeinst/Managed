@@ -76,6 +76,11 @@ Some other things worth knowing:
   marks. The clock you're racing is the one that runs while it sits there.
 - The first time you meet a minigame it opens on a card explaining what it is,
   which keys do what, and what costs you marks. H brings it back later.
+- The boards change as you climb. The intern patches racks, triages passwords
+  and translates meetings. T1 takes calls where the script and the caller
+  disagree. T2 gets the one where you can make the change instantly and the
+  only question is who it lands on. None of them are on a stopwatch; take as
+  long as you like and be right.
 - Stopping to talk to someone costs you nothing. Neither does clicking away
   mid-conversation; you come back to the line you were on.
 - Stress climbs all day and makes hands-on work harder. That's what the kitchen
@@ -89,11 +94,17 @@ heard good things.
 
 ## Roadmap
 
-Every rung is playable, but the senior desks are thin — eight tickets deep where
-the intern has thirty-five. They need the same density: more tickets, more
-events, more promotion scenes, and minigames that match the job, like subnetting
-on the Project Team, quote Tetris in Procurement, and defending a budget as
-vCIO. The engine doesn't need anything new for that, since rungs are data.
+Every rung is playable and every rung now deals a queue the rung below can't
+get, but the boards run out after T2. Project Team, Procurement, Solutions
+Architect and vCIO still borrow the helpdesk's three: they want their own, and
+the designs exist — subnetting on the Project Team, quote Tetris in Procurement,
+defending a budget as vCIO. They're waiting on somebody actually climbing that
+far, because building nine boards for a rung nobody has stood on is how the
+first version ended up with thirty-five of its forty-three tickets on the
+intern's desk.
+
+The Big Migration is the same story. It's the win condition, Director's whole
+reason to exist, and there's still no board for it.
 
 The elevator should also go somewhere. Client sites. The dreaded on-site visit.
 
