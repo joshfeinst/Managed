@@ -3152,7 +3152,15 @@ function resolveTicket(t){
      to spare is equally "on time"; only cutting it fine costs you. */
   const prompt = clamp(r * 2, 0, 1);
   const offers = ticketOffers(t.id);
-  const W = { prompt:.14, craft:.38, bonus:.20 }, BASE = .28;
+  /* Craft was .38 of a .72 graded band — 53% of everything a hands-on ticket
+     could earn — and it is the ONE term measured by real-time dexterity in a
+     game whose clock stops behind every panel. Two human testers ran craft at
+     20-27% while triaging better than the "flawless" bot profile, because
+     simDay sets gameScores to the skill dial itself: every bar ever validated
+     here assumed a player with perfect hands. Craft now weighs about what
+     promptness does, and the decision the game is actually about — which
+     tickets you protect — is what carries the day. */
+  const W = { prompt:.20, craft:.22, bonus:.30 }, BASE = .28;
   const avail = W.prompt + (offers.game ? W.craft : 0) + (offers.bonus ? W.bonus : 0);
   const got   = W.prompt * prompt
               + (offers.game  ? W.craft * gameAvg : 0)
@@ -3859,10 +3867,17 @@ function gameTick(dt){
 }
 /* Accuracy first, then the clock: the board is solvable on sight, so without
    a pace component it handed out full marks for free. */
+/* ACCURACY ONLY. This board used to dock .035 a point for every second past
+   par — a real-time reflex tax inside a panel where the shift clock is frozen
+   and every other kind of thinking is free. It was the only such tax in the
+   game, it sat on CRAFT (which carried half of every hands-on ticket), and it
+   is why two testers who read the rack carefully scored 24% craft while
+   out-triaging the "flawless" bot. The minigame's cost to your day is the flat
+   charge levied when it opens; inside it, take as long as you like and be
+   right. Getting it wrong is what costs you. */
 function cableScore(g){
   const miss = Math.max(0, g.mistakes - (g.forgive || 0));
-  const over = Math.max(0, g.t - g.par);
-  return clamp(1 - miss*.18 - over*.035, .2, 1);
+  return clamp(1 - miss*.22, .2, 1);
 }
 const CABLE_COLS = ['#d64541','#2f7fbe','#ffb02e','#4ade80','#c084fc','#39d7ff','#ff8ad1'];
 /* Every cable is also LABELLED. Matching purely on hue — with red against
@@ -3923,13 +3938,15 @@ const GAMES = {
     const left = cols.map((c,i)=>({c, i}));
     const right = cols.map((c,i)=>({c, i}));
     for (let i=n-1;i>0;i--){ const j = Ri('game', i+1); [right[i], right[j]] = [right[j], right[i]]; }
-    return { kind:'cable', n, left, right, cur:0, side:0, pickL:-1, t:0, par: n * 2.4,
+    return { kind:'cable', n, left, right, cur:0, side:0, pickL:-1, t:0,
       linked:new Array(n).fill(-1), mistakes:0, buzz:0, click:null,
       hint:'PICK A CABLE — UP/DOWN TO MOVE, E TO GRAB',
       /* row pitch, shared by the renderer and the hit test so they can never
          disagree about where a cable is */
       rowDy(){ return Math.min(24, 130/this.n); },
       step(dt){
+        /* t is kept for the panel's own readout only — it does not score.
+           See cableScore. */
         this.t += dt; this.buzz = Math.max(0, this.buzz - dt);
         this.hint = this.side === 0
           ? 'PICK A CABLE — UP/DOWN TO MOVE, E TO GRAB'
@@ -4009,11 +4026,11 @@ const GAMES = {
           txt(CABLE_TAGS[this.right[j].i], 350, y + 7, '#8b93a0', 6, 'center');
           if (this.side===1 && this.cur===j){ ctx.strokeStyle='#fff'; ctx.strokeRect(318.5, y-4.5, 49, 17); }
         }
-        const over = Math.max(0, this.t - this.par);
         txt('MISTAKES ' + this.mistakes + (this.forgive ? ' (1 FORGIVEN)' : ''),
             140, 216, this.mistakes ? '#d64541' : '#8b93a0', 6, 'center');
-        txt('TIME ' + this.t.toFixed(1) + 's / ' + this.par.toFixed(0) + 's',
-            340, 216, over > 0 ? '#ffb02e' : '#4ade80', 6, 'center');
+        /* no par, no countdown: accuracy is the whole score here */
+        txt('TAKE YOUR TIME — ACCURACY IS THE SCORE',
+            340, 216, '#8b93a0', 6, 'center');
         if (this.buzz > 0){
           ctx.strokeStyle = 'rgba(214,69,65,' + (this.buzz*2).toFixed(2) + ')';
           ctx.lineWidth = 2; ctx.strokeRect(61, 27, 358, 212);
@@ -5892,6 +5909,39 @@ function selfTest(runSim){
       const offWorld = document.body.classList.contains('screenopen');
       ok('toasts: show() flags full screens so the rule can fire',
          onScreen && !offWorld, 'screen ' + onScreen + ' world ' + offWorld);
+    }
+
+    /* CRAFT MUST NOT CARRY THE DAY, AND MUST NOT BE A REFLEX TAX.
+       Measured: craft weighed .38 of a .72 graded band — 53% of everything a
+       hands-on ticket could earn — and it was the only term scored by
+       real-time dexterity in a game that freezes its clock behind every panel.
+       Two testers out-triaged the "flawless" bot and still scored 24% craft,
+       because simDay defines craft AS the skill dial, so every bar ever
+       validated here assumed perfect hands. */
+    {
+      const w = { prompt:.20, craft:.22, bonus:.30 };
+      /* read the real weights out of resolveTicket rather than trusting a copy */
+      const src = resolveTicket.toString();
+      const m = src.match(/W = \{\s*prompt:\s*\.?(\d+)\s*,\s*craft:\s*\.?(\d+)\s*,\s*bonus:\s*\.?(\d+)/);
+      ok('craft: the ticket weights are readable from the code', !!m, m ? '' : 'weights not found');
+      if (m){
+        const [pr, cr, bo] = [+('.'+m[1]), +('.'+m[2]), +('.'+m[3])];
+        ok('craft: no single term carries half a hands-on ticket',
+           cr <= (pr + cr + bo) * 0.42,
+           'craft ' + cr + ' of ' + (pr+cr+bo).toFixed(2) + ' graded');
+        ok('craft: triage-side terms together outweigh craft',
+           pr + bo > cr, 'prompt+bonus ' + (pr+bo).toFixed(2) + ' vs craft ' + cr);
+      }
+      /* and the board itself must not charge you for thinking */
+      const board = m => ({ mistakes:m, forgive:0, t:0 });
+      const quick = cableScore(board(1)), slow = cableScore({ mistakes:1, forgive:0, t:600 });
+      ok('craft: the cable board does not tax time, only mistakes',
+         quick === slow,
+         'same 1 mistake: 0s scores ' + quick.toFixed(2) + ', 600s scores ' + slow.toFixed(2));
+      ok('craft: mistakes still cost',
+         cableScore(board(0)) > cableScore(board(1)) &&
+         cableScore(board(1)) > cableScore(board(3)),
+         [0,1,3].map(k => cableScore(board(k)).toFixed(2)).join(' / '));
     }
 
     /* The queue row has to say WHERE a ticket sends you before you take it.
