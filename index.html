@@ -3184,14 +3184,27 @@ function presentCommute(){
     /* Day one is deliberately lighter, and never saying so made day two read
        as your play collapsing when it was the difficulty arriving. */
     (run.day === 1 ? '<dt>Today</dt><dd>a half-load first day, and everyone knows it</dd>' : '') +
+    /* THE WIN NEEDS A DAY THREE. retireAfterDays counts evenings at the top and
+       then simply ends the career, so the only ending you can actually earn
+       arrived as an unheralded text card — you finished a day like any other
+       and the game told you it was over. It gets a morning now. */
+    (lastDayAtTop() ? '<dt>Today</dt><dd>your last one, if you want it to be</dd>' : '') +
     '<dt>Job posting</dt><dd>' + run.seed + '</dd>';
   document.getElementById('r-note').textContent = run.day === 1
     ? 'Orientation is a PDF nobody sent you. Your badge photo is already unflattering. Good luck in there.'
+    : lastDayAtTop()
+    ? 'Somebody has put a good chair at your desk. Nobody will say who, or why, and Linda has started a sentence about you three times this week and finished none of them. Get through today and you are getting through it for the last time.'
     : commuteLine();
   const act = document.getElementById('r-actions'); act.innerHTML = '';
   mkBtn(act, 'CLOCK IN ▶', () => clockIn());
   show('s-review');
   saveGame();
+}
+/* True on the morning of the day whose EVENING would retire you: daysAtTop is
+   incremented at the end of the day, so the last one starts one short. */
+function lastDayAtTop(){
+  const g = ROLES[run.rung].gates;
+  return !g.nextAt && !!g.retireAfterDays && run.daysAtTop === g.retireAfterDays - 1;
 }
 function commuteLine(){
   const lines = ['The parking lot is full of cars nicer than yours. They belong to sales.',
@@ -6598,6 +6611,34 @@ function selfTest(runSim){
       void body;
       Object.assign(meta, JSON.parse(savedMeta));
       run = savedRun2; show(null);
+      if (typeof G !== 'undefined') G.state = 'work';
+    }
+    /* The only ending you can EARN used to arrive with no warning: you played
+       an ordinary day at the top and the game told you it was over. */
+    {
+      const savedRun3 = run;
+      const noteAt = d => {
+        rngInit('JOB-TEST'); runInit('JOB-TEST');
+        run.rung = ROLES.length - 1; run.day = 12; run.daysAtTop = d;
+        presentCommute();
+        return document.getElementById('r-note').textContent;
+      };
+      const need = ROLES[ROLES.length-1].gates.retireAfterDays;
+      const before = noteAt(need - 2), last = noteAt(need - 1);
+      /* matched on the chair, not on the word "last": one of the ordinary
+         commute lines is "you rehearse saying per my last email", which made
+         a /last/ test pass on a morning that said nothing at all */
+      const CHAIR = /good chair/i;
+      ok('the retirement day announces itself in the morning',
+         last !== before && CHAIR.test(last), last.slice(0, 60));
+      ok('and the days before it do not', !CHAIR.test(before), before.slice(0, 60));
+      ok('nobody with somewhere left to climb is told they are finishing',
+         (() => { rngInit('JOB-TEST'); runInit('JOB-TEST');
+                  run.rung = 0; run.daysAtTop = need - 1; run.day = 4;
+                  presentCommute();
+                  return !CHAIR.test(document.getElementById('r-note').textContent); })(),
+         'intern at daysAtTop ' + (need - 1));
+      run = savedRun3; show(null);
       if (typeof G !== 'undefined') G.state = 'work';
     }
     /* Colour must never be the only way to read a puzzle: the cable rack pairs
