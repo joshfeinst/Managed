@@ -2745,12 +2745,26 @@ function autoWalk(){
   if (nx === player.tx && ny === player.ty){ ap.path.shift(); return; }
   const dx = Math.sign(nx - player.tx), dy = Math.sign(ny - player.ty);
   if (!tryStep(player, dx, dy)){
-    /* somebody wandered into the route: re-plan once, then give up quietly */
-    if (ap.replanned){ G.autoPath = null; return; }
+    /* Somebody is standing in the route. The old code re-planned ONCE with the
+       same occupancy-blind astar, got the identical body-blocked path, and
+       then cancelled the walk with no sound, no message and no arrow — the
+       player stood still believing they were walking. Two playtesters lost
+       45-60 game-minutes an errand to this while the walk itself costs 8.
+       Re-plan AROUND people; wait a beat if there is genuinely no way past
+       (they are on a schedule and will move); only give up after that. */
+    ap.blocked = (ap.blocked || 0) + 1;
+    if (ap.blocked % 12 !== 1) return;                  // let them walk out of it
     const goal = ap.path[ap.path.length - 1];
-    const fresh = astar(player.tx, player.ty, goal[0], goal[1]);
-    G.autoPath = fresh ? { path: fresh, use: ap.use, replanned: true } : null;
-  }
+    const around = astar(player.tx, player.ty, goal[0], goal[1], true);
+    if (around && around.length){
+      G.autoPath = { path: around, use: ap.use, blocked: ap.blocked };
+      return;
+    }
+    if (ap.blocked < 120) return;                       // ~4s of patience
+    G.autoPath = null;
+    toast('SOMEBODY IS IN THE WAY. WALK IT YOURSELF.', 'corp', 2200);
+    sfx('err');
+  } else ap.blocked = 0;
 }
 function walkToClick(vx, vy){
   if (!W2.W || !player) return false;
@@ -2767,14 +2781,16 @@ function walkToClick(vx, vy){
     for (const [ax,ay] of [[tx,ty-1],[tx,ty+1],[tx-1,ty],[tx+1,ty]]){
       if (ax<0||ay<0||ax>=W2.W||ay>=W2.H) continue;
       if (solidAt(ax,ay) || entAt(ax,ay)) continue;
-      const pth = astar(player.tx, player.ty, ax, ay);
+      const pth = astar(player.tx, player.ty, ax, ay, true) || astar(player.tx, player.ty, ax, ay);
       if (pth && (!best || pth.length < best.length)) best = pth;
     }
     if (!best) return false;
     G.autoPath = { path: best, use: [tx, ty] };
     return true;
   }
-  const pth = astar(player.tx, player.ty, tx, ty);
+  /* prefer a route that goes around people; fall back to the direct one so a
+     crowded corridor still gets you moving */
+  const pth = astar(player.tx, player.ty, tx, ty, true) || astar(player.tx, player.ty, tx, ty);
   if (!pth) return false;
   G.autoPath = { path: pth, use: null };
   return true;
@@ -5736,6 +5752,44 @@ function selfTest(runSim){
       const offWorld = document.body.classList.contains('screenopen');
       ok('toasts: show() flags full screens so the rule can fire',
          onScreen && !offWorld, 'screen ' + onScreen + ' world ' + offWorld);
+    }
+
+    /* A walked errand must survive somebody standing in the corridor. Two
+       playtesters lost 45-60 game-minutes an errand to this while the walk
+       itself costs 8 — the route died silently on contact and they stood
+       there believing they were still walking. */
+    {
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      meta.pace = 'standard';
+      const k = anchorPos('COFFEE');
+      const route = k && astar(player.tx, player.ty, k[0], k[1]);
+      let clean = 0, blocked = 0, arrivedClean = false, arrivedBlocked = false;
+      if (route && route.length > 5){
+        run.clock = 0; G.autoPath = { path: route.slice(), use: null };
+        for (let i = 0; i < 20000 && G.autoPath; i++) sim(1/30);
+        clean = run.clock;
+        arrivedClean = Math.abs(player.tx - k[0]) + Math.abs(player.ty - k[1]) <= 1;
+        /* now park somebody squarely on the route and do it again */
+        rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+        loadMap('office1'); spawnPeople(); G.state = 'work';
+        const r2 = astar(player.tx, player.ty, k[0], k[1]);
+        const at = r2[3], who = Object.values(npcs)[0];
+        occ.delete(okey(who.tx, who.ty));
+        who.tx = at[0]; who.ty = at[1]; who.x = at[0]; who.y = at[1]; who.t = 1;
+        occ.add(okey(at[0], at[1]));
+        run.clock = 0; G.autoPath = { path: r2.slice(), use: null };
+        for (let i = 0; i < 20000 && G.autoPath; i++) sim(1/30);
+        blocked = run.clock;
+        arrivedBlocked = Math.abs(player.tx - k[0]) + Math.abs(player.ty - k[1]) <= 1;
+      }
+      ok('travel: an unobstructed errand is cheap', arrivedClean && clean < 30,
+         clean.toFixed(1) + ' game-min for ' + (route ? route.length : 0) + ' tiles');
+      ok('travel: somebody standing in the corridor does not strand you',
+         arrivedBlocked, 'arrived ' + arrivedBlocked + ' after ' + blocked.toFixed(1) + ' min');
+      ok('travel: routing around a person is not ruinous',
+         blocked < clean * 3 + 10, 'clean ' + clean.toFixed(1) + ' vs blocked ' + blocked.toFixed(1));
+      run = null; meta.pace = null; G.state = 'title';
     }
 
     /* --- what the third fleet caught (wave 3, five players) --- */
