@@ -1125,6 +1125,39 @@ function chatPick(id, day, count, n){
    bonus}, next}], next } — no opts and no next ends the scene. Lines and
    option text may use {token} fills resolved at ticket build. */
 const DIALOGUE = {
+  /* --------------------------- Director dialogue -------------------------- */
+  't9.cut.a':   { who:'client', t:['{client}\'s cutover is Saturday. The rollback plan is one sentence long.',
+    'The sentence is "restore from backup". You wrote that sentence, once, nine rungs ago, and someone approved it then too.'] },
+  't9.cut.b':   { who:'sys', t:['You are not a pair of hands in somebody else\'s window any more. You are the signature.'],
+    opts:[ {t:'Refuse the date until the rollback is real and tested', fx:{time:26, rep:3, bonus:1, stress:6}},
+           {t:'Go, and staff the weekend properly out of your own budget', fx:{time:18, rep:2, bonus:1, stress:8}},
+           {t:'Approve it. Everyone else has.', fx:{time:4, rep:-3, stress:10}} ] },
+  't9.cut.c':   { who:'linda', t:['Whatever you decided, it is yours now. That is the part nobody warns you about.'] },
+  't9.vault.a': { who:'sys', t:['Legal want a named successor for the password vault.',
+    'The honest answer is that there is no successor, because for nine rungs you were the succession plan and nobody wrote it down.'] },
+  't9.vault.b': { who:'sys', t:['Naming someone makes it real. Not naming someone also makes it real, later, worse.'],
+    opts:[ {t:'Name Kayla and start handing it over properly', fx:{time:24, rep:3, bonus:1, stress:4}},
+           {t:'Name yourself and a solicitor', fx:{time:9, rep:1, stress:3}},
+           {t:'Ask for more time', fx:{time:5, rep:-2, stress:5}} ] },
+  't9.linda.a': { who:'sys', t:['Linda\'s performance review is due. You are writing it.',
+    'She wrote yours nine times. You still have the one that said "adequate".'] },
+  't9.linda.b': { who:'sys', t:['Everything you know about being managed was learned in this box, from her, in both directions.'],
+    opts:[ {t:'Write the honest one, including what she got right', fx:{time:20, rep:3, bonus:1, stress:4}},
+           {t:'Write "meets expectations" and give her the afternoon back', fx:{time:6, rep:1, stress:2}},
+           {t:'Write the one you wish you had been given', fx:{time:16, rep:2, bonus:1, stress:6}} ] },
+  't9.derek.a': { who:'derek', t:['Fifteen minutes? I have booked thirty. I have another offer. I am telling you first.'],
+    },
+  't9.derek.b': { who:'sys', t:['For nine rungs his hoarding was an obstacle you routed around. It is a number on a retention register now, and the number is yours to pay.'],
+    opts:[ {t:'Match it, and make the handover of what he knows a condition', fx:{time:22, rep:2, bonus:1, stress:5}},
+           {t:'Match it', fx:{time:8, stress:4}},
+           {t:'Let him go and find out exactly what he was holding', fx:{time:12, rep:-1, stress:9}} ] },
+  't9.hire.a':  { who:'sys', t:['Six intern CVs. Unpaid, "great exposure" — the same posting you answered.',
+    'One of them is you, ten years ago, with a worse font.'] },
+  't9.hire.b':  { who:'sys', t:['You can hire the safe one, or the one who is going to be a problem in the good way.'],
+    opts:[ {t:'Hire the one who is you, and pay them', fx:{time:18, rep:3, bonus:1, stress:3}},
+           {t:'Hire the safest CV', fx:{time:7, stress:1}},
+           {t:'Push back on "unpaid" before hiring anyone', fx:{time:24, rep:3, bonus:1, stress:6}} ] },
+
   /* ---------------------------- T2 dialogue ------------------------------ */
   't2.dl.a':   { who:'client', t:['Someone replied-all to "All Staff". Someone else replied-all asking people to stop replying all.',
     'The list has 412 members. It has no moderator. It has never had a moderator.'] },
@@ -1596,6 +1629,29 @@ const DIALOGUE = {
    sla in game-minutes (scaled by role slaScale). weight biases the draw.
    from: npc originator (else a client from FILLS is stamped on). */
 const TICKETS = {
+  /* -------------------------- DIRECTOR OF IT (rung 9) ---------------------
+     The five the adjudicated plan kept out of thirteen designed: the ones that
+     are structurally impossible lower down. The queue is the shortest it has
+     ever been and every row has your name in the approver field.
+
+     Everything else proposed for this rung was cut — it is the least-reached
+     content in the game and eight of those tickets could have run at T3. */
+  'cutover-weekend': { tiers:[9,9], weight:4, sla:70, slaMult:2.6, pri:1, stress:10,
+    title:'{client} cutover is Saturday and the rollback plan is one sentence',
+    steps:[{say:'t9.cut.a'},{choice:'t9.cut.b'},{say:'t9.cut.c'}] },
+  'vault-succession': { tiers:[9,9], weight:3, sla:64, slaMult:2.5, pri:2, stress:8,
+    title:'Legal want a named successor for the password vault',
+    steps:[{say:'t9.vault.a'},{choice:'t9.vault.b'}] },
+  'linda-review': { tiers:[9,9], weight:3, sla:58, slaMult:2.4, pri:3, stress:9,
+    title:'Linda\'s performance review is due, and you are writing it',
+    steps:[{say:'t9.linda.a'},{choice:'t9.linda.b'}] },
+  'derek-counteroffer': { tiers:[9,9], weight:3, sla:52, slaMult:2.3, pri:4, stress:7,
+    title:'Derek would like fifteen minutes and has booked thirty',
+    steps:[{say:'t9.derek.a'},{choice:'t9.derek.b'}] },
+  'intern-hire': { tiers:[9,9], weight:3, sla:60, slaMult:2.5, pri:4, stress:5,
+    title:'Six intern CVs. One of them is you, ten years ago.',
+    steps:[{say:'t9.hire.a'},{choice:'t9.hire.b'}] },
+
   /* ---------------------------- T2 HELPDESK (rung 2) ----------------------
      "Your queue is quieter and every ticket in it is heavier — you close
      something at 11am and then find yourself checking it again at 2pm, and at
@@ -1858,25 +1914,25 @@ const TICKETS = {
     steps:[{say:'t.dom.a'},{game:'pw',diff:2},{choice:'t.dom.b'},{goto:'SERVERS'}] },
 
   /* ---- up the ladder: the job stops being tickets and starts being people --- */
-  'scope-creep': { tiers:[3,8], weight:3, sla:55, slaMult:1.9, pri:3, stress:6,
+  'scope-creep': { tiers:[7,9], weight:3, sla:55, slaMult:1.9, pri:3, stress:6,
     title:'{client} considers the new site "basically the same project"',
     steps:[{say:'t.scope.a'},{choice:'t.scope.b'},{game:'jargon',diff:2}] },
-  'quote-three': { tiers:[4,9], weight:3, sla:60, slaMult:1.9, pri:2, stress:5,
+  'quote-three': { tiers:[5,9], weight:3, sla:60, slaMult:1.9, pri:2, stress:5,
     title:'Three quotes for {device}, of which two must be worse',
     steps:[{say:'t.quote.a'},{goto:'CONF'},{choice:'t.quote.b'}] },
-  'renewal-shock': { tiers:[4,9], weight:3, sla:50, slaMult:1.9, pri:4, stress:8,
+  'renewal-shock': { tiers:[6,9], weight:3, sla:50, slaMult:1.9, pri:4, stress:8,
     title:'{client}: the licence renewal is up 40% and they have questions',
     steps:[{say:'t.renew.a'},{game:'jargon',diff:2},{choice:'t.renew.b'}] },
-  'qbr-deck': { tiers:[4,9], weight:3, sla:70, slaMult:3.2, pri:2, stress:6,
+  'qbr-deck': { tiers:[6,9], weight:3, sla:70, slaMult:3.2, pri:2, stress:6,
     title:'{client} QBR deck — last quarter\'s, with the dates changed',
     steps:[{say:'t.qbr.a'},{choice:'t.qbr.b'},{goto:'CONF'}] },
-  'budget-defense': { tiers:[5,9], weight:3, sla:65, slaMult:1.9, pri:4, stress:8,
+  'budget-defense': { tiers:[8,9], weight:3, sla:65, slaMult:1.9, pri:4, stress:8,
     title:'Defend the security spend to someone who has never been breached',
     steps:[{say:'t.budget.a'},{game:'jargon',diff:3},{choice:'t.budget.b'}] },
   'exit-interview': { tiers:[4,9], weight:2, sla:45, slaMult:1.9, pri:3, stress:7,
     title:'{User} is resigning and you are the one who noticed first',
     steps:[{say:'t.exit.a'},{choice:'t.exit.b'}] },
-  'audit-evidence': { tiers:[3,9], weight:3, sla:75, slaMult:3.2, pri:3, stress:7,
+  'audit-evidence': { tiers:[8,9], weight:3, sla:75, slaMult:3.2, pri:3, stress:7,
     title:'{client}\'s auditor wants evidence the policy was ever followed',
     steps:[{say:'t.eviD.a'},{game:'pw',diff:3},{choice:'t.eviD.b'}] },
   'onsite-drive': { tiers:[3,8], weight:2, sla:90, slaMult:1.9, pri:2, stress:6,
@@ -2537,7 +2593,12 @@ const FIRE_GRACE = 3;          // days at the very start of a career that cannot
    deal an identical queue (Procurement, Relationship Mgr, Solutions Architect
    and vCIO are one job wearing four titles). The self-test ratchets on these:
    they may only go down, and both must reach 0. */
-const LADDER_DEBT = { thin: 4, twins: 0 };   // T1+T2+T3 built 2026-08-25: was {6,6}
+/* ZERO. Reached 2026-08-25: every promotion deals work the rung below cannot
+   get, and no two rungs deal the same queue. It started at {6,6} — T1 and T2
+   added nothing at all, and Procurement, Relationship Manager, Solutions
+   Architect and vCIO were one job wearing four titles. The budget is closed:
+   any regression is now a test failure, not a note in a plan. */
+const LADDER_DEBT = { thin: 0, twins: 0 };
 /* Points of day-score separation between flawless and mediocre play at steady
    state. Measured at 3 on 2026-08-25 — far too few for a game whose whole
    subject is how well you triage. Ratcheted UPWARD: it may only improve, and
@@ -6608,18 +6669,18 @@ function selfTest(runSim){
          regressions; a ratchet keeps the suite honest about everything else
          while making this debt impossible to add to and impossible to forget.
          Lower the budgets as rungs land. Both must reach 0. */
-      ok('ladder: promotions that deal nothing new (budget ' + LADDER_DEBT.thin + ')',
+      ok('ladder: every promotion deals work the rung below cannot get',
          thin.length <= LADDER_DEBT.thin,
          thin.length + '/' + LADDER_DEBT.thin + (thin.length ? ' — ' + thin.join(' · ') : ''));
-      ok('ladder: rungs dealing an identical queue (budget ' + LADDER_DEBT.twins + ')',
+      ok('ladder: no two rungs deal an identical queue',
          twins.length <= LADDER_DEBT.twins,
          twins.length + '/' + LADDER_DEBT.twins + (twins.length ? ' — ' + twins.join(' · ') : ''));
       /* A ratchet whose budget can be raised is not a ratchet. The budget
          itself is pinned to the historical high-water mark, so loosening it
          to hide new debt fails the suite. */
       ok('ladder: the debt budget was never loosened',
-         LADDER_DEBT.thin <= 4 && LADDER_DEBT.twins <= 0,
-         JSON.stringify(LADDER_DEBT) + ' vs the tightened mark {thin:4,twins:0}');
+         LADDER_DEBT.thin === 0 && LADDER_DEBT.twins === 0,
+         JSON.stringify(LADDER_DEBT) + ' — the budget is closed at zero and may not reopen');
       if (thin.length < LADDER_DEBT.thin || twins.length < LADDER_DEBT.twins)
         console.info('[managed] LADDER DEBT IMPROVED — lower LADDER_DEBT to ' +
           JSON.stringify({ thin: thin.length, twins: twins.length }));
