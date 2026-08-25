@@ -2433,15 +2433,19 @@ function walkCostFromDesk(anchor){
 }
 function workLeft(t){
   const steps = TICKETS[t.id].steps;
-  let m = 0;
+  let m = 0, at = null;
   for (let i = t.si; i < steps.length; i++){
     const st = steps[i];
-    /* live: the NEXT leg is measured from where the player actually is; legs
-       after that are measured from the place they will be standing */
+    /* Each leg starts where the previous one ENDED. Pricing every leg from
+       the desk made a two-stop errand — walk to the coffee machine, then walk
+       to Derek — look like two independent trips from your chair, which is
+       neither what you do nor what it costs. A gate tester found those
+       tickets uncompletable inside their own SLA from most of the map. */
     if (st.goto){
-      const from = (i === t.si && typeof player !== 'undefined' && player)
-        ? [player.tx, player.ty] : null;
+      const from = at || ((i === t.si && typeof player !== 'undefined' && player)
+        ? [player.tx, player.ty] : null);
       m += from ? walkCost(st.goto, from) : walkCostFromDesk(st.goto);
+      at = anchorPos(st.goto) || at;
     }
     else if (st.game) m += 14;
     else if (st.choice) m += 7;
@@ -2473,9 +2477,13 @@ function ticketOffers(id){
   return (OFFERS[id] = { game, bonus });
 }
 function ticketWork(T){
-  let m = 6;
+  let m = 6, at = null;
   for (const st of T.steps){
-    if (st.goto) m += walkCostFromDesk(st.goto);      // deterministic per seed
+    /* leg N starts where leg N-1 ended, not back at the desk */
+    if (st.goto){
+      m += at ? walkCost(st.goto, at) : walkCostFromDesk(st.goto);
+      at = anchorPos(st.goto) || at;
+    }
     else if (st.game) m += 14;
     else if (st.choice) m += 7;
     else if (st.say) m += 4 * ((DIALOGUE[st.say] && DIALOGUE[st.say].t.length) || 1);
@@ -2724,6 +2732,8 @@ function slaTick(){
          like the score does: letting the P4 burn is cheap in both currencies. */
       run.stress = clamp(run.stress + t.stress * (.30 + .25*pri), 0, 100);
       const pn = 5 - pri;
+      /* what it was, so the evening can say what the day actually cost you */
+      (run.burnLog = run.burnLog || []).push({ t: t.title, p: pn, s: stakesOf(t.id), worked: t.si > 0 });
       slog('BREACHED (P' + pn + '): ' + t.title);
       /* the first one of a career explains itself, once — a new player reads a
          breach as failure, and here it is the mechanic */
@@ -3135,7 +3145,11 @@ function endDay(){
      otherwise, since the day ends before its crash ever lands */
   if (run.crashes.length) run.stress = clamp(run.stress + run.crashes.length * BURN.crashStress, 0, 100);
   /* anything still open rolls into the void; unworked queue counts against you */
-  for (const t of run.queue){ run.scores.push(0); run.breaches++; run.burned.push(stakesOf(t.id)); }
+  for (const t of run.queue){
+    run.scores.push(0); run.breaches++; run.burned.push(stakesOf(t.id));
+    (run.burnLog = run.burnLog || []).push({ t: t.title, p: 5 - (TICKETS[t.id].pri || 2),
+                                             s: stakesOf(t.id), worked: t.si > 0, never: true });
+  }
   run.queue = [];
   /* An oversubscribed day cannot be cleared, and grading the mean over every
      ticket that existed would just mean everyone fails. What is graded is the
@@ -3168,6 +3182,10 @@ function endDay(){
                        zero, playing the way the screen implied. */
                     earned: Math.round(run.earned || 0),
                     burned: Math.round(burnedStakes),
+                    /* the three that cost the most, by name. A gate tester
+                       had CRAFT 100% and SPEED 46% — both healthy — next to a
+                       20% performance and no way to see what had eaten it. */
+                    worst: (run.burnLog || []).slice().sort((a,b) => b.s - a.s).slice(0,3),
                     prev: run.perfHist.length ? run.perfHist[run.perfHist.length-1] : null };
   run.perfHist.push(dayPerf);
   slog('END OF DAY — perf ' + Math.round(dayPerf*100) + '%, ' + run.resolved + ' resolved, ' +
@@ -3287,6 +3305,12 @@ function reviewScreen(dayPerf, eod, promo, ending){
   const den = (ls ? ls.earned + ls.burned : 0) || 1;
   const dPrev = ls && ls.prev != null ? Math.round((dayPerf - ls.prev)*100) : null;
   document.getElementById('r-stats').innerHTML =
+    (ls && ls.worst && ls.worst.length
+      ? '<dt>What it cost you</dt><dd>' + ls.worst.map(w =>
+          '<b>P' + w.p + '</b> ' + w.t + ' <span style="color:var(--alert)">(-' + w.s + ')</span>' +
+          (w.never ? ' — never started' : w.worked ? ' — you were part-way in' : ' — never picked up'))
+          .join('<br>') + '</dd>'
+      : '') +
     (ls ? '<dt>What the day was worth</dt><dd><b>' + ls.earned + '</b> of ' + den +
       ' priority points protected — that ratio <b>is</b> your performance' +
       '<br><span class="hint" style="margin:0">P1 is worth ' + STAKES[4] + ', P2 ' + STAKES[3] +
@@ -3441,7 +3465,7 @@ function serializeRun(){
     rungSince:run.rungSince || 0,
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
-    introDone: !!run.introDone, seen: run.seen || {},
+    introDone: !!run.introDone, seen: run.seen || {}, burnLog: run.burnLog || [],
     reviewCard: run.reviewCard || null,
     /* Both were memory-only, and both detonated on resume: a missing warned
        threw a TypeError per tick for the 12 minutes before every calendar
@@ -3482,6 +3506,7 @@ function resumeRun(s){
     queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
     pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone,
     warned: r.warned || {}, taughtQueue: !!r.taughtQueue, lastChat: r.lastChat || {},
+    burnLog: r.burnLog || [],
     reviewCard: r.reviewCard || null,
     seen: r.seen || {}, scores:r.scores,
     burned: r.burned || [], earned: r.earned || 0, stakesDone: r.stakesDone || 0,
@@ -5804,6 +5829,81 @@ function selfTest(runSim){
       const offWorld = document.body.classList.contains('screenopen');
       ok('toasts: show() flags full screens so the rule can fire',
          onScreen && !offWorld, 'screen ' + onScreen + ' world ' + offWorld);
+    }
+
+    /* A multi-stop errand's second leg starts where the first one ENDED.
+       Pricing every leg from the desk made "fetch the coffee, then take it to
+       Derek" look like two separate trips from your chair, and a gate tester
+       found those tickets uncompletable inside their own SLA from most of the
+       map. */
+    {
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const oneLeg  = ticketWork({ steps: [{ goto:'COFFEE' }] });
+      const twoLeg  = ticketWork({ steps: [{ goto:'COFFEE' }, { goto:'COFFEE' }] });
+      const chained = ticketWork({ steps: [{ goto:'COFFEE' }, { goto:'SERVERS' }] });
+      /* the same place twice costs almost nothing extra — you are standing there */
+      ok('travel: a second stop at the same place is nearly free',
+         twoLeg < oneLeg + 6, 'one leg ' + oneLeg + ' vs same place twice ' + twoLeg);
+      /* a genuinely different second stop costs the leg BETWEEN them, and that
+         must not simply be the desk-to-there price again */
+      const fromDesk = walkCostFromDesk('SERVERS');
+      ok('travel: the second leg is measured from the first destination',
+         chained > twoLeg && chained !== oneLeg + fromDesk,
+         'chained ' + chained + ', desk-priced would be ' + (oneLeg + fromDesk));
+      /* workLeft chains too — it drives the live row slack and the in-hand
+         grace, and testing only ticketWork let a mutation through */
+      TICKETS.__one = { steps: [{ goto:'COFFEE' }] };
+      TICKETS.__two = { steps: [{ goto:'COFFEE' }, { goto:'COFFEE' }] };
+      const wOne = workLeft({ id:'__one', si:0 }), wSame = workLeft({ id:'__two', si:0 });
+      delete TICKETS.__one; delete TICKETS.__two;
+      /* A second stop AT THE SAME PLACE must be near-free, because you are
+         standing there. Comparing two DIFFERENT destinations passed whether
+         the legs chained or not — desk-pricing the second leg still made the
+         far one bigger — so it proved nothing. */
+      ok('travel: workLeft chains the legs as well',
+         wSame < wOne + 8, 'one stop ' + wOne + ' vs the same stop twice ' + wSame);
+      run = null; G.state = 'title';
+    }
+    /* The evening has to say what the day COST, not only what it scored. A
+       gate tester finished a day with CRAFT 100% and SPEED 46% — both healthy
+       — next to a 20% performance, and no screen told them what ate it. */
+    {
+      /* a ticket that dies on the SLA clock — not just the end-of-day sweep —
+         must land in the ledger by name */
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      run.burnLog = []; run.burned = []; run.active = null; run.clock = 500;
+      run.queue = [{ uid:983, id:'printer-jam', title:'A ticket that timed out', fills:{},
+                     at:0, deadline:5, sla:40, stress:4, si:0, bonus:0, gameScores:[], from:null }];
+      slaTick();
+      ok('review: a ticket that times out is recorded by name',
+         (run.burnLog || []).length === 1 &&
+         run.burnLog[0].t === 'A ticket that timed out' && typeof run.burnLog[0].p === 'number',
+         JSON.stringify(run.burnLog));
+
+      /* and the evening names the costliest of them on screen */
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      run.clock = DAY_MIN; run.earned = 2; run.stakesDone = 3; run.resolved = 1;
+      run.burned = []; run.burnLog = [];
+      run.queue = [
+        { uid:981, id:'coffee-derek', title:'Coffee for DEREK', fills:{}, at:0, deadline:1,
+          sla:40, stress:4, si:2, bonus:0, gameScores:[], from:null },
+        { uid:982, id:'printer-jam', title:'The printer is possessed again', fills:{}, at:0,
+          deadline:1, sla:40, stress:4, si:0, bonus:0, gameScores:[], from:null }];
+      endDay();
+      const ls = run && run.lastScore;
+      const html = document.getElementById('r-stats').innerHTML;
+      ok('review: the day records WHICH tickets it lost',
+         !!ls && Array.isArray(ls.worst) && ls.worst.length >= 2,
+         ls ? (ls.worst || []).length + ' recorded' : 'no ledger');
+      ok('review: the evening names them on screen',
+         /What it cost you/.test(html) && html.indexOf('Coffee for DEREK') >= 0,
+         html.indexOf('Coffee for DEREK') >= 0 ? '' : 'ticket titles absent');
+      ok('review: it says whether you had started them',
+         /never started|part-way in|never picked up/.test(html));
+      run = null; G.state = 'title';
     }
 
     /* A walked step is priced by the ROUTE, not by a flat guess — and the two
