@@ -6641,6 +6641,37 @@ function selfTest(runSim){
       run = savedRun3; show(null);
       if (typeof G !== 'undefined') G.state = 'work';
     }
+    /* A promotion has to change the WORK, not just the letterhead. The ticket
+       pools are already ratcheted apart; the boards are the other half of that
+       and were not guarded at all — a retier could quietly hand T1's call board
+       to the intern and nothing would have said a word. */
+    {
+      const boardsAt = r => {
+        const set = new Set();
+        for (const id in TICKETS){
+          const T = TICKETS[id];
+          if (T.tiers[0] <= r && r <= T.tiers[1])
+            for (const st of T.steps) if (st.game) set.add(st.game);
+        }
+        return set;
+      };
+      const pit = boardsAt(0), t1 = boardsAt(1), t2 = boardsAt(2);
+      ok('T1 deals a board the intern never sees',
+         [...t1].some(g => !pit.has(g)),
+         'intern [' + [...pit].join(' ') + '] vs t1 [' + [...t1].join(' ') + ']');
+      ok('and T2 deals one T1 never sees',
+         [...t2].some(g => !t1.has(g)),
+         't1 [' + [...t1].join(' ') + '] vs t2 [' + [...t2].join(' ') + ']');
+      ok('nothing above a rung leaks down to it',
+         !pit.has('script') && !pit.has('blast') && !t1.has('blast'),
+         'intern [' + [...pit].join(' ') + '] t1 [' + [...t1].join(' ') + ']');
+      /* and a board nothing deals is a board nobody plays */
+      const dealt = new Set();
+      for (const id in TICKETS) for (const st of TICKETS[id].steps) if (st.game) dealt.add(st.game);
+      const orphans = Object.keys(GAMES).filter(g => !dealt.has(g));
+      ok('every board the game can open is dealt by some ticket',
+         orphans.length === 0, orphans.join(','));
+    }
     /* Colour must never be the only way to read a puzzle: the cable rack pairs
        red against green and blue against purple, and it is half the minigames
        in the game. */
