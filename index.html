@@ -1763,7 +1763,8 @@ const TICKETS = {
     steps:[{say:'t3.rebuild.a'},{choice:'t3.rebuild.b'}] },
   'asked-for-by-name': { tiers:[3,7], weight:3, sla:34, slaMult:1.7, pri:2, stress:6,
     title:'Gary is on the phone and asked for you specifically',
-    steps:[{say:'t3.gary.a'},{choice:'t3.gary.b'}] },
+    /* Gary is, in fact, on the phone. This had no board at all. */
+    steps:[{say:'t3.gary.a'},{game:'script',diff:2},{choice:'t3.gary.b'}] },
   'intermittent': { tiers:[3,7], weight:3, sla:50, slaMult:2.2, pri:3, stress:8,
     title:'Intermittent',
     steps:[{say:'t3.inter.a'},{choice:'t3.inter.b'}] },
@@ -1861,7 +1862,13 @@ const TICKETS = {
     steps:[{say:'t.label.a'},{game:'jargon',diff:1}] },
   'shadow-raj': { tiers:[0,0], weight:2, sla:55, slaMult:3.2, pri:1, stress:2, from:'raj',
     title:'Shadow RAJ on a live T1 call',
-    steps:[{goto:'n2'},{say:'t.shadow.a'},{game:'jargon',diff:1},{say:'t.shadow.b'}] },
+    /* Shadowing a live call now opens the LIVE CALL board. It opened jargon
+       translation because the call board did not exist when this was written,
+       and then went on opening it after the board arrived — a tester took this
+       ticket twice looking for the new board and got the old one both times.
+       It is also the intern's single taste of T1's board: one template against
+       T1's four, so the promotion still changes the job. */
+    steps:[{goto:'n2'},{say:'t.shadow.a'},{game:'script',diff:1},{say:'t.shadow.b'}] },
   'asset-tags': { tiers:[0,0], weight:2, sla:75, slaMult:3.2, pri:1, stress:2, from:'linda',
     title:'Asset-tag 14 new laptops',
     steps:[{goto:'SHELF'},{say:'t.tags.a'}] },
@@ -6781,14 +6788,41 @@ function selfTest(runSim){
         return set;
       };
       const pit = boardsAt(0), t1 = boardsAt(1), t2 = boardsAt(2);
-      ok('T1 deals a board the intern never sees',
-         [...t1].some(g => !pit.has(g)),
-         'intern [' + [...pit].join(' ') + '] vs t1 [' + [...t1].join(' ') + ']');
+      /* Counted, not just present. Absolute exclusion was the wrong shape: it
+         made "the promotion changes the job" true by making the call board
+         unreachable for everyone, since nobody has ever been promoted. The
+         intern gets one call ticket as a taste; T1 gets strictly more. */
+      const dealtBy = (r, g) => Object.keys(TICKETS).filter(id => {
+        const T = TICKETS[id];
+        return T.tiers[0] <= r && r <= T.tiers[1] && T.steps.some(st => st.game === g);
+      }).length;
+      ok('T1 deals more of the call board than the intern does',
+         dealtBy(1, 'script') > dealtBy(0, 'script') && dealtBy(0, 'script') === 1,
+         'intern ' + dealtBy(0, 'script') + ' call tickets, t1 ' + dealtBy(1, 'script'));
+      /* A COUNT IS NOT THE POINT. Counting alone passed happily with the
+         intern's one call ticket moved back onto the jargon board — 0 is still
+         "at most a taste" and 4 is still "more". The thing that actually went
+         wrong was a ticket named "Shadow RAJ on a LIVE T1 CALL" opening jargon
+         translation, so what has to be guarded is that a ticket about a phone
+         call uses the phone-call board. */
+      {
+        /* "on the phone", not "phone". A bare \bphone\b flagged "my phone kept
+           buzzing so I pressed yes", which is a handset in somebody's pocket
+           and not a call at all — the lint has to mean what the board means. */
+        const callish = Object.keys(TICKETS).filter(id =>
+          /\bcalls?\b|\bcaller\b|on the phone|on the line/i.test(TICKETS[id].title));
+        const wrong = callish.filter(id =>
+          !TICKETS[id].steps.some(st => st.game === 'script'));
+        ok('a ticket about a phone call opens the phone-call board',
+           callish.length > 0 && wrong.length === 0,
+           callish.length + ' call tickets' +
+           (wrong.length ? ', wrong board: ' + wrong.join(', ') : ''));
+      }
       ok('and T2 deals one T1 never sees',
          [...t2].some(g => !t1.has(g)),
          't1 [' + [...t1].join(' ') + '] vs t2 [' + [...t2].join(' ') + ']');
-      ok('nothing above a rung leaks down to it',
-         !pit.has('script') && !pit.has('blast') && !t1.has('blast'),
+      ok('the tree board belongs to T2 and stays there',
+         !pit.has('blast') && !t1.has('blast') && t2.has('blast'),
          'intern [' + [...pit].join(' ') + '] t1 [' + [...t1].join(' ') + ']');
       /* and a board nothing deals is a board nobody plays */
       const dealt = new Set();
