@@ -2801,13 +2801,24 @@ const SKILL_DEBT = 4;
    ladder ended up with thirty-five of its forty-three tickets on the intern's
    desk. Recorded so that it is known debt rather than a future discovery, and
    ratcheted so that it can only get better. */
+/* RE-BASELINED UPWARD 2026-08-25 21:xx, which a ratchet is not supposed to
+   allow, and the reason is written here so nobody has to guess. The old numbers
+   were not better. They were measured with simDay charging a bot 0.238 minutes
+   per tile against a player's 1.05 — a bot walking four and a half times faster
+   than the person it modelled. Re-measured against the corrected walk, flawless
+   play misses the bar on 12 seeds out of 12 AT EVERY RUNG, and sloppy play
+   clears it nowhere. The ladder is not leaky any more; it is shut.
+   This is the honest floor. It may only come down from here, and every point it
+   comes down is a real point. */
 const GATE_DEBT = {
   /* seeds out of 12 on which FLAWLESS play fails to clear the bar */
-  tight: { intern:1, t1:3, t2:5, project:2, procure:2 },
-  /* seeds out of 12 on which SLOPPY play clears it anyway */
-  loose: { intern:5, t2:1, t3:9, project:8, procure:8, relmgr:8, solarch:4, vcio:11 }
+  tight: { intern:12, t1:12, t2:12, t3:12, project:12, procure:12,
+           relmgr:12, solarch:12, vcio:12 },
+  /* seeds out of 12 on which SLOPPY play clears it anyway — zero everywhere
+     now, which is not a triumph: nothing clears anything. */
+  loose: {}
 };
-const GATE_DEBT_BUDGET = 67;      /* the sum of both rows on 2026-08-25 */
+const GATE_DEBT_BUDGET = 108;     /* both rows, 2026-08-25, corrected walk */
 /* How many POINTS short of its own bar flawless play falls at the intern gate.
    19 on 2026-08-25 21:0x, the first measurement ever taken with the bot walking
    at a player's speed. Every earlier number in this file — GATE_DEBT above,
@@ -8027,8 +8038,8 @@ function selfTest(runSim){
         const sum = Object.values(GATE_DEBT.tight).reduce((a,b)=>a+b,0) +
                     Object.values(GATE_DEBT.loose).reduce((a,b)=>a+b,0);
         ok('gate: the per-rung gate debt was never loosened',
-           sum <= GATE_DEBT_BUDGET && GATE_DEBT_BUDGET <= 67,
-           sum + ' against a budget of ' + GATE_DEBT_BUDGET + ' (2026-08-25: 67)');
+           sum <= GATE_DEBT_BUDGET && GATE_DEBT_BUDGET <= 108,
+           sum + ' against a budget of ' + GATE_DEBT_BUDGET + ' (corrected walk: 108)');
         const named = new Set([...Object.keys(GATE_DEBT.tight), ...Object.keys(GATE_DEBT.loose)]);
         ok('gate: every rung named in the debt table is a real rung',
            [...named].every(id => ROLES.some(R => R.id === id && R.gates.nextAt)),
