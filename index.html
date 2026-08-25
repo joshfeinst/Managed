@@ -4058,7 +4058,15 @@ function careerOver(kind){
 
   const texts = {
     burnout: ['BURNED OUT', 'You typed "per my last email" into the microwave and hit START. Security walked you out gently — they\'ve seen it before. Day ' + savedRun.day + ', ' + ROLES[savedRun.rung].title + '.'],
-    fired:   ['LET GO', '"We\'re restructuring the support function," said Linda, restructuring you specifically out of the building. Day ' + savedRun.day + '.'],
+    /* Linda cannot restructure you out of a building where she reports to you.
+       firedBelow is live at rung 9 — it is 0.38 — so this line CAN fire at
+       Director, and when it did it fired the wrong person. Above the helpdesk
+       nobody is let go; the word is different and so is who says it. */
+    fired:   savedRun.rung >= 9
+      ? ['ASKED TO STEP DOWN', 'The owner did it himself, over coffee he made, in the kitchen you specified. "We\'re taking IT in a different direction." Linda was in the room and said nothing at all. Day ' + savedRun.day + '.']
+      : savedRun.rung >= 6
+      ? ['MANAGED OUT', 'Nobody said the word. The standing meeting stopped appearing, then your name came off the org chart, and Linda asked whether you had thought about consulting. Day ' + savedRun.day + '.']
+      : ['LET GO', '"We\'re restructuring the support function," said Linda, restructuring you specifically out of the building. Day ' + savedRun.day + '.'],
     retired: ['RETIRED (LEGEND)', 'You survived to Director and walked out on a Friday with a box of desk plants and every password in your head. They will be calling you within a month. Consulting rates apply.']
   };
   const [title, note] = texts[kind];
@@ -6564,6 +6572,33 @@ function selfTest(runSim){
            'finished ' + idle.finished);
       }
       MG = savedMG; G.state = savedState; G.modal = savedModal;
+    }
+    /* The exit interview names a person. At Director that person reports to
+       you, and firedBelow is live all the way up the ladder, so the line could
+       and did fire on the rung where it makes no sense. */
+    {
+      const savedRun2 = run, savedMeta = JSON.stringify(meta);
+      const firedAt = rung => {
+        rngInit('JOB-TEST'); runInit('JOB-TEST');
+        run.rung = rung; run.day = 6; run.perfHist = [.2,.2];
+        careerOver('fired');
+        const t = document.getElementById('o-title').textContent;
+        const n = document.getElementById('o-note') &&
+                  document.getElementById('o-stats').textContent;
+        void n;
+        return t;
+      };
+      const pit = firedAt(0), mid = firedAt(6), top = firedAt(9);
+      ok('being let go reads differently once nobody is above you',
+         pit !== top && mid !== top && pit !== mid,
+         [pit, mid, top].join(' / '));
+      ok('and Linda does not fire the person she reports to',
+         top.indexOf('LET GO') < 0, top);
+      const body = document.getElementById('o-title').textContent;
+      void body;
+      Object.assign(meta, JSON.parse(savedMeta));
+      run = savedRun2; show(null);
+      if (typeof G !== 'undefined') G.state = 'work';
     }
     /* Colour must never be the only way to read a puzzle: the cable rack pairs
        red against green and blue against purple, and it is half the minigames
