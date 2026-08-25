@@ -5025,6 +5025,12 @@ const GAMES = {
           return;
         }
         const rs = this.rows();
+        /* Closing a group takes its children off the list. If the cursor was
+           standing on one of them it now points past the end: nothing is
+           highlighted, and 1 and E do nothing at all with no explanation —
+           which is indistinguishable from a dead key. */
+        if (this.cur >= rs.length) this.cur = Math.max(0, rs.length - 1);
+        if (this.top > this.cur) this.top = this.cur;
         if (press.up)   this.cur = (this.cur + rs.length - 1) % rs.length;
         if (press.down) this.cur = (this.cur + 1) % rs.length;
         let k = press.use ? 'open' : press.one ? 'mark' : press.two ? 'apply' : null;
@@ -6505,6 +6511,25 @@ function selfTest(runSim){
         ok('a wrong name costs more than a missing one',
            warnedEveryone < blindly + 1e-9 || warnedEveryone < .5,
            'everybody ' + warnedEveryone.toFixed(3) + ', on sight ' + blindly.toFixed(3));
+      }
+      /* 4b. closing a group must not strand the cursor past the end of the
+             list, where 1 and E silently do nothing */
+      {
+        const g = board();
+        openAll(g);
+        g.cur = g.rows().length - 1;              /* the deepest visible row */
+        const deep = g.rows()[g.cur];
+        for (const n of g.all) if (n.group) n.open = false;   /* collapse it all */
+        g.step(1/30);
+        const now = g.rows()[g.cur];
+        ok('collapsing the tree never strands the cursor off the end',
+           g.cur < g.rows().length && !!now,
+           'cur ' + g.cur + ' of ' + g.rows().length + ' rows');
+        g.act('mark');
+        ok('and the row it lands on still answers to the keys',
+           now && (now.group ? !now.marked : now.marked),
+           (now ? now.name : 'nothing') + ' marked ' + (now && now.marked));
+        void deep;
       }
       /* 5. nothing here is on a stopwatch either */
       {
