@@ -805,7 +805,7 @@ function bakePortrait(look){
    ladder is real data so the systems and tests see the whole shape. */
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
-    gates:{ nextAt:{perf:0.76, days:3}, firedBelow:0.28, cert:null },
+    gates:{ nextAt:{perf:0.70, days:3}, firedBelow:0.28, cert:null },
     queue:{ ratePerHr:2.75, slaScale:1.0 }, deskAnchor:'TERMINAL' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
     gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.3, cert:null },
@@ -2136,6 +2136,29 @@ const FIRE_GRACE = 3;          // days at the very start of a career that cannot
    and vCIO are one job wearing four titles). The self-test ratchets on these:
    they may only go down, and both must reach 0. */
 const LADDER_DEBT = { thin: 6, twins: 6 };
+/* Points of day-score separation between flawless and mediocre play at steady
+   state. Measured at 3 on 2026-08-25 — far too few for a game whose whole
+   subject is how well you triage. Ratcheted UPWARD: it may only improve, and
+   the floor cannot be lowered to hide a regression. */
+const SKILL_DEBT = 3;
+/* Why the INTERN bar is 0.70 and not the 0.76 it shipped at. Swept 2026-08-25
+   over 6 seeds x 8 days x 4 skill profiles, scoring the best 3-day window each
+   career reached:
+
+     bar    flawless  good  mediocre  sloppy   <- share of seeds that promote
+     76%         67%    17%       0%      0%   (shipped: flawless FAILS a third of seeds)
+     72%         67%    83%      17%      0%
+     70%        100%   100%      33%      0%   <- chosen
+     68%        100%   100%      67%     17%
+     66%        100%   100%     100%     50%
+
+   At 76% a flawless player could not promote on a third of postings, which
+   makes the ladder decoration; five human testers played roughly twenty days
+   between them and none ever promoted. At 70% skill decides it: flawless and
+   good always get there, mediocre a third of the time, sloppy never. Below 68%
+   the gate stops meaning anything. The rungs above intern were already 0.70
+   and below, so this also removes a difficulty spike at the very first gate,
+   which was the steepest in the game. */
 /* Reputation used to be a write-only currency: ten dialogue options bought
    nothing but rep, rep did nothing until the career was already over, and so
    every one of those options was strictly worse than the alternative. Being
@@ -5975,6 +5998,60 @@ function selfTest(runSim){
       ok('travel: distance pricing did not break seeded SLAs', a === b,
          a === b ? '' : 'plan diverged with the map preloaded');
       run = null; G.state = 'title';
+    }
+
+    /* THE GATE HAS TO BE CLEARABLE BY GOOD PLAY, AND SKILL HAS TO MATTER.
+       Measured 2026-08-25 across 3 seeds x 7 days: steady-state performance
+       (day 3 onward, when the queue is saturated) is 65% for FLAWLESS play and
+       62% for mediocre play — a three-point spread — against a 76% bar. So the
+       promotion is decided by catching a lucky early window rather than by how
+       well you work, which is exactly what five human testers hit: they played
+       few days, never caught the window, and never promoted, while bots that
+       play dozens of days promote reliably.
+
+       Two things are asserted. The gate must be clearable by a flawless player
+       inside a career's length — otherwise the ladder is decoration. And skill
+       must separate: perfect play has to beat mediocre play by a visible
+       margin, or the day is not a test of anything. The second is DEBT today,
+       ratcheted like the ladder, because fixing it is a balance change that
+       wants its own measurement pass, not a 5am guess. */
+    {
+      const bar = ROLES[0].gates.nextAt;
+      const play = (skill, days) => {
+        const out = [];
+        QUIET = true; rngInit('GATE-T'); runInit('GATE-T');
+        for (let d = 0; d < days && run && !run.pendingEnd; d++){
+          rollDay(); simDay(skill, { order:'pridead' });
+          if (!run) break;
+          out.push(run.perfHist[run.perfHist.length - 1]);
+          if (run.pendingEnd) break;
+          startCommute();
+        }
+        run = null;
+        return out;
+      };
+      const bestWindow = ds => {
+        let b = 0;
+        for (let i = 0; i + bar.days <= ds.length; i++)
+          b = Math.max(b, ds.slice(i, i + bar.days).reduce((a,c)=>a+c,0) / bar.days);
+        return b;
+      };
+      const good = play(1.0, 6), poor = play(0.6, 6);
+      ok('gate: flawless play can actually clear the promotion bar',
+         bestWindow(good) >= bar.perf,
+         'best ' + Math.round(bestWindow(good)*100) + '% vs a ' + Math.round(bar.perf*100) + '% bar');
+      /* steady state = once the queue saturates and day 1's half-load is behind you */
+      const ss = a => a.slice(2).reduce((x,y)=>x+y,0) / Math.max(1, a.slice(2).length);
+      const spread = Math.round((ss(good) - ss(poor)) * 100);
+      ok('gate: skill separates at steady state (debt: ' + SKILL_DEBT + ' points)',
+         spread >= SKILL_DEBT,
+         'flawless ' + Math.round(ss(good)*100) + '% vs mediocre ' + Math.round(ss(poor)*100) +
+         '% — ' + spread + ' points apart');
+      if (spread > SKILL_DEBT)
+        console.info('[managed] SKILL SEPARATION IMPROVED — raise SKILL_DEBT to ' + spread);
+      ok('gate: the skill-separation debt was never loosened', SKILL_DEBT >= 3,
+         'floor is the 2026-08-25 measurement of 3 points');
+      G.state = 'title';
     }
 
     /* CONTENT: a promotion has to hand you work you could not get below it.
