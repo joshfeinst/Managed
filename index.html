@@ -972,7 +972,7 @@ const MAPS = { office1: {
     '####D#####################D###############o#',
     '#..........................................#',
     '#............................9.............#',
-    '#########D######D########D##################',
+    '#########D######D########D#########D########',
     '#kkKkVk......#......#........#.............#',
     '#,,,,,,......#..HH..#........#.............#',
     '#,,,,,,..U...#..HH..#....R...#..SSSSSSSS...#',
@@ -5042,6 +5042,11 @@ const WALK_MIN_PER_TILE = 1.05;
    out of 12 while no human has ever promoted once. Every balance number in this
    file was measured on a player who does not exist. */
 const BOT_TILES_PER_MIN = 1 / WALK_MIN_PER_TILE;
+/* The ceiling on any single errand, from any desk, in minutes. Measured, not
+   chosen: with the server room reachable from the mid corridor the worst leg
+   in the building is 60 (the architect to the lift, which is the length of the
+   floor and ought to hurt). Ratchet, not a target — it only ever goes down. */
+const WALK_BUDGET = 62;
 const WALK_FALLBACK = 14;          // no map parsed yet (headless planning)
 function tilesBetween(from, anchor){
   const a = anchorPos(anchor);
@@ -10441,6 +10446,44 @@ function selfTest(runSim){
         return a && !reach.has(a[0] + ',' + a[1]);
       }).map(R => R.id);
       ok('and you can walk to it from the front door', !stranded.length, stranded.join(' '));
+      /* REACHABLE IS NOT THE SAME AS REACHABLE IN TIME. Every anchor passed the
+         flood-fill above and the office still had a room you could not afford
+         to enter: the server room's only door faced south, away from the whole
+         building, so SERVERS — the destination fourteen tickets send you to,
+         more than any other — cost 70 to 90 minutes from every desk outside it.
+         That is a fifth of an eight-hour day, one way, spent walking to the
+         thing an MSP game is about, and it read as a balance problem at three
+         separate rungs before anyone looked at the map. A door in the north
+         wall fixed all of it at once.
+
+         So the walk is now priced, not just possible. A goto step charges
+         WALK_MIN_PER_TILE per tile of real path, so any errand a ticket can
+         demand has to stay inside a budget from EVERY rung's desk — the
+         seniors are supposed to sit further from the pit, not in a different
+         postcode. */
+      {
+        const wanted = new Set();
+        for (const id in TICKETS)
+          for (const st of TICKETS[id].steps) if (st.goto) wanted.add(st.goto);
+        const over = []; let worst = 0, worstAt = '';
+        for (const R of ROLES){
+          /* price it the way the game does, from the desk, but without
+             borrowing run.rung — a lint that edits the run to read it is a
+             lint that can leave the run somewhere it did not start */
+          const desk = anchorPos(R.deskAnchor);
+          if (!desk) continue;                       // covered by the desk lint
+          for (const a of wanted){
+            if (!anchorPos(a)) continue;             // covered by the anchor lint
+            const m = walkCost(a, desk);
+            if (m > worst){ worst = m; worstAt = R.id + '->' + a; }
+            if (m > WALK_BUDGET) over.push(R.id + '->' + a + ':' + m);
+          }
+        }
+        ok('no errand is further than the day can afford', !over.length,
+           over.slice(0,6).join(' ') + (over.length > 6 ? ' +' + (over.length-6) : ''));
+        ok('and the longest one is on record', worst > 0,
+           'worst ' + worst + ' min (' + worstAt + '), budget ' + WALK_BUDGET);
+      }
     }
     /* THE HANDBOOK IS A PROMISE AND THE DATA IS THE TRUTH. It told players the
        queue opens at "the glowing one at your desk" for months, and then the
