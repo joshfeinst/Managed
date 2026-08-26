@@ -5446,6 +5446,9 @@ const OTHER_FLOOR = { office1:'ground', ground:'office1' };
    printed sheet — landed within 17 points of a perfect one, and a board whose
    wrong answer scores 83% has no game in it. */
 const STARTER_SLIP = .26;
+/* The last rung that is actually ON the queue. The game says so itself, in
+   promo.project: "Project Team. You are off the queue — properly off it." */
+const LAST_QUEUE_RUNG = 3;
 /* A queue row may run to two lines and no further. Measured at the shipped
    720px panel: 247 of 268 titles are one line, and even with every {fill}
    at its longest none reaches three. It is a content budget, not a layout
@@ -5843,7 +5846,7 @@ function runInit(seed){
           stress:20, coffee:0, crashes:[], burnout:0, rep:meta.certs.length ? 1 : 0,
           queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[], pendingScenes:[], seen:{},
           scores:[], breaches:0, resolved:0, aces:0, daysAtTop:0, satOn:{}, promoted:false,
-          burned:[], earned:0, stakesDone:0, rungSince:0, warned:{} };
+          burned:[], earned:0, stakesDone:0, rungSince:0, warned:{}, queueDays:0 };
   run.rep += metaFx('rep');
 }
 function newRun(seed){
@@ -7384,6 +7387,12 @@ function endDay(){
                     worst: (run.burnLog || []).slice().sort((a,b) => b.s - a.s).slice(0,3),
                     prev: run.perfHist.length ? run.perfHist[run.perfHist.length-1] : null };
   run.perfHist.push(dayPerf);
+  /* Days actually spent answering the queue, which is not the same as days
+     survived — the exit interview printed run.day beside perfHist.length under
+     two different labels, and measured over twelve careers those two numbers
+     were identical every single time. A career stat that is a copy of the one
+     above it is padding on the one screen a whole career is aimed at. */
+  if (run.rung <= LAST_QUEUE_RUNG) run.queueDays = (run.queueDays || 0) + 1;
   slog('END OF DAY — perf ' + Math.round(dayPerf*100) + '%, ' + run.resolved + ' resolved, ' +
        run.breaches + ' breached (' + (run.breaches - Math.min(run.breaches, tolerance)) +
        ' beyond tolerance), stress ' + Math.round(run.stress) + ', burnout ' + Math.round(run.burnout) + '%');
@@ -7733,7 +7742,8 @@ function careerOver(kind){
   document.getElementById('o-stats').innerHTML =
     '<dt>Days survived</dt><dd>' + savedRun.day + '</dd>' +
     '<dt>Final title</dt><dd>' + ROLES[savedRun.rung].title + '</dd>' +
-    '<dt>Days on the queue</dt><dd>' + savedRun.perfHist.length + '</dd>' +
+    '<dt>Days on the queue</dt><dd>' + (savedRun.queueDays || 0) +
+      (savedRun.rung > LAST_QUEUE_RUNG ? ' — you got off it' : '') + '</dd>' +
     '<dt>Reputation banked</dt><dd>+' + (Math.floor(savedRun.rep/2) + (kind==='retired'?5:kind==='shortof'?2:0)) + ' (total ' + meta.rep + ')</dd>' +
     '<dt>Careers lived</dt><dd>' + meta.runsPlayed + '</dd>';
   document.getElementById('o-note').textContent = kind === 'retired'
@@ -7789,7 +7799,7 @@ function serializeRun(){
     burned:run.burned || [], earned:run.earned || 0, stakesDone:run.stakesDone || 0,
     speedSum:run.speedSum || 0, qualSum:run.qualSum || 0, qualN:run.qualN || 0,
     rungSince:run.rungSince || 0,
-    resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop,
+    resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop, queueDays:run.queueDays || 0,
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
     introDone: !!run.introDone, seen: run.seen || {}, burnLog: run.burnLog || [],
     reviewCard: run.reviewCard || null,
@@ -7839,7 +7849,8 @@ function resumeRun(s){
     speedSum: r.speedSum || 0, qualSum: r.qualSum || 0, qualN: r.qualN || 0,
     rungSince: r.rungSince || 0,
     breaches:r.breaches, resolved:r.resolved,
-    aces:r.aces, daysAtTop:r.daysAtTop, satOn:r.satOn || {}, promoted:r.promoted,
+    aces:r.aces, daysAtTop:r.daysAtTop, queueDays:r.queueDays || 0,
+    satOn:r.satOn || {}, promoted:r.promoted,
     phase:r.phase || 'work', pendingEnd: r.pendingEnd || null };
   if (run.pendingEnd){ careerOver(run.pendingEnd); return; }
   if (!run.plan){ startCommute(); return; }
@@ -14639,6 +14650,26 @@ function selfTest(runSim){
       run = null; G.state = 'title';
     }
 
+    /* THE EXIT INTERVIEW MUST NOT PAD ITSELF. It printed run.day beside
+       perfHist.length under "Days survived" and "Days on the queue", and
+       measured over twelve real careers those two numbers were identical
+       every single time — the same stat twice, on the one screen a whole
+       career is aimed at. "On the queue" now means what the game says it
+       means in promo.project: the days you spent at a helpdesk rung. */
+    {
+      const keepRun = run, keepState = G.state, keepMeta = meta;
+      rngInit('OVER'); runInit('OVER');
+      run.rung = 6; run.day = 10; run.queueDays = 4; run.rep = 8;
+      run.perfHist = [.6,.6,.6,.6,.6,.6,.6,.6,.6,.6];
+      careerOver('burnout');
+      const html = document.getElementById('o-stats').innerHTML;
+      const sv = html.match(/Days survived<\/dt><dd>(\d+)/);
+      const oq = html.match(/Days on the queue<\/dt><dd>(\d+)/);
+      run = keepRun; G.state = keepState; meta = keepMeta;
+      ok('the exit interview does not print the same stat twice',
+         !!sv && !!oq && +sv[1] === 10 && +oq[1] === 4,
+         (sv ? sv[1] : '?') + ' survived / ' + (oq ? oq[1] : '?') + ' on the queue');
+    }
     /* the review prints the number the career actually turns on */
     {
       QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
