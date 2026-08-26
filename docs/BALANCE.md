@@ -531,6 +531,32 @@ line, so its bar reads "misplaced" on some sweeps and not others. That is
 measurement noise around a genuinely narrow gap, not a bar that needs moving
 again — it is the rung to look at next if anything here gets looked at.
 
+## A repeated key is not an error, it is a silent deletion
+
+A duplicate key in a JavaScript object literal is legal: the later one wins and
+everything written under the earlier one is discarded, without a warning. This
+file is twelve thousand lines of object literals, and it has now been bitten
+three times:
+
+- `worst` in `run.lastScore`, shadowed by the burn ledger forty lines below it
+  in the same literal. Dead code from the day it was written; the review screen
+  printed `worst: a P[object Object],...` to every player who breached.
+- a `const dealt` collision that stopped the page parsing — the only one of the
+  three that failed loudly, because `const` does.
+- three CHAT entries given rung-aware lines that were thrown away in silence,
+  because entries for those people already existed further down the table.
+
+The self-test cannot see any of it: by the time it runs, the object has already
+collapsed. So `tools/verify.js` checks the **source text** — every `const
+UPPERCASE = {` table, every key, counted. It found two real duplicates on its
+first run: a scene id collision where a second procurement ticket had been
+written with the same premise as one already in the pool, in different words,
+so its dialogue was dead the moment it was saved and both tickets showed the
+older scene. The redundant ticket is gone and the board went to the ticket that
+was already there.
+
+A similarity scan across all 194 ticket titles found no other pair above 0.62.
+
 ## The ratchets
 
 | name | value | meaning | direction |

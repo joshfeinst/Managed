@@ -46,8 +46,31 @@ async function launch() {
   console.log('SELFTEST ' + (tests.length - fails.length) + '/' + tests.length + ' passed');
   fails.forEach(f => console.log('  FAIL ' + f.name + '  ' + f.detail));
 
+  /* DUPLICATE KEYS IN THE DATA TABLES. A repeated key in an object literal is
+     not an error in JavaScript — the later one silently wins and everything
+     written under the earlier one is discarded. This file is twelve thousand
+     lines of object literals and has been bitten three times: `worst` in
+     run.lastScore, which made a whole branch dead code from the day it was
+     written; a `const dealt` collision that stopped the page parsing; and a
+     CHAT table where three people were given rung-aware lines that were thrown
+     away, in silence, because entries for them already existed further down.
+     The self-test cannot see this — by the time it runs, the object has
+     already collapsed — so it is checked here, against the source text. */
+  const src = fs.readFileSync(process.argv[2], 'utf8');
+  const dupes = [];
+  for (const m of src.matchAll(/\nconst ([A-Z_][A-Z0-9_]*) = \{\n([\s\S]*?)\n\};/g)){
+    const table = m[1], body = m[2];
+    const keys = [...body.matchAll(/^  '?([\w.$-]+)'?\s*:/gm)].map(x => x[1]);
+    const seen = new Map();
+    for (const k of keys) seen.set(k, (seen.get(k) || 0) + 1);
+    for (const [k, n] of seen) if (n > 1) dupes.push(table + '.' + k + ' x' + n);
+  }
+  if (dupes.length) console.log('DUPLICATE KEYS ' + dupes.length + '\n  ' + dupes.join('\n  '));
+  else console.log('DUPLICATE KEYS 0');
+
   console.log('PAGE ERRORS ' + errors.length + (errors.length ? '\n  ' + errors.join('\n  ') : ''));
-  console.log(fails.length === 0 && errors.length === 0 ? 'VERIFY OK' : 'VERIFY FAILED');
+  const clean = fails.length === 0 && errors.length === 0 && dupes.length === 0;
+  console.log(clean ? 'VERIFY OK' : 'VERIFY FAILED');
   await browser.close();
-  process.exit(fails.length === 0 && errors.length === 0 ? 0 : 1);
+  process.exit(clean ? 0 : 1);
 })().catch(e => { console.error('HARNESS ERROR', e); process.exit(2); });

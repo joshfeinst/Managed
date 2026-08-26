@@ -1039,9 +1039,17 @@ const NPCS = {
    pure hash of (who, day, how many times you have talked to them), so it
    consumes no RNG stream: chatting can never shift the seeded content of the
    day, and the same posting still plays the same office twice. */
+/* THE OFFICE NOTICES WHERE YOU ARE ON THE LADDER. Everybody here already had a
+   voice; what nothing in this table did was read r.rung. So a promotion changed
+   the tickets, the meetings, the boards and the queue, and never once changed
+   what anybody said to you — Derek gave a Director the intern's pep talk, and
+   Linda, who decides your promotions, said the same two things at every rung
+   she had ever promoted you through. */
 const CHAT = {
   derek: {
     when: [
+      { if:r => r.rung >= 8, t:'You outrank me by four rungs and you still come and ask me things. That is the only compliment I know how to accept.' },
+      { if:r => r.rung >= 4, t:'You have gone over to the side that has meetings. I forgive you. I will still not document anything.' },
       { if:r => r.stress > 72, t:'You have the face. I had that face in 2016. I still have the 2016 face, it just moved in.' },
       { if:r => r.queue.length >= 5, t:'Five open? Rookie numbers. I once had eleven and a wedding to get to.' },
       { if:r => r.breaches >= 3, t:'Breaches are fine. Breaches are DATA. That is what I tell Linda and she has stopped believing me.' },
@@ -1062,6 +1070,8 @@ const CHAT = {
   },
   raj: {
     when: [
+      { if:r => r.rung >= 6, t:'You used to sit there. I sit there now. I have not moved anything, in case you come back.' },
+      { if:r => r.rung >= 3, t:'When it gets to you it means I could not do it, so I always want to know what it was. Nobody ever tells me what it was.' },
       { if:r => r.stress > 72, t:'Are you okay? You look how I feel and I have had six coffees and a bad phone call.' },
       { if:r => r.breaches >= 2, t:'Mine are breaching too. Is that normal? Please say it is normal. Kayla just laughed.' },
       { if:r => r.day === 1, t:'You’re new! Okay. Do not touch the fax machine. That is the whole orientation.' },
@@ -1081,6 +1091,8 @@ const CHAT = {
   },
   kayla: {
     when: [
+      { if:r => r.rung >= 7, t:'You are in the drawings-and-decisions part of the building now. Do you miss closing things? Be honest.' },
+      { if:r => r.rung >= 2, t:'You are quite good at this. I am saying it once and then never again, so.' },
       { if:r => r.queue.length >= 5, t:'Your queue is a hallway now. Pick the loudest one and let the rest be sad.' },
       { if:r => r.breaches >= 4, t:'You are dropping the wrong ones. Drop the P4. Nobody has ever been fired over a P4.' },
       { if:r => r.stress > 72, t:'Go outside. I am serious. The queue will be exactly this bad in four minutes.' },
@@ -1101,6 +1113,8 @@ const CHAT = {
   },
   mackenzie: {
     when: [
+      { if:r => r.rung >= 8, t:'You can say yes to things now! Enormous news. Enormous, enormous news for me specifically.' },
+      { if:r => r.rung >= 5, t:'We are on the same side of the deal now, which I have decided means you agree with me.' },
       { if:r => r.breaches >= 3, t:'Hey — quick thing — is the queue okay? A client mentioned. I said it was fine. Make it fine.' },
       { if:r => r.clock > 400, t:'Before you go! Tiny ask. It is not tiny. I will send it tonight.' },
       { if:r => r.resolved >= 3, t:'You are FAST. I am going to start promising things at your speed.' },
@@ -1119,6 +1133,9 @@ const CHAT = {
   },
   brenda: {
     when: [
+      { if:r => r.rung === 0, t:'You are the new one. There is a form for you. There is a form for everyone, but yours is late.' },
+      { if:r => r.rung >= 8, t:'You are important now, so I will tell you: the thermostat argument has been running since 2011 and it is not about temperature.' },
+      { if:r => r.rung >= 5, t:'You are a budget holder now. That means when you take a chair from the third floor it is a transfer and not a theft.' },
       { if:r => r.coffee >= 3, t:'That is your third. The machine is not a friendship and it is not free, spiritually.' },
       { if:r => r.stress > 72, t:'You are grey. Drink water. I am not asking, I am the office manager.' },
       { if:r => r.clock > 420, t:'The cleaners come at six and they will hoover around you. They have before.' },
@@ -1137,6 +1154,10 @@ const CHAT = {
   },
   linda: {
     when: [
+      { if:r => r.rung >= 9, t:'You have my old job. I would like to say it gets easier. What it gets is quieter, which is not the same thing.' },
+      { if:r => r.rung >= 6, t:'You manage people now. The whole trick is that they can tell whether you would do it yourself.' },
+      { if:r => r.rung >= 3 && r.rung <= 5, t:'You are past the part where people tell you what to do and into the part where they ask what you think. It is worse.' },
+      { if:r => r.rung === 0, t:'Everyone starts here. I started here. There is a photograph of it that will not be shown to you.' },
       { if:r => r.breaches >= 5, t:'I am seeing a lot of red on the board. I am choosing to see it as a busy day.' },
       { if:r => r.stress > 80, t:'You are working late in your face. Go home on time and I will pretend I did not say that.' },
       { if:r => r.aces >= 3, t:'Three clean ones. That goes in the review. Quietly. Do not make it weird.' },
@@ -1156,6 +1177,8 @@ const CHAT = {
   },
   gary: {
     when: [
+      { if:r => r.rung >= 8, t:'They said you run the whole thing now! So you would definitely know about my home printer.' },
+      { if:r => r.rung >= 4, t:'You have moved desks! Does that mean you are the one who authorises things? It is about my printer.' },
       { if:r => r.queue.length >= 4, t:'You look busy! I’ll be quick. It’s about my home printer. It’s not quick.' },
       { if:r => r.clock > 400, t:'Still here? Me too! I find the end of the day is when people have time.' }
     ],
@@ -1639,12 +1662,6 @@ const DIALOGUE = {
     opts:[ {t:'Submit it with the cuts named and justified in writing', fx:{time:16, rep:3, bonus:1, stress:4}},
            {t:'Submit it', fx:{time:5, bonus:1, stress:3}},
            {t:'Submit the number they asked for and flag the risk verbally', fx:{time:8, rep:-1, stress:6}} ] },
-  'q.three.a': { who:'sys', t:['Policy requires three quotes. You have one.',
-    'The second vendor stopped replying in March. The third has sent a PDF that is a photograph of a different PDF.'] },
-  'q.three.b': { who:'sys', t:['You could make the numbers work by Friday, or you could make them true.'],
-    opts:[ {t:'Chase properly and miss Friday', fx:{time:19, rep:2, bonus:1, stress:5}},
-           {t:'Document why only one quote was obtainable', fx:{time:11, rep:2, bonus:1, stress:3}},
-           {t:'Ask the one vendor for two more quotes', fx:{time:4, rep:-3, stress:4}} ] },
   'r.churn.a': { who:'sys', t:['{client} used to send four emails a day. They have sent none this month.',
     'Nothing is broken. Nothing has been raised. That is what makes it a P1.'] },
   'r.churn.b': { who:'sys', t:['Silence from a client is either contentment or a procurement process, and you have about a week to find out which.'],
@@ -2522,9 +2539,6 @@ const TICKETS = {
   'the-budget-round': { tiers:[5,9], weight:4, sla:48, slaMult:2.1, pri:3, stress:8,
     title:'Next year\'s IT budget, and it is smaller than this year\'s',
     steps:[{say:'q.budg.a'},{game:'quote',diff:2},{choice:'q.budg.b'}] },
-  'three-quotes-required': { tiers:[5,9], weight:3, sla:54, slaMult:2.3, pri:2, stress:6,
-    title:'Policy needs three quotes. Two vendors have stopped replying.',
-    steps:[{say:'q.three.a'},{game:'quote',diff:1},{choice:'q.three.b'}] },
   'expenses-rejected': { tiers:[5,9], weight:4, sla:64, slaMult:2.4, pri:1, stress:3,
     title:'Your expense claim was rejected. It is for £4.20.',
     steps:[{say:'x.exp.a'},{choice:'x.exp.b'}] },
@@ -2790,9 +2804,13 @@ const TICKETS = {
      ability to FIX anything at all — you can only quote it, chase it, and
      explain why it has not arrived. Everything here is somebody else's
      deadline with your name on the purchase order. */
-  'quote-three-suppliers': { tiers:[5,7], weight:4, sla:36, slaMult:1.8, pri:4, stress:8,
+  /* the board goes on the ticket that already existed. A second ticket was
+     written for it before anyone checked, with the same premise in different
+     words and a colliding scene id, so the new scene was dead the moment it
+     was saved and both tickets showed this one. */
+  'quote-three-suppliers': { tiers:[5,8], weight:4, sla:36, slaMult:1.8, pri:4, stress:8,
     title:'Three comparable quotes needed. Two suppliers have stopped replying.',
-    steps:[{say:'q.three.a'},{choice:'q.three.b'}] },
+    steps:[{say:'q.three.a'},{game:'quote',diff:1},{choice:'q.three.b'}] },
   'lead-time-fourteen-weeks': { tiers:[5,8], weight:4, sla:32, slaMult:1.6, pri:4, stress:9,
     title:'The switch is fourteen weeks. The project needs it in nine days.',
     steps:[{say:'q.lead.a'},{choice:'q.lead.b'}] },
@@ -9561,6 +9579,37 @@ function selfTest(runSim){
       ok('no ticket is ever dealt outside its own tiers',
          !uniq.length, uniq.slice(0, 6).join(' ') + (uniq.length > 6 ? ' +' + (uniq.length-6) : ''));
       run = savedRunT;
+    }
+    /* THE OFFICE HAS TO NOTICE. Three of the seven people had no CHAT entry at
+       all and fell back to a two-line DIALOGUE node for an entire career, and
+       nothing anywhere read r.rung — so a promotion changed the tickets, the
+       meetings and the boards, and never once changed what anybody said to
+       you. Linda, who decides your promotions, had two lines. */
+    {
+      const savedRunC = run;
+      const thin = [], deaf = [];
+      for (const id in NPCS){
+        const C = CHAT[id];
+        const pool = C ? (C.any || []).length + (C.when || []).length
+                       : (DIALOGUE[NPCS[id].talk] || { t:[] }).t.length;
+        if (pool < 6) thin.push(id + ':' + pool);
+        if (!C) continue;
+        /* the same day, the same everything, at the bottom and at the top */
+        const lineAt = rung => {
+          rngInit('CHAT-T'); runInit('CHAT-T');
+          run.rung = rung; run.clock = 200; run.stress = 30; run.coffee = 0;
+          run.queue = []; run.breaches = 0; run.burnout = 10; run.rep = 0;
+          const hit = (C.when || []).find(w => { try { return w.if(run); } catch(_){ return false; } });
+          return hit ? hit.t : null;
+        };
+        const bottom = lineAt(0), top = lineAt(ROLES.length - 1);
+        if (bottom === top) deaf.push(id);
+      }
+      ok('everybody in the office has more than a couple of things to say',
+         !thin.length, thin.join(' '));
+      ok('and the office talks to a Director differently than to the intern',
+         deaf.length <= 1, 'unchanged for: ' + deaf.join(' '));
+      run = savedRunC;
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could
