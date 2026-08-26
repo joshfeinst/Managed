@@ -83,7 +83,7 @@ body.panelopen #obj, body.screenopen #obj{display:none !important}
    with overflow:hidden, so its glyphs were clipped by a zero-height line box
    and every ticket title in the game rendered blank while sitting correctly in
    the DOM. Overlays must set their own line-height. */
-#tix{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(600px,94%);
+#tix{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(720px,94%);
   max-height:88%; overflow:auto; display:none; background:rgba(14,17,21,.97); line-height:1.45;
   border:1px solid var(--line); border-top:3px solid var(--amber);
   font-size:clamp(11px,2vh,15px); box-shadow:0 18px 50px -12px #000;}
@@ -97,7 +97,10 @@ body.panelopen #obj, body.screenopen #obj{display:none !important}
 #tix .row .id{font-family:var(--pix); font-size:.6em; color:var(--dim)}
 #tix .row .sla{font-weight:700; color:var(--ok); font-variant-numeric:tabular-nums}
 #tix .row .sla.warn{color:var(--amber)} #tix .row .sla.bad{color:var(--alert)}
-#tix .row .ttl{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+#tix .row .ttl{min-width:0}
+#tix .row .ttl .tt{display:block}
+#tix .row .ttl .leg{display:block; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; font-size:.82em; line-height:1.3}
 #tix .row .pri{font-family:var(--pix); font-size:.55em; letter-spacing:.06em; padding:2px 5px;
   border:1px solid currentColor; border-radius:2px; white-space:nowrap}
 #tix .row .p1{color:#ff8a7d} #tix .row .p2{color:var(--amber)}
@@ -5290,6 +5293,11 @@ const OTHER_FLOOR = { office1:'ground', ground:'office1' };
    printed sheet — landed within 17 points of a perfect one, and a board whose
    wrong answer scores 83% has no game in it. */
 const STARTER_SLIP = .26;
+/* A queue row may run to two lines and no further. Measured at the shipped
+   720px panel: 247 of 268 titles are one line, and even with every {fill}
+   at its longest none reaches three. It is a content budget, not a layout
+   one — a title that needs a third line is too long to skim. */
+const QUEUE_TITLE_LINES = 2;
 const FIRE_GRACE = 3;          // days at the very start of a career that cannot end it
 /* Ladder content debt, measured 2026-08-25 before the ladder build began:
    six promotions deal nothing the rung below could not, and six pairs of rungs
@@ -6759,7 +6767,7 @@ function queueView(){
 function legHint(t){
   const steps = (TICKETS[t.id] || {}).steps || [];
   const legs = steps.slice(t.si || 0).filter(st => st.goto);
-  if (!legs.length) return ' <span style="color:#5c646e">· at your desk</span>';
+  if (!legs.length) return '<span class="leg" style="color:#5c646e">· at your desk</span>';
   let at = (typeof player !== 'undefined' && player) ? [player.tx, player.ty] : null, mins = 0;
   const names = [];
   for (const st of legs){
@@ -6768,7 +6776,7 @@ function legHint(t){
     names.push((ANCHOR_NAMES[st.goto] || st.goto).replace(/^THE /i, ''));
   }
   const far = mins >= 25;
-  return ' <span style="color:' + (far ? 'var(--alert)' : 'var(--corp)') + '">· ' +
+  return '<span class="leg" style="color:' + (far ? 'var(--alert)' : 'var(--corp)') + '">· ' +
          names.join(' then ').toLowerCase() + ', ~' + mins + ' min walk</span>';
 }
 function renderQueue(){
@@ -6805,9 +6813,9 @@ function renderQueue(){
          worth one point, and could not have known. */
       row.innerHTML = '<span class="id">#' + (10000 + t.uid) + '</span>' +
         '<span class="pri p' + pn + '">P' + pn + '</span>' +
-        '<span class="ttl">' + t.title +
+        '<span class="ttl"><span class="tt">' + t.title +
           (t.si > 0 ? ' <span style="color:var(--corp)">(in progress)</span>' : '') +
-          legHint(t) + '</span>' +
+          '</span>' + legHint(t) + '</span>' +
         '<span class="sla"></span>';
       row.onclick = () => {
         const at = view.indexOf(t);
@@ -10528,6 +10536,49 @@ function selfTest(runSim){
       const r = cell ? cell.getBoundingClientRect() : null;
       ok('ui: queue rows render their ticket title', !!r && r.height > 4 && r.width > 40,
          r ? Math.round(r.width) + 'x' + Math.round(r.height) : 'no row');
+      /* The row ellipsis is silent: it clips and says nothing, and the panel
+         was 600px wide, which cut 114 of 268 titles and pushed the walk-cost
+         hint off the end of 238 of them — the hint that exists so a player can
+         see a P4 is a two-hour round trip BEFORE taking it. Measured across
+         panel widths, 600px clips 43% and 720px clips none. Every title has to
+         fit the box it is drawn in, so measure all of them, not one. */
+      const tt = cell && cell.querySelector('.tt');
+      /* An inline box reports scrollWidth === clientWidth === 0, so dropping
+         display:block would make this measure nothing and pass. Prove there is
+         a box before believing what it says about fitting inside one.
+         Measure the RESOLVED title, not the template: {user} can be "Janet" or
+         "the temp whose badge never worked", and a screenshot caught two rows
+         still cut after the raw templates all measured clean. Worst case is
+         the longest string every pool can produce, in every slot at once. */
+      const lh = tt ? (parseFloat(getComputedStyle(tt).lineHeight) || 0) : 0;
+      if (tt && tt.clientWidth > 40 && lh > 4){
+        const kept = tt.innerHTML;
+        const worst = {};
+        for (const k in FILLS) worst[k] = FILLS[k].slice()
+          .sort((x, y) => String(y).length - String(x).length)[0];
+        const over = [];
+        for (const id in TICKETS){
+          tt.textContent = fill(TICKETS[id].title, worst);
+          const lines = Math.round(tt.scrollHeight / lh);
+          /* Both halves matter. Height alone passes for free if the title is
+             set nowrap — it stays one line and is cut sideways instead. */
+          if (lines > QUEUE_TITLE_LINES) over.push(id + ' (' + lines + ' lines)');
+          else if (tt.scrollWidth > tt.clientWidth)
+            over.push(id + ' (cut by ' + (tt.scrollWidth - tt.clientWidth) + 'px)');
+        }
+        tt.innerHTML = kept;
+        ok('ui: no ticket title outgrows its queue row', !over.length,
+           over.length + ': ' + over.slice(0, 3).join(', '));
+      } else ok('ui: no ticket title outgrows its queue row', false,
+                tt ? 'title box ' + tt.clientWidth + 'px / lh ' + lh : 'no .tt cell');
+      /* ...and the hint sits on its own line under it, so it is never the part
+         that gets cut. */
+      const leg = cell && cell.querySelector('.leg');
+      ok('ui: the queue row shows where a ticket sends you',
+         !!leg && leg.getBoundingClientRect().height > 4 && leg.clientWidth > 40 &&
+         leg.scrollWidth <= leg.clientWidth,
+         leg ? Math.round(leg.getBoundingClientRect().height) + 'px, over ' +
+               (leg.scrollWidth - leg.clientWidth) : 'no leg hint');
       document.getElementById('tix').style.display = 'none';
       G.state = savedState; G.modal = savedModal; run = savedRun;
     }
