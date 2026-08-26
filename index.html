@@ -959,7 +959,7 @@ const ANCHOR_NAMES = {
 const MAPS = { office1: {
   name:'PROACTIVE IT PARTNERS — FLOOR 2',
   map:[
-    '##########wwwww#wwwww#wwwww#wwwww###########',
+    '##########wwwww#wwwww#wwwww#wwwww#wwwwYwwww#',
     '#..f.....#......................#mmmmmmmmxm#',
     '#EP......W..qc...qc...qc...qc...#mm.dq.....#',
     '#E.......W..1....2....3....4....#mmm8......#',
@@ -4202,6 +4202,15 @@ const LEGEND = {
   'c':{o:12}, 'K':{o:13, act:'coffee', anchor:'COFFEE'},
   'V':{o:14, act:'vending', anchor:'VEND'}, 'R':{o:15, act:'printer', anchor:'PRINTER'},
   'S':{o:16, act:'rack'}, 'f':{o:17}, 'x':{o:31},
+  /* THE CORNER OFFICE HAD NO WINDOW. The pit's north wall is glass for its
+     whole length; the executive suite's was eleven characters of brick. The
+     office empties out as you climb — the arcade, the cooler, the vending
+     machine and the good radiator are all down in the pit you left — and by
+     vCIO there was nothing on that floor to walk to at all, which quietly
+     killed the game's own movement-is-meaning pillar at exactly the rungs
+     that take longest to reach. Same glass as the pit, so it reads as the
+     same building. */
+  'Y':{o:7, act:'window', anchor:'WINDOW'},
   't':{o:19}, 'k':{o:21}, 'A':{o:22, act:'arcade', anchor:'ARCADE'},
   'C':{o:23, act:'cooler', anchor:'COOLER'}, 'F':{o:24},
   'U':{o:25, act:'couch'}, 'N':{o:26}, 'H':{o:30, act:'shelf', anchor:'SHELF'},
@@ -5907,6 +5916,14 @@ const PROP_LINES = {
     'THE HEALTHY SHELF IS FULL. IT HAS BEEN FULL SINCE INSTALLATION.',
     'PRICES WENT UP IN MARCH. THE STICKER SAYING SO WENT UP IN JULY.'
   ],
+  window: [
+    'THE CAR PARK. YOUR CAR. THE SPACE WITH YOUR NAME ON IT, WHICH YOU ASKED THEM NOT TO DO.',
+    'FROM UP HERE THE PIT IS A ROOM WITH FOUR DESKS IN IT. IT DID NOT LOOK LIKE THAT FROM INSIDE.',
+    'IT IS STILL LIGHT. YOU HAVE NOT SEEN IT STILL LIGHT ON A WEDNESDAY IN SOME TIME.',
+    'THE BUILDING OPPOSITE HAS A FLOOR OF EMPTY DESKS AND ALL THE LIGHTS ON.',
+    'SOMEBODY IS HAVING A CIGARETTE BY THE BINS. YOU KNOW EXACTLY WHICH TICKET IT IS ABOUT.',
+    'THE GLASS IS CLEANED QUARTERLY BY A MAN ON A CRADLE. HE WAVES. YOU ALWAYS WAVE BACK.'
+  ],
   cooler: [
     'THE WATER IS FINE. THE GOSSIP IS FINER.',
     'THE BOTTLE IS EMPTY. THE SPARE IS RIGHT THERE. NOBODY HAS MOVED IT.',
@@ -5984,6 +6001,7 @@ function interact(act){
       toast(propLine('arcade'), 'corp', 2800);
       break;
     case 'vending': toast(propLine('vending'), 'corp', 2200); break;
+    case 'window': toast(propLine('window'), 'corp', 2800); break;
     case 'cooler': toast(propLine('cooler'), 'corp', 2000); break;
     case 'printer': toast(propLine('printer'), 'corp', 2600); break;
     case 'rack': toast(propLine('rack'), 'corp', 2600); break;
@@ -10753,6 +10771,64 @@ function selfTest(runSim){
            !wrong.length, wrong.join(' '));
       }
       run = savedRunR;
+    }
+    /* A PROP NOBODY CAN REACH IS FURNITURE. Walking the office is a stated
+       pillar, and the office empties out as you climb: the arcade, the cooler,
+       the vending machine and the good coffee are all in the pit you left, and
+       the executive suite had NOTHING on it — its north wall was eleven
+       characters of brick where the pit's is glass for its whole length. By
+       vCIO there was nowhere to walk to, at the rungs that take longest to
+       reach.
+
+       The corner office has a window now. What is guarded is the class rather
+       than the fix: every interactable in the LEGEND has to be reachable, has
+       to have a branch that answers it, and — if it speaks through propLine —
+       has to have lines to say. Any of the three missing makes it scenery. */
+    {
+      loadMap('office1');
+      const acts = new Set();
+      for (const ch in LEGEND) if (LEGEND[ch].act) acts.add(LEGEND[ch].act);
+      acts.delete('door');
+      const src = Array.from(document.querySelectorAll('script:not([src])'))
+                       .map(n => n.textContent).join('\n');
+      /* reachability: you stand NEXT to a prop, never on it — every one must
+         have a walkable neighbour the front door can get to */
+      const reach = new Set(); const q = [W2.spawn.slice()];
+      reach.add(W2.spawn[0] + ',' + W2.spawn[1]);
+      while (q.length){
+        const [x,y] = q.shift();
+        for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+          const nx=x+dx, ny=y+dy, k=nx+','+ny;
+          if (!inMap(nx,ny) || reach.has(k) || solidAt(nx,ny)) continue;
+          reach.add(k); q.push([nx,ny]);
+        }
+      }
+      const mute = [], stranded = [], silent = [];
+      for (const a of acts){
+        if (!new RegExp("case '" + a + "':").test(src)) mute.push(a);
+        let standable = false;
+        for (let i = 0; i < W2.act.length; i++){
+          if (W2.act[i] !== a) continue;
+          const x = i % W2.W, y = (i / W2.W)|0;
+          for (const [dx,dy] of [[0,1],[0,-1],[-1,0],[1,0]])
+            if (reach.has((x+dx) + ',' + (y+dy))) standable = true;
+        }
+        if (!standable) stranded.push(a);
+        /* only the ones that speak through the shared pool need a pool */
+        if (new RegExp("case '" + a + "':[^]{0,160}?propLine\\('" + a + "'\\)").test(src)
+            && !(PROP_LINES[a] && PROP_LINES[a].length >= 3)) silent.push(a);
+      }
+      ok('every prop in the office answers when you use it', !mute.length, mute.join(' '));
+      ok('and every one of them can be stood next to', !stranded.length, stranded.join(' '));
+      ok('and the ones that talk have more than one thing to say',
+         !silent.length, silent.join(' '));
+      /* the other direction: a pool written for a prop that is not on the map */
+      const onMap = new Set();
+      for (let i = 0; i < W2.act.length; i++) if (W2.act[i]) onMap.add(W2.act[i]);
+      const orphan = Object.keys(PROP_LINES).filter(k =>
+        new RegExp("propLine\\('" + k + "'\\)").test(src) && !onMap.has(k));
+      ok('and no prop lines were written for something that is not there',
+         !orphan.length, orphan.join(' '));
     }
     /* A SOUND NOBODY PLAYS IS A SOUND THAT IS NOT IN THE GAME. `phone` — a
        handset ringing twice — sat in SFX for the whole life of the project
