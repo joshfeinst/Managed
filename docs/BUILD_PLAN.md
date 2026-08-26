@@ -105,3 +105,35 @@ are the two levers that have actually moved this number.
 Everything else is in `docs/BALANCE.md`, and the rule that matters most:
 `bars.js` and `meta.js` both get run after any content lands, and when they
 disagree the one that plays whole careers is the one that is right.
+
+### Procurement's 8-point gap: five hypotheses, all eliminated
+
+It is **stable, not noise** — 8 points at 24 seeds and 8 at 30. It is the
+narrowest on the ladder (relmgr and solarch are 9, everything else 11–16), and
+`bars.js` calls it 70% good / 33% bad against a 30% threshold. One marginal
+rung out of nine.
+
+What it is *not*, each measured rather than assumed:
+
+| hypothesis | procure | t3 (gap 16) | verdict |
+|---|---|---|---|
+| ceiling too low | 43 | 43 | identical |
+| too little droppable work | 21% of dealt | 19% | procure is *better* |
+| priority mix compressed | 24/27/28/21 | 22/29/27/22 | identical |
+| dear tickets cost more to finish | P1 29 min | P1 29 min | identical |
+| dear work capped out of the day | 19% of daily slots | 20% | identical |
+
+What the bots actually do differs, and this is the thing to explain next:
+
+| | closed/day | avg stakes per closed |
+|---|---|---|
+| t3, good triage | 5.2 | **4.48** |
+| t3, bad triage | 5.4 | 2.55 |
+| procure, good triage | 5.0 | **3.75** |
+| procure, bad triage | 5.9 | 2.68 |
+
+Good triage captures 76% more value per ticket at T3 and only 40% at
+Procurement, on pools whose composition measures the same. The good bot cannot
+find work as dear at procure as it can at T3, and none of the five inputs above
+explains why. That is where the next look should start — probably by dumping
+what `pridead` actually closes, ticket by ticket, on one seed at each rung.
