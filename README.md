@@ -157,7 +157,7 @@ were invisible to the ones that came before them.
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 360 in-game self-tests |
+| `verify.js` | boots it and runs the 362 in-game self-tests |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
 | `playday.js` | plays past the first ticket — follows markers, answers dialogue, leaves boards it cannot solve |
 | `visual.js` | screenshots every screen and board at four window sizes, asserting no text lands on the canvas |
