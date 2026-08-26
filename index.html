@@ -1591,6 +1591,18 @@ const DIALOGUE = {
            {t:'Send the real diagram — they asked for the architecture', fx:{time:3, rep:-3, stress:6}},
            {t:'Four boxes, and be in the room to narrate it', fx:{time:7, rep:4, bonus:1, stress:2}} ] },
   /* -------------------- RELATIONSHIP MANAGER (rung 6) ---------------------- */
+  'v.pack.a': { who:'sys', t:['The board pack goes out Friday. There are nine questions on the standing agenda.',
+    'Six of them you can answer with something true. The other three you can answer with something true about a different subject, which is not the same thing, and everyone in that room has been in a lot of rooms.'] },
+  'v.pack.b': { who:'sys', t:['They will remember which of the two you did for a long time.'],
+    opts:[ {t:'Put the three unanswerables in the pack, named, with a date', fx:{time:23, rep:4, bonus:1, stress:7}},
+           {t:'Answer six and let the other three come up live', fx:{time:12, rep:1, bonus:1, stress:6}},
+           {t:'Fill all nine and hope the follow-ups go elsewhere', fx:{time:8, rep:-4, stress:10}} ] },
+  'v.may.a': { who:'sys', t:['Somebody has brought a printout of what you said in May.',
+    'You did say it. You said it with a caveat that is not on the printout, because the caveat was spoken and the number was on a slide.'] },
+  'v.may.b': { who:'sys', t:['You can defend the number or you can defend the caveat. Not both, and not quickly.'],
+    opts:[ {t:'Say the number was wrong and say what it is now', fx:{time:17, rep:3, bonus:1, stress:9}},
+           {t:'Show the working and let them draw the conclusion', fx:{time:14, rep:2, bonus:1, stress:6}},
+           {t:'Stand behind the slide', fx:{time:5, rep:-3, stress:8}} ] },
   'a.built.a': { who:'client', t:['They would like the as-built diagram before the audit.',
     'There is a diagram. It is from 2019, it is a screenshot inside a Word document, and two of the boxes on it were decommissioned by somebody who has since been promoted twice.'] },
   'a.built.b': { who:'sys', t:['Whatever you send them becomes the truth for the next four years.'],
@@ -2463,6 +2475,12 @@ const TICKETS = {
      can sign, and the harder it gets to admit which part of it was nonsense.
      These are the tickets you are allowed to let burn. Finding out that you
      are allowed is the lesson of the rung. */
+  'the-board-pack': { tiers:[8,9], weight:4, sla:42, slaMult:1.8, pri:4, stress:11,
+    title:'The board pack is due and three of the questions have no answer',
+    steps:[{say:'v.pack.a'},{game:'paper',diff:2},{choice:'v.pack.b'}] },
+  'the-number-you-gave-in-may': { tiers:[8,9], weight:3, sla:46, slaMult:2.0, pri:3, stress:10,
+    title:'Somebody has brought a printout of what you said in May',
+    steps:[{say:'v.may.a'},{game:'paper',diff:3},{choice:'v.may.b'}] },
   'as-built-is-a-rumour': { tiers:[7,9], weight:4, sla:50, slaMult:2.0, pri:3, stress:9,
     title:'{client} want the as-built diagram. There is a diagram.',
     steps:[{say:'a.built.a'},{game:'diagram',diff:2},{choice:'a.built.b'}] },
@@ -5917,6 +5935,12 @@ function abandonScore(g){
     const over = Math.max(0, g.marked.size - hit - (g.forgive || 0));
     return clamp(1 - over * .25, 0, 1);
   }
+  if (g.kind === 'paper'){
+    /* the best it could still finish at: every remaining question answered
+       right. What has already been bluffed stays bluffed. */
+    const left = g.qs.length - g.at;
+    return clamp((g.credit + left) / g.qs.length - g.bluffed * .12, 0, 1);
+  }
   if (g.kind === 'script'){
     /* the best it could still finish at: every remaining box banked honestly
        and the call resolved, each of which costs one more turn */
@@ -6065,6 +6089,26 @@ const RM_MOVES = [
 const SA_NODES = ['CORE-SW', 'DIST-A', 'DIST-B', 'FIREWALL', 'WAN-1', 'WAN-2',
   'ESX-01', 'ESX-02', 'SAN', 'DC-01', 'DC-02', 'APP-TIER', 'DB-TIER',
   'WAREHOUSE-SW', 'FLOOR-SW', 'VPN-GW', 'BACKUP', 'PRINT-SRV', 'WIFI-CTRL'];
+/* The vCIO board. Each question is answered by exactly one fact, or by
+   nothing at all — and the ones answered by nothing are the point. `ev` is the
+   fact that answers it; null means there is no answer and saying so is the
+   right move. Decoys are drawn from every other question's fact, so every
+   wrong card in your hand is a true statement about something else, which is
+   exactly how it goes in the room. */
+const BOARD_QS = [
+  { q:'Why did support costs rise eleven percent?',           ev:'The March migration doubled the estate we monitor' },
+  { q:'Are we getting value from the security spend?',        ev:'Two incidents last year, both contained inside an hour' },
+  { q:'Why are we still paying for the old ERP?',             ev:'Finance run year-end out of it every January' },
+  { q:'What is the plan if the warehouse floods again?',      ev:'Warehouse workloads moved off-site in February' },
+  { q:'Could we do this cheaper offshore?',                   ev:'The last offshore trial cost 40% more after rework' },
+  { q:'Why was the project three months late?',               ev:null },
+  { q:'Who signed off the architecture we are now replacing?', ev:null },
+  { q:'What is our actual disaster recovery time?',           ev:null },
+  { q:'Why did we not know about this sooner?',               ev:null },
+  { q:'Is the roadmap still the roadmap?',                    ev:'Two of the four items shipped; the other two were deferred in writing' },
+  { q:'How many licences are we not using?',                  ev:'A reclaim in April returned 90 seats' },
+  { q:'What does good look like in twelve months?',           ev:'The three-year plan puts consolidation in year two' }
+];
 /* --------------------------- how to play each one -------------------------
    A minigame that opens straight into a live board with a six-pixel hint bar
    is a game assuming you have already played it. Every one of these now opens
@@ -6183,6 +6227,21 @@ const GAME_BRIEF = {
     ],
     watch: 'CORE-SW is not the answer, it is the thing everything is measured from. ' +
            'Marking a box that strands nothing costs more than missing one.'
+  },
+  paper: {
+    what: 'The board have questions. You have facts. Each question is answered ' +
+          'by exactly one of them — or by none, and some of these have no ' +
+          'answer at all.',
+    keys: [
+      ['UP / DOWN', 'move through your facts'],
+      ['E or 1', 'cite the one you are on'],
+      ['2', 'say you cannot defend it'],
+      ['CLICK', 'or click a fact to cite it'],
+      ['', 'a fact cited is gone for the rest of the meeting']
+    ],
+    watch: 'Every wrong card is TRUE — about something else. Citing one is worse ' +
+           'than conceding, and conceding a question you could have answered is ' +
+           'only a small loss.'
   },
   blast: {
     what: 'You can make this change. That was never the question. The question ' +
@@ -7081,6 +7140,106 @@ const GAMES = {
           wrapTxt(this.flashTxt, 240, 236, 340, this.flashOk ? '#4ade80' : '#d64541', 6);
       } };
   }},
+  /* --------------------------- THE BOARD PAPER (vCIO) ---------------------
+     The only board in the game with a verb for "I cannot defend that". Every
+     other one asks you to be right; this one asks you to know when you are
+     not, which is the whole difference between the rung below and this one.
+     Conceding a question you COULD have answered is a small loss. Answering
+     one you could not, with a true fact about something else, is the largest
+     single loss on any board here — because that is what it costs. */
+  paper: { init(diff){
+    const k = 3 + Math.min(diff, 2);
+    const pool = BOARD_QS.slice();
+    const take = a => a.splice(Ri('game', a.length), 1)[0];
+    const answerable = pool.filter(x => x.ev), open = pool.filter(x => !x.ev);
+    const qs = [];
+    /* at least one of each, or the board has no decision in it */
+    qs.push(take(answerable)); qs.push(take(open));
+    const rest = answerable.concat(open);
+    while (qs.length < k && rest.length) qs.push(take(rest));
+    for (let a2 = qs.length - 1; a2 > 0; a2--){
+      const b = Ri('game', a2 + 1); [qs[a2], qs[b]] = [qs[b], qs[a2]];
+    }
+    /* the hand: every real answer, plus true facts about other things */
+    const hand = qs.filter(x => x.ev).map(x => ({ t:x.ev, used:false }));
+    const decoys = BOARD_QS.filter(x => x.ev && !qs.includes(x));
+    const want = Math.min(decoys.length, 2 + Math.min(diff, 2));
+    for (let i = 0; i < want; i++)
+      hand.push({ t: decoys.splice(Ri('game', decoys.length), 1)[0].ev, used:false });
+    for (let a2 = hand.length - 1; a2 > 0; a2--){
+      const b = Ri('game', a2 + 1); [hand[a2], hand[b]] = [hand[b], hand[a2]];
+    }
+    return { kind:'paper', qs, hand, at:0, cur:0, credit:0, conceded:0, bluffed:0,
+      flash:0, flashTxt:'', flashOk:false, click:null,
+      obj:'ANSWER IT WITH A FACT, OR SAY YOU CANNOT',
+      hint:'UP/DOWN A FACT · E CITES IT · 2 CONCEDES THE QUESTION',
+      rowRect(i){ return [70, 136 + i*15, 340, 13]; },
+      btns: [ { x:340, y:214, w:150, h:16, k:'concede', cap:'2  I CANNOT DEFEND THAT' } ],
+      act(k){ if (k === 'concede') this.concede(); else if (k === 'cite') this.cite(); },
+      concede(){
+        const q = this.qs[this.at]; if (!q) return;
+        this.conceded++;
+        if (!q.ev){ this.credit += 1; this.flashOk = true;
+          this.flashTxt = 'NOBODY ENJOYED THAT AND EVERYBODY BELIEVED YOU'; sfx('ui'); }
+        else { this.credit += .4; this.flashOk = false;
+          this.flashTxt = 'YOU HAD THAT ONE. IT WAS IN YOUR HAND.'; sfx('err'); }
+        this.flash = 1; this.at++;
+      },
+      cite(){
+        const q = this.qs[this.at]; if (!q) return;
+        const card = this.hand[this.cur]; if (!card || card.used) return;
+        card.used = true;
+        if (q.ev && card.t === q.ev){ this.credit += 1; this.flashOk = true;
+          this.flashTxt = 'THAT IS THE ANSWER AND THE ROOM MOVES ON'; sfx('ui'); }
+        else if (this.forgive){ this.forgive--; this.credit += 1; this.flashOk = true;
+          this.flashTxt = 'NOBODY FOLLOWED THAT UP'; sfx('ui'); }
+        else { this.bluffed++; this.flashOk = false;
+          this.flashTxt = q.ev ? 'TRUE, AND NOT AN ANSWER TO WHAT WAS ASKED'
+                               : 'THERE WAS NO ANSWER. NOW THERE IS A FOLLOW-UP.';
+          sfx('err'); }
+        this.flash = 1; this.at++;
+      },
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.at >= this.qs.length){
+          if (this.flash > 0) return;
+          this.score = clamp(this.credit / this.qs.length - this.bluffed * .12, 0, 1);
+          this.finished = true; return;
+        }
+        const live = this.hand.filter(h => !h.used).length;
+        if (press.up)   do { this.cur = (this.cur + this.hand.length - 1) % this.hand.length; }
+                        while (this.hand[this.cur].used && live);
+        if (press.down) do { this.cur = (this.cur + 1) % this.hand.length; }
+                        while (this.hand[this.cur].used && live);
+        let k = press.use || press.one ? 'cite' : press.two ? 'concede' : null;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (let i = 0; i < this.hand.length; i++)
+            if (inRect(pt, ...this.rowRect(i)) && !this.hand[i].used){ this.cur = i; k = 'cite'; }
+          for (const b of this.btns)
+            if (inRect(pt, b.x - b.w/2, b.y, b.w, b.h)) k = b.k;
+        }
+        if (k) this.act(k);
+      },
+      draw(){
+        mgPanel('THE BOARD PAPER', this.hint);
+        txt(this.obj, 240, 58, '#8d8778', 6, 'center');
+        const q = this.qs[this.at];
+        if (q){
+          txt('QUESTION ' + (this.at + 1) + ' OF ' + this.qs.length, 70, 76, '#8d8778', 6);
+          wrapTxt('"' + q.q + '"', 240, 94, 336, '#e8e4da', 7);
+          txt('WHAT YOU CAN CITE', 70, 128, '#8d8778', 6);
+          this.hand.forEach((h, i) => {
+            const [rx, ry, rw, rh] = this.rowRect(i);
+            if (i === this.cur && !h.used){ ctx.fillStyle = '#1d2530'; ctx.fillRect(rx, ry, rw, rh); }
+            txt(h.used ? '·' : (i === this.cur ? '>' : ' '), rx + 4, ry + 9, '#2f7fbe', 6);
+            txt(h.t, rx + 14, ry + 9, h.used ? '#4a4740' : (i === this.cur ? '#e8e4da' : '#c9c4b8'), 5);
+          });
+        } else txt('THE MEETING ENDS ON TIME.', 240, 120, '#4ade80', 8, 'center');
+        if (this.flash > 0)
+          wrapTxt(this.flashTxt, 240, 236, 340, this.flashOk ? '#4ade80' : '#d64541', 6);
+      } };
+  }},
   blast: { init(diff){
     /* the group you are changing is not also one of its own members: it comes
        out of the pool before anything is built from it */
@@ -7270,7 +7429,8 @@ const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
                     blast:'BLAST RADIUS', subnet:'THE ADDRESS PLAN',
                     quote:'THE SHORTFALL',
                     keep:'KEEPING EVERYBODY',
-                    diagram:'THE DIAGRAM' };
+                    diagram:'THE DIAGRAM',
+                    paper:'THE BOARD PAPER' };
 function mgPanel(title, hint){
   ctx.fillStyle = 'rgba(8,10,13,.88)'; ctx.fillRect(0,0,VW,VH);
   ctx.fillStyle = '#12161b'; ctx.fillRect(60, 26, 360, 214);
@@ -8930,6 +9090,95 @@ function selfTest(runSim){
       ok('marking the whole drawing is not a strategy',
          markAll / n < .3, 'mark-everything scores ' + (markAll/n).toFixed(3));
       MG = savedMG5;
+    }
+    /* THE BOARD PAPER is the only board with a verb for "I cannot defend
+       that", so the thing to prove is that the verb is worth having: every
+       paper contains a question nothing in your hand answers, every wrong card
+       is TRUE about something else, and bluffing costs more than folding. */
+    {
+      const savedMG6 = MG;
+      let hasOpen = 0, hasDecoy = 0, foldAll = 0, bluffAll = 0, perfect = 0, n = 0;
+      for (let i = 0; i < 24; i++){
+        rngInit('BP-' + i);
+        const g = GAMES.paper.init(2);
+        if (g.qs.some(q => !q.ev)) hasOpen++;
+        /* a decoy is a card in hand that answers none of today's questions */
+        if (g.hand.some(h => !g.qs.some(q => q.ev === h.t))) hasDecoy++;
+        const play = how => { rngInit('BP-' + i);
+          const h = GAMES.paper.init(2);
+          for (let t = 0; t < 40 && !h.finished; t++){
+            const q = h.qs[h.at];
+            if (!q) { h.flash = 0; h.step(0); break; }
+            if (how === 'fold') h.concede();
+            else if (how === 'bluff'){
+              const j = h.hand.findIndex(c => !c.used);
+              if (j < 0) h.concede(); else { h.cur = j; h.cite(); }
+            } else {
+              const j = h.hand.findIndex(c => !c.used && q.ev && c.t === q.ev);
+              if (j < 0) h.concede(); else { h.cur = j; h.cite(); }
+            }
+            h.flash = 0; h.step(0);
+          }
+          return h.finished ? h.score : 0;
+        };
+        foldAll += play('fold'); bluffAll += play('bluff'); perfect += play('right');
+        n++;
+      }
+      ok('every board paper has a question nothing in your hand answers',
+         hasOpen === n, hasOpen + '/' + n + ' papers had one');
+      ok('and a card that is true about something else',
+         hasDecoy === n, hasDecoy + '/' + n + ' papers had a decoy');
+      ok('knowing which is which is worth full marks',
+         perfect / n > .95, 'playing it right scores ' + (perfect/n).toFixed(3));
+      ok('and bluffing every question is worse than folding every question',
+         bluffAll / n < foldAll / n - .1,
+         'bluff ' + (bluffAll/n).toFixed(3) + ' vs fold ' + (foldAll/n).toFixed(3));
+      /* THE MARGINAL CASE, which is the one the bluff penalty is actually for.
+         All-bluff against all-fold is separated by the credit alone, so
+         deleting the penalty outright left that test green. What it buys is
+         the gap for somebody who plays the whole paper right and then reaches
+         for a card on the one question they should have folded. */
+      {
+        let oneFold = 0, oneBluff = 0, m = 0;
+        for (let i = 0; i < 24; i++){
+          const play = slipAt => { rngInit('BP-' + i);
+            const h = GAMES.paper.init(2);
+            for (let t = 0; t < 40 && !h.finished; t++){
+              const q = h.qs[h.at]; if (!q){ h.flash = 0; h.step(0); break; }
+              const slip = h.at === slipAt;
+              const j = h.hand.findIndex(c => !c.used && q.ev && c.t === q.ev);
+              if (slip){
+                const w = h.hand.findIndex(c => !c.used && c.t !== q.ev);
+                if (w < 0) h.concede(); else { h.cur = w; h.cite(); }
+              } else if (j < 0) h.concede();
+              else { h.cur = j; h.cite(); }
+              h.flash = 0; h.step(0);
+            }
+            return h.finished ? h.score : 0; };
+          /* slip on the first question that DOES have an answer */
+          rngInit('BP-' + i);
+          const probe = GAMES.paper.init(2);
+          const at = probe.qs.findIndex(q => q.ev);
+          if (at < 0) continue;
+          oneBluff += play(at);
+          /* the same player, folding that one instead */
+          rngInit('BP-' + i);
+          const h2 = GAMES.paper.init(2);
+          for (let t = 0; t < 40 && !h2.finished; t++){
+            const q = h2.qs[h2.at]; if (!q){ h2.flash = 0; h2.step(0); break; }
+            const j = h2.hand.findIndex(c => !c.used && q.ev && c.t === q.ev);
+            if (h2.at === at || j < 0) h2.concede(); else { h2.cur = j; h2.cite(); }
+            h2.flash = 0; h2.step(0);
+          }
+          oneFold += h2.finished ? h2.score : 0;
+          m++;
+        }
+        ok('one bluff costs more than one fold',
+           m > 0 && oneFold / m - oneBluff / m > .15,
+           'fold it ' + (oneFold/Math.max(1,m)).toFixed(3) +
+           ' vs bluff it ' + (oneBluff/Math.max(1,m)).toFixed(3) + ' over ' + m + ' papers');
+      }
+      MG = savedMG6;
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could
