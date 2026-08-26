@@ -557,6 +557,45 @@ was already there.
 
 A similarity scan across all 194 ticket titles found no other pair above 0.62.
 
+## The desk moves now, and it costs you
+
+Every role shipped with `deskAnchor:'TERMINAL'` — one chair for nine
+promotions — while the plan had always said the desk should relocate and
+improve as you climb the same map. Nine desks now, walking you steadily away
+from the pit: the far end of the helpdesk, the good end of it, beside the
+terminal, the project room downstairs, the client side, and finally the quiet
+suite off Linda's office.
+
+It is not decoration. **Tickets are priced from your desk**, so the printer and
+the coffee machine genuinely get further away as you get more senior, and an
+errand costs a Solutions Architect real minutes it never cost an intern. That
+is the joke and it is also the mechanic.
+
+What it did to the ladder:
+
+| | before | after |
+|---|---|---|
+| `GATE_DEBT` | 46 | **45** |
+| relmgr / solarch, sloppy clears | 2/12, 2/12 | **0/12, 0/12** |
+| relmgr / solarch, flawless misses | 6/12, 4/12 | 7/12, 8/12 |
+| `meta.js`, players reaching retirement | 7/24 | **11/24** |
+| bars.js | 1 rung misplaced | **all nine well placed** |
+
+The two rungs sitting furthest from everything pay for it in the tight column
+and buy the loose column outright. That is the right way round: a gate a bad
+player clears is worse than one a good player sometimes has to wait for. And
+more careers reach the top than before, not fewer.
+
+Three invariants, because `deskAnchor` is a field that would mis-price every
+SLA on a rung rather than fail if it were wrong:
+
+    every rung has a desk you can actually stand on
+    and the desk moves as you climb
+    and you can walk to it from the front door
+
+The first one earned its place immediately: `DESK_ARCH` was written at [34,18],
+which is a server rack.
+
 ## The ratchets
 
 | name | value | meaning | direction |

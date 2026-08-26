@@ -867,34 +867,34 @@ function bakePortrait(look){
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
     gates:{ nextAt:{perf:0.53, days:3}, firedBelow:0.24, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:30, slaScale:1.0 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.2, meetingMin:30, slaScale:1.0 }, deskAnchor:'DESK_PIT' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
     gates:{ nextAt:{perf:0.39, days:3}, firedBelow:0.18, cert:null },
-    queue:{ ratePerHr:2.8, meetingMin:34, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.8, meetingMin:34, slaScale:0.96 }, deskAnchor:'DESK_PIT2' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
     gates:{ nextAt:{perf:0.39, days:3}, firedBelow:0.18, cert:null },
-    queue:{ ratePerHr:2.8, meetingMin:40, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.8, meetingMin:40, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
     gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
-    queue:{ ratePerHr:2.8, meetingMin:48, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.8, meetingMin:48, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
     gates:{ nextAt:{perf:0.39, days:3}, firedBelow:0.18, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:60, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.2, meetingMin:60, slaScale:0.96 }, deskAnchor:'DESK_PROJ' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
     gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:68, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.2, meetingMin:68, slaScale:0.96 }, deskAnchor:'DESK_PROC' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
     gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:78, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.2, meetingMin:78, slaScale:0.96 }, deskAnchor:'DESK_CLIENT' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
-    gates:{ nextAt:{perf:0.36, days:3}, firedBelow:0.16, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:84, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
+    queue:{ ratePerHr:2.2, meetingMin:84, slaScale:0.96 }, deskAnchor:'DESK_ARCH' },
   { id:'vcio',   title:'vCIO',          pay:135000,
     gates:{ nextAt:{perf:0.41, days:3}, firedBelow:0.18, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:88, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.2, meetingMin:88, slaScale:0.96 }, deskAnchor:'DESK_EXEC' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
     gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.16, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:80, slaScale:1.05 }, deskAnchor:'TERMINAL' }
+    queue:{ ratePerHr:2.2, meetingMin:80, slaScale:1.05 }, deskAnchor:'DESK_CORNER' }
 ];
 
 /* Shared fill pools — every {token} in a ticket title/line resolves from here
@@ -937,7 +937,12 @@ const FILLS = {
      special:       D door (walkable)  P player spawn  1-9 NPC anchors      */
 /* Anchor ids are terse; players are not. */
 const ANCHOR_NAMES = {
-  TERMINAL:'YOUR DESK', COFFEE:'THE COFFEE MACHINE', PRINTER:'THE PRINTER',
+  TERMINAL:'THE HELPDESK TERMINAL', COFFEE:'THE COFFEE MACHINE', PRINTER:'THE PRINTER',
+  DESK_PIT:'YOUR DESK — THE FAR END OF THE PIT', DESK_PIT2:'YOUR DESK — NEARER THE WINDOW',
+  DESK_T3:'YOUR DESK — BESIDE THE TERMINAL', DESK_PROJ:'YOUR DESK — THE PROJECT ROOM',
+  DESK_PROC:'YOUR DESK — THE PROJECT ROOM', DESK_CLIENT:'YOUR DESK — THE CLIENT SIDE',
+  DESK_ARCH:'YOUR DESK — THE CLIENT SIDE', DESK_EXEC:'YOUR DESK — THE QUIET SUITE',
+  DESK_CORNER:'YOUR DESK — THE CORNER',
   VEND:'THE VENDING MACHINE', ARCADE:'THE ARCADE CABINET', COOLER:'THE WATER COOLER',
   SHELF:'THE SUPPLY SHELF', ELEV:'THE ELEVATOR', SERVERS:'THE SERVER ROOM',
   CONF:'THE CONFERENCE ROOM', KITCHEN:'THE KITCHEN', KITCHEN2:'THE KITCHEN',
@@ -979,7 +984,21 @@ const MAPS = { office1: {
      derived from interactables (COFFEE, PRINTER, TERMINAL, ELEV, ARCADE,
      COOLER, VEND, RACKS) as the open tile south of the prop. */
   anchors:{ HALL:[21,11], HALLE:[38,11], CONF:[36,6], LOBBY:[4,7],
-            KITCHEN:[9,15], KITCHEN2:[10,17], SERVERS:[35,17], SOUTH:[26,21], PITMID:[20,5] }
+            KITCHEN:[9,15], KITCHEN2:[10,17], SERVERS:[35,17], SOUTH:[26,21], PITMID:[20,5],
+            /* YOUR DESK, AND IT MOVES. The plan always said the desk should
+               relocate as you climb the same map, and every role shipped with
+               deskAnchor:'TERMINAL' — one chair for nine promotions. These are
+               all open floor and they walk you steadily away from the pit:
+               the far end of the helpdesk, then the good end of it, then the
+               project room downstairs, then the client side, and finally the
+               quiet suite off Linda's office. Tickets are priced from your
+               desk, so the printer and the coffee machine genuinely do get
+               further away as you get more senior. That is the joke and it is
+               also the mechanic. */
+            DESK_PIT:[15,7], DESK_PIT2:[20,7], DESK_T3:[28,7],
+            DESK_PROJ:[24,15], DESK_PROC:[24,18],
+            DESK_CLIENT:[34,15], DESK_ARCH:[38,17],
+            DESK_EXEC:[38,3], DESK_CORNER:[38,2] }
 }};
 
 /* meta-progression (slice: one cert + one perk visible, more later) */
@@ -4105,8 +4124,8 @@ const GATE_DEBT = {
      performance FALLS as a career runs on — burnout compounds and the nights
      give back less — so a rung reached on day 12 is played by a worse player
      than the same rung would be on day 3. That is the next problem. */
-  tight: { intern:2, t1:5, t2:3, t3:2, project:6, procure:3,
-           relmgr:6, solarch:4, vcio:3 },
+  tight: { intern:3, t1:2, t2:3, t3:2, project:6, procure:4,
+           relmgr:7, solarch:8, vcio:2 },
   /* seeds out of 12 on which SLOPPY play clears it anyway.
      THIS COLUMN WENT UP, 2026-08-26, and it is not the regression it looks
      like. It was zero on every rung because the bars were so high that
@@ -4118,7 +4137,7 @@ const GATE_DEBT = {
      it may only fall from here.
      vCIO's 4/12 is the worst of them and the one to fix first. */
   loose: { intern:1, t1:2, t2:0, t3:1, project:0, procure:2,
-           relmgr:2, solarch:2, vcio:2 }
+           relmgr:0, solarch:0, vcio:2 }
 };
 /* 45. The loose column is one seed in twelve on eight rungs of nine — bad
    triage almost never promotes now, where a week ago it did so on up to four
@@ -4133,7 +4152,14 @@ const GATE_DEBT = {
    DIRECTOR on 6 of 24 players, at an average of 14.7 careers against 12.6.
    The game got harder because it got bigger. Shrinking the new content back
    out of the queue would have bought the number and lost the rungs. */
-const GATE_DEBT_BUDGET = 46;      /* helpdesk meetings + bars re-cut, 2026-08-26 */
+/* 45. The desks moved, and the tight column moved with them: a Solutions
+   Architect sits on the client side now, a long way from the printer and the
+   coffee machine, and tickets are priced from your desk — so an errand costs a
+   senior player real minutes that it never used to. relmgr and solarch pay the
+   most for that and their tight rows went up. The loose rows on both went to
+   ZERO in exchange, which is the half of the gate that matters, and meta.js
+   went from 7 of 24 players reaching retirement to 11. */
+const GATE_DEBT_BUDGET = 45;      /* the desk moves, 2026-08-26 */
 /* How many POINTS short of its own bar flawless play falls at the intern gate.
    19 on 2026-08-25 21:0x, the first measurement ever taken with the bot walking
    at a player's speed. Every earlier number in this file — GATE_DEBT above,
@@ -4805,7 +4831,14 @@ function fmtDate(d){
 }
 function clockIn(){
   loadMap('office1');
-  spawnPeople();
+  /* AT YOUR OWN DESK. Every morning of every rung used to start at the office
+     entrance, so the only thing a promotion changed about the room was nothing.
+     Sitting down somewhere else is the cheapest, most legible progression this
+     map can give: you can see how far you have come from where the day starts.
+     The saved-game path keeps using the saved position — resuming an afternoon
+     must not teleport you to your chair. */
+  const desk = anchorPos(ROLES[run.rung].deskAnchor);
+  spawnPeople(0, desk || null);
   cam.x = clamp(player.tx*TILE - VW/2, 0, W2.W*TILE - VW);
   cam.y = clamp(player.ty*TILE - VH/2, 0, W2.H*TILE - VH);
   G.state = 'work'; show(null); clearInput();
@@ -9769,6 +9802,41 @@ function selfTest(runSim){
       ok('and a good day never reads out a bad one',
          !crossed.length, [...new Set(crossed)].join(' '));
       run = savedRunR;
+    }
+    /* THE DESK MOVES, AND IT HAS TO BE A REAL PLACE. Every role shipped with
+       deskAnchor:'TERMINAL' — one chair for nine promotions — and the field is
+       what tickets are PRICED from, so a desk that does not exist or cannot be
+       stood on would silently mis-price every SLA on that rung rather than
+       failing. Walkable, reachable from the entrance, and genuinely somewhere
+       else as you climb. */
+    {
+      loadMap('office1');
+      const bad = [], seen = new Set();
+      for (const R of ROLES){
+        const a = anchorPos(R.deskAnchor);
+        if (!a){ bad.push(R.id + ':missing'); continue; }
+        if (solidAt(a[0], a[1])){ bad.push(R.id + ':solid'); continue; }
+        seen.add(a[0] + ',' + a[1]);
+      }
+      ok('every rung has a desk you can actually stand on', !bad.length, bad.join(' '));
+      ok('and the desk moves as you climb', seen.size >= 6,
+         seen.size + ' distinct desks across ' + ROLES.length + ' rungs');
+      /* and every one of them is reachable from the door */
+      const reach = new Set(); const q = [W2.spawn.slice()];
+      reach.add(W2.spawn[0] + ',' + W2.spawn[1]);
+      while (q.length){
+        const [x,y] = q.shift();
+        for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+          const nx = x+dx, ny = y+dy, k = nx + ',' + ny;
+          if (!inMap(nx,ny) || reach.has(k) || solidAt(nx,ny)) continue;
+          reach.add(k); q.push([nx,ny]);
+        }
+      }
+      const stranded = ROLES.filter(R => {
+        const a = anchorPos(R.deskAnchor);
+        return a && !reach.has(a[0] + ',' + a[1]);
+      }).map(R => R.id);
+      ok('and you can walk to it from the front door', !stranded.length, stranded.join(' '));
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could

@@ -113,10 +113,6 @@ What's left:
 
 The elevator should go somewhere. Client sites. The dreaded on-site visit.
 
-Your desk should move. It's the same desk at every rung, and the plan always
-said it should relocate and improve as you climb — progression you can see
-without reading a number.
-
 Relationship Manager is the weakest rung on the ladder: good triage separates
 from bad by fewer points there than anywhere else. It's measured, it's written
 down in `docs/BALANCE.md`, and it wants content rather than another pass at its
