@@ -921,6 +921,10 @@ const FILLS = {
            'Halloran & Sons Roofing','Northgate Veterinary','Calder Brothers Concrete',
            'Westmoor Property Group','Fairlane Orthodontics','Tannerville Public Library',
            'Copperfield Insurance','Delacroix Bakery Group'],
+  /* WHOEVER THIS TURNS OUT TO BE. Four tickets used to write "he" or "she"
+     about a name drawn from this pool, so the game said "Remove Sharon's
+     access. All of it. He left in April." Ticket prose about {user} is
+     neutral, and the self-test keeps it that way. */
   user:   ['Janet','Dale','the office manager','the new hire','Doug from accounting',
            'the front desk','Sharon','the warehouse guy','Marcy','the night dispatcher',
            'Gary in shipping','the practice manager','Priya','the owner\'s brother',
@@ -1611,11 +1615,11 @@ const DIALOGUE = {
            {t:'Wipe it immediately', fx:{time:2, stress:8}},
            {t:'Lock it, locate it, wipe in the morning if still gone', fx:{time:12, rep:2, bonus:1, stress:3}} ] },
   't2.wipe.c': { who:'sys', t:['At 17:40 the director finds the laptop in the boot, under a coat. He does not mention this to anyone. You find out on Thursday.'] },
-  't2.mbx.a':  { who:'client', t:['A manager wants full access to {user}\'s mailbox. He says her manager approved it.',
-    'He is her manager. He has approved it. To himself. By email. To you.'] },
+  't2.mbx.a':  { who:'client', t:['A manager wants full access to {user}\'s mailbox. They say their manager approved it.',
+    'They ARE their manager. They have approved it. To themselves. By email. To you.'] },
   't2.mbx.b':  { who:'sys', t:['This is legal before it is technical, and nobody in this building will tell you that.'],
     opts:[ {t:'Route it through HR and say so plainly', fx:{time:13, rep:3, bonus:1, stress:4}},
-           {t:'Grant it — he is her manager', fx:{time:4, rep:-2, stress:7}},
+           {t:'Grant it — they are their manager', fx:{time:4, rep:-2, stress:7}},
            {t:'Grant read-only and log every access', fx:{time:10, rep:1, bonus:1, stress:3}} ] },
   't2.pay.a':  { who:'client', t:['Payroll cannot print. The run closes at 3pm. It is 2:04pm.',
     'Payroll prints to one device. It has printed to one device since before you were hired.'] },
@@ -2490,17 +2494,17 @@ const DIALOGUE = {
     opts:[ {t:'Undo it and credit them for spotting it', fx:{time:8, rep:3, bonus:1}},
            {t:'Undo it silently', fx:{time:3, bonus:1}},
            {t:'Document what they did, in detail, in the ticket', fx:{time:7, rep:-2}} ] },
-  't2.off.a':  { who:'client', t:['Remove {user}\'s access. All of it. He left in April.',
-    'Mackenzie, cc\'d: "he\'s still here?" Mackenzie has been approving his expenses.'] },
+  't2.off.a':  { who:'client', t:['Remove {user}\'s access. All of it. They left in April.',
+    'Mackenzie, cc\'d: "are they still here?" Mackenzie has been approving their expenses.'] },
   't2.off.b':  { who:'sys', t:['Four months of access nobody noticed. The interesting question is how many others.'],
-    opts:[ {t:'Offboard him and audit everyone who left this year', fx:{time:26, rep:3, bonus:1, stress:6}},
-           {t:'Offboard him', fx:{time:7, bonus:1}},
-           {t:'Offboard him and quietly mention it to Linda', fx:{time:10, rep:2, bonus:1, stress:2}} ] },
+    opts:[ {t:'Offboard them and audit everyone who left this year', fx:{time:26, rep:3, bonus:1, stress:6}},
+           {t:'Offboard them', fx:{time:7, bonus:1}},
+           {t:'Offboard them and quietly mention it to Linda', fx:{time:10, rep:2, bonus:1, stress:2}} ] },
   't2.vpn.a':  { who:'client', t:['{User} connects to the VPN, gets the green tick, and can reach nothing at all.',
-    'It has been like that since she started working from the new house.'] },
-  't2.vpn.b':  { who:'sys', t:['Her home router hands out the same subnet as the office. It always has.'],
-    opts:[ {t:'Walk her through changing her home subnet', fx:{time:16, rep:2, bonus:1, stress:3}},
-           {t:'Tell her to use her phone hotspot', fx:{time:4, rep:-1}},
+    'It has been like that since they started working from the new house.'] },
+  't2.vpn.b':  { who:'sys', t:['Their home router hands out the same subnet as the office. It always has.'],
+    opts:[ {t:'Walk them through changing their home subnet', fx:{time:16, rep:2, bonus:1, stress:3}},
+           {t:'Tell them to use their phone hotspot', fx:{time:4, rep:-1}},
            {t:'Re-address the office instead. It is only fourteen years old.', fx:{time:9, stress:6}} ] },
   't2.lic.a':  { who:'linda', t:['True-up time. We are 40 seats over.',
     'Those 40 seats were bought on Mackenzie\'s personal card in 2022 and expensed as "software".'] },
@@ -2697,12 +2701,12 @@ const DIALOGUE = {
            {t:'"Put it in a ticket"', fx:{time:2, rep:-3, stress:1}} ] },
 
   /* ------------------------------ T1 dialogue ---------------------------- */
-  't1.cfo.a':   { who:'client', t:['{User} again. Third reset today. He is on a plane. He is always on a plane.',
+  't1.cfo.a':   { who:'client', t:['{User} again. Third reset today. They are on a plane. They are always on a plane.',
     'Policy says verify the caller. Policy has never met the CFO.'] },
-  't1.cfo.b':   { who:'sys', t:['Reset done. He will do this again on Thursday.'],
+  't1.cfo.b':   { who:'sys', t:['Reset done. They will do this again on Thursday.'],
     opts:[ {t:'Log it as a security event, quietly', fx:{time:6, rep:1, bonus:1}},
            {t:'Reset it and say nothing', fx:{stress:2}},
-           {t:'Suggest a password manager to a man on a plane', fx:{time:4, rep:-1, stress:3}} ] },
+           {t:'Suggest a password manager to somebody on a plane', fx:{time:4, rep:-1, stress:3}} ] },
   't1.phones.a':{ who:'client', t:['{client} says every phone in the building is down.',
     'Every phone in the building is one phone, on one desk, that a cleaner unplugged.'] },
   't1.phones.b':{ who:'sys', t:['The handset cable is coiled neatly beside the socket. Neatly. Someone was proud of this.'] },
@@ -14665,6 +14669,36 @@ function selfTest(runSim){
       ok('the exit interview does not print the same stat twice',
          !!sv && !!oq && +sv[1] === 10 && +oq[1] === 4,
          (sv ? sv[1] : '?') + ' survived / ' + (oq ? oq[1] : '?') + ' on the queue');
+    }
+    /* WHOEVER {user} TURNS OUT TO BE. The pool holds Janet, Dale, Sharon, Gary
+       in shipping, Priya and the owner's brother, and four tickets wrote "he"
+       or "she" about whichever one it dealt — so the game said "Remove
+       Sharon's access. All of it. He left in April", and told a T2 that Gary
+       in shipping's home router was hers. Fourteen lines across four tickets.
+       A ticket that resolves {user} does not get to pick a gender for them. */
+    {
+      const GENDERED = /\b(she|her|hers|herself|he|him|his|himself)\b/i;
+      const guilty = [];
+      for (const id in TICKETS){
+        const T = TICKETS[id];
+        let usesUser = /\{[Uu]ser\}/.test(T.title);
+        const lines = [];
+        for (const st of T.steps){
+          for (const key of [st.say, st.choice]){
+            const n = DIALOGUE[key];
+            if (!n) continue;
+            for (const l of n.t){ if (/\{[Uu]ser\}/.test(l)) usesUser = true; lines.push([key, l]); }
+            for (const op of (n.opts || [])) lines.push([key, op.t]);
+          }
+        }
+        if (!usesUser) continue;
+        for (const [k, l] of lines){
+          const m = String(l).match(GENDERED);
+          if (m) guilty.push(id + '/' + k + ': "' + m[0] + '"');
+        }
+      }
+      ok('no ticket assigns a gender to whoever {user} turned out to be',
+         !guilty.length, guilty.length + ': ' + guilty.slice(0, 3).join(' · '));
     }
     /* the review prints the number the career actually turns on */
     {
