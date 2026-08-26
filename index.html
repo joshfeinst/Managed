@@ -2492,7 +2492,8 @@ const DIALOGUE = {
     opts:[ {t:'Offboard him and audit everyone who left this year', fx:{time:26, rep:3, bonus:1, stress:6}},
            {t:'Offboard him', fx:{time:7, bonus:1}},
            {t:'Offboard him and quietly mention it to Linda', fx:{time:10, rep:2, bonus:1, stress:2}} ] },
-  't2.vpn.a':  { who:'client', t:['The VPN works for everyone except {user}. It has never worked for {user}.'] },
+  't2.vpn.a':  { who:'client', t:['{User} connects to the VPN, gets the green tick, and can reach nothing at all.',
+    'It has been like that since she started working from the new house.'] },
   't2.vpn.b':  { who:'sys', t:['Her home router hands out the same subnet as the office. It always has.'],
     opts:[ {t:'Walk her through changing her home subnet', fx:{time:16, rep:2, bonus:1, stress:3}},
            {t:'Tell her to use her phone hotspot', fx:{time:4, rep:-1}},
@@ -3537,8 +3538,13 @@ const TICKETS = {
   'offboard-maybe': { tiers:[2,6], weight:3, sla:38, slaMult:1.8, pri:3, stress:8,
     title:'Remove {user}\'s access. All of it. (Mackenzie: "he\'s still here?")',
     steps:[{say:'t2.off.a'},{game:'blast',diff:2},{choice:'t2.off.b'}] },
+  /* Retitled: this and vpn-for-everyone-else both read 'The VPN works for
+     everyone except {user}', they overlap at rungs 2-4, and two rows of the
+     same sentence in one queue is not a joke, it is a misread. They are
+     different faults — this one is a subnet collision, which presents as
+     connected-but-useless — so the symptom can say so. */
   'vpn-except-her': { tiers:[2,4], weight:3, sla:42, slaMult:2.0, pri:3, stress:6,
-    title:'VPN works for everyone except {user}',
+    title:'{User} connects to the VPN and still cannot reach anything',
     steps:[{say:'t2.vpn.a'},{game:'jargon',diff:2},{choice:'t2.vpn.b'}] },
   'shadow-license-mackenzie': { tiers:[2,6], weight:3, sla:50, slaMult:2.2, pri:3, stress:7,
     title:'License true-up: 40 seats bought on a personal card',
@@ -4340,7 +4346,11 @@ const TICKETS = {
   'vcio-eleven-month-year': { tiers:[8,8], weight:3, sla:58, slaMult:2.1, pri:2, stress:7,
     title:'Financial year is eleven months long this year',
     steps:[{say:'vx.spend.a'},{goto:'CONF'},{choice:'vx.spend.b'}] },
-  'vcio-key-person-named': { tiers:[8,8], weight:2, sla:62, slaMult:2.2, pri:2, stress:10,
+  /* Was pri:2 — two points for a walk to the shelf, two choices and ten
+     stress, so burning it always beat working it and vx.buss was content
+     nobody would ever see. Key-person risk is the vCIO's actual job; it is
+     priced as one now. */
+  'vcio-key-person-named': { tiers:[8,8], weight:2, sla:62, slaMult:2.2, pri:3, stress:10,
     title:'Key-person risk has a name and the name is Derek',
     steps:[{goto:'SHELF'},{say:'vx.buss.a'},{choice:'vx.buss.b'},{choice:'vx.buss.c'}] },
 
