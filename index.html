@@ -7908,8 +7908,15 @@ function careerOver(kind){
   document.getElementById('o-stats').innerHTML =
     '<dt>Days survived</dt><dd>' + savedRun.day + '</dd>' +
     '<dt>Final title</dt><dd>' + ROLES[savedRun.rung].title + '</dd>' +
-    '<dt>Days on the queue</dt><dd>' + (savedRun.queueDays || 0) +
-      (savedRun.rung > LAST_QUEUE_RUNG ? ' — you got off it' : '') + '</dd>' +
+    /* YOU CANNOT GET OFF SOMETHING YOU WERE NEVER ON. meta.carry re-hires you
+       one rung below where you got to, so as soon as one career has reached
+       Project Team every career after it can start off the queue — and the
+       exit interview congratulated all of them with "0 — you got off it".
+       queueDays counts evenings finished at or below T3, so zero of them
+       means every day of that career was already above the helpdesk. */
+    '<dt>Days on the queue</dt><dd>' + (!savedRun.queueDays
+      ? 'none — you were hired above it'
+      : savedRun.queueDays + (savedRun.rung > LAST_QUEUE_RUNG ? ' — you got off it' : '')) + '</dd>' +
     '<dt>Reputation banked</dt><dd>+' + (Math.floor(savedRun.rep/2) + (kind==='retired'?5:kind==='shortof'?2:0)) + ' (total ' + meta.rep + ')</dd>' +
     '<dt>Careers lived</dt><dd>' + meta.runsPlayed + '</dd>';
   document.getElementById('o-note').textContent = kind === 'retired'
@@ -14600,7 +14607,39 @@ function selfTest(runSim){
            /nothing closed today/.test(d) && !/0% of each ticket/.test(d) &&
            /nothing hands-on today/.test(d),
            (d.match(/Speed[^A-Z]*/) || ['?'])[0].slice(0, 60));
-        ok('review: a day that closed something still reports its speed',
+        /* AND THE EXIT INTERVIEW DOES NOT CONGRATULATE YOU ON LEAVING A JOB YOU
+         NEVER HAD. meta.carry re-hires you one rung below where you got to, so
+         once one career has reached Project Team every career after it starts
+         off the queue — and every one of their exit interviews read "Days on
+         the queue: 0 — you got off it". Three careers, one from the bottom and
+         two hired above the helpdesk. */
+      {
+        const keptCarry = meta.carry, keptRuns = meta.runsPlayed, keptRep = meta.rep;
+        const endAt = carry => {
+          meta.carry = carry;
+          rngInit('CARRY-TEST'); runInit('CARRY-TEST'); rollDay();
+          const started = run.rung;
+          run.day = 9; run.clock = DAY_MIN; run.queue = []; run.resolved = 5;
+          run.stakesDone = 10; run.earned = 8; run.scores = [.8,.8,.8,.8,.8];
+          run.breaches = 0; run.burned = []; run.burnout = 99.99; run.stress = 95;
+          endDay();
+          const btn = document.querySelector('#r-actions button'); if (btn) btn.click();
+          return { started, txt: document.getElementById('o-stats').textContent };
+        };
+        const low = endAt(0), high = endAt(ROLES.length - 2);
+        meta.carry = keptCarry; meta.runsPlayed = keptRuns; meta.rep = keptRep;
+        run = null; G.state = 'title';
+        ok('the exit interview does not say you left a queue you were never on',
+           high.started > LAST_QUEUE_RUNG && /hired above it/.test(high.txt) &&
+           !/0 — you got off it/.test(high.txt),
+           'started at rung ' + high.started + ': ' +
+           ((high.txt.match(/Days on the queue[^A-Z]*/) || ['?'])[0]).slice(0, 50));
+        ok('...and still counts them for a career that started on it',
+           low.started === 0 && /Days on the queue/.test(low.txt) &&
+           !/hired above it/.test(low.txt),
+           ((low.txt.match(/Days on the queue[^A-Z]*/) || ['?'])[0]).slice(0, 50));
+      }
+      ok('review: a day that closed something still reports its speed',
            /% of each ticket/.test(w) && /% across 3 hands-on jobs/.test(w),
            (w.match(/Speed[^A-Z]*/) || ['?'])[0].slice(0, 60));
         run = null; G.state = 'title';
