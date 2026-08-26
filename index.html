@@ -871,34 +871,34 @@ function bakePortrait(look){
    docs/BALANCE.md rather than tuned around. */
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
-    gates:{ nextAt:{perf:0.69, days:3}, firedBelow:0.31, cert:null },
+    gates:{ nextAt:{perf:0.79, days:3}, firedBelow:0.355, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:30, slaScale:1.0 }, deskAnchor:'DESK_PIT' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
-    gates:{ nextAt:{perf:0.73, days:3}, firedBelow:0.33, cert:null },
+    gates:{ nextAt:{perf:0.815, days:3}, firedBelow:0.365, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:34, slaScale:0.96 }, deskAnchor:'DESK_PIT2' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
-    gates:{ nextAt:{perf:0.65, days:3}, firedBelow:0.29, cert:null },
+    gates:{ nextAt:{perf:0.795, days:3}, firedBelow:0.355, cert:null },
     queue:{ ratePerHr:1.3, meetingMin:40, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
-    gates:{ nextAt:{perf:0.55, days:3}, firedBelow:0.25, cert:null },
+    gates:{ nextAt:{perf:0.815, days:3}, firedBelow:0.365, cert:null },
     queue:{ ratePerHr:1.6, meetingMin:48, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
-    gates:{ nextAt:{perf:0.65, days:3}, firedBelow:0.29, cert:null },
+    gates:{ nextAt:{perf:0.845, days:3}, firedBelow:0.38, cert:null },
     queue:{ ratePerHr:1.1, meetingMin:60, slaScale:0.96 }, deskAnchor:'DESK_PROJ' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
-    gates:{ nextAt:{perf:0.57, days:3}, firedBelow:0.26, cert:null },
+    gates:{ nextAt:{perf:0.785, days:3}, firedBelow:0.355, cert:null },
     queue:{ ratePerHr:1.1, meetingMin:68, slaScale:0.96 }, deskAnchor:'DESK_PROC' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.54, days:3}, firedBelow:0.24, cert:null },
+    gates:{ nextAt:{perf:0.755, days:3}, firedBelow:0.34, cert:null },
     queue:{ ratePerHr:1.1, meetingMin:78, slaScale:0.96 }, deskAnchor:'DESK_CLIENT' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
-    gates:{ nextAt:{perf:0.44, days:3}, firedBelow:0.20, cert:null },
+    gates:{ nextAt:{perf:0.66, days:3}, firedBelow:0.295, cert:null },
     queue:{ ratePerHr:1.7, meetingMin:84, slaScale:0.96 }, deskAnchor:'DESK_ARCH' },
   { id:'vcio',   title:'vCIO',          pay:135000,
-    gates:{ nextAt:{perf:0.48, days:3}, firedBelow:0.22, cert:null },
+    gates:{ nextAt:{perf:0.7, days:3}, firedBelow:0.315, cert:null },
     queue:{ ratePerHr:1.7, meetingMin:88, slaScale:0.96 }, deskAnchor:'DESK_EXEC' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
-    gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.25, cert:null },
+    gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.34, cert:null },
     queue:{ ratePerHr:1.6, meetingMin:80, slaScale:1.05 }, deskAnchor:'DESK_CORNER' }
 ];
 
@@ -5293,7 +5293,35 @@ function makeArrival(id, at, role){
      in, so the tickets the game most wants you to protect were the ones you
      could least afford to be mid-ticket for. Every ticket gets a minimum
      window to be picked up in, whatever its length. */
-  const sla = Math.max(workMin * (T.slaMult || 1.9), workMin + MIN_SLACK)
+  /* THE CLOCK HAS TO OUTLAST THE TICKET YOU ARE ALREADY HOLDING. You cannot
+     abandon work half-done — not in this game and not at a desk — so the only
+     moment triage happens is BETWEEN tickets. A P1 that lands while you are
+     thirty minutes into something else has to survive that wait, or it dies
+     whatever you decide, and the decision the whole game is about stops paying.
+
+     It was dying. The burn ledger at Relationship Manager said flawless triage
+     lost 1.38 P1s a day and deliberately-worst triage lost 1.55 — a rung where
+     doing the important thing first bought you almost nothing. Widening the
+     top two bands fixes it at every rung on the ladder, measured:
+
+       gap between good and bad triage, in points of day score
+       band multiplier   x1     x1.6    x2.0
+       t2               5.8    11.9    11.6
+       t3               7.8    12.3    13.0
+       project          6.4    10.7    12.5
+       relmgr           3.1     8.6    13.0
+       solarch          5.3     9.7    13.5
+       director        12.0    16.6    19.7
+
+     The mirror experiment is in docs/BALANCE.md and was rejected: widening the
+     BOTTOM two bands shrinks every gap, because a P4 that lives longer is one
+     the bad triager gets to finish before reaching the P1 anyway.
+
+     It reads right, too. A P1 gets a bridge call and an agreed target; a P4
+     gets whatever the portal said when it was raised. */
+  const URGENT_GRACE = { 4:2.0, 3:1.5, 2:1, 1:1 };
+  const sla = Math.max(workMin * (T.slaMult || 1.9) * (URGENT_GRACE[T.pri || 2] || 1),
+                       workMin + MIN_SLACK)
             * role.queue.slaScale * dayEase;
   return { at, id, uid: run.uid++, title: fill(T.title, fills), fills,
            sla: Math.round(sla), stress: T.stress };
