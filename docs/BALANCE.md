@@ -195,27 +195,46 @@ Only the 3–5 day rows of that sweep are trustworthy.)*
 | t1 | 2.8 | 34 | 41% | .18 | 3/12 | 1/12 |
 | t2 | 2.8 | 40 | 42% | .19 | 4/12 | 1/12 |
 | t3 | 2.8 | 48 | 38% | .17 | 4/12 | 1/12 |
-| project | 2.2 | 60 | 36% | .16 | 3/12 | 3/12 |
-| procure | 2.2 | 68 | 39% | .18 | 6/12 | 2/12 |
-| relmgr | 2.2 | 78 | 36% | .16 | 4/12 | 3/12 |
-| solarch | 2.2 | 84 | 34% | .15 | 4/12 | 3/12 |
-| vcio | 2.2 | 88 | 33% | .15 | 3/12 | 4/12 |
+| project | 2.2 | 60 | 38% | .17 | 4/12 | 1/12 |
+| procure | 2.2 | 68 | 40% | .18 | 6/12 | 1/12 |
+| relmgr | 2.2 | 78 | 41% | .18 | 5/12 | 1/12 |
+| solarch | 2.2 | 84 | 38% | .17 | 4/12 | 1/12 |
+| vcio | 2.2 | 88 | 42% | .19 | 3/12 | 2/12 |
 
-`GATE_DEBT` total **52**, from 69. Before this pass the same table read 8/12,
-7/12, 11/12, 12/12, 10/12, 8/12 in the tight column from T3 upward — **the top
-five rungs were shut.** They are open now.
+`GATE_DEBT` total **45**, from 69. Before this pass the tight column read
+8/12, 7/12, 11/12, 12/12, 10/12, 8/12 from T3 upward — **the top five rungs
+were shut.** The loose column is now one seed in twelve on eight rungs of nine.
 
-`tools/meta.js`, 8 careers: **3 reached retirement**, best rung DIRECTOR, about
-11.7 careers to a win. It had never reached the top at all.
+`tools/bars.js`, 24 seeds x 12 days: **all nine rungs healthy** — good triage
+clears ≥60% of seeds, bad triage ≤30%. It was three of nine, and at vCIO bad
+triage outscored good.
 
-### The sloppy column went UP, and that is not the regression it looks like
+`tools/meta.js`, 24 players x 16 careers: **8 of 24 reach retirement**, best
+rung DIRECTOR, average 12.6 careers to a win. It had never reached the top.
 
-It was 0/12 on every rung. It was zero because the bars were so high that
-*nobody* cleared them — flawless was missing 8 to 12 seeds out of 12 up there.
-A gate nobody can clear has a perfect sloppy record for the worst possible
-reason. With the bars re-cut, bad triage now backs into a promotion on 1–4
-seeds in 12. **That is the real number**, it is recorded as the new ratchet
-floor, and it may only fall. vCIO's 4/12 is the worst and the one to fix first.
+*(An 8-player run of the same build reported 1 of 8 and looked like a collapse.
+It was small-sample noise. Reachability gets 24 players before anyone reacts
+to it.)*
+
+### vCIO: fixed by making its work cheaper, not by moving its bar
+
+vCIO was the worst rung left — good triage separated from bad by 6 points, the
+narrowest on the ladder. The cause was not the queue: the *theoretical* ceiling
+there is 42 points, against intern's 47, with the widest stakes spread in the
+game. The bots simply could not realise it.
+
+| | closed/day | avg stakes per closed | perf |
+|---|---|---|---|
+| intern, good triage | 8.2 | 3.55 | 50% |
+| intern, bad triage | 7.5 | 2.67 | 34% |
+| vCIO, good triage | 5.5 | 4.27 | 37% |
+| vCIO, bad triage | 6.1 | 3.19 | 30% |
+
+Good triage buys the *same* relative advantage on both rungs — about a third
+more value per ticket closed. But a vCIO day protected only **38% of its
+queue's value** against an intern's 51%, so that advantage was swamped by the
+burned pool. Cutting top-rung choice costs a second time took vCIO's separation
+from 6 points to 10 and its closures from 5.5 to 6.2 a day. It is healthy now.
 
 ### The five-day gate: measured, and rejected
 

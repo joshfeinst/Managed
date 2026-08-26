@@ -71,9 +71,6 @@ budget landed is stale; everything set from it needs redoing.
 - [x] relmgr/solarch fixed by the meeting budget + senior time scale, not by a bar
 - [x] Full battery: verify, visual, save, meta, burn, human, templates, gate --ladder
 - [x] `docs/BALANCE.md` rewritten — three causes, all measured
-- [ ] **vCIO is the weakest rung left.** Bad triage clears 3–4 seeds in 12 and
-      the good/bad gap is 6 points, the narrowest on the ladder. A five-day gate
-      fixes it and costs the top of the ladder (see BALANCE.md) — so it needs
-      content: more genuinely droppable work in the vCIO pool, or cheaper
-      tickets so more of the day is decisions rather than one long meeting.
+- [x] **vCIO fixed** — its work got cheaper, not its bar lower. Separation 6 →
+      10 points; all nine rungs now healthy on tools/bars.js.
 - [ ] Put the minigame question to Josh with a real rung in front of him.
