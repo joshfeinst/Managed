@@ -874,22 +874,22 @@ const ROLES = [
     gates:{ nextAt:{perf:0.53, days:3}, firedBelow:0.24, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:30, slaScale:1.0 }, deskAnchor:'DESK_PIT' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
-    gates:{ nextAt:{perf:0.39, days:3}, firedBelow:0.18, cert:null },
+    gates:{ nextAt:{perf:0.45, days:3}, firedBelow:0.2, cert:null },
     queue:{ ratePerHr:2.8, meetingMin:34, slaScale:0.96 }, deskAnchor:'DESK_PIT2' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
     gates:{ nextAt:{perf:0.39, days:3}, firedBelow:0.18, cert:null },
     queue:{ ratePerHr:2.8, meetingMin:40, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
-    gates:{ nextAt:{perf:0.32, days:3}, firedBelow:0.14, cert:null },
+    gates:{ nextAt:{perf:0.34, days:3}, firedBelow:0.15, cert:null },
     queue:{ ratePerHr:2.8, meetingMin:48, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
-    gates:{ nextAt:{perf:0.34, days:3}, firedBelow:0.15, cert:null },
+    gates:{ nextAt:{perf:0.4, days:3}, firedBelow:0.18, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:60, slaScale:0.96 }, deskAnchor:'DESK_PROJ' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
     gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:68, slaScale:0.96 }, deskAnchor:'DESK_PROC' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.36, days:3}, firedBelow:0.16, cert:null },
+    gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:78, slaScale:0.96 }, deskAnchor:'DESK_CLIENT' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
     gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
@@ -1910,6 +1910,78 @@ const DIALOGUE = {
     opts:[ {t:'Fix it properly, and write down what was missing', fx:{time:15, rep:3, bonus:1, stress:3}},
            {t:'Fix your own access and get on with the day', fx:{time:7, bonus:1, stress:2}},
            {t:'Raise a ticket with yourself about it', fx:{time:4, rep:1, bonus:1, stress:1}} ] },
+  'j.mon.a':   { who:'client', t:['{User} would like a second monitor. There is no urgency, they say, three times.',
+    'There is a cupboard with four in it. Two of them work. Nobody knows which two and the labels came off in the move.'] },
+  'j.mon.b':   { who:'sys', t:['This takes eleven minutes and will be remembered for a year.'],
+    opts:[ {t:'Test all four, label them, fit the good one', fx:{time:18, rep:3, bonus:1, stress:2}},
+           {t:'Take one at random and swap it if it is dead', fx:{time:8, bonus:1, stress:2}},
+           {t:'Add it to the list of things for the next order', fx:{time:3, rep:-1, stress:1}} ] },
+  'j.clock.a': { who:'brenda', t:['The clock in the meeting room is eleven minutes fast.',
+    'It has been eleven minutes fast for so long that two teams now schedule against it deliberately and are, correctly, always early.'] },
+  'j.clock.b': { who:'sys', t:['This is not an IT system. It has a battery.'],
+    opts:[ {t:'Fix it and warn the two teams', fx:{time:12, rep:3, bonus:1, stress:1}},
+           {t:'Fix it', fx:{time:5, bonus:1, stress:2}},
+           {t:'Leave it. It is load-bearing now.', fx:{time:2, rep:1, bonus:1}} ] },
+  'j.name.a':  { who:'sys', t:['{User} got married in April and is still in the address book under their old name.',
+    'It is in six systems. Four of them sync from one of the other two, and nobody has ever established which.'] },
+  'j.name.b':  { who:'sys', t:['Changing it in the wrong one changes it back overnight.'],
+    opts:[ {t:'Find the authoritative one and change it there', fx:{time:19, rep:4, bonus:1, stress:3}},
+           {t:'Change it everywhere and see what sticks', fx:{time:11, bonus:1, stress:4}},
+           {t:'Change the one they actually look at', fx:{time:5, bonus:1, stress:1}} ] },
+  'j.font.a':  { who:'client', t:['"Can you make it bigger?"',
+    'That is the entire ticket. Bigger than what, in what, is not addressed, and they have gone to lunch.'] },
+  'j.font.b':  { who:'sys', t:['There are about nine things they could mean and one of them is the screen resolution.'],
+    opts:[ {t:'Wait for them and fix the right thing', fx:{time:13, rep:2, bonus:1, stress:1}},
+           {t:'Guess: it is the browser zoom. It is always the browser zoom.', fx:{time:5, bonus:1, stress:2}},
+           {t:'Reply asking what they mean by bigger', fx:{time:3, rep:-1, stress:2}} ] },
+  'j.label.a': { who:'sys', t:['The label printer is out of labels.',
+    'The labels are a size that only this printer takes, and the only person who knew where they were ordered from has been on secondment since January.'] },
+  'j.label.b': { who:'sys', t:['Nobody has labelled anything since the labels ran out. It shows.'],
+    opts:[ {t:'Track the part number down and set up a standing order', fx:{time:20, rep:3, bonus:1, stress:3}},
+           {t:'Order one box of whatever fits', fx:{time:8, bonus:1, stress:2}},
+           {t:'Write on things with a pen like everybody else has been', fx:{time:2, rep:-1, stress:1}} ] },
+  'j.phone.a': { who:'client', t:['"You do phones, don\'t you? It is not a work phone. It will only take a second."',
+    'It is their personal phone. It has 41 apps open, no updates since 2022, and a photograph of a boarding pass as the lock screen.'] },
+  'j.phone.b': { who:'sys', t:['Saying yes to this once means saying yes to it forever.'],
+    opts:[ {t:'Help, once, and be clear that it is once', fx:{time:14, rep:3, bonus:1, stress:3}},
+           {t:'Show them how to update it themselves', fx:{time:9, rep:2, bonus:1, stress:2}},
+           {t:'Explain, kindly, that it is not something IT does', fx:{time:4, rep:-1, bonus:1, stress:2}} ] },
+  'j.desk.a':  { who:'sys', t:['A desk wobbles. This has been raised with IT.',
+    'It has been raised with IT because the person who sits at it emailed the helpdesk address, which is the only address anybody in this building can remember.'] },
+  'j.desk.b':  { who:'sys', t:['There is a folded piece of card under one leg already. Somebody has tried.'],
+    opts:[ {t:'Fix it properly and tell Facilities it happened', fx:{time:11, rep:3, bonus:1, stress:1}},
+           {t:'Pass it to Facilities with the right form attached', fx:{time:6, rep:1, bonus:1}},
+           {t:'Close it as not an IT issue', fx:{time:2, rep:-2, stress:2}} ] },
+  'j.chair.a': { who:'brenda', t:['A chair request has landed in your queue. For the second time.',
+    'It bounced out of Facilities because the requester put "computer chair" in the description, and something in the routing rules saw the word "computer".'] },
+  'j.chair.b': { who:'sys', t:['You could close it, or you could fix the rule that will send you the next one.'],
+    opts:[ {t:'Fix the routing rule', fx:{time:15, rep:4, bonus:1, stress:2}},
+           {t:'Walk it over to Facilities yourself', fx:{time:8, rep:2, bonus:1, stress:1}},
+           {t:'Close it. Not IT.', fx:{time:2, rep:-1, stress:1}} ] },
+  'j.dog.a':   { who:'client', t:['{User} cannot set a photograph of their dog as their wallpaper.',
+    'Group policy sets the wallpaper. Group policy has set the same corporate photograph of a glass building since 2018 and nobody remembers requesting it.'] },
+  'j.dog.b':   { who:'sys', t:['You can say no and be right, or you can find out whether anybody still wants that policy.'],
+    opts:[ {t:'Ask whether the policy is still wanted by anyone', fx:{time:13, rep:3, bonus:1, stress:2}},
+           {t:'Explain the policy and why it exists', fx:{time:6, rep:1, bonus:1}},
+           {t:'Quietly exclude them from it', fx:{time:7, rep:-2, stress:3}} ] },
+  'j.tv.a':    { who:'sys', t:['The television in reception has no sound.',
+    'It has never had sound. It plays a corporate showreel to an empty sofa, and a visitor once asked what it was for and nobody could say.'] },
+  'j.tv.b':    { who:'sys', t:['Nobody has ever asked for the sound before today.'],
+    opts:[ {t:'Fix it and ask whether anyone wants it on', fx:{time:12, rep:2, bonus:1, stress:1}},
+           {t:'Fix the sound', fx:{time:7, bonus:1, stress:2}},
+           {t:'Leave it. Sound in reception would be worse.', fx:{time:2, rep:1, bonus:1}} ] },
+  'j.inbox.a': { who:'client', t:['{User} would like their inbox organised. By you.',
+    'There are 61,000 messages and no folders. They have described the system they want in a voicemail, which is four minutes long.'] },
+  'j.inbox.b': { who:'sys', t:['This is not a thing IT does. It is also somebody genuinely drowning.'],
+    opts:[ {t:'Show them rules and folders for twenty minutes', fx:{time:22, rep:4, bonus:1, stress:3}},
+           {t:'Set up three folders and one rule to start them off', fx:{time:11, rep:2, bonus:1, stress:2}},
+           {t:'Send them a link to the training portal', fx:{time:3, rep:-2, stress:2}} ] },
+  'j.mouse2.a':{ who:'client', t:['{User}\'s mouse clicks twice when they click once.',
+    'They have adapted. They now click half as often, which works, and which is why this has taken four months to be reported.'] },
+  'j.mouse2.b':{ who:'sys', t:['There is a drawer of mice. This takes ninety seconds.'],
+    opts:[ {t:'Swap it and check the drawer stock while you are there', fx:{time:9, rep:2, bonus:1, stress:1}},
+           {t:'Swap it', fx:{time:4, bonus:1}},
+           {t:'Tell them to adjust the double-click speed', fx:{time:3, rep:-1, stress:2}} ] },
   'h.ang.a':  { who:'client', t:['{client} opens with "I have already explained this twice."',
     'They have. To two different people, neither of whom wrote anything down, and one of whom no longer works here.'] },
   'h.ang.b':  { who:'sys', t:['Nothing about this is your fault and all of it is now your problem.'],
@@ -2936,6 +3008,48 @@ const TICKETS = {
      Intern had 35 tickets of its own and T1, T2 and T3 had fifteen each, which
      is backwards: every career passes through all three of them, and most
      careers spend more days there than anywhere else. Six apiece. */
+  /* ------------------ WHAT YOU ARE ALLOWED TO LET BURN, MID-LADDER --------
+     The droppable share of the queue ran 25% at intern, 12% at T2, 9% at T3
+     and 7% at Project Team before these. Triage is choosing what to drop, and
+     across the middle of the ladder — the part every career passes through —
+     there was almost nothing cheap to choose. Same fix as the senior rungs got,
+     same reason: these are not filler, they are the decision. */
+  'second-monitor-when-you-can': { tiers:[1,5], weight:4, sla:64, slaMult:2.5, pri:1, stress:2,
+    title:'{User} would like a second monitor when you get a chance',
+    steps:[{say:'j.mon.a'},{choice:'j.mon.b'}] },
+  'meeting-room-clock': { tiers:[1,5], weight:3, sla:70, slaMult:2.6, pri:1, stress:2,
+    title:'The clock in the meeting room is eleven minutes fast',
+    steps:[{say:'j.clock.a'},{choice:'j.clock.b'}] },
+  'name-in-the-address-book': { tiers:[1,6], weight:4, sla:60, slaMult:2.4, pri:1, stress:3,
+    title:'{User} got married and is still in the address book as {user}',
+    steps:[{say:'j.name.a'},{choice:'j.name.b'}] },
+  'make-the-font-bigger': { tiers:[1,5], weight:4, sla:58, slaMult:2.3, pri:1, stress:2,
+    title:'"Can you make it bigger?" — no further detail',
+    steps:[{say:'j.font.a'},{choice:'j.font.b'}] },
+  'the-label-printer': { tiers:[2,6], weight:3, sla:66, slaMult:2.5, pri:1, stress:3,
+    title:'The label printer is out of the labels nobody orders',
+    steps:[{say:'j.label.a'},{goto:'SHELF'},{choice:'j.label.b'}] },
+  'look-at-my-phone': { tiers:[1,6], weight:4, sla:62, slaMult:2.4, pri:1, stress:3,
+    title:'{User} wants you to look at their personal phone',
+    steps:[{say:'j.phone.a'},{choice:'j.phone.b'}] },
+  'the-desk-wobbles': { tiers:[2,6], weight:3, sla:72, slaMult:2.7, pri:1, stress:2,
+    title:'A desk wobbles. This has been raised with IT.',
+    steps:[{say:'j.desk.a'},{choice:'j.desk.b'}] },
+  'chair-is-not-it': { tiers:[2,6], weight:3, sla:68, slaMult:2.6, pri:1, stress:2,
+    title:'A chair request has been assigned to you by mistake, twice',
+    steps:[{say:'j.chair.a'},{choice:'j.chair.b'}] },
+  'wallpaper-of-a-dog': { tiers:[1,5], weight:3, sla:74, slaMult:2.7, pri:1, stress:2,
+    title:'{User} cannot set a photograph of their dog as the wallpaper',
+    steps:[{say:'j.dog.a'},{choice:'j.dog.b'}] },
+  'unmute-the-television': { tiers:[2,6], weight:3, sla:56, slaMult:2.3, pri:1, stress:3,
+    title:'The reception television has no sound and never has',
+    steps:[{say:'j.tv.a'},{goto:'LOBBY'},{choice:'j.tv.b'}] },
+  'sort-my-inbox': { tiers:[2,6], weight:3, sla:70, slaMult:2.6, pri:1, stress:4,
+    title:'{User} would like their inbox organised. By you.',
+    steps:[{say:'j.inbox.a'},{choice:'j.inbox.b'}] },
+  'a-mouse-that-clicks-twice': { tiers:[1,5], weight:4, sla:54, slaMult:2.2, pri:2, stress:3,
+    title:'{User}\'s mouse clicks twice when they click once',
+    steps:[{say:'j.mouse2.a'},{choice:'j.mouse2.b'}] },
   'already-angry': { tiers:[1,3], weight:4, sla:26, slaMult:1.5, pri:3, stress:8,
     title:'{client} is already angry, and not at you, yet',
     steps:[{say:'h.ang.a'},{choice:'h.ang.b'}] },
@@ -4349,8 +4463,8 @@ const GATE_DEBT = {
      performance FALLS as a career runs on — burnout compounds and the nights
      give back less — so a rung reached on day 12 is played by a worse player
      than the same rung would be on day 3. That is the next problem. */
-  tight: { intern:3, t1:3, t2:4, t3:2, project:5, procure:3,
-           relmgr:4, solarch:4, vcio:2 },
+  tight: { intern:3, t1:3, t2:4, t3:4, project:5, procure:2,
+           relmgr:5, solarch:4, vcio:2 },
   /* seeds out of 12 on which SLOPPY play clears it anyway.
      THIS COLUMN WENT UP, 2026-08-26, and it is not the regression it looks
      like. It was zero on every rung because the bars were so high that
@@ -4361,7 +4475,7 @@ const GATE_DEBT = {
      now backs into a promotion on 1-4 seeds in 12. That is the real number and
      it may only fall from here.
      vCIO's 4/12 is the worst of them and the one to fix first. */
-  loose: { intern:1, t1:0, t2:1, t3:1, project:4, procure:5,
+  loose: { intern:1, t1:1, t2:1, t3:1, project:2, procure:3,
            relmgr:2, solarch:4, vcio:2 }
 };
 /* 45. The loose column is one seed in twelve on eight rungs of nine — bad
@@ -4377,27 +4491,23 @@ const GATE_DEBT = {
    DIRECTOR on 6 of 24 players, at an average of 14.7 careers against 12.6.
    The game got harder because it got bigger. Shrinking the new content back
    out of the queue would have bought the number and lost the rungs. */
-/* 50, UP FROM 45, and the reason is written here rather than smoothed away.
-   Eighteen tickets landed on T1, T2 and T3 — the three rungs every career
-   passes through and where most careers spend most of their days, and which had
-   fifteen tickets each against the intern's thirty-five. A bigger pool is a
-   bigger denominator, so bars came down, and lower bars let bad triage through
-   at the rungs whose good-versus-bad gap is narrowest: project (9 points),
-   procure (8) and solarch (11).
+/* 49, and back under. The eighteen mid-ladder tickets that pushed this to 50
+   were mostly P1s and P2s, which made the middle of the ladder heavier without
+   making it more decidable — the droppable share of the queue read 12% at T2,
+   9% at T3 and 7% at Project Team against the intern's 25%. Triage is choosing
+   what to drop, and there was nothing cheap to choose.
 
-   The trade was taken deliberately. tools/meta.js, which plays whole careers
-   and is the harness this file has already recorded as the one that is right
-   when they disagree, went from 12 of 24 players reaching retirement to
-   SEVENTEEN, at 12.8 careers rather than 13.3. tools/bars.js reads all nine
-   rungs well placed at 24 seeds. Raising those three bars back was tried and
-   measured: it cost two more seeds of flawless reach and bought almost nothing
-   in the loose column, because on a narrow-gap rung both columns move together.
+   Twelve more, all of them things you are allowed to let burn: a second monitor
+   when you get a chance, a meeting-room clock two teams now schedule against
+   deliberately, a chair request that bounced out of Facilities because the
+   routing rules saw the word "computer". T2 26%, T3 22%, Project 20% now, and
+   every narrow rung's good-versus-bad gap widened with it — project 9 -> 12,
+   procure 8 -> 11, relmgr 9 -> 11.
 
-   Which is the same conclusion this file reached about vCIO two passes ago and
-   about Relationship Manager one pass ago: a rung whose gap is under about ten
-   points cannot be fixed with a bar. project, procure and solarch want content.
-   That is the next job and it is named in docs/BUILD_PLAN.md. */
-const GATE_DEBT_BUDGET = 50;      /* eighteen mid-ladder tickets, 2026-08-26 */
+   Which is the third time this exact fix has worked, after the senior rungs and
+   after vCIO: a rung that will not separate wants cheap work in it, not a
+   different bar. */
+const GATE_DEBT_BUDGET = 49;      /* mid-ladder chaff, 2026-08-26 */
 /* How many POINTS short of its own bar flawless play falls at the intern gate.
    19 on 2026-08-25 21:0x, the first measurement ever taken with the bot walking
    at a player's speed. Every earlier number in this file — GATE_DEBT above,

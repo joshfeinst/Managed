@@ -627,6 +627,39 @@ Four invariants, because "a certificate that does nothing" is a price tag:
 The last one is the one that would have gone wrong silently: two multipliers
 where the second overwrites the first look identical until somebody holds both.
 
+## The third time the same fix worked
+
+The middle of the ladder had the same disease the top did, and it took three
+separate discoveries of it to see that it is one disease.
+
+Droppable (P4) share of the weighted queue, before and after:
+
+| rung | intern | t1 | t2 | t3 | project | procure | relmgr | solarch | vcio |
+|---|---|---|---|---|---|---|---|---|---|
+| before | 25% | 19% | 12% | 9% | 7% | 14% | 17% | 17% | 16% |
+| after | 25% | 30% | 26% | 22% | 20% | 24% | 23% | 17% | 16% |
+
+Eighteen tickets had just landed on T1–T3 to fix a *breadth* problem, and they
+were mostly P1s and P2s — so the middle of the ladder got heavier without
+getting more decidable. Twelve more, all of them things you are allowed to let
+burn, and every narrow rung's good-versus-bad gap widened with them:
+
+| rung | gap before | gap after |
+|---|---|---|
+| project | 9 | 12 |
+| procure | 8 | 11 |
+| relmgr | 9 | 11 |
+
+`GATE_DEBT` 50 → **49**, all nine bars well placed, `meta.js` 12 of 24 players
+reaching retirement at 12.7 careers.
+
+**The rule, now that it has held three times:** a rung that will not separate
+good triage from bad wants *cheap work in it*, not a different bar. It was true
+of the senior rungs, then of vCIO, then of the middle of the ladder. Adding
+important-feeling content to a rung that is already all-important makes it
+worse, and that is the trap every time — because important content is the
+content that feels worth writing.
+
 ## The ratchets
 
 | name | value | meaning | direction |

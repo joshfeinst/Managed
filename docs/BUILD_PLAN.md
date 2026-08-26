@@ -85,8 +85,12 @@ budget landed is stale; everything set from it needs redoing.
 
 ## The standing job (2026-08-26, after the overnight run)
 
-**Three rungs need content, not another pass at their bars.** project, procure
-and solarch separate good triage from bad by 9, 8 and 11 points — the narrowest
+**Done, mostly** — twelve droppable tickets took project 9 -> 12, procure
+8 -> 11 and relmgr 9 -> 11. Solutions Architect is the one still at 11 with a
+4/12 loose row, and it is the last rung whose queue is under 20% droppable.
+
+The original note, kept because the rule generalises: project, procure
+and solarch separated good triage from bad by 9, 8 and 11 points — the narrowest
 on the ladder — and on a rung that narrow both columns of `GATE_DEBT` move
 together, so lowering the bar lets bad play through and raising it locks good
 play out. Measured both ways; neither works.
