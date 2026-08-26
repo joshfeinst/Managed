@@ -1591,6 +1591,18 @@ const DIALOGUE = {
            {t:'Send the real diagram — they asked for the architecture', fx:{time:3, rep:-3, stress:6}},
            {t:'Four boxes, and be in the room to narrate it', fx:{time:7, rep:4, bonus:1, stress:2}} ] },
   /* -------------------- RELATIONSHIP MANAGER (rung 6) ---------------------- */
+  'r.qbr2.a': { who:'sys', t:['The quarterly review is at two o\'clock. The numbers are the numbers.',
+    'Uptime is fine. Ticket volume is up, because the thing you warned them about in March happened in July. Nobody in the room was in the March meeting.'] },
+  'r.qbr2.b': { who:'sys', t:['You will be asked, gently, whether things are on track.'],
+    opts:[ {t:'Show them March, and what it cost, and what it costs next', fx:{time:21, rep:3, bonus:1, stress:6}},
+           {t:'Answer what was asked, honestly, and no more', fx:{time:12, rep:1, bonus:1, stress:3}},
+           {t:'"Broadly on track."', fx:{time:4, rep:-3, stress:7}} ] },
+  'r.both.a': { who:'sys', t:['Raj says the change was signed off. Their finance director says it was not.',
+    'Both of them are telling the truth. The sign-off went to somebody who left, and the auto-reply said she would be back on the fourth.'] },
+  'r.both.b': { who:'sys', t:['Somebody has to be told they were wrong, and neither of them is.'],
+    opts:[ {t:'Own the gap yourself and fix the process', fx:{time:24, rep:4, bonus:1, stress:8}},
+           {t:'Show them both the auto-reply', fx:{time:10, rep:1, bonus:1, stress:4}},
+           {t:'Let it go and absorb the hours', fx:{time:7, rep:-1, stress:5}} ] },
   'q.budg.a': { who:'linda', t:['Next year\'s budget. It is four percent smaller than this year\'s and everything in it costs eleven percent more.',
     'Three of these lines are the ones that stop the company being on the news. You already know which three.'] },
   'q.budg.b': { who:'sys', t:['Whatever you cut, you will be asked about it in eight months, in a room, by someone holding a printout.'],
@@ -2403,7 +2415,13 @@ const TICKETS = {
      and the company's entire migration the least — inverting triage on the one
      rung that is the win condition. Corrected here; guarded by the "the
      migration is the heaviest thing on a Director's desk" invariant. */
-  'cutover-weekend': { tiers:[9,9], weight:4, sla:70, slaMult:2.6, pri:4, stress:10,
+  /* slaMult 1.5, not the 2.6 it was authored with. pridead breaks ties by
+     earliest deadline, so the most generous window in the game put the game's
+     CLIMAX last behind every other P1 and the day ended before a flawless
+     Director reached it — the win-reachability invariant caught it the moment
+     senior content grew. The cutover is Saturday; the signature is today, and
+     2.6 was saying the opposite in the only units the queue reads. */
+  'cutover-weekend': { tiers:[9,9], weight:4, sla:70, slaMult:1.5, pri:4, stress:10,
     title:'{client} cutover is Saturday and the rollback plan is one sentence',
     steps:[{say:'t9.cut.a'},{choice:'t9.cut.b'},{say:'t9.cut.c'}] },
   'vault-succession': { tiers:[9,9], weight:3, sla:64, slaMult:2.5, pri:3, stress:8,
@@ -2433,6 +2451,12 @@ const TICKETS = {
      can sign, and the harder it gets to admit which part of it was nonsense.
      These are the tickets you are allowed to let burn. Finding out that you
      are allowed is the lesson of the rung. */
+  'the-quarterly-review': { tiers:[6,9], weight:4, sla:46, slaMult:2.1, pri:3, stress:9,
+    title:'{client}\'s QBR is at two and the numbers are the numbers',
+    steps:[{say:'r.qbr2.a'},{game:'keep',diff:2},{choice:'r.qbr2.b'}] },
+  'both-sides-are-right': { tiers:[6,9], weight:3, sla:50, slaMult:2.2, pri:2, stress:9,
+    title:'Your engineer and their finance director are both right',
+    steps:[{say:'r.both.a'},{game:'keep',diff:3},{choice:'r.both.b'}] },
   'the-budget-round': { tiers:[5,9], weight:4, sla:48, slaMult:2.1, pri:3, stress:8,
     title:'Next year\'s IT budget, and it is smaller than this year\'s',
     steps:[{say:'q.budg.a'},{game:'quote',diff:2},{choice:'q.budg.b'}] },
@@ -5863,6 +5887,11 @@ function abandonScore(g){
     if (g.total() > g.budget) return .15;
     return clamp(g.rows.reduce((a, r) => a + quoteLineValue(r), 0) / g.rows.length, 0, 1);
   }
+  if (g.kind === 'keep'){
+    /* the meters as they stand: unplayed moves are not credit for anything */
+    const v = x => clamp((x - 3) / (g.goal - 3), 0, 1);
+    return (v(g.c) + v(g.t) + v(g.m)) / 3;
+  }
   if (g.kind === 'script'){
     /* the best it could still finish at: every remaining box banked honestly
        and the call resolved, each of which costs one more turn */
@@ -5984,6 +6013,28 @@ const QUOTE_LINES = [
   { n:'OUT-OF-HOURS COVER',    must:true  }
 ];
 const QUOTE_TIERS = ['PROPER', 'ADEQUATE', 'CHEAPEST'];
+/* The Relationship Manager's board is the first one with no right answer in
+   it — only three parties who cannot all be satisfied by the same sentence.
+   Every card here pleases somebody and costs somebody, which is why it is the
+   only rung where the fiction and the mechanic are the same thing.
+   c = the client, t = your own team, m = the margin. */
+const RM_MOVES = [
+  { t:'Give the client the credit for the fix',        fx:{c: 3, t:-2, m: 0} },
+  { t:'Give your engineer the credit, in front of them', fx:{c:-1, t: 3, m: 0} },
+  { t:'Absorb the overrun quietly',                    fx:{c: 3, t: 0, m:-3} },
+  { t:'Invoice for the overrun, with the evidence',    fx:{c:-2, t: 1, m: 3} },
+  { t:'Ask Raj to work Saturday',                      fx:{c: 3, t:-3, m: 1} },
+  { t:'Tell them Saturday is not happening',           fx:{c:-2, t: 3, m: 0} },
+  { t:'Push back on the scope, politely',              fx:{c:-1, t: 2, m: 2} },
+  { t:'Agree to the scope and find the hours later',   fx:{c: 2, t:-2, m:-1} },
+  { t:'Put the truth in writing before the meeting',   fx:{c:-1, t: 2, m: 1} },
+  { t:'Take the blame for something that was theirs',  fx:{c: 3, t:-1, m:-1} },
+  { t:'Send the report a day early, unfinished',       fx:{c: 1, t:-2, m: 1} },
+  { t:'Bring the engineer to the meeting',             fx:{c: 2, t: 1, m:-2} },
+  { t:'Discount next quarter to hold the account',     fx:{c: 3, t: 0, m:-3} },
+  { t:'Say no, and say why, and mean it',              fx:{c:-2, t: 3, m: 2} },
+  { t:'Promise a date you have not checked',           fx:{c: 2, t:-3, m: 0} }
+];
 /* --------------------------- how to play each one -------------------------
    A minigame that opens straight into a live board with a six-pixel hint bar
    is a game assuming you have already played it. Every one of these now opens
@@ -6074,6 +6125,20 @@ const GAME_BRIEF = {
     ],
     watch: 'Over budget and finance send the whole thing back. Cheapest on a ! line ' +
            'is worth nothing at all, however much it saved.'
+  },
+  keep: {
+    what: 'A client, your own team, and the margin. Every move on the list ' +
+          'pleases one of them and costs another, and you have fewer moves ' +
+          'than they have grievances.',
+    keys: [
+      ['UP / DOWN', 'move through the list'],
+      ['E', 'play the one you are on'],
+      ['CLICK', 'or click a move to play it'],
+      ['', 'the three numbers are what it does to each meter'],
+      ['', 'a move played cannot be unplayed']
+    ],
+    watch: 'All three have to finish past the white line. A hand that gets all ' +
+           'three home always exists — it is never the comfortable one.'
   },
   blast: {
     what: 'You can make this change. That was never the question. The question ' +
@@ -6708,6 +6773,115 @@ const GAMES = {
           wrapTxt(this.flashTxt, 240, 232, 340, this.flashOk ? '#4ade80' : '#d64541', 6);
       } };
   }},
+  /* --------------------------- KEEPING EVERYBODY (RELMGR) -----------------
+     The first board with no right answer in it. Three parties, every move
+     pleases one and costs another, and you have fewer moves than parties have
+     grievances. The deal is brute-forced at generation until a selection
+     exists that gets all three home — so a failure is always a choice, the
+     same contract the address plan makes. */
+  keep: { init(diff){
+    const picks = 3 + Math.min(diff, 2);
+    const dealt = 3 + picks;
+    const START = 5, GOAL = 6;
+    let hand = null, guard = 0;
+    const solvable = h => {
+      /* choose `picks` of `dealt` — at most C(7,5)=21 combinations */
+      const n = h.length, out = [];
+      const walk = (i, chosen) => {
+        if (out.length) return;
+        if (chosen.length === picks){
+          let c = START, t = START, m = START;
+          for (const k of chosen){ c += h[k].fx.c; t += h[k].fx.t; m += h[k].fx.m; }
+          if (c >= GOAL && t >= GOAL && m >= GOAL) out.push(chosen.slice());
+          return;
+        }
+        if (i >= n) return;
+        walk(i + 1, chosen.concat(i)); walk(i + 1, chosen);
+      };
+      walk(0, []);
+      return out.length > 0;
+    };
+    do {
+      const pool = RM_MOVES.slice();
+      hand = [];
+      while (hand.length < dealt && pool.length)
+        hand.push(pool.splice(Ri('game', pool.length), 1)[0]);
+    } while (!solvable(hand) && guard++ < 80);
+    return { kind:'keep', hand, cur:0, left:picks, picks,
+      c:START, t:START, m:START, goal:GOAL, played:[],
+      flash:0, flashTxt:'', flashOk:false, click:null,
+      obj:'THREE PEOPLE. ' + picks + ' MOVES. NOBODY GETS EVERYTHING.',
+      hint:'UP/DOWN A MOVE · E PLAYS IT · YOU CANNOT UNPLAY ONE',
+      rowRect(i){ return [70, 118 + i*15, 340, 13]; },
+      act(k){ if (k === 'play') this.play(); },
+      play(){
+        if (this.left <= 0) return;
+        const mv = this.hand[this.cur]; if (!mv || mv.done) return;
+        mv.done = true; this.played.push(mv);
+        this.c = clamp(this.c + mv.fx.c, 0, 10);
+        this.t = clamp(this.t + mv.fx.t, 0, 10);
+        this.m = clamp(this.m + mv.fx.m, 0, 10);
+        this.left--;
+        this.flash = .7; this.flashOk = true; this.flashTxt = mv.t; sfx('ui');
+      },
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.left <= 0){
+          if (this.flash > 0) return;
+          if (this.forgive && (this.c < this.goal || this.t < this.goal || this.m < this.goal)){
+            this.forgive--;
+            const lo = Math.min(this.c, this.t, this.m);
+            if (this.c === lo) this.c = this.goal;
+            else if (this.t === lo) this.t = this.goal; else this.m = this.goal;
+          }
+          /* smooth partial credit: three met is the win, and getting two of
+             them comfortably home still beats abandoning one entirely */
+          const v = x => clamp((x - 3) / (this.goal - 3), 0, 1);
+          this.score = (v(this.c) + v(this.t) + v(this.m)) / 3;
+          this.finished = true; return;
+        }
+        const live = () => this.hand.filter(h => !h.done).length;
+        if (press.up)   do { this.cur = (this.cur + this.hand.length - 1) % this.hand.length; }
+                        while (this.hand[this.cur].done && live());
+        if (press.down) do { this.cur = (this.cur + 1) % this.hand.length; }
+                        while (this.hand[this.cur].done && live());
+        let go = press.use || press.one;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (let i = 0; i < this.hand.length; i++)
+            if (inRect(pt, ...this.rowRect(i)) && !this.hand[i].done){ this.cur = i; go = true; }
+        }
+        if (go) this.play();
+      },
+      draw(){
+        mgPanel('KEEPING EVERYBODY', this.hint);
+        txt(this.obj, 240, 58, '#8d8778', 6, 'center');
+        const meters = [['THE CLIENT', this.c], ['YOUR TEAM', this.t], ['THE MARGIN', this.m]];
+        meters.forEach((mm, i) => {
+          const x = 72 + i*116, y = 72;
+          const met = mm[1] >= this.goal;
+          txt(mm[0], x, y, met ? '#4ade80' : '#c9c4b8', 6);
+          ctx.fillStyle = '#161b21'; ctx.fillRect(x, y + 5, 100, 8);
+          ctx.fillStyle = met ? '#4ade80' : mm[1] < 3 ? '#d64541' : '#ffb02e';
+          ctx.fillRect(x, y + 5, 100 * mm[1] / 10, 8);
+          ctx.strokeStyle = '#343b44'; ctx.strokeRect(x + .5, y + 5.5, 99, 7);
+          /* the line they have to be over, drawn where it actually is */
+          ctx.fillStyle = '#e8e4da'; ctx.fillRect(x + 100 * this.goal / 10, y + 3, 1, 12);
+        });
+        txt('MOVES LEFT: ' + this.left, 410, 104, this.left ? '#c9c4b8' : '#ffb02e', 6, 'right');
+        this.hand.forEach((mv, i) => {
+          const [rx, ry, rw, rh] = this.rowRect(i);
+          if (i === this.cur && !mv.done){ ctx.fillStyle = '#1d2530'; ctx.fillRect(rx, ry, rw, rh); }
+          const col = mv.done ? '#4a4740' : (i === this.cur ? '#e8e4da' : '#c9c4b8');
+          txt(mv.done ? '·' : (i === this.cur ? '>' : ' '), rx + 4, ry + 9, '#2f7fbe', 6);
+          txt(mv.t, rx + 14, ry + 9, col, 6);
+          const f = mv.fx, sig = v => (v > 0 ? '+' : '') + v;
+          txt(sig(f.c) + ' ' + sig(f.t) + ' ' + sig(f.m), rx + rw - 4, ry + 9,
+              mv.done ? '#4a4740' : '#8d8778', 6, 'right');
+        });
+        if (this.flash > 0) wrapTxt(this.flashTxt, 240, 232, 340, '#4ade80', 6);
+      } };
+  }},
   blast: { init(diff){
     /* the group you are changing is not also one of its own members: it comes
        out of the pool before anything is built from it */
@@ -6895,7 +7069,8 @@ function drawBrief(g){
 const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
                     jargon:'JARGON TRANSLATION', script:'BY THE SCRIPT',
                     blast:'BLAST RADIUS', subnet:'THE ADDRESS PLAN',
-                    quote:'THE SHORTFALL' };
+                    quote:'THE SHORTFALL',
+                    keep:'KEEPING EVERYBODY' };
 function mgPanel(title, hint){
   ctx.fillStyle = 'rgba(8,10,13,.88)'; ctx.fillRect(0,0,VW,VH);
   ctx.fillStyle = '#12161b'; ctx.fillRect(60, 26, 360, 214);
@@ -8465,6 +8640,51 @@ function selfTest(runSim){
            ' (submitted on ' + m + '/24)');
       }
       MG = savedMG3;
+    }
+    /* KEEPING EVERYBODY promises a hand that gets all three parties home
+       always exists, and that it is never the comfortable one. The second
+       half is the board: if pleasing the client also happens to please the
+       team and the margin, there is no game here, only a list. */
+    {
+      const savedMG4 = MG;
+      let solvable = 0, clientFirstWins = 0, n = 0;
+      for (let i = 0; i < 24; i++){
+        rngInit('KP-' + i);
+        const g = GAMES.keep.init(2);
+        /* brute force: does ANY selection of `picks` moves get all three home? */
+        let found = false;
+        const walk = (at, chosen) => {
+          if (found) return;
+          if (chosen.length === g.picks){
+            let c = 5, t = 5, m = 5;
+            for (const k of chosen){ c += g.hand[k].fx.c; t += g.hand[k].fx.t; m += g.hand[k].fx.m; }
+            if (c >= g.goal && t >= g.goal && m >= g.goal) found = true;
+            return;
+          }
+          if (at >= g.hand.length) return;
+          walk(at + 1, chosen.concat(at)); walk(at + 1, chosen);
+        };
+        walk(0, []);
+        if (found) solvable++;
+        /* and now play it the way it is tempting to: keep the client happy */
+        rngInit('KP-' + i);
+        const h = GAMES.keep.init(2);
+        for (let k = 0; k < h.picks; k++){
+          let best = -1, bv = -99;
+          h.hand.forEach((mv, j) => { if (!mv.done && mv.fx.c > bv){ bv = mv.fx.c; best = j; } });
+          if (best < 0) break;
+          h.cur = best; h.play();
+        }
+        h.flash = 0; h.step(0);
+        if (h.c >= h.goal && h.t >= h.goal && h.m >= h.goal) clientFirstWins++;
+        n++;
+      }
+      ok('every hand can get all three of them home',
+         solvable === n, solvable + '/' + n + ' hands had a winning selection');
+      ok('and pleasing the client is never how you do it',
+         clientFirstWins === 0,
+         'client-first play got everybody home on ' + clientFirstWins + '/' + n + ' hands');
+      MG = savedMG4;
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could
