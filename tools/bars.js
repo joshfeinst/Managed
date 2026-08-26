@@ -150,7 +150,7 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
     const at = async f => page.evaluate(({ dist, f, PLAYERS }) => {
       SAVE_SUSPEND = true; QUIET = true; A.sfxVol = 0;
       for (const d of dist){
-        const bar = d.p25 + (d.p50 - d.p25) * f;
+        const bar = Math.max(.05, Math.min(.98, d.p25 + (d.p50 - d.p25) * f));
         ROLES[d.ix].gates.nextAt.perf = bar;
         ROLES[d.ix].gates.firedBelow = bar * 0.45;
       }
@@ -174,9 +174,24 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
       QUIET = false; SAVE_SUSPEND = false;
       return { rate: won/PLAYERS, avg: lens.length ? lens.reduce((a,c)=>a+c,0)/lens.length : 0 };
     }, { dist, f, PLAYERS: 20 });
-    let lo = 0, hi = 1, best = null;
+    /* THE SEARCH HAS TO BE ABLE TO LOOK BELOW p25. The first version bisected f
+       over [0,1] — p25 to p50 — on the reasoning that a bar below p25 promotes
+       more than three careers in four and is therefore too generous to be the
+       answer. It is not: a bar is cleared by the best three-day WINDOW of a
+       career, and a long career gets many windows, so the number that gives a
+       sane retirement rate over fourteen careers routinely sits below p25.
+
+       When the true answer was below the floor the search reported a best of
+       40% against a 75% target and went non-monotonic on the way — every lower
+       f giving the same 35% — which reads like "the bar is not the binding
+       constraint" and is really "the tool cannot see the answer". meta.js
+       caught it: the bars already in the file scored 83% where the tool's own
+       recommendation scored 40%.
+
+       f now runs from -2 (a full two spans BELOW p25) to 1. */
+    let lo = -2, hi = 1, best = null;
     console.log('');
-    for (let i = 0; i < 6; i++){
+    for (let i = 0; i < 8; i++){
       const f = (lo + hi) / 2;
       const r = await at(f);
       console.log('  f=' + f.toFixed(3) + '  retired ' + (r.rate*100).toFixed(0) +
@@ -190,7 +205,7 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
                 '% retire in ' + best.avg.toFixed(1) + ' careers\n');
     console.log('  put these in ROLES:');
     for (const d of dist){
-      const bar = d.p25 + (d.p50 - d.p25) * best.f;
+      const bar = Math.max(.05, Math.min(.98, d.p25 + (d.p50 - d.p25) * best.f));
       console.log('    ' + d.id.padEnd(10) + ' nextAt:{perf:' + bar.toFixed(3) +
                   '}, firedBelow:' + (bar*0.45).toFixed(3));
     }
