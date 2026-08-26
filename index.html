@@ -5143,6 +5143,76 @@ function smalltalk(e){
   const [pdx,pdy] = DIRV[player.dir];
   e.dir = pdx === 1 ? 'left' : pdx === -1 ? 'right' : pdy === 1 ? 'up' : 'down';
 }
+/* THE OFFICE SAYS ONE THING PER PROP, FOREVER. Every machine in the building
+   had exactly one line, so the arcade cabinet greeted you identically on day
+   one and on the last Friday of a nine-rung career, and the elevator's
+   "YOUR CAREER DOES NOT. YET." — which is a joke with a promise in it — never
+   paid that promise off. Walking the office is a stated pillar of this game;
+   it should be worth doing more than once.
+
+   Indexed by how many times you have touched the thing today, so a curious
+   player gets a run of them rather than a repeat. */
+const PROP_LINES = {
+  arcade: [
+    'AGENT 360 — GOLDENSHARE. HIGH SCORE: "DRK". OF COURSE IT IS.',
+    'SECOND PLACE IS "ASS", SET IN 2019, AND NOBODY WILL ADMIT TO IT.',
+    'THE JOYSTICK PULLS LEFT. EVERYONE HAS ADAPTED. NOBODY HAS FIXED IT.',
+    'THERE IS A NOTE TAPED TO IT: "DO NOT UNPLUG — THIS MEANS YOU, GARY".',
+    'THE ATTRACT MODE STILL SAYS INSERT COIN. IT HAS NEVER TAKEN A COIN.'
+  ],
+  vending: [
+    'B4 IS STUCK AGAIN. B4 IS ALWAYS STUCK. B4 IS A LIE.',
+    'SOMEBODY HAS PUT AN IOU IN THE COIN SLOT. IT IS SIGNED "D".',
+    'THE HEALTHY SHELF IS FULL. IT HAS BEEN FULL SINCE INSTALLATION.',
+    'PRICES WENT UP IN MARCH. THE STICKER SAYING SO WENT UP IN JULY.'
+  ],
+  cooler: [
+    'THE WATER IS FINE. THE GOSSIP IS FINER.',
+    'THE BOTTLE IS EMPTY. THE SPARE IS RIGHT THERE. NOBODY HAS MOVED IT.',
+    'TWO PEOPLE STOP TALKING WHEN YOU ARRIVE, WHICH IS ITS OWN INFORMATION.',
+    'THERE IS A CONE OF CUPS. THERE IS ALWAYS EXACTLY ONE CONE OF CUPS.'
+  ],
+  printer: [
+    'IT DISPLAYS "PC LOAD LETTER". NOBODY HAS EVER KNOWN WHAT THAT MEANS.',
+    'THE TRAY IS LABELLED "HEADED PAPER — DO NOT". IT IS FULL OF PLAIN PAPER.',
+    'FORTY PAGES OF SOMEBODY ELSE\'S SLIDES ARE IN THE OUT TRAY, WARM.',
+    'A STICKY NOTE READS "WORKS IF YOU HOLD THE FLAP". YOU KNOW IT DOES.',
+    'IT IS PRINTING. NOBODY IS AT IT. NOBODY HAS BEEN AT IT FOR SOME TIME.'
+  ],
+  rack: [
+    'A CABLE LABELED "TEMP FIX 2011" PULSES GENTLY. DO NOT.',
+    'ONE PORT HAS BEEN COLOURED IN WITH A RED PEN. NOBODY WILL SAY WHY.',
+    'THE FAN NOISE CHANGES PITCH WHEN YOU LOOK AT IT. IT DOES NOT. BUT.',
+    'THERE IS A LABEL MAKER IN HERE AND EVERY LABEL IS HANDWRITTEN.'
+  ],
+  shelf: [
+    'ASSET TAGS, LABEL TAPE, AND A BOX MARKED "OLD KEYBOARDS (HAUNTED)".',
+    'A DRAWER OF CABLES FOR DEVICES THIS COMPANY HAS NEVER OWNED.',
+    'ELEVEN IDENTICAL POWER BRICKS. NONE OF THEM FIT ANYTHING CURRENT.',
+    'A SPARE OF THE THING THAT BROKE LAST MONTH, ORDERED THIS MONTH.'
+  ],
+  couch: [
+    'YOU SIT. THE QUEUE DOES NOT.',
+    'YOU SIT DOWN AND IMMEDIATELY REMEMBER SOMETHING YOU HAVE NOT DONE.'
+  ]
+};
+/* The elevator is the one that answers back. It has been telling you your
+   career does not go to other floors since your first day; when it finally
+   does, it says so. */
+function elevatorLine(){
+  const r = run.rung;
+  return r >= 9 ? 'IT GOES TO OTHER FLOORS. SO, IT TURNS OUT, DID YOUR CAREER.'
+       : r >= 7 ? 'IT GOES TO OTHER FLOORS. YOU HAVE BEEN TO TWO OF THEM THIS WEEK.'
+       : r >= 4 ? 'IT GOES TO OTHER FLOORS. YOUR CAREER IS STARTING TO.'
+       : 'IT GOES TO OTHER FLOORS. YOUR CAREER DOES NOT. YET.';
+}
+function propLine(kind){
+  const pool = PROP_LINES[kind];
+  if (!pool) return '';
+  const n = (run.satOn['_p' + kind] || 0);
+  run.satOn['_p' + kind] = n + 1;
+  return pool[n % pool.length];
+}
 function interact(act){
   switch(act){
     case 'terminal': openQueue(); break;
@@ -5164,18 +5234,18 @@ function interact(act){
     case 'couch':
       if (run.satOn._couch){ toast('THE COUCH HAS GIVEN ALL IT CAN TODAY.', 'corp', 2000); break; }
       run.satOn._couch = 1; run.stress = Math.max(0, run.stress - 6);
-      toast('YOU SIT. THE QUEUE DOES NOT.', 'corp', 2400);
+      toast(propLine('couch'), 'corp', 2400);
       break;
     case 'arcade':
       if (!run.satOn._arc){ run.satOn._arc = 1; run.stress = Math.max(0, run.stress - 2); }
-      toast('AGENT 360 — GOLDENSHARE. HIGH SCORE: "DRK". OF COURSE IT IS.', 'corp', 2800);
+      toast(propLine('arcade'), 'corp', 2800);
       break;
-    case 'vending': toast('B4 IS STUCK AGAIN. B4 IS ALWAYS STUCK. B4 IS A LIE.', 'corp', 2200); break;
-    case 'cooler': toast('THE WATER IS FINE. THE GOSSIP IS FINER.', 'corp', 2000); break;
-    case 'printer': toast('IT DISPLAYS "PC LOAD LETTER". NOBODY HAS EVER KNOWN WHAT THAT MEANS.', 'corp', 2600); break;
-    case 'rack': toast('A CABLE LABELED "TEMP FIX 2011" PULSES GENTLY. DO NOT.', 'corp', 2600); break;
-    case 'shelf': toast('ASSET TAGS, LABEL TAPE, AND A BOX MARKED "OLD KEYBOARDS (HAUNTED)".', 'corp', 2600); break;
-    case 'elevator': toast('IT GOES TO OTHER FLOORS. YOUR CAREER DOES NOT. YET.', 'corp', 2400); break;
+    case 'vending': toast(propLine('vending'), 'corp', 2200); break;
+    case 'cooler': toast(propLine('cooler'), 'corp', 2000); break;
+    case 'printer': toast(propLine('printer'), 'corp', 2600); break;
+    case 'rack': toast(propLine('rack'), 'corp', 2600); break;
+    case 'shelf': toast(propLine('shelf'), 'corp', 2600); break;
+    case 'elevator': toast(elevatorLine(), 'corp', 2400); break;
     case 'door': break;
   }
 }
@@ -9861,6 +9931,29 @@ function selfTest(runSim){
          /your desk moves/i.test(t) &&
          new Set(ROLES.map(R => R.deskAnchor)).size > 1,
          new Set(ROLES.map(R => R.deskAnchor)).size + ' distinct desks');
+    }
+    /* WALKING THE OFFICE IS A STATED PILLAR, so the office has to be worth
+       walking more than once. Every prop used to answer with one line for an
+       entire career — and the elevator's line is a joke with a promise in it
+       ("YOUR CAREER DOES NOT. YET.") that it never paid off. */
+    {
+      const savedRunP = run;
+      rngInit('PROP'); runInit('PROP');
+      const thin = [];
+      for (const k in PROP_LINES){
+        const seen = new Set();
+        for (let i = 0; i < 8; i++) seen.add(propLine(k));
+        if (seen.size < Math.min(4, PROP_LINES[k].length)) thin.push(k + ':' + seen.size);
+      }
+      ok('the office does not repeat itself the second time you touch it',
+         !thin.length, thin.join(' '));
+      /* and the elevator keeps its promise */
+      const lift = r => { run.rung = r; return elevatorLine(); };
+      const bottom = lift(0), top = lift(ROLES.length - 1);
+      ok('the elevator stops saying your career does not go anywhere',
+         bottom !== top && /YET/.test(bottom) && !/YET/.test(top),
+         bottom.slice(-28) + ' -> ' + top.slice(-28));
+      run = savedRunP;
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could
