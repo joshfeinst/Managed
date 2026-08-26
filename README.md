@@ -54,8 +54,10 @@ tickets, the deadlines and the scoring are the same at all three, so it changes
 how much room you get and nothing else. A profile that hasn't finished a career
 yet starts on Relaxed.
 
-You cannot clear the queue. That's deliberate: about 23 tickets arrive against a
-day with room for roughly 16, so deciding what to let burn is the game.
+You cannot clear the queue. That's deliberate: about eighteen tickets arrive
+against a day you can work eight or nine of, so deciding what to let burn is the
+game. The ratio holds as you climb, but the shape of it changes — a vCIO is
+dealt fewer, heavier things and spends a third of the week in rooms.
 
 Every ticket has a priority, P1 through P4, on its queue row, and it's the
 office's priority rather than the technically correct one. The account manager's
@@ -76,11 +78,18 @@ Some other things worth knowing:
   marks. The clock you're racing is the one that runs while it sits there.
 - The first time you meet a minigame it opens on a card explaining what it is,
   which keys do what, and what costs you marks. H brings it back later.
-- The boards change as you climb. The intern patches racks, triages passwords
-  and translates meetings. T1 takes calls where the script and the caller
-  disagree. T2 gets the one where you can make the change instantly and the
-  only question is who it lands on. None of them are on a stopwatch; take as
-  long as you like and be right.
+- Every rung has its own boards, and they are the rung. The intern patches
+  racks, triages passwords and translates meetings. T1 takes calls where the
+  script and the caller disagree. T2 gets the change you can make instantly,
+  where the only question is who it lands on. The Project Team carves one /24
+  into sites and finds out that a block one size too generous starves the last
+  one on the list. Procurement gets a budget that will not stretch and three
+  lines it is not allowed to cheapen. The Relationship Manager gets a client,
+  a team and a margin who cannot all be satisfied by the same sentence. The
+  Solutions Architect gets the as-built drawing and three outage windows to
+  test it with. The vCIO gets a board paper where some questions have no answer
+  and saying so is the right move. The Director decides whose Saturday it is.
+  None of them are on a stopwatch; take as long as you like and be right.
 - Stopping to talk to someone costs you nothing. Neither does clicking away
   mid-conversation; you come back to the line you were on.
 - Stress climbs all day and makes hands-on work harder. That's what the kitchen
@@ -94,24 +103,29 @@ heard good things.
 
 ## Roadmap
 
-Every rung is playable and every rung now deals a queue the rung below can't
-get, but the boards run out after T2. Project Team, Procurement, Solutions
-Architect and vCIO still borrow the helpdesk's three: they want their own, and
-the designs exist — subnetting on the Project Team, quote Tetris in Procurement,
-defending a budget as vCIO. They're waiting on somebody actually climbing that
-far, because building nine boards for a rung nobody has stood on is how the
-first version ended up with thirty-five of its forty-three tickets on the
-intern's desk.
+Every rung is playable, deals a queue the rung below can't get, has its own
+meetings, says something to you when you're promoted, and has a board of its
+own. The Big Migration turns up on your last day at the top and you can lose
+it — there are two retirements now, and which one you read depends on whether
+you signed the thing.
 
-The Big Migration is the same story. It's the win condition, Director's whole
-reason to exist, and there's still no board for it.
+What's left:
 
-The elevator should also go somewhere. Client sites. The dreaded on-site visit.
+The elevator should go somewhere. Client sites. The dreaded on-site visit.
 
-After that, multiplayer to a degree: a shared career leaderboard, where the same
-seed deals the same tickets and you compare whose career went better. Ghosts
-later. And more meta-progression — certifications, LinkedIn connections, other
-MSPs willing to hire you, and something worth spending banked reputation on.
+Your desk should move. It's the same desk at every rung, and the plan always
+said it should relocate and improve as you climb — progression you can see
+without reading a number.
+
+Relationship Manager is the weakest rung on the ladder: good triage separates
+from bad by fewer points there than anywhere else. It's measured, it's written
+down in `docs/BALANCE.md`, and it wants content rather than another pass at its
+bar.
+
+Then multiplayer to a degree: a shared career leaderboard, where the same seed
+deals the same tickets and you compare whose career went better. Ghosts later.
+And more meta-progression — certifications, LinkedIn connections, other MSPs
+willing to hire you, and something worth spending banked reputation on.
 
 ## Under the hood
 
@@ -121,6 +135,26 @@ all the content, so the writing scales without touching the engine), engine
 (tile world, pathfinding, camera, renderer), sim (the day machine, SLA, burnout,
 versioned saves), UI, tests, and the PWA registration.
 
-Every run is seeded, so a job posting ID deals the same career twice. The
-headless test harnesses are in `tools/`: run `npm i playwright`, then pass each
-one the path to `index.html`.
+Every run is seeded, so a job posting ID deals the same career twice.
+
+The headless harnesses are in `tools/`: run `npm i playwright`, then pass each
+one the path to `index.html`. They exist because most of this game's real bugs
+were invisible to the ones that came before them.
+
+| | |
+|---|---|
+| `verify.js` | boots it and runs the ~290 in-game self-tests |
+| `visual.js` | screenshots every screen and board at four window sizes, asserting no text lands on the canvas |
+| `boards.js` | plays every minigame perfectly, carelessly and at random, and reports the spread |
+| `keys.js` | presses every key each board's how-to-play card promises, and pokes every click rect |
+| `bars.js` | where should each promotion bar sit? `--sweep` finds the deal rate that best separates good triage from bad |
+| `gate.js` | `--ladder` measures every rung against the debt recorded in the game |
+| `meta.js` | plays whole careers across many players — the only one that can see whether the top of the ladder is reachable |
+| `save.js` | mid-day save, reload, and the afternoon has to survive it |
+| `human.js`, `marathon.js`, `burn.js`, `templates.js`, `dials.js`, `trace.js`, `timing.js` | input driving, long soaks, burnout curves, per-template fairness |
+
+Anything that changes a rung's content or its numbers has to be run past
+`bars.js` **and** `meta.js` before it lands. They disagree, and the one that
+plays careers is the one that's right — there's a note in `docs/BALANCE.md`
+about the day two harnesses both said ship it and `meta.js` showed it would
+have shut the top of the ladder.
