@@ -675,6 +675,39 @@ important-feeling content to a rung that is already all-important makes it
 worse, and that is the trap every time — because important content is the
 content that feels worth writing.
 
+## The README was wrong about the game's central claim
+
+It said: *"A P1 is worth much more than a P4, so the big ugly ticket beats the
+quick easy one nearly every time."* Measured over 40 seeds x 6 days
+(`tools/dials.js`), the quick easy one wins:
+
+| strategy | perf | closed/day | breached/day |
+|---|---|---|---|
+| shortest first | **0.490** | 9.84 | 6.73 |
+| priority then deadline | 0.472 | 8.03 | 8.54 |
+| priority | 0.463 | 7.89 | 8.68 |
+| newest first | 0.458 | 8.61 | 7.96 |
+| deadline then priority | 0.419 | 8.02 | 8.55 |
+| most slack first | 0.402 | 7.58 | 8.98 |
+| longest first | 0.384 | 7.08 | 9.49 |
+| worst priority first | 0.364 | 7.82 | 8.75 |
+| **oldest first** | **0.362** | 7.00 | 9.57 |
+
+Two things fall out of it, and the second is better than the claim it replaces.
+
+**There is no single right answer, and that is the design working.** *Protect
+the big ones* and *close what you can actually finish* are within two points of
+each other. A game where one triage rule dominates is a game with a solution.
+
+**Working the queue in the order it arrived is exactly as expensive as
+deliberately doing the least important thing first.** 0.362 against 0.364 — the
+two worst strategies available, and indistinguishable. That is the whole satire
+in one number, and it feels like diligence the entire time you are doing it.
+
+It is pinned now, next to the triage edge it belongs with:
+
+    gate: working the queue in order is as bad as working it backwards
+
 ## The ratchets
 
 | name | value | meaning | direction |

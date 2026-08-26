@@ -65,9 +65,17 @@ coffee run is a P1. The client who wants MFA switched off is a P4. Learning
 whose absurdity outranks whose is the skill.
 
 At the end of the day you're scored on what you protected against what was at
-stake. A P1 is worth much more than a P4, so the big ugly ticket beats the quick
-easy one nearly every time. Dropping tickets is expected, and there's some
-forgiveness for your first casualties. Dropping the wrong ones is what hurts.
+stake. A P1 is worth seven times a P4. Dropping tickets is expected, and there's
+some forgiveness for your first casualties. Dropping the wrong ones is what
+hurts.
+
+Measured across 40 seeds, the two strategies that work are *protect the big
+ones* and *close what you can actually finish*, and they're within two points of
+each other — so there's no single right answer, which is the point. The two that
+lose you the most are doing the least important thing first, and **working the
+queue in the order it arrived**. Those two score the same. Going in order is
+exactly as expensive as choosing badly, and it feels like diligence the whole
+time you're doing it.
 
 Some other things worth knowing:
 

@@ -11942,6 +11942,17 @@ function selfTest(runSim){
       /* And the axis the gate actually discriminates on, stated outright so it
          cannot be mistaken for craft again. */
       const craftBest = medBest(0.35, 'pridead');
+      /* AND GOING IN ORDER IS THE SAME MISTAKE. Measured over 40 seeds, working
+         the queue oldest-first scores 0.362 and deliberately working the least
+         important thing first scores 0.364 — the two worst strategies in the
+         game, and indistinguishable. That is the whole satire in one number, so
+         it is pinned: FIFO has to cost about what bad triage costs, or the game
+         is quietly rewarding the thing it is about. */
+      const fifoBest = medBest(0.35, 'oldest');
+      ok('gate: working the queue in order is as bad as working it backwards',
+         Math.round((craftBest - fifoBest) * 100) >= TRIAGE_EDGE,
+         'good triage ' + Math.round(craftBest*100) + '% vs oldest-first ' +
+         Math.round(fifoBest*100) + '%');
       ok('gate: it is TRIAGE the bar separates, not craft (edge: ' + TRIAGE_EDGE + ')',
          Math.round((craftBest - badBest) * 100) >= TRIAGE_EDGE,
          'same skill, good triage ' + Math.round(craftBest*100) +
