@@ -1348,22 +1348,50 @@ it.
 
 | rung | rate | meetings | bar | floor | flawless p50 | sloppy p50 | gap | good clears | bad clears |
 |---|---|---|---|---|---|---|---|---|---|
-| intern | 1.9 | 30 | 0.763 | 0.343 | 79% | 61% | 18 | 77% | 0% |
-| t1 | 1.9 | 34 | 0.703 | 0.316 | 74% | 59% | 15 | 67% | 23% |
-| t2 | 1.9 | 40 | 0.636 | 0.286 | 68% | 52% | 16 | 73% | 10% |
-| t3 | 1.9 | 48 | 0.596 | 0.268 | 64% | 48% | 16 | 77% | 7% |
-| project | 1.5 | 60 | 0.643 | 0.289 | 68% | 55% | 13 | 67% | 17% |
-| procure | 1.9 | 68 | 0.527 | 0.237 | 58% | 43% | 14 | 80% | 13% |
-| relmgr | 1.9 | 78 | 0.543 | 0.244 | 60% | 44% | 16 | 60% | 13% |
-| solarch | 1.7 | 84 | 0.608 | 0.274 | 68% | 51% | 17 | 70% | 10% |
-| vcio | 1.7 | 88 | 0.629 | 0.283 | 70% | 51% | 19 | 83% | 13% |
+| intern | 1.9 | 30 | 0.730 | 0.329 | 78% | 61% | 18 | 83% | 0% |
+| t1 | 1.9 | 34 | 0.706 | 0.318 | 77% | 59% | 19 | 77% | 3% |
+| t2 | 1.9 | 40 | 0.598 | 0.269 | 67% | 48% | 19 | 77% | 10% |
+| t3 | 1.9 | 48 | 0.563 | 0.253 | 68% | 47% | 22 | 83% | 20% |
+| project | 1.5 | 60 | 0.628 | 0.283 | 68% | 55% | 13 | 70% | 27% |
+| procure | 1.9 | 68 | 0.521 | 0.234 | 58% | 43% | 14 | 83% | 17% |
+| relmgr | 1.9 | 78 | 0.511 | 0.230 | 61% | 44% | 17 | 77% | 17% |
+| solarch | 1.7 | 84 | 0.553 | 0.249 | 68% | 51% | 17 | 87% | 27% |
+| vcio | 1.7 | 88 | 0.653 | 0.294 | 69% | 51% | 18 | 77% | 3% |
 | director | 1.6 | 80 | — | 0.310 | — | — | — | — | — |
 
-Careers: **16 of 24 reach retirement at skill .85**, averaging 10.5 careers.
+Careers: **18 of 24 reach retirement at skill .85**, averaging 10.3 careers, and
+every one of the twenty-four reached Director at least once.
 
-65 events, 266 tickets, 637 dialogue nodes, 10 people, 341 self-tests.
+65 events, 268 tickets, 641 dialogue nodes, 10 people, 12 boards, 342 self-tests.
 
-### Six ratchets added, all mutation-tested
+### The helpdesk had no board of its own
+
+Rungs four to nine each got a bespoke minigame; rungs zero to three shared the
+same four. The pit's own is a **sequence** rather than a matching, a judgement
+or a selection — a new starter on Monday and a printed checklist in the order
+somebody thought of the steps. You cannot make a mailbox before the licence
+exists and the checklist puts the mailbox first.
+
+Three harnesses caught it in turn, and the third found a hole in all of them:
+
+| | what it said |
+|---|---|
+| the self-test | no ticket deals this board — the dead-content class, again |
+| `boards.js` | careless play scores 83% against a perfect 100%; a 17-point spread is not a game |
+| **a screenshot** | it throws the moment it is drawn |
+
+The third is the one that matters. It referenced `CX`, a local const inside the
+how-to-card renderer, and `verify` reported PAGE ERRORS 0 while `visual` passed
+and `boards.js` gave it a clean bill — because **nothing in the suite had ever
+called a board's `draw()`**. Twelve boards, forty rounds each, and not one of
+them was ever rendered.
+
+Every board is now initialised at all three difficulties and drawn, before and
+after a step. A fourth bug surfaced immediately on the same route: seven rows at
+22px ran to y=250 against a panel that ends at 240, so difficulty three fell off
+the bottom. The draw test proves a board renders, not that it renders *inside*.
+
+### Eight ratchets added, all mutation-tested
 
 | what it guards | how it fails |
 |---|---|
@@ -1373,6 +1401,8 @@ Careers: **16 of 24 reach retirement at skill .85**, averaging 10.5 careers.
 | every interactable is reachable, answers, and speaks | wall the window back up |
 | every scene is one something opens | add an unreferenced node |
 | a rung's signature board is dealt off its own tickets | demote all three of vCIO's |
+| every board can actually be drawn | put `CX` back in the starter board |
+| the office sounds like the country it is in | put THE ELEVATOR back on the sign |
 
 ## The ratchets
 

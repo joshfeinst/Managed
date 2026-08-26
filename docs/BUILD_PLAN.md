@@ -244,7 +244,8 @@ desks are `n4`, `n5` and `n9`, which were the last free NPC anchors on the map.
   across it is the only spatial progression. A second floor is the next real
   feature, not a polish item.
 - **`tools/ladder.js --measure` generates the balance table.** Paste it.
-- **The junior rungs share four boards** (cable, jargon, pw, script) where the
-  seniors have nine. That is by design — the bespoke boards were specified for
-  rungs 4-9 — but intern and T1 are the thinnest part of the game by board
-  variety if that ever needs attention.
+- ~~The junior rungs share four boards.~~ **Done** — the pit has its own now,
+  the new-starter checklist, and it is a sequence rather than a matching or a
+  judgement, which no other board in the game is. Finding it took three
+  harnesses and a screenshot; the screenshot is the one that found that nothing
+  had ever called a board's `draw()`.
