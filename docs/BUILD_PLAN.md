@@ -185,9 +185,10 @@ promotion bar — so the same sentence means the same thing at every desk.
   (swept at 14 seeds, which is not a measurement). Re-swept at 26: 1.5 -> 1.9
   doubles its gap to 15. Meeting load turned out not to be a lever at all, 68
   minutes against 50 landing inside the noise, so the meetings stay.
-- **T3 is the narrowest rung now** at 11.2 points, and its `bad burns +1.9` is
-  the same signature Procurement had. Same recipe: `tools/score.js`, then the
-  burn ledger, then re-sweep the rate at 26 seeds or more.
+- ~~T3 is the narrowest rung now.~~ **Done** — same signature, same cause,
+  1.5 -> 1.9 takes its gap from 14.5 to 19.8.
+- **Project Team is the narrowest left** at 12 points, and it is the last rung
+  still carrying a rate set at 14 seeds. Same recipe, third time.
 - **14 seeds is not a measurement.** Three separate numbers set from 14-seed
   sweeps this session had to be redone at 26. Sweep at 26 the first time.
 - **Craft vs triage** is open for Josh. `tools/dials.js` now measures triage at

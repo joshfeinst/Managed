@@ -1012,33 +1012,52 @@ now they do not have to be paid for. Rate 1.9 doubles the gap and leaves the day
 playable; 2.3 buys two more points for six more points of breach and is the
 drowning trade again.
 
+## T3 had the same signature, and the same cause
+
+`bad burns +1.9` where a healthy rung reads +3.5 to +8.8 — Procurement's tell,
+one rung up the ladder. Same recipe, and the same answer: its deal rate had been
+swept at 14 seeds too.
+
+| rate | meetings | good | bad | gap | P1s burned good/bad | breach |
+|---|---|---|---|---|---|---|
+| 1.5 | 48 | .646 | .500 | 14.5 | 0.53 / 1.07 | 46% |
+| **1.9** | **48** | **.582** | **.384** | **19.8** | **0.75 / 1.71** | **53%** |
+| 2.3 | 48 | .462 | .288 | 17.4 | 1.11 / 2.42 | 65% |
+| 1.9 | 34 | .589 | .406 | 18.4 | 0.71 / 1.62 | 52% |
+
+Meetings are not a lever here either — 48 minutes against 34 is 19.8 against
+18.4. Two rungs, two independent sweeps, same conclusion: **the meeting load is
+satire, not balance, and it never has to be traded away.**
+
+**Fourteen seeds is not a measurement.** Three separate numbers set from 14-seed
+sweeps in one session had to be redone at 26. Sweep at 26 the first time.
+
 ## Where the ladder stands, 2026-08-26
 
-30 seeds x 8 days per rung, plus 24 careers. **No rung is misplaced** — the first
-time that has been true.
+30 seeds x 8 days per rung, plus 24 careers. **No rung is misplaced.**
 
-| rung | bar | flawless p50 | sloppy p50 | gap | good clears | bad clears |
-|---|---|---|---|---|---|---|
-| intern | 77% | 80% | 62% | 18 | 67% | 0% |
-| t1 | 76% | 78% | 61% | 16 | 63% | 3% |
-| t2 | 68% | 73% | 48% | 26 | 73% | 3% |
-| t3 | 68% | 73% | 59% | 15 | 70% | 10% |
-| project | 62% | 66% | 54% | 12 | 67% | 13% |
-| procure | 57% | 60% | 44% | 17 | 70% | 13% |
-| relmgr | 54% | 62% | 37% | 24 | 77% | 3% |
-| solarch | 58% | 67% | 48% | 19 | 83% | 13% |
-| vcio | 62% | 75% | 54% | 21 | 73% | 27% |
+| rung | rate | bar | flawless p50 | sloppy p50 | gap | good clears | bad clears |
+|---|---|---|---|---|---|---|---|
+| intern | 1.9 | 77% | 80% | 62% | 18 | 67% | 0% |
+| t1 | 1.9 | 76% | 78% | 61% | 16 | 63% | 3% |
+| t2 | 1.9 | 63% | 69% | 48% | 21 | 73% | 10% |
+| t3 | 1.9 | 62% | 66% | 46% | 21 | 73% | 7% |
+| project | 1.5 | 62% | 66% | 54% | 12 | 67% | 13% |
+| procure | 1.9 | 57% | 61% | 44% | 17 | 70% | 13% |
+| relmgr | 1.9 | 54% | 62% | 37% | 24 | 73% | 3% |
+| solarch | 2.2 | 61% | 67% | 48% | 19 | 70% | 7% |
+| vcio | 1.7 | 64% | 75% | 54% | 21 | 70% | 17% |
 
-Careers: **19 of 24 reach retirement at skill .85, averaging 10.1 careers; 10 of
-16 at skill .70, averaging 10.5.**
+Careers: **17 of 24 reach retirement at skill .85, averaging 10.1 careers; 10 of
+16 at skill .70, averaging 10.3.**
 
 Where the day began: gaps of 3-10 points at the mid rungs, sloppy triage
 clearing its gate in 33-97% of seeds, and a flawless triager burning three
-quarters of the queue. Gaps are 12-26 now and sloppy triage clears 0-27%.
+quarters of the queue. Gaps are 12-24 now, every rung clears good triage 63-73%
+of the time and bad triage 0-17%.
 
-T3 is the narrowest left at 11.2 points of mean gap, and its `bad burns +1.9` is
-the same signature Procurement had this morning. That is where the next look
-starts.
+Project Team is the narrowest left at 12, and it is the last rung still holding
+a rate that was set at 14 seeds. The recipe is written down twice above.
 
 ### And the bisection is a command now
 
