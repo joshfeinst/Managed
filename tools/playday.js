@@ -74,6 +74,12 @@ const BUDGET = +(process.argv[3] || 240) * 1000;
     await S.click(go.x, go.y);
   }
   await clear();
+  /* CRUNCH pace. Options promises the shift is the same eight hours at every
+     setting — same tickets, same deadlines, same score — and only how fast
+     they pass in the real world changes, which is exactly what a driver on a
+     budget wants. At RELAXED a day is a thirteen-minute shift and the driver
+     was still at 11:55am when its time ran out. */
+  await S.page.evaluate(() => { meta.pace = 'crunch'; if (typeof applySettings === 'function') applySettings(); });
   say('\n== on the floor ==  ' + await objLine());
   await S.shot('floor');
 
@@ -91,7 +97,7 @@ const BUDGET = +(process.argv[3] || 240) * 1000;
     /* end of day / review / gate: take whatever button it offers */
     const bs = await S.clickables();
     const go = bs.find(x => !x.disabled &&
-      /CONTINUE|NEXT|CLOCK IN|ACCEPT|GO ON|FINISH|SIGN|DONE|OK/i.test(x.text));
+      /CONTINUE|NEXT|CLOCK IN|ACCEPT|GO ON|FINISH|SIGN|DONE|OK|LEAVE IT/i.test(x.text));
     if (go && !(await tixOpen())){
       say('\n== a screen: "' + go.text.slice(0,40) + '" ==');
       for (const t of txt.slice(0, 10)) say('   | ' + t);

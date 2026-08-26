@@ -6421,6 +6421,31 @@ function fill(s, fills){
   });
 }
 
+/* SCENES HAVE FILLS TOO. Events and interludes open with openDlg(id, {}, ...)
+   — no fills at all — so every {client} an author wrote into a scene reached
+   the player as the literal text "{client}". Five lines across four scenes did
+   it, including "{Client} has a new starter", which a T1 reads on the morning
+   they are promoted.
+
+   Resolved from the day and the scene's own name rather than from a stream. A
+   scene must not be able to shift the day's tickets, and this consumes no
+   randomness at all, so it cannot. */
+function sceneFills(nodeId){
+  const node = DIALOGUE[nodeId], fills = {};
+  if (!node) return fills;
+  const lines = (node.t || []).concat((node.opts || []).map(o => o.t));
+  let n = 0;
+  for (const ch of String(nodeId)) n += ch.charCodeAt(0);
+  for (const l of lines)
+    for (const m of (String(l).match(/\{(\w+)\}/g) || [])){
+      const tok = fillKey(m.slice(1, -1));
+      if (fills[tok] !== undefined) continue;
+      const pool = FILLS[tok];
+      if (pool) fills[tok] =
+        pool[(n * 7 + (typeof run !== 'undefined' && run ? run.day * 13 : 0) + tok.length * 3) % pool.length];
+    }
+  return fills;
+}
 function startCommute(){
   /* a career that ended yesterday does not get another morning */
   if (run.pendingEnd){ careerOver(run.pendingEnd); return; }
@@ -6642,7 +6667,7 @@ function eventsTick(){
     /* saves written before scenes remembered their place hold plain ids */
     const s = run.pendingScenes.shift();
     const id = (s && typeof s === 'object') ? s.id : s;
-    openDlg(id, {}, null);
+    openDlg(id, sceneFills(id), null);
     if (dlg && s && typeof s === 'object' && s.li > 0){
       dlg.li = Math.min(s.li, dlg.lines.length - 1);
       dlg.reveal = dlg.lines[dlg.li].length;     // don't re-type what was read
@@ -6673,7 +6698,7 @@ function openEvent(id){
   slog('event: ' + id + (E.fx.time ? ' (-' + E.fx.time + ' min)' : ''));
   run.clock += E.fx.time || 0;                       // meetings eat the day, atomically
   if (E.fx.stress) run.stress = clamp(run.stress + E.fx.stress, 0, 100);
-  openDlg(E.scene, {}, null);
+  openDlg(E.scene, sceneFills(E.scene), null);
 }
 function slaTick(){
   for (let i=run.queue.length-1; i>=0; i--){
@@ -14669,6 +14694,46 @@ function selfTest(runSim){
       ok('the exit interview does not print the same stat twice',
          !!sv && !!oq && +sv[1] === 10 && +oq[1] === 4,
          (sv ? sv[1] : '?') + ' survived / ' + (oq ? oq[1] : '?') + ' on the queue');
+    }
+    /* NO SCENE PUTS A TEMPLATE ON SCREEN. Events and interludes open with
+       openDlg(id, ..., null) and used to pass no fills at all, so an authored
+       {client} arrived at the player as the literal text "{client}" — five
+       lines across four scenes, including "{Client} has a new starter", which
+       is what a T1 reads on the morning they are promoted. Render every one
+       of them the way the game does and look for a brace. */
+    {
+      const keepDlg = dlg, keepState = G.state, keepModal = G.modal;
+      const scenes = new Set();
+      for (const id in EVENTS) if (EVENTS[id].scene) scenes.add(EVENTS[id].scene);
+      for (const n of ['i.day1', 'i.firstticket', 'i.firstbreach']) scenes.add(n);
+      for (const id in ROLES) if (DIALOGUE['promo.' + ROLES[id].id]) scenes.add('promo.' + ROLES[id].id);
+      /* Through openEvent and the pendingScenes path, not through a copy of
+         them. Building the fills here instead passed happily with the real
+         call sites reverted to openDlg(id, {}) — it was testing sceneFills,
+         which was never the thing that was broken. */
+      const keepRun = run;
+      rngInit('TOKEN'); runInit('TOKEN'); rollDay();
+      const raw = [];
+      const braces = () => {
+        if (!dlg) return null;
+        for (const l of dlg.lines){ const m = String(l).match(/\{\w+\}/); if (m) return m[0]; }
+        for (const op of (dlg.opts || [])){ const m = String(op.t).match(/\{\w+\}/); if (m) return m[0]; }
+        return null;
+      };
+      for (const id of scenes){
+        if (!DIALOGUE[id]){ raw.push(id + ': no such scene'); continue; }
+        if (EVENTS[id]) { /* scenes are keyed by scene id, not event id */ }
+        const ev = Object.keys(EVENTS).find(e => EVENTS[e].scene === id);
+        dlg = null;
+        if (ev) openEvent(ev);
+        else { run.pendingScenes = [id]; eventsTick(); }
+        const b2 = braces();
+        if (b2) raw.push(id + ': ' + b2);
+      }
+      run = keepRun;
+      dlg = keepDlg; G.state = keepState; G.modal = keepModal;
+      ok('no scene shows the player a {token} it failed to fill', !raw.length,
+         raw.length + ': ' + raw.slice(0, 4).join(' · '));
     }
     /* WHOEVER {user} TURNS OUT TO BE. The pool holds Janet, Dale, Sharon, Gary
        in shipping, Priya and the owner's brother, and four tickets wrote "he"
