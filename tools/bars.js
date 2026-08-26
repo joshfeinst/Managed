@@ -186,31 +186,42 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
         return b; };
       const tight = seeds.map(s => best(play(s, 1.0,  DAYS, r, 'pridead' )));
       const loose = seeds.map(s => best(play(s, 0.35, DAYS, r, 'worstpri')));
+      /* THE QUANTITY THE GATE ACTUALLY DECIDES ON. An earlier version of this
+         tool asked whether flawless's 25th percentile beat sloppy's 90th, and
+         called every rung in the game misplaced — but that is asking whether a
+         good player's bad career beats a bad player's best one, which no game
+         with seed variance survives. What a bar is FOR is a clear-rate: good
+         triage should get through most seeds, bad triage should not. */
+      const clears = (arr, at) => arr.filter(v => v >= at).length / arr.length;
+      const cand = pct(tight, 25);      // a bar here lets flawless clear ~75%
       rows.push({ id:ROLES[r].id, bar:bar.perf, days:bar.days,
         tp10:pct(tight,10), tp25:pct(tight,25), tp50:pct(tight,50), tp90:pct(tight,90),
-        lp50:pct(loose,50), lp90:pct(loose,90), lmax:Math.max.apply(null, loose) });
+        lp50:pct(loose,50), lp90:pct(loose,90), lmax:Math.max.apply(null, loose),
+        cand, candLoose:clears(loose, cand),
+        nowTight:clears(tight, bar.perf), nowLoose:clears(loose, bar.perf) });
     }
     return rows;
   }, { SEEDS, DAYS });
 
   const p = v => (v*100).toFixed(0).padStart(3) + '%';
   console.log('BAR PLACEMENT — ' + SEEDS + ' seeds x ' + DAYS + ' days per rung\n');
-  console.log('  rung        bar |  flawless p10  p25  p50  p90 | sloppy p50  p90  max | window');
+  console.log('  rung        bar | flaw p50 slop p50 gap | clears now: good/bad |' +
+              ' suggested bar -> bad clears');
   let bad = 0;
   for (const r of rows0(out)){
-    const ceiling = r.tp25, floor = r.lp90;
-    const fits = ceiling > floor;
-    const verdict = !fits ? '  NO BAR FITS'
-      : r.bar > ceiling ? '  bar too high (want <=' + p(ceiling).trim() + ')'
-      : r.bar <= floor  ? '  bar too low (want >' + p(floor).trim() + ')' : '';
-    if (verdict) bad++;
-    console.log('  ' + r.id.padEnd(10) + p(r.bar) + ' | ' +
-      ['tp10','tp25','tp50','tp90'].map(k=>p(r[k])).join(' ') + ' | ' +
-      ['lp50','lp90','lmax'].map(k=>p(r[k])).join(' ') + ' | ' +
-      r.days + 'd' + verdict);
+    /* A healthy gate: good triage gets through most seeds, bad triage rarely.
+       Judged at the bar in the file, not at a hypothetical one. */
+    const healthy = r.nowTight >= .6 && r.nowLoose <= .3;
+    if (!healthy) bad++;
+    console.log('  ' + r.id.padEnd(10) + p(r.bar) + ' |' + p(r.tp50) + '   ' + p(r.lp50) +
+      '  ' + ((r.tp50 - r.lp50)*100).toFixed(0).padStart(3) + ' |      ' +
+      p(r.nowTight) + ' / ' + p(r.nowLoose) + '     |  ' + p(r.cand) + ' -> ' +
+      p(r.candLoose) + (healthy ? '' : '   <-- MISPLACED'));
   }
-  console.log('\n  A bar wants to sit in (sloppy p90, flawless p25]: high enough that bad');
-  console.log('  triage fails it, low enough that good triage usually clears it.');
+  console.log('\n  healthy = good triage clears >=60% of seeds, bad triage <=30%.');
+  console.log('  "suggested bar" is flawless p25 (good triage clears ~75% there);');
+  console.log('  the number after it is what share of SLOPPY seeds also clear it —');
+  console.log('  if that is not low, no bar fixes the rung and the rung needs content.');
   console.log(bad ? '\n' + bad + ' RUNG(S) MISPLACED' : '\nALL BARS WELL PLACED');
   await browser.close();
   process.exit(0);

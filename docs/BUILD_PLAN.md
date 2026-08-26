@@ -32,9 +32,9 @@ from the first unchecked box.
 - [x] 6. Director of IT — finish the rung: it has 5 own tickets and needs its own meetings
 - [x] 7. **Promotion scenes.** There are currently ZERO in the entire game. Nine
       gates fire and none of them says anything. `run.pendingScenes` is the hook.
-- [ ] 8. **The Big Migration.** The win condition still arrives as an unheralded
-      text card. `retireAfterDays:3` at Director with no authored payoff.
-- [ ] 9. Verification pass: full battery, balance re-measure, `docs/BALANCE.md` refresh
+- [x] 8. **The Big Migration.** — `650e869`. Dealt on the last day at the top,
+      once, early; landing it picks which of two retirements you read.
+- [ ] 9. **The balance pass.** Bigger than "re-measure" — see below.
 
 ## Rules for this run
 
@@ -52,6 +52,25 @@ from the first unchecked box.
   Six bespoke minigames would each buy about as much as the fifth did. The rungs
   are being built with tickets, meetings and scenes first for that reason; the
   board question goes back to Josh with a real rung in front of him.
-- Upper rungs are still hard to clear (`GATE_DEBT` 69) because performance
-  degrades across a career — a rung reached on day 12 is played by a worse
-  player than the same rung on day 3. That is a balance pass, not content.
+- ~~Upper rungs are hard to clear because performance degrades across a
+  career.~~ **Measured and wrong.** Three real causes, all found 2026-08-26 and
+  written up in `docs/BALANCE.md`: one deal rate copy-pasted down eight rungs
+  (a flawless vCIO scored 14% and was fired on arrival); the disposable share
+  of the queue collapsing 25% → 6% so there was nothing cheap to sacrifice; and
+  meeting time accumulating to 151 minutes of a 480-minute day. The first and
+  third are fixed. The second is fixed with content at rungs 5–9.
+
+## Step 9 — what is actually left
+
+Rates and bars are a **matched pair** and must be set together from
+`tools/bars.js --sweep`, never by hand. The sweep taken before the meeting
+budget landed is stale; everything set from it needs redoing.
+
+- [ ] Re-sweep deal rates under the meeting budget, set rates and bars together
+- [ ] Re-baseline `GATE_DEBT` / `GATE_DEBT_BUDGET` / `GATE_REACH` and say why
+- [ ] Relationship Manager and Solutions Architect separated good triage from
+      bad by only 3–9 points at every rate tried. If the re-sweep does not fix
+      them, they need shorter work, not a different bar — write it down rather
+      than tuning around it.
+- [ ] Full battery: verify, visual, save, meta, marathon, gate --ladder
+- [ ] `docs/BALANCE.md` final table
