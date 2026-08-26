@@ -410,6 +410,37 @@ harness that drives a game can be measuring itself.
 None of those was a fault in the game. Every flagged board gets read twice
 before it gets touched.
 
+## Nothing had ever pressed a key on a board
+
+`boards.js` drives the boards by calling their methods and `visual.js` only
+looks at them. Neither presses a key. Six boards shipped with input written
+straight against `press.one`..`press.four` and never once driven through the
+real keydown layer — and a key that is bound in the how-to-play card and dead
+in the handler is indistinguishable, to a player, from a game that has crashed.
+
+```
+node tools/keys.js index.html
+```
+
+It opens each board for real, dismisses the card, presses every key that
+board's card promises, and asserts the board's own state moves. **All eleven
+boards, 53 bindings, none dead.** Deleting one binding is reported precisely
+and only on the board that lost it.
+
+Getting there took three corrections, all of them to the harness:
+
+1. The real frame loop clears `press` every tick. Stepping the board by hand
+   without an explicit `clearInput()` let a flag set by the *previous* key
+   survive into the next board, which produced dead-key reports on boards
+   nothing had been done to — and a different set of them on every run.
+2. Stripping `flashTxt` from the state hash made three boards look dead for
+   behaving correctly. A key that refuses and says why is not dead: *"that is a
+   person, not a group"* is the game answering you.
+3. A key can land on what is already set. Every quote line starts at ADEQUATE,
+   so `2` sets what is already there — and moving the cursor does not help,
+   because the next line starts there too. The sweep now perturbs with the
+   board's own sibling keys until the key under test has somewhere to go.
+
 ## The ratchets
 
 | name | value | meaning | direction |
