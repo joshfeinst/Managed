@@ -949,7 +949,7 @@ const ANCHOR_NAMES = {
   DESK_ARCH:'YOUR DESK — THE CLIENT SIDE', DESK_EXEC:'YOUR DESK — THE QUIET SUITE',
   DESK_CORNER:'YOUR DESK — THE CORNER',
   VEND:'THE VENDING MACHINE', ARCADE:'THE ARCADE CABINET', COOLER:'THE WATER COOLER',
-  SHELF:'THE SUPPLY SHELF', ELEV:'THE ELEVATOR', SERVERS:'THE SERVER ROOM',
+  SHELF:'THE SUPPLY SHELF', ELEV:'THE LIFT', SERVERS:'THE SERVER ROOM',
   CONF:'THE CONFERENCE ROOM', KITCHEN:'THE KITCHEN', KITCHEN2:'THE KITCHEN',
   LOBBY:'RECEPTION', HALL:'THE HALLWAY', HALLE:'THE EAST HALLWAY', SOUTH:'THE SOUTH WING',
   PITMID:'THE HELPDESK PIT',
@@ -2966,7 +2966,7 @@ const DIALOGUE = {
     'Lesson one is always "engage stakeholders earlier". Nobody has ever done this.'] },
   'e.allhands':{ who:'sys', t:['ALL-HANDS: 45 slides on "synergizing the customer journey". Slide 32 is just a stock photo of a lighthouse.'] },
   'e.pizza':  { who:'sys', t:['Surprise pizza party! In lieu of raises. The pizza is from the cheap place. Morale is legally required to improve.'] },
-  'e.fire':   { who:'sys', t:['Fire drill. Everyone stands in the parking lot pretending they wouldn\'t grab the servers first.'] },
+  'e.fire':   { who:'sys', t:['Fire drill. Everyone stands in the car park pretending they wouldn\'t grab the servers first.'] },
   'e.bday':   { who:'brenda', t:['Card for Dale in accounting. Sign it. Something warm but professional.'],
     opts:[ {t:'"Happy birthday Dale!" (safe)', fx:{rep:1}},
            {t:'An inside joke you don\'t actually share with Dale', fx:{stress:2}},
@@ -6040,7 +6040,7 @@ const COMMUTE = {
     { if:r => r.rung >= 4,
       t:'Your calendar loaded before your email did, which tells you what sort of day is waiting.' },
     { if:r => r.rung <= 1,
-      t:'The parking lot is full of cars nicer than yours. They belong to sales.' }
+      t:'The car park is full of cars nicer than yours. They belong to sales.' }
   ],
   any: [
     'Radio traffic report mentions your exit by name. It is not a compliment.',
@@ -11260,6 +11260,48 @@ function selfTest(runSim){
            !wrong.length, wrong.join(' '));
       }
       run = savedRunR;
+    }
+    /* THE BUILDING IS IN BRITAIN AND HAS TO SOUND LIKE IT. Found by taking a
+       screenshot rather than by reading the file: the office called the same
+       object a lift in one line of prose and THE ELEVATOR on the sign the
+       player actually walks up to, and two scenes had everybody standing in a
+       parking lot outside a building that charges in pounds, takes annual
+       leave and has a car park everywhere else.
+
+       Register is the whole product here — the jokes are made of how these
+       people talk — so it is worth a lint rather than a proofread. Only
+       PLAYER-VISIBLE prose is scanned: the code may go on calling the anchor
+       ELEV and the act 'elevator' forever, because nobody reads that. The list
+       is deliberately short and every entry is one that was actually wrong. */
+    {
+      const WRONG = [[/\bparking lot\b/i, 'car park'], [/\belevators?\b/i, 'lift'],
+                     [/\bgotten\b/i, 'got'], [/\bcell ?phones?\b/i, 'mobile'],
+                     [/\bsidewalk\b/i, 'pavement'], [/\btrash cans?\b/i, 'bin']];
+      const prose = [];
+      for (const id in DIALOGUE){
+        const n = DIALOGUE[id];
+        for (const l of (n.t || [])) prose.push([id, l]);
+        for (const o of (n.opts || [])) prose.push([id, o.t]);
+      }
+      for (const k in PROP_LINES) for (const l of PROP_LINES[k]) prose.push(['prop:' + k, l]);
+      for (const k in REVIEW_LINES) for (const l of REVIEW_LINES[k]) prose.push(['review:' + k, l]);
+      for (const l of (COMMUTE.any || [])) prose.push(['commute', l]);
+      for (const w of (COMMUTE.when || [])) prose.push(['commute', w.t]);
+      for (const k in CHAT){
+        for (const l of (CHAT[k].any || [])) prose.push(['chat:' + k, l]);
+        for (const w of (CHAT[k].when || [])) prose.push(['chat:' + k, w.t]);
+      }
+      for (const k in ANCHOR_NAMES) prose.push(['sign:' + k, ANCHOR_NAMES[k]]);
+      for (const k in EV_NAMES) prose.push(['calendar:' + k, EV_NAMES[k]]);
+      for (const id in TICKETS) prose.push(['title:' + id, TICKETS[id].title]);
+      const off = [];
+      for (const [where, line] of prose){
+        if (typeof line !== 'string') continue;
+        for (const [re2, better] of WRONG)
+          if (re2.test(line)) off.push(where + ' (' + better + ')');
+      }
+      ok('the office sounds like it is in the country it is in',
+         !off.length, [...new Set(off)].slice(0, 6).join(' '));
     }
     /* NOBODY SCHEDULES TWO STAND-UPS FOUR MINUTES APART. A vCIO's morning
        opened with the all-company standup at :10 and the project standup at
