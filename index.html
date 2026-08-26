@@ -6863,7 +6863,13 @@ function presentCommute(){
     '<dt>Burnout</dt><dd style="color:' + (run.burnout > 60 ? 'var(--alert)' : 'inherit') + '">' +
       Math.round(run.burnout) + '%' + (run.burnout > 25
         ? ' — you are sleeping through less of it every night' : '') + '</dd>' +
-    '<dt>Reputation</dt><dd>' + run.rep + '</dd>' +
+    /* ONE NUMBER, ONE NAME. This said "Reputation" while the evening called
+       the same field Goodwill and the exit interview used "Reputation banked"
+       for meta.rep — a different quantity entirely, the one that buys
+       certificates. Two screens a player sees ten seconds apart gave one
+       number two names, and one of those names already belonged to something
+       else. The in-run number is Goodwill everywhere it appears. */
+    '<dt>Goodwill</dt><dd>' + run.rep + '</dd>' +
     /* Day one is deliberately lighter, and never saying so made day two read
        as your play collapsing when it was the difficulty arriving. */
     (run.day === 1 ? '<dt>Today</dt><dd>a half-load first day, and everyone knows it</dd>' : '') +
@@ -8022,7 +8028,13 @@ function reviewScreen(dayPerf, eod, promo, ending){
        needs 67% averaged over 3 days — your last 0 average 0%", directly under
        PROMOTED. A player reads a 0% as a verdict on the day they just won.
        There is no average yet; say that instead of inventing one. */
-    (gate ? '<dt>Promotion needs</dt><dd>' + Math.round((run.gateBar != null ? run.gateBar : gate.perf)*100) +
+    /* NOT ON THE EVENING IT ENDS. "Promotion needs 53% averaged over 3 days —
+       your last 3 average 43%" was printed under YOUR LAST DAY and under YOU
+       ARE DONE IN, planning a promotion for a player who has just been let go
+       or finished. The window is still computed above, because the save and
+       the exit interview read it; it is simply not something to tell someone
+       there is no tomorrow for. */
+    (gate && !ending ? '<dt>Promotion needs</dt><dd>' + Math.round((run.gateBar != null ? run.gateBar : gate.perf)*100) +
       '% averaged over ' + gate.days + ' days — ' +
       (run.gateWin
         ? 'your last ' + Math.min(run.gateWin, gate.days) +
@@ -8030,8 +8042,23 @@ function reviewScreen(dayPerf, eod, promo, ending){
         : 'and the counting starts tomorrow, at the new desk') +
       (run.rep ? ' <span style="color:var(--ok)">(' + Math.round(gate.perf*100) + '% before goodwill)</span>' : '') +
       '</dd>' : '') +
+    /* THERE IS NO BAR LEFT TO LOWER. A Director has no rung above them —
+       gates.nextAt is null, which is why the Promotion needs row above is
+       absent — and this line still told them, every evening including THE
+       LAST FRIDAY, that their goodwill "lowers the PROMOTION BAR by 7.0
+       points (as much as it ever buys)". It buys nothing at the top; half of
+       it, rounded down, is banked into the next career by careerOver, and
+       that is the only thing it is still for. */
     '<dt>Goodwill</dt><dd>' + (run.rep || 0) + ' — ' +
-      (run.rep ? 'lowers the PROMOTION BAR by ' + (repHelp()*100).toFixed(1) + ' points' +
+      (ending
+        ? (run.rep ? 'no bar left to lower on your last evening — ' +
+                     Math.floor(run.rep / 2) + ' of it banks into the next career'
+                   : 'nobody ever mentioned you either way, and now nobody will')
+      : !gate
+        ? (run.rep ? 'nothing above this rung to be promoted to, so it buys you nothing tonight — ' +
+                     Math.floor(run.rep / 2) + ' of it banks into the next career'
+                   : 'nobody has mentioned you either way, and there is no promotion bar left for it to lower')
+      : run.rep ? 'lowers the PROMOTION BAR by ' + (repHelp()*100).toFixed(1) + ' points' +
                  (repHelp() >= REP.maxHelp ? ' (as much as it ever buys)' : '') +
                  '; it does not change today\'s score'
                : 'nobody has mentioned you either way. It never changes your score — only the promotion bar') + '</dd>' +
@@ -8214,10 +8241,20 @@ function careerOver(kind){
       : savedRun.queueDays + (savedRun.rung > LAST_QUEUE_RUNG ? ' — you got off it' : '')) + '</dd>' +
     '<dt>Reputation banked</dt><dd>+' + (Math.floor(savedRun.rep/2) + (kind==='retired'?5:kind==='shortof'?2:0)) + ' (total ' + meta.rep + ')</dd>' +
     '<dt>Careers lived</dt><dd>' + meta.runsPlayed + '</dd>';
+  /* THE SCREEN CANNOT CONTRADICT THE ROW ABOVE IT. "Retirement unlocks nothing
+     further" sat two rows under "Reputation banked +17", and retiring banks
+     MORE than any other ending — five on top of half your run, which is most
+     of a CISSP — and carries you back in at vCIO. The joke was meant to be
+     that there is no prestige tier; as written it was a flat denial of the
+     number directly above it. And being let go quietly takes a rung off
+     meta.carry, the only thing in this game that walks backwards, while the
+     note promised the next career starts "with everything you've banked". */
   document.getElementById('o-note').textContent = kind === 'retired'
-    ? 'Retirement unlocks nothing further. That is the joke.'
+    ? 'There is no tier above this one and nothing new to unlock. You bank more for it than for anything else and start again one rung down. That is the joke.'
     : kind === 'shortof'
     ? 'The cutover was on your last day\'s queue. It is always on your last day\'s queue.'
+    : kind === 'fired'
+    ? 'Reputation follows you. The reference does not — being let go costs you a rung on the next application.'
     : 'Reputation follows you. The next job posting starts a new career with everything you\'ve banked.';
   const act = document.getElementById('o-actions'); act.innerHTML = '';
   mkBtn(act, 'NEW CAREER ▶', () => actSetup());
@@ -8950,9 +8987,10 @@ const GAME_BRIEF = {
       ['1 2 3', 'give it to that person'],
       ['4', 'take it yourself'],
       ['E', 'submit the rota'],
-      ['', 'the letters under a name are what they can do']
+      ['CLICK', 'or click the job, then the person']
     ],
-    watch: 'A rota that works without you always exists. Taking one yourself is ' +
+    watch: 'The letters under a name are what that person can do. ' +
+           'A rota that works without you always exists. Taking one yourself is ' +
            'allowed and never full marks; asking somebody past their bar is worth ' +
            'nothing at all.'
   },
@@ -8985,6 +9023,11 @@ const GAMES = {
       /* row pitch, shared by the renderer and the hit test so they can never
          disagree about where a cable is */
       rowDy(){ return Math.min(24, 130/this.n); },
+      /* the hit rectangles, NAMED. They were two literals inside step(), which
+         is why the click sweep reported "no declared rects — hit-tests inline,
+         NOT COVERED HERE" for the first board in the game. */
+      leftRect(i){ return [112, 68 + i*this.rowDy(), 54, 14]; },
+      rightRect(i){ return [316, 64 + i*this.rowDy(), 54, 18]; },
       step(dt){
         /* t is kept for the panel's own readout only — it does not score.
            See cableScore. */
@@ -9000,11 +9043,10 @@ const GAMES = {
            not a blind confirm of whatever happened to be highlighted. */
         if (this.click){
           const pt = this.click; this.click = null;
-          const dy = this.rowDy();
           let row = -1, onLeft = false;
           for (let i = 0; i < this.n; i++){
-            if (inRect(pt, 112, 68 + i*dy, 54, 14)){ row = i; onLeft = true; }
-            if (inRect(pt, 316, 64 + i*dy, 54, 18)) row = i;
+            if (inRect(pt, ...this.leftRect(i))){ row = i; onLeft = true; }
+            if (inRect(pt, ...this.rightRect(i))) row = i;
           }
           /* clicking back into the cable column while holding one puts it down
              rather than doing nothing */
@@ -10144,9 +10186,20 @@ const GAMES = {
     /* YOU are index staff.length — every skill, and two units of weekend */
     return { kind:'weekend', tasks, staff, you:{ name:'YOU', cap:2 },
       cur:0, submitted:false, flash:0, flashTxt:'', flashOk:false, click:null,
-      obj:'FIVE THINGS. ONE WEEKEND. EVERYBODY HAS A NAME.',
+      /* IT DEALS FOUR TO SIX. The headline said FIVE THINGS on a board whose
+         size is 4 + min(diff,2), so a Director's own migration announced the
+         wrong number of jobs on two difficulties out of three. */
+      obj: numWord(tasks.length).toUpperCase() + ' THINGS. ONE WEEKEND. EVERYBODY HAS A NAME.',
       hint:'UP/DOWN A JOB · 1-3 GIVES IT TO SOMEONE · 4 TAKES IT YOURSELF · E SUBMITS',
       rowRect(i){ return [70, 108 + i*17, 340, 15]; },
+      /* THE ONE BOARD A POINTER COULD NOT PLAY. Clicking a job moved the
+         cursor and nothing else — handing the job to somebody was on 1/2/3/4
+         and nowhere else — so SUBMIT could only ever answer "SOMETHING ON
+         THAT LIST HAS NOBODY AGAINST IT". This is the Big Migration: the one
+         board the entire career is aimed at, and on a phone it was the end of
+         the run. The people are drawn as columns at 72 + i*86; that column is
+         the target, exactly as the quote board's tiers are. */
+      personRect(i){ return [72 + i*86, 63, 74, 28]; },
       loadOf(p){ return this.tasks.reduce((a, t) => a + (t.to === p ? t.w : 0), 0); },
       capOf(p){ return p < this.staff.length ? this.staff[p].cap : this.you.cap; },
       nameOf(p){ return p < 0 ? '—' : p < this.staff.length ? this.staff[p].name : this.you.name; },
@@ -10194,6 +10247,10 @@ const GAMES = {
           const pt = this.click; this.click = null;
           for (let i = 0; i < this.tasks.length; i++)
             if (inRect(pt, ...this.rowRect(i))) this.cur = i;
+          /* tap a name to give the selected job to them — tapping the same
+             name again takes it back off them, which is what 1/2/3/4 do */
+          for (let p = 0; p <= this.staff.length; p++)
+            if (inRect(pt, ...this.personRect(p))) this.give(p);
           for (const b of this.btns)
             if (inRect(pt, b.x - b.w/2, b.y, b.w, b.h)) go = true;
         }
@@ -13286,6 +13343,92 @@ function selfTest(runSim){
       MG = savedMG; G.state = savedState;
       ok('every board can actually be drawn', !broke.length, broke.join(' '));
     }
+    /* AND EVERY BOARD HAS TO BE FINISHABLE WITH A POINTER. keys.js proves each
+       how-to card's KEYS are live and that each declared rectangle does
+       something; neither asks whether the rectangles are ENOUGH. WHOSE
+       SATURDAY — the Big Migration, the board the whole career is aimed at —
+       declared rows and a SUBMIT button and no way at all to hand a job to a
+       person: giving it to somebody was on 1/2/3/4 and nowhere else. Clicking
+       every rectangle it had, in any order, could only ever produce
+       "SOMETHING ON THAT LIST HAS NOBODY AGAINST IT". On a phone that is
+       where the run ended.
+       So: open each board, click nothing but its own declared rectangles,
+       and require a result. Not a good one — any result.
+
+       What this does NOT prove: that a rectangle is where the board DRAWS the
+       thing. It aims with the board's own rects, so a rect and its renderer
+       can drift together and this stays green — that is what visual.js and a
+       screenshot are for. What it proves is that the rectangles a pointer can
+       reach are ENOUGH to finish, which is the thing WHOSE SATURDAY failed. */
+    {
+      const savedMG = MG, savedState = G.state, savedRunP = run;
+      const stuck = [];
+      /* A board is two kinds of rectangle: one you SELECT with and one you ACT
+         with, and clicking them in a flat list is not playing. WHOSE SATURDAY
+         needs job-then-person; the rack needs cable-then-port. So the driver
+         picks a thing and then does something to it, which is what the how-to
+         card tells a player to do. */
+      const sizeOf = g => (g.rows && g.rows.length) || (g.tasks && g.tasks.length) ||
+                  (g.hand && g.hand.length) || (g.sites && g.sites.length) ||
+                  (g.qs && g.qs.length) || (g.steps && g.steps.length) ||
+                  (g.items && g.items.length) || 0;
+      const picksOf = g => {
+        const l = [];
+        if (g.leftRect) for (let i = 0; i < (g.n || 0); i++) l.push(g.leftRect(i));
+        if (g.rowRect)  for (let i = 0, n = sizeOf(g); i < n; i++) l.push(g.rowRect(i));
+        if (g.cardRect) for (let i = 0; i < 4; i++) l.push(g.cardRect(i));
+        if (g.nodeRect && g.nodes) for (let i = 0; i < g.nodes.length; i++) l.push(g.nodeRect(i));
+        return l;
+      };
+      const doesOf = g => {
+        const l = [];
+        if (g.rightRect)  for (let i = 0; i < (g.n || 0); i++) l.push(g.rightRect(i));
+        if (g.personRect) for (let i = 0; i <= (g.staff ? g.staff.length : 0); i++)
+          l.push(g.personRect(i));
+        if (g.tierRect)   for (let i = 0, n = sizeOf(g); i < n; i++)
+          for (let t = 0; t < 3; t++) l.push(g.tierRect(i, t));
+        if (g.optRect)    for (let i = 0; i < 4; i++) l.push(g.optRect(i));
+        return l;
+      };
+      const btnsOf = g => (g.btns || []).map(b => [b.x - b.w/2, b.y, b.w, b.h]);
+      for (const id in GAMES){
+        QUIET = true; SAVE_SUSPEND = true;
+        rngInit('TAP-' + id); runInit('TAP-' + id); rollDay();
+        let done = false;
+        openGame(id, 2, () => { done = true; });
+        if (!MG){ stuck.push(id + ':would not open'); continue; }
+        MG.brief = null;
+        /* the board's own rectangles are recomputed each pass, because a board
+           that advances a page moves them */
+        /* EXACTLY what a click does: the point, and press.use with it — see the
+           pointer handler. A test that only set the point would be testing a
+           click nobody can make. */
+        const tap = ([x, y, w, h]) => {
+          if (!MG || done) return;
+          MG.click = { x: x + w/2, y: y + h/2 }; press.use = true;
+          gameTick(1/30); clearInput();
+          /* boards that flash a refusal need the flash to run out before the
+             next thing they are told lands */
+          for (let f = 0; f < 60 && MG && !done && MG.flash > 0; f++){ gameTick(1/30); clearInput(); }
+        };
+        for (let pass = 0; pass < 12 && MG && !done; pass++){
+          const picks = picksOf(MG), does = doesOf(MG), btns = btnsOf(MG);
+          if (!picks.length && !does.length && !btns.length){
+            stuck.push(id + ':declares no rectangle'); break;
+          }
+          if (picks.length && does.length){
+            for (const p of picks){ tap(p); for (const d of does){ if (!MG || done) break; tap(d); } }
+          } else for (const r of picks.concat(does)) tap(r);
+          for (const b of btns) tap(b);
+          for (let f = 0; f < 120 && MG && !done; f++){ gameTick(1/30); clearInput(); }
+        }
+        if (!done) stuck.push(id + (MG ? ':never finished' : ':lost the board'));
+        MG = null;
+      }
+      MG = savedMG; G.state = savedState; run = savedRunP; SAVE_SUSPEND = false;
+      ok('every board can be played to a result with a pointer alone',
+         !stuck.length, stuck.join(' · '));
+    }
     /* AND THE RUNG'S OWN BOARD HAS TO BE ON THE RUNG'S OWN TICKETS. Six
        bespoke minigames were written for rungs four to nine, one each, and a
        board is only that rung's signature if the rung's OWN work opens it —
@@ -16004,6 +16147,98 @@ function selfTest(runSim){
       ok('review: Speed says which direction is good', /higher is better/.test(html));
       ok('review: Goodwill is not presented as a score input',
          /does not change today/.test(html) || /only the promotion bar/.test(html));
+      /* WHAT THE EVENING IS ALLOWED TO PROMISE. Two rows on this screen are
+         about a promotion, and both were unconditional: a Director — whose
+         gates.nextAt is null and who therefore gets no "Promotion needs" row
+         at all — was still told every evening, THE LAST FRIDAY included, that
+         goodwill "lowers the PROMOTION BAR by 7.0 points"; and a player being
+         let go or finishing burnt out was handed a promotion target under
+         YOUR LAST DAY. Both are the screen describing a future the game has
+         just ruled out. Driven through the real endDay, not read off a
+         template. */
+      {
+        const evening = (rung, before) => {
+          rngInit('PROMISE'); runInit('PROMISE');
+          run.rung = rung; run.day = 12; run.clock = DAY_MIN + 1;
+          run.queue = []; run.crashes = []; run.burned = []; run.breaches = 0;
+          run.perfHist = [.6,.6,.6,.6,.6,.6,.6]; run.rungSince = 0; run.rep = 20;
+          run.resolved = 5; run.stakesDone = 12; run.earned = 12 * .6;
+          run.scores = new Array(5).fill(.6); run.speedSum = 5 * .6;
+          if (before) before();
+          endDay();
+          const h = document.getElementById('r-stats').innerHTML;
+          const e = run && run.pendingEnd; if (run) run.pendingEnd = null;
+          return { h, e, note: document.getElementById('r-note').textContent };
+        };
+        const TOP = ROLES.length - 1;
+        const top = evening(TOP);
+        ok('the top of the ladder is not sold a promotion discount',
+           !/PROMOTION BAR/.test(top.h) && /banks into the next career/.test(top.h),
+           top.h.replace(/<[^>]*>/g, ' ').match(/Goodwill.{0,90}/) || '?');
+        ok('...and it does not quote a promotion bar it has no row for',
+           /Promotion needs/.test(evening(2).h) && !/Promotion needs/.test(top.h));
+        const sacked = evening(2, () => {
+          run.firedStreak = 1; run.earned = 0; run.scores = [0,0,0,0,0];
+        });
+        ok('the evening a career ends does not plan the promotion',
+           sacked.e === 'fired' && !/Promotion needs/.test(sacked.h) &&
+           !/PROMOTION BAR/.test(sacked.h),
+           sacked.e + ' / ' + sacked.h.replace(/<[^>]*>/g, ' ').match(/Goodwill.{0,60}/));
+        const done = evening(3, () => { run.burnout = 101; });
+        ok('...burning out included',
+           done.e === 'burnout' && !/Promotion needs/.test(done.h) &&
+           !/PROMOTION BAR/.test(done.h),
+           done.e + ' / ' + done.h.replace(/<[^>]*>/g, ' ').match(/Goodwill.{0,60}/));
+        /* and an ordinary evening below the top still gets both rows, or the
+           two guards above would pass on a screen that says nothing at all */
+        const normal = evening(2);
+        ok('...while an ordinary evening still gets told both',
+           /Promotion needs/.test(normal.h) && /PROMOTION BAR/.test(normal.h));
+      }
+      /* AND THE SAME NUMBER KEEPS ITS NAME FROM THE MORNING TO THE EVENING. */
+      {
+        rngInit('NAMING'); runInit('NAMING'); run.rung = 2; run.day = 6; run.rep = 20;
+        rollDay(); presentCommute();
+        const morning = document.getElementById('r-stats').innerHTML;
+        run.clock = DAY_MIN + 1; run.queue = []; run.crashes = []; run.burned = [];
+        run.resolved = 4; run.stakesDone = 9; run.earned = 6;
+        run.scores = [.7,.7,.7,.7]; run.speedSum = 4 * .7;
+        endDay();
+        const evening = document.getElementById('r-stats').innerHTML;
+        ok('goodwill is called goodwill in the morning as well as the evening',
+           /<dt>Goodwill<\/dt>/.test(morning) && /<dt>Goodwill<\/dt>/.test(evening) &&
+           !/<dt>Reputation<\/dt>/.test(morning),
+           (morning.match(/<dt>[A-Za-z ]*[Rr]eputation[A-Za-z ]*<\/dt>/) || ['ok'])[0]);
+      }
+      /* THE EXIT INTERVIEW CANNOT DENY THE ROW ABOVE IT. "Retirement unlocks
+         nothing further" sat directly under "Reputation banked +17", and
+         retiring banks five more than any other ending; being let go silently
+         takes a rung off meta.carry under a note promising the next career
+         starts with everything you banked. */
+      {
+        const savedMetaX = JSON.stringify(meta);
+        const endAt = (kind, rung) => {
+          rngInit('EXIT-' + kind); runInit('EXIT-' + kind);
+          run.rung = rung; run.day = 14; run.rep = 12; run.queueDays = 5;
+          const before = meta.carry || 0;
+          careerOver(kind);
+          return { note: document.getElementById('o-note').textContent,
+                   stats: document.getElementById('o-stats').innerHTML,
+                   carry: (meta.carry || 0) - before };
+        };
+        meta.carry = 4;
+        const ret = endAt('retired', ROLES.length - 1);
+        const banked = +(ret.stats.match(/Reputation banked<\/dt><dd>\+(\d+)/) || [0,0])[1];
+        ok('the retirement note does not deny the reputation beside it',
+           banked > 0 && !/unlocks nothing further/.test(ret.note),
+           banked + ' banked: "' + ret.note.slice(0, 50) + '"');
+        meta.carry = 4;
+        const sack = endAt('fired', 3);
+        ok('being let go says out loud that it costs you a rung',
+           sack.carry === -1 && /rung/.test(sack.note),
+           'carry ' + sack.carry + ': "' + sack.note.slice(0, 60) + '"');
+        Object.assign(meta, JSON.parse(savedMetaX));
+      }
       run = null; G.state = 'title';
     }
     {

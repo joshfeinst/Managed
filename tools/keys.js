@@ -124,6 +124,17 @@ const NAMED = [['ArrowUp',   String.raw`\bUP\b`],
         const n = (g.rows && g.rows.length) || (g.tasks && g.tasks.length) ||
                   (g.hand && g.hand.length) || (g.sites && g.sites.length) ||
                   (g.qs && g.qs.length) || (g.steps && g.steps.length) || 0;
+        /* the rack's ports were two literals inside step() until the pointer
+           invariant went in; now they are named, so they are testable */
+        if (g.leftRect)  for (let i = 0; i < Math.min(g.n || 0, 3); i++)
+          list.push(['cable' + i, ...g.leftRect(i)]);
+        if (g.rightRect) for (let i = 0; i < Math.min(g.n || 0, 3); i++)
+          list.push(['port' + i, ...g.rightRect(i)]);
+        /* WHOSE SATURDAY declared rows and a SUBMIT button and nothing that
+           handed a job to a person — the whole reason a pointer could not
+           play the Big Migration */
+        if (g.personRect) for (let i = 0; i <= (g.staff ? g.staff.length : 0); i++)
+          list.push(['who' + i, ...g.personRect(i)]);
         if (g.rowRect) for (let i = 0; i < Math.min(n, 4); i++)
           list.push(['row' + i, ...g.rowRect(i)]);
         if (g.optRect) for (let i = 0; i < 3; i++) list.push(['opt' + i, ...g.optRect(i)]);
