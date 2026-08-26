@@ -181,12 +181,9 @@ promotion bar — so the same sentence means the same thing at every desk.
 
 ### What is left
 
-- **Project, Procurement and Relationship Manager.** Their sloppy p50 sits
-  within 7 points of their flawless p50, so no bar separates them cleanly.
-  Deal rate, breach tolerance, ticket-size spread, the walk budget and
-  `URGENCY_SLOPE` have all been tried; what is left is the content itself —
-  those pools need decisions with sharper consequences. Start with
-  `tools/score.js` and the burn ledger, not with a dial.
+- **Procurement** is now the narrowest rung at a 10-point gap, which is exactly
+  where Relationship Manager was this morning before its rate was re-swept.
+  Start with `tools/score.js` and the burn ledger, not with a dial.
 - **Craft vs triage** is open for Josh. `tools/dials.js` now measures triage at
   11.7 points and craft at 9.9 — much closer than the 3-vs-12 it was, because
   `URGENT_GRACE` means more tickets actually get finished and craft only scores

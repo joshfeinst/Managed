@@ -949,30 +949,58 @@ ten desks with ten different score ranges.
 Found while photographing a real evening to check the previous fix, which is the
 argument for photographing it.
 
+## The deal rates were swept before URGENT_GRACE existed
+
+The matched-pair rule caught this one on the way out. Every rung's deal rate was
+swept and set BEFORE the urgent-window fix landed, so all of them were tuned to
+a world where a P1 could not survive being deferred. With the grace in place the
+day affords far more work, and the burn ledger said so plainly: Project and
+Procurement were protecting their P1s beautifully (a 2x good-vs-bad ratio) and
+burning only 8 stakes a day — too little for the burn term to move the score at
+all. Their days had become under-subscribed.
+
+Re-swept, and every one of them wanted more:
+
+| rung | rate | gap at old rate | gap at new |
+|---|---|---|---|
+| t2 | 1.3 -> 1.9 | 9.3 | 20.0 |
+| t3 | 1.6 -> 1.5 | 12.4 | 23.1 |
+| project | 1.1 -> 1.5 | 12.4 | 16.1 |
+| procure | 1.1 -> 1.5 | 7.9 | 21.2 |
+| relmgr | 1.1 -> 1.9 | 7.7 | 14.0 |
+
+**Anything that changes what a day can hold invalidates every deal rate on the
+ladder.** That is the third time the same lesson has been paid for in this file.
+
 ## Where the ladder stands, 2026-08-26
 
 30 seeds x 8 days per rung, plus 24 careers:
 
 | rung | bar | flawless p50 | sloppy p50 | gap | good clears | bad clears |
 |---|---|---|---|---|---|---|
-| intern | 79% | 81% | 62% | 19 | 70% | 0% |
-| t1 | 81% | 83% | 61% | 21 | 60% | 3% |
-| t2 | 80% | 82% | 73% | 10 | 70% | 10% |
-| t3 | 80% | 78% | 59% | 19 | 43% | 3% |
-| project | 84% | 84% | 77% | 7 | 47% | 10% |
-| procure | 79% | 82% | 75% | 7 | 67% | 33% |
-| relmgr | 76% | 79% | 73% | 7 | 73% | 40% |
-| solarch | 65% | 66% | 48% | 18 | 57% | 7% |
-| vcio | 69% | 74% | 54% | 19 | 63% | 0% |
+| intern | 79% | 80% | 62% | 18 | 67% | 0% |
+| t1 | 77% | 78% | 61% | 16 | 57% | 3% |
+| t2 | 66% | 73% | 48% | 26 | 83% | 7% |
+| t3 | 74% | 72% | 59% | 14 | 37% | 3% |
+| project | 66% | 68% | 54% | 15 | 63% | 7% |
+| procure | 68% | 66% | 56% | 10 | 43% | 17% |
+| relmgr | 53% | 62% | 37% | 24 | 73% | 10% |
+| solarch | 61% | 66% | 48% | 18 | 63% | 7% |
+| vcio | 68% | 74% | 54% | 19 | 63% | 3% |
 
-Careers: **18 of 24 reach retirement at skill .85, averaging 7.4 careers; 11 of
-16 at skill .70, averaging 9.0.** Every rung's good-vs-bad gap was 3-10 points
-before this day's work and is 7-21 now.
+Careers: **19 of 24 reach retirement at skill .85, averaging 9.7 careers; 9 of
+16 at skill .70, averaging 10.1.**
 
-Project, Procurement and Relationship Manager are the three still worth work:
-their sloppy p50 sits within 7 points of their flawless p50, so the bar cannot
-be placed anywhere that separates them cleanly. That is a content problem — those
-pools need decisions with sharper consequences, not another dial.
+Where the day began: gaps of 3-10 points at the mid rungs, sloppy triage
+clearing its gate in 33-97% of seeds, and a flawless triager burning three
+quarters of the queue. Gaps are 10-26 now and sloppy triage clears 0-17%
+everywhere. Relationship Manager — the rung that resisted deal rate, breach
+tolerance, ticket spread and the walk budget all session — finished at a 24-point
+gap, 73% good against 10% bad.
+
+Procurement is the narrowest at 10 points, which is where Relationship Manager
+was this morning. It is the one to look at next, and `tools/score.js` plus the
+burn ledger is how.
 
 ## The ratchets
 
