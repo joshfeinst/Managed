@@ -4253,7 +4253,7 @@ const TICKETS = {
    pre-roll from the world stream. Interrupting events open their scene the
    moment the clock passes them — the queue does not care. */
 const EVENTS = {
-  'standup':  { when:{at:10, chance:.9},  scene:'e.standup', fx:{time:8, stress:2} },
+  'standup':  { when:{at:10, chance:.9}, slot:'standup',  scene:'e.standup', fx:{time:8, stress:2} },
   /* THE HELPDESK LADDER HAD ONE CALENDAR FOR FOUR RUNGS. Every senior rung got
      five bespoke meetings and intern through T3 shared a single ungated pool,
      so the first four promotions — the ones players actually live through —
@@ -4263,14 +4263,14 @@ const EVENTS = {
   'h.queue':  { when:{at:22,  chance:.34, tiers:[1,3]}, scene:'e.h.queue',  fx:{time:12, stress:4} },
   'h.buddy':  { when:{at:150, chance:.26, tiers:[1,2]}, scene:'e.h.buddy',  fx:{time:16, stress:3} },
   'h.script': { when:{at:268, chance:.22, tiers:[1,3]}, scene:'e.h.script', fx:{time:14, stress:5} },
-  'h.oncall': { when:{at:38,  chance:.28, tiers:[2,4]}, scene:'e.h.oncall', fx:{time:15, stress:6} },
-  'h.cab':    { when:{at:206, chance:.24, tiers:[2,4]}, scene:'e.h.cab',    fx:{time:22, stress:5} },
+  'h.oncall': { when:{at:38,  chance:.28, tiers:[2,4]}, slot:'oncall', scene:'e.h.oncall', fx:{time:15, stress:6} },
+  'h.cab':    { when:{at:206, chance:.24, tiers:[2,4]}, slot:'cab', scene:'e.h.cab',    fx:{time:22, stress:5} },
   'h.escal':  { when:{at:120, chance:.26, tiers:[3,5]}, scene:'e.h.escal',  fx:{time:19, stress:7} },
   'h.kb':     { when:{at:330, chance:.20, tiers:[3,5]}, scene:'e.h.kb',     fx:{time:18, stress:-3} },
   /* PROJECT TEAM. The calendar is the job now: every one of these is a meeting
      about whether a date is still true, which is a different kind of day from
      the helpdesk's interruptions. */
-  'p.standup':{ when:{at:14, chance:.55, tiers:[4,8]}, scene:'e.p.standup', fx:{time:14, stress:3} },
+  'p.standup':{ when:{at:14, chance:.55, tiers:[4,8]}, slot:'standup', scene:'e.p.standup', fx:{time:14, stress:3} },
   'p.slip':   { when:{at:128, chance:.30, tiers:[4,8]}, scene:'e.p.slip',    fx:{time:18, stress:8} },
   'p.change': { when:{at:196, chance:.26, tiers:[4,7]}, scene:'e.p.change',  fx:{time:16, stress:6} },
   'p.steerco':{ when:{at:262, chance:.24, tiers:[4,8]}, scene:'e.p.steerco', fx:{time:34, stress:7} },
@@ -4292,7 +4292,7 @@ const EVENTS = {
   /* SOLUTIONS ARCHITECT. Rooms where a drawing is agreed by people who will
      not be there when it is built. */
   'a.review':  { when:{at:96,  chance:.32, tiers:[7,8]}, scene:'e.a.review',  fx:{time:28, stress:6} },
-  'a.cab':     { when:{at:164, chance:.30, tiers:[7,8]}, scene:'e.a.cab',     fx:{time:24, stress:7} },
+  'a.cab':     { when:{at:164, chance:.30, tiers:[7,8]}, slot:'cab', scene:'e.a.cab',     fx:{time:24, stress:7} },
   'a.workshop':{ when:{at:232, chance:.26, tiers:[7,8]}, scene:'e.a.workshop',fx:{time:36, stress:5} },
   'a.postinc': { when:{at:296, chance:.22, tiers:[7,8]}, scene:'e.a.postinc', fx:{time:26, stress:9} },
   'a.roadmap': { when:{at:356, chance:.20, tiers:[7,8]}, scene:'e.a.roadmap', fx:{time:22, stress:4} },
@@ -4306,11 +4306,11 @@ const EVENTS = {
   /* DIRECTOR. Nothing arrives pre-decided and nothing can be escalated, which
      is the whole difference between this calendar and every one below it. */
   'd.owners':  { when:{at:86,  chance:.30, tiers:[9,9]}, scene:'e.d.owners',  fx:{time:36, stress:9} },
-  'd.allhands':{ when:{at:150, chance:.24, tiers:[9,9]}, scene:'e.d.allhands',fx:{time:30, stress:7} },
+  'd.allhands':{ when:{at:150, chance:.24, tiers:[9,9]}, slot:'allhands', scene:'e.d.allhands',fx:{time:30, stress:7} },
   'd.exit':    { when:{at:222, chance:.26, tiers:[9,9]}, scene:'e.d.exit',    fx:{time:22, stress:8} },
   'd.goodchair':{when:{at:284, chance:.22, tiers:[9,9]}, scene:'e.d.goodchair',fx:{time:14, stress:-5} },
   'd.newintern':{when:{at:344, chance:.26, tiers:[9,9]}, scene:'e.d.newintern',fx:{time:18, stress:-3} },
-  'allhands': { when:{at:240, chance:.22}, scene:'e.allhands', fx:{time:30, stress:5} },
+  'allhands': { when:{at:240, chance:.22}, slot:'allhands', scene:'e.allhands', fx:{time:30, stress:5} },
   'pizza':    { when:{at:185, chance:.15}, scene:'e.pizza', fx:{time:10, stress:-8} },
   'firedrill':{ when:{at:150, chance:.1},  scene:'e.fire', fx:{time:12, stress:1} },
   'birthday': { when:{at:130, chance:.3},  scene:'e.bday', fx:{time:4} },
@@ -4345,7 +4345,7 @@ const EVENTS = {
   /* T2: the meetings are about the BOUNDARY. What T1 should have solved, what
      should go to T3, and a triage matrix nobody applies. Squeezed from both
      ends, blamed by both, and the only person who knows how it got here. */
-  'hd2.handover': { when:{at:20, chance:.32, tiers:[2,2]}, scene:'e.hd2.handover', fx:{time:12, stress:6} },
+  'hd2.handover': { when:{at:20, chance:.32, tiers:[2,2]}, slot:'oncall', scene:'e.hd2.handover', fx:{time:12, stress:6} },
   'hd2.matrix': { when:{at:138, chance:.22, tiers:[2,2]}, scene:'e.hd2.matrix', fx:{time:10, stress:4} },
   'hd2.filter': { when:{at:288, chance:.20, tiers:[2,2]}, scene:'e.hd2.filter', fx:{time:6, stress:-6} },
 
@@ -5135,6 +5135,11 @@ const BREACH_TOLERANCE = .20;
    there are 18 templates written for the rung against 126 eligible, so no
    amount of reweighting can make the day mostly its own. The rest is supply. */
 const QUEUE_MEMORY = 2, QUEUE_FADE = 1.8;
+/* Minutes a day must leave between two meetings. Not realism — a real senior
+   calendar is back-to-back and that is the joke — but four minutes apart reads
+   as a scheduling bug rather than a punchline, and from inside the day the
+   player cannot tell the difference. */
+const MEETING_GAP = 12;
 const FIRE_GRACE = 3;          // days at the very start of a career that cannot end it
 /* Ladder content debt, measured 2026-08-25 before the ladder build began:
    six promotions deal nothing the rung below could not, and six pairs of rungs
@@ -5683,6 +5688,30 @@ function rollDay(){
     if (R('world') < EVENTS[id].when.chance) events.push({ at:EVENTS[id].when.at, id });
   }
   events.sort((a,b)=>a.at-b.at);
+  /* TWO MEETINGS ABOUT THE SAME THING, AND TWO IN THE SAME FOUR MINUTES. A
+     vCIO's morning opened with the all-company standup at :10 and the project
+     standup at :14 — both true to life, both funny once, and together reading
+     as a bug rather than a joke, because nobody schedules two stand-ups four
+     minutes apart even in this building. The same pair existed at T2 (two
+     on-call handovers) and at Director (two all-hands).
+
+     A slot is "the meeting about this thing"; a day holds one of each, and the
+     first in the day wins, which is the rung's own where it has one. The gap
+     is the other half: you have to be able to physically get out of one room
+     and into the next. */
+  {
+    const bySlot = new Set(), spaced = [];
+    for (const e of events){
+      const slot = EVENTS[e.id].slot;
+      if (slot){
+        if (bySlot.has(slot)) continue;
+        bySlot.add(slot);
+      }
+      if (spaced.length && e.at - spaced[spaced.length-1].at < MEETING_GAP) continue;
+      spaced.push(e);
+    }
+    events.length = 0; events.push.apply(events, spaced);
+  }
   /* YOUR AFTERNOON GETS CANCELLED, AND THANK GOD. Every rung ADDS meetings and
      none are ever retired, so eligibility accumulates: 37 events are live at
      vCIO against 12 at intern, and the senior ones are the long ones. Measured,
@@ -11231,6 +11260,49 @@ function selfTest(runSim){
            !wrong.length, wrong.join(' '));
       }
       run = savedRunR;
+    }
+    /* NOBODY SCHEDULES TWO STAND-UPS FOUR MINUTES APART. A vCIO's morning
+       opened with the all-company standup at :10 and the project standup at
+       :14, because both are eligible at that rung and each rolls on its own
+       chance. T2 could get two on-call handovers; the Director two all-hands.
+       Each of those is true to life and funny once, and two of them in one
+       morning reads as a scheduling bug, which from inside the day is
+       indistinguishable from being one.
+
+       Rolled rather than reasoned about: forty careers of real days, at every
+       rung, checked for two meetings in the same slot and for any pair closer
+       together than it takes to walk between rooms. */
+    {
+      const savedRunM = run;
+      const clash = [], tight = [];
+      for (let r = 0; r < ROLES.length; r++){
+        for (let sd = 0; sd < 4; sd++){
+          rngInit('MTG-' + r + '-' + sd); runInit('MTG-' + r + '-' + sd);
+          if (!run) continue;
+          run.rung = r;
+          for (let d = 0; d < 5; d++){
+            run.day = d + 1; rollDay();
+            const ev = run.plan.events;
+            const slots = {};
+            for (let i = 0; i < ev.length; i++){
+              const sl = EVENTS[ev[i].id].slot;
+              if (sl){
+                if (slots[sl]) clash.push(ROLES[r].id + ':' + slots[sl] + '+' + ev[i].id);
+                slots[sl] = ev[i].id;
+              }
+              if (i && ev[i].at - ev[i-1].at < MEETING_GAP)
+                tight.push(ROLES[r].id + ':' + ev[i-1].id + '+' + ev[i].id +
+                           '@' + (ev[i].at - ev[i-1].at) + 'min');
+            }
+          }
+        }
+      }
+      run = savedRunM;
+      ok('a day never holds two meetings about the same thing',
+         !clash.length, [...new Set(clash)].slice(0,4).join(' '));
+      ok('and never two you could not walk between',
+         !tight.length, [...new Set(tight)].slice(0,4).join(' ') +
+         ' (gap ' + MEETING_GAP + ')');
     }
     /* A PROMOTION HAS TO CHANGE THE WORK, AND THE WEEK. There is already a
        lint that every rung can fill its own day, but it counts everything
