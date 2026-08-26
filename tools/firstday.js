@@ -79,14 +79,25 @@ const target = process.argv[2] || path.join(__dirname, '..', 'index.html');
   await beat('the floor, first look');
   await S.shot('floor');
 
-  /* Follow the arrow by clicking on it, which is a thing the game supports and
-     a thing people do: walkToClick pathfinds. Holding a direction and hoping
-     walked into a colleague instead and spent the morning talking to him.
-     The player is drawn at the centre of the view and the arrow is thirteen
-     tiles east and two down, which is what somebody LOOKING at it can see. */
+  /* Follow the arrow by clicking ON it, recomputed every step from where it is
+     actually drawn — which is what somebody LOOKING at it does. This used to
+     click a fixed offset, thirteen tiles east and two down of the player, on
+     the theory that that is where the arrow was; it was, at the first step
+     only, and the walk reached the desk because the pit's east wall stopped it
+     there. Open a door at the far end of that corridor and the same driver
+     walks east forever, thirteen tiles at a time, reporting that the day-one
+     arrow cannot be followed. The arrow's position is on screen, so read it. */
+  const arrowAt = () => S.page.evaluate(() => {
+    if (typeof objectiveTarget !== 'function') return null;
+    const t = objectiveTarget();
+    if (!t || !t.pos) return null;
+    return { x: t.pos[0] * TILE + TILE / 2 - cam.x, y: t.pos[1] * TILE + TILE / 2 - cam.y };
+  });
   let arrived = false;
-  for (let i = 0; i < 10 && !arrived; i++){
-    await S.clickGame(240 + 13 * 16, 135 + 2 * 16);
+  for (let i = 0; i < 14 && !arrived; i++){
+    const a = await arrowAt();
+    if (!a) break;
+    await S.clickGame(a.x, a.y);
     await S.wait(1400);
     const txt = await S.read();
     arrived = txt.some(t => /THIS IS YOUR DESK/i.test(t));

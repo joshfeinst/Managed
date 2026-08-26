@@ -1029,7 +1029,7 @@ const ANCHOR_NAMES = {
   DESK_ARCH:'YOUR DESK — THE CLIENT SIDE', DESK_EXEC:'YOUR DESK — THE QUIET SUITE',
   DESK_CORNER:'YOUR DESK — THE CORNER',
   VEND:'THE VENDING MACHINE', ARCADE:'THE ARCADE CABINET', COOLER:'THE WATER COOLER',
-  SHELF:'THE SUPPLY SHELF', ELEV:'THE LIFT', SERVERS:'THE SERVER ROOM',
+  SHELF:'THE SUPPLY SHELF', ELEV:'THE LIFT', ELEV_E:'THE EAST LIFT', SERVERS:'THE SERVER ROOM',
   CONF:'THE CONFERENCE ROOM', KITCHEN:'THE KITCHEN', KITCHEN2:'THE KITCHEN',
   /* Two floors, two receptions, and the queue row only ever shows a name —
      so the one upstairs says which floor it is on. */
@@ -1053,9 +1053,9 @@ const MAPS = { office1: {
     '#........#......................#..tttttt..#',
     '#p.......#....qc...qc.......Tc..#..7tttt...#',
     '#........D......................D..........#',
-    '####D#####################D###############o#',
-    '#..........................................#',
-    '#............................9.............#',
+    '####D#####################D##########D####o#',
+    '#.........................................e#',
+    '#............................9............e#',
     '#########D######D########D#########D########',
     '#kkKkVk......#......#........#.............#',
     '#,,,,,,......#..HH..#........#.............#',
@@ -1111,7 +1111,7 @@ ground: {
     '#,,,,,,,,,,#..cccc...#..cccc...#.....f.....#',
     '#,,NNNNN,,,#.........#.........#...........#',
     '#,,,,,,,,,,GGGGGGGGGGGGGGDGGGGGGGGGGDGGGGGG#',
-    '#,,,,,,,,,,................................#',
+    '#,,,,,,,,,,...............................e#',
     '#,,,,,,,,,,####D###########D#########D######',
     '#,,,,,,,,,,...........#.........#..........#',
     '#,,UU,,,f,,.BBBBB.....#.hhhhhhh.#..tt..tt..#',
@@ -4909,6 +4909,15 @@ const LEGEND = {
   '#':{w:4}, 'w':{w:6}, 'W':{w:20}, 'o':{w:28}, 'p':{w:29},
   '.':{f:1}, ',':{f:2}, 's':{f:3}, 'm':{f:27},
   'G':{o:7}, 'E':{o:18, act:'elevator', anchor:'ELEV'},
+  /* THE SECOND SHAFT. One lift, at the west end of a forty-four-tile floor,
+     put the Solutions Architect's desk fifty-seven tiles from the only way
+     downstairs — sixty minutes before the doors opened — which left thirteen
+     tiles of ground floor inside the cross-floor budget on a ground floor
+     fifty-five tiles deep. Two thirds of it could not be reached by anybody
+     above T1 at any price, so nothing had ever been put there. Its own glyph
+     because the anchor derivation keeps the FIRST tile it sees for a name,
+     and these two need separate names to be told apart when routing. */
+  'e':{o:18, act:'elevator', anchor:'ELEV_E'},
   'd':{o:9}, 'q':{o:10}, 'T':{o:11, act:'terminal', anchor:'TERMINAL'},
   'c':{o:12}, 'K':{o:13, act:'coffee', anchor:'COFFEE'},
   'V':{o:14, act:'vending', anchor:'VEND'}, 'R':{o:15, act:'printer', anchor:'PRINTER'},
@@ -5364,8 +5373,10 @@ function objectiveTarget(){
      entirely down here, so point at the lift instead of at a cell in the post
      room that happens to share its numbers */
   if (run.marker){
-    if (run.markerFloor && run.markerFloor !== W2.id)
-      return W2.anchors.ELEV ? { pos: W2.anchors.ELEV, label: 'THE LIFT' } : null;
+    if (run.markerFloor && run.markerFloor !== W2.id){
+      const L = (run.markerLift && W2.anchors[run.markerLift]) ? run.markerLift : 'ELEV';
+      return W2.anchors[L] ? { pos: W2.anchors[L], label: ANCHOR_NAMES[L] || 'THE LIFT' } : null;
+    }
     return { pos: run.marker, label: run.markerLabel || 'GO HERE' };
   }
   /* THE DAY-ONE ARROW, AND NOTHING ELSE. Two things were wrong with this and
@@ -5399,8 +5410,11 @@ function atTerminal(){
 function objectiveText(){
   if (!run) return '';
   if (run.marker){
-    if (run.markerFloor && run.markerFloor !== W2.id)
-      return (run.markerLabel || 'THE MARKER') + ' IS ON THE OTHER FLOOR — TAKE THE LIFT';
+    if (run.markerFloor && run.markerFloor !== W2.id){
+      const L = (run.markerLift && W2.anchors[run.markerLift]) ? run.markerLift : 'ELEV';
+      return (run.markerLabel || 'THE MARKER') + ' IS ON THE OTHER FLOOR — TAKE ' +
+             (ANCHOR_NAMES[L] || 'THE LIFT');
+    }
     return 'GO TO ' + (run.markerLabel || 'THE MARKER') + ' — FOLLOW THE ARROW';
   }
   /* The tutorial line comes FIRST so it can never disagree with the arrow.
@@ -5410,7 +5424,10 @@ function objectiveText(){
     /* the terminal is upstairs; there is no arrow to it from reception, and
        promising one is how a player ends up looking for a marker that the
        objective system has correctly declined to draw */
-    if (!W2.anchors.TERMINAL) return 'YOUR DESK IS UPSTAIRS — TAKE THE LIFT';
+    if (!W2.anchors.TERMINAL){
+      const L = bestLiftTo('TERMINAL', [player.tx, player.ty]) || 'ELEV';
+      return 'YOUR DESK IS UPSTAIRS — TAKE ' + (ANCHOR_NAMES[L] || 'THE LIFT');
+    }
     /* TAB, not E. Use is facing-based — workInput reads faceCell() — so a
        player standing ON the terminal tile with their back to it presses the
        key the game just told them to press and nothing happens, with no
@@ -6274,11 +6291,73 @@ function floorDist(map, a, b){
   const t = FLOOR_DIST[map];
   return t && t[a] && t[a][b] !== undefined ? t[a][b] : null;
 }
+/* TWO SHAFTS, AND THE TRIP HAS TO PICK ONE. The near half and the far half of
+   a cross-floor errand are not independent: you leave by a lift and you arrive
+   at the one directly above or below it, so the cheapest route is the smallest
+   SUM, not the nearest lift here plus the nearest lift there. Every price in
+   the game goes through this — the SLA a ticket is born with, the slack column,
+   the walk hint on the queue row — so there is exactly one place that decides
+   it. */
+const LIFTS = ['ELEV', 'ELEV_E'];
+function liftsOn(mapId){
+  return LIFTS.filter(L => FLOOR_POS[mapId] && FLOOR_POS[mapId][L]);
+}
+/* near(L) = tiles from where you are now to lift L on THIS floor.
+   Returns the tiles for the whole trip, by the cheapest shaft. */
+function crossTiles(near, anchor){
+  const h = floorOf(anchor);
+  if (!h) return null;
+  let best = null;
+  for (const L of liftsOn(h)){
+    const a = near(L), b = floorDist(h, L, anchor);
+    if (a === null || a === undefined || b === null || b === undefined) continue;
+    if (best === null || a + b < best) best = a + b;
+  }
+  return best;
+}
 /* The far half of a cross-floor errand: the lift on the destination floor to
-   the anchor itself. Fixed per anchor, so it is the same for every seed. */
+   the anchor itself. Fixed per anchor, so it is the same for every seed.
+   Used only where the near half is already zero — you are standing at a lift
+   — so the nearest shaft is the right one. */
 function tilesFromLift(anchor){
   const h = floorOf(anchor);
-  return h ? floorDist(h, 'ELEV', anchor) : null;
+  if (!h) return null;
+  let best = null;
+  for (const L of liftsOn(h)){
+    const v = floorDist(h, L, anchor);
+    if (v !== null && v !== undefined && (best === null || v < best)) best = v;
+  }
+  return best;
+}
+/* The shaft that makes a named cross-floor errand cheapest from here — the
+   same choice crossTiles makes, named rather than summed, so the arrow and the
+   price agree. */
+function bestLiftTo(anchor, from){
+  const h = floorOf(anchor);
+  let best = null, bd = Infinity;
+  for (const L of LIFTS){
+    if (!anchorPos(L)) continue;
+    const near = tilesBetween(from, L);
+    const far = h ? floorDist(h, L, anchor) : 0;
+    if (near === null || far === null || far === undefined) continue;
+    if (near + far < bd){ bd = near + far; best = L; }
+  }
+  return best;
+}
+/* Which lift you are standing at. takeLift needs it: arriving at the far end
+   of the other floor because you happened to use the second shaft is the whole
+   point of there being a second shaft. */
+function nearestLift(pos){
+  const from = pos || (typeof player !== 'undefined' && player ? [player.tx, player.ty] : null);
+  if (!from) return 'ELEV';
+  let best = 'ELEV', bd = Infinity;
+  for (const L of LIFTS){
+    const p = anchorPos(L);
+    if (!p) continue;
+    const d = Math.abs(from[0] - p[0]) + Math.abs(from[1] - p[1]);
+    if (d < bd){ bd = d; best = L; }
+  }
+  return best;
 }
 
 function tilesBetween(from, anchor){
@@ -6289,9 +6368,9 @@ function tilesBetween(from, anchor){
 }
 function walkCost(anchor, from){
   if (isOffFloor(anchor)){
-    const toLift = tilesBetween(from, 'ELEV'), off = tilesFromLift(anchor);
-    if (toLift !== null && off !== null)
-      return Math.max(3, Math.round((toLift + off) * WALK_MIN_PER_TILE)) + LIFT_MIN;
+    const n = crossTiles(L => tilesBetween(from, L), anchor);
+    if (n !== null)
+      return Math.max(3, Math.round(n * WALK_MIN_PER_TILE)) + LIFT_MIN;
     return WALK_FALLBACK + LIFT_MIN;
   }
   const n = tilesBetween(from, anchor);
@@ -6348,13 +6427,12 @@ function walkLegs(steps, si, fromPos){
         m = n === null ? WALK_FALLBACK : Math.max(3, Math.round(n * WALK_MIN_PER_TILE));
       }
     } else {
-      const toLift = (floor === W2.id)
-        ? (atPos ? tilesBetween(atPos, 'ELEV') : deskToLift())
-        : (atName ? floorDist(floor, atName, 'ELEV') : 0);
-      const off = tilesFromLift(g);
-      m = (toLift === null || off === null)
+      const n = crossTiles(L => (floor === W2.id)
+        ? (atPos ? tilesBetween(atPos, L) : deskToLift(L))
+        : (atName ? floorDist(floor, atName, L) : 0), g);
+      m = n === null
         ? WALK_FALLBACK + LIFT_MIN
-        : Math.max(3, Math.round((toLift + off) * WALK_MIN_PER_TILE)) + LIFT_MIN;
+        : Math.max(3, Math.round(n * WALK_MIN_PER_TILE)) + LIFT_MIN;
       floor = home; at = null;
       crossed.push(g);
     }
@@ -6363,10 +6441,10 @@ function walkLegs(steps, si, fromPos){
   }
   return { mins, names, crossed };
 }
-function deskToLift(){
+function deskToLift(lift){
   const role = (typeof run !== 'undefined' && run) ? ROLES[run.rung] : null;
   const desk = role && anchorPos(role.deskAnchor || 'TERMINAL');
-  return desk ? tilesBetween(desk, 'ELEV') : null;
+  return desk ? tilesBetween(desk, lift || 'ELEV') : null;
 }
 function workLeft(t){
   const steps = TICKETS[t.id].steps;
@@ -7107,9 +7185,12 @@ function takeLift(){
   if (!to || !MAPS[to] || !run || G.state !== 'work'){
     toast(elevatorLine(), 'corp', 2400); return;
   }
+  /* you come out where you went in: the east shaft on one floor opens on the
+     east shaft on the other, which is the only reason a second one helps */
+  const by = nearestLift();
   run.clock += LIFT_MIN;
   loadMap(to);
-  spawnPeople(run.clock, anchorPos('ELEV'));
+  spawnPeople(run.clock, anchorPos(by) || anchorPos('ELEV'));
   /* SNAP THE CAMERA, or you arrive looking at wherever you were standing on
      the other floor. The floors are different heights, so the old scroll
      position is not merely wrong, it is off the end of the shorter one: the
@@ -7366,6 +7447,13 @@ function advanceStep(){
     if (!a){ t.si++; advanceStep(); return; }
     run.marker = a.pos; run.markerLabel = ANCHOR_NAMES[st.goto] || st.goto;
     run.markerFloor = a.floor;
+    /* WHICH SHAFT. The price of this leg was worked out over both of them and
+       took the cheaper; an arrow that points at the other one sends a player
+       the long way round to a job the game already charged them the short way
+       for. Decided once, here, from where they are standing — an arrow that
+       swapped ends every few steps would be worse than a wrong one. */
+    run.markerLift = a.floor !== W2.id
+      ? bestLiftTo(st.goto, [player.tx, player.ty]) : null;
     if (G.modal) closeModalToWork();
     const away = a.floor !== W2.id;
     toast('GO TO: ' + (ANCHOR_NAMES[st.goto] || st.goto) +
@@ -11658,6 +11746,84 @@ function selfTest(runSim){
          run && run.rung === 2 && run.pendingEnd === 'burnout',
          run ? 'rung ' + run.rung + ', ending ' + run.pendingEnd : 'run gone');
       if (run) run.pendingEnd = null;
+    }
+    /* TWO SHAFTS, AND THEY GO WHERE THEY SAY. One lift at the west end of a
+       forty-four-tile floor put the architect's desk fifty-seven tiles from
+       the only way downstairs; the ground floor is fifty-five tiles deep, and
+       two thirds of it was outside the cross-floor budget for anyone above T1
+       at any price, so nothing had ever been put there. Three things have to
+       hold: each shaft opens on its own counterpart, the price is worked out
+       over both and takes the cheaper, and the ARROW points at the one the
+       price used — an arrow to the other end is a player walking the long way
+       round to a job they were charged the short way for. */
+    {
+      const savedRun = run, savedState = G.state, savedMap = W2.id;
+      rngInit('LIFTS'); runInit('LIFTS'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      const missing = [];
+      for (const f of Object.keys(MAPS))
+        for (const L of LIFTS) if (!(FLOOR_POS[f] && FLOOR_POS[f][L])) missing.push(f + '.' + L);
+      ok('level: both floors have both lifts', !missing.length, missing.join(' '));
+
+      /* ride each one and come out at its own counterpart */
+      const rides = [];
+      for (const from of ['office1', 'ground'])
+        for (const L of LIFTS){
+          loadMap(from); spawnPeople(); G.state = 'work';
+          const p = anchorPos(L); if (!p){ rides.push(from + '/' + L + ':no anchor'); continue; }
+          player.tx = p[0]; player.ty = p[1];
+          takeLift();
+          const want = anchorPos(L);
+          if (W2.id === from) rides.push(from + '/' + L + ':did not move');
+          else if (!want || player.tx !== want[0] || player.ty !== want[1])
+            rides.push(from + '/' + L + ':landed ' + player.tx + ',' + player.ty +
+                       ' not ' + (want ? want.join(',') : 'anywhere'));
+        }
+      ok('level: each lift opens on the one directly above or below it',
+         !rides.length, rides.join(' · '));
+
+      /* the price takes the cheaper shaft, and the arrow points at that one */
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      const wrongWay = [], overBudget = [];
+      for (let ri = 0; ri < ROLES.length; ri++){
+        const desk = anchorPos(ROLES[ri].deskAnchor);
+        if (!desk) continue;
+        for (const a in FLOOR_POS.ground){
+          if (LIFTS.indexOf(a) >= 0) continue;
+          const m = walkCost(a, desk);
+          if (m > CROSS_FLOOR_BUDGET) overBudget.push(ROLES[ri].id + '->' + a + ':' + m);
+          const pick = bestLiftTo(a, desk);
+          let best = null, bestL = null;
+          for (const L of LIFTS){
+            const t = tilesBetween(desk, L) + floorDist('ground', L, a);
+            if (best === null || t < best){ best = t; bestL = L; }
+          }
+          if (pick !== bestL) wrongWay.push(ROLES[ri].id + '->' + a + ' took ' + pick);
+        }
+      }
+      ok('level: every room on the ground floor is inside the day for every rung',
+         !overBudget.length, overBudget.slice(0,4).join(' '));
+      ok('level: a cross-floor errand is priced by the cheaper shaft',
+         !wrongWay.length, wrongWay.slice(0,4).join(' '));
+
+      /* THE ARROW. Set a real cross-floor marker from the desk that most
+         wants the east shaft, and require the arrow to point at it. */
+      run.rung = ROLES.length - 3;
+      const deskA = anchorPos(ROLES[run.rung].deskAnchor);
+      player.tx = deskA[0]; player.ty = deskA[1];
+      const t = { uid:1, id:'courier-at-the-desk', title:'x', fills:{}, at:0, deadline:400,
+                  sla:60, stress:1, si:0, bonus:0, gameScores:[], from:null };
+      run.queue = [t]; run.active = t; run.marker = null;
+      advanceStep();
+      while (run.active && !run.marker && run.active.si < 6){ run.active.si++; advanceStep(); }
+      const tgt = objectiveTarget(), line = objectiveText();
+      const wantL = bestLiftTo('RECEPTION', deskA), wantP = anchorPos(wantL);
+      ok('level: the arrow points at the shaft the price used',
+         !!tgt && !!wantP && tgt.pos[0] === wantP[0] && tgt.pos[1] === wantP[1] &&
+         wantL === 'ELEV_E' && line.indexOf('EAST LIFT') >= 0,
+         'chose ' + wantL + ', arrow at ' + (tgt ? tgt.pos.join(',') : 'nothing') +
+         ', line "' + line + '"');
+      run = savedRun; G.state = savedState; loadMap(savedMap); spawnPeople();
     }
     /* AND THE PROMOTION EVENING DOES NOT REPORT A ZERO IT INVENTED. Promoting
        sets rungSince to perfHist.length, so for exactly one evening the gate
