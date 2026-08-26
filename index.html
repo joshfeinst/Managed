@@ -5678,11 +5678,51 @@ function reviewScreen(dayPerf, eod, promo, ending){
     mkBtn(act, 'SAVE & QUIT', () => { saveGame(); toTitle(); }, true);
   }
 }
+/* The evening card had the same problem the morning card did: four lines, one
+   per band, seen at the end of every day of every career at every rung. Four
+   bands, five or six lines each, picked by the day so it does not touch a
+   seeded stream — and the top and bottom bands know how far you have climbed,
+   because "Derek exhaled at your queue" is not what a bad day looks like when
+   you are the one who signs things. */
+const REVIEW_LINES = {
+  great: [
+    'Kayla nodded at you in the hallway. From Kayla, that is a standing ovation.',
+    'Nothing you touched today will come back. You can tell. It is a feeling with no evidence and it is always right.',
+    'You left at the right time, with the right things done, which happens about four times a year.',
+    'Somebody thanked you for a thing that did not happen, which almost never occurs and should be written down.',
+    'The queue is not empty. The queue is never empty. But the right things are the ones missing from it.'
+  ],
+  good: [
+    'Nobody said anything, which in MSP terms is a glowing review.',
+    'A quiet day, in the sense that the loud parts were all things you had planned for.',
+    'You closed the ones that mattered and let go of the ones that did not, which is the entire job described.',
+    'Two of them will come back tomorrow and you already know which two.',
+    'Fine. Genuinely fine. You will not remember this day, and that is the highest praise this place offers.'
+  ],
+  poor: [
+    'Derek looked at your queue, then at you, then just... exhaled.',
+    'You spent the afternoon being busy, which is not the same as the morning, when you were working.',
+    'Two things you closed will reopen. You knew while you were closing them.',
+    'Somebody asked how it was going and you said "yeah, good", and neither of you believed it.',
+    'The day got away from you around eleven and you spent the rest of it not catching up.'
+  ],
+  bad: [
+    'Linda has "popped a meeting on your calendar for first thing". Sleep well.',
+    'You are going to think about one of those on the drive home, and again at about eleven.',
+    'The board is red in the places it should be green and green in the places nobody looks at.',
+    'Tomorrow starts with today attached to it.',
+    'You will open your laptop at home tonight. You know you will. You will not fix anything.'
+  ]
+};
 function reviewLine(p){
-  if (p >= .8) return 'Kayla nodded at you in the hallway. From Kayla, that is a standing ovation.';
-  if (p >= .6) return 'Nobody said anything, which in MSP terms is a glowing review.';
-  if (p >= .4) return 'Derek looked at your queue, then at you, then just... exhaled.';
-  return 'Linda has "popped a meeting on your calendar for first thing". Sleep well.';
+  const band = p >= .8 ? 'great' : p >= .6 ? 'good' : p >= .4 ? 'poor' : 'bad';
+  /* the very top and the very bottom read differently once you are senior */
+  if (band === 'bad' && run.rung >= 7)
+    return 'Nobody will say anything about today. That is not the same as nobody noticing, and you know which one it is.';
+  if (band === 'great' && run.rung >= 7)
+    return 'A day where the only difficult things were the ones only you could do. There are not many of those.';
+  const pool = REVIEW_LINES[band];
+  return pool[((run.day || 1) * 5 + run.rung) % pool.length];
 }
 function careerOver(kind){
   slog('CAREER OVER: ' + kind);
@@ -9703,6 +9743,32 @@ function selfTest(runSim){
       ok('a morning that names a weekday happens on that weekday',
          !wrong.length, wrong.join(' '));
       run = savedRunL;
+    }
+    /* THE EVENING CARD, same as the morning one: four lines used to serve every
+       day of every career. What is pinned here is that the bands stay in their
+       lanes — a 90% day must never read out the line for a day that went
+       wrong, which is the failure a banded pool actually has. */
+    {
+      const savedRunR = run;
+      rngInit('RVW'); runInit('RVW');
+      const seen = new Set(), crossed = [];
+      const bandOf = p => p >= .8 ? 'great' : p >= .6 ? 'good' : p >= .4 ? 'poor' : 'bad';
+      for (let rung = 0; rung < ROLES.length; rung++)
+        for (let d = 1; d <= 12; d++)
+          for (const p of [.95, .85, .7, .62, .5, .45, .3, .1]){
+            run.rung = rung; run.day = d;
+            const line = reviewLine(p);
+            seen.add(line);
+            const b = bandOf(p);
+            for (const other of ['great','good','poor','bad'])
+              if (other !== b && REVIEW_LINES[other].indexOf(line) >= 0)
+                crossed.push(b + '->' + other);
+          }
+      ok('the evening card has more than one line per verdict',
+         seen.size >= 16, seen.size + ' distinct evenings');
+      ok('and a good day never reads out a bad one',
+         !crossed.length, [...new Set(crossed)].join(' '));
+      run = savedRunR;
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could
