@@ -5952,12 +5952,107 @@ const BOT_TILES_PER_MIN = 1 / WALK_MIN_PER_TILE;
    in the building is 60 (the architect to the lift, which is the length of the
    floor and ought to hurt). Ratchet, not a target — it only ever goes down. */
 const WALK_BUDGET = 62;
+/* The same ceiling for an errand that crosses floors, which is a different
+   number because it is a different trip: the walk to the lift, the lift, and
+   the walk at the far end. Measured, not chosen. The worst desk on office1 is
+   the architect's at 57 tiles from the lift — 60 minutes before the doors even
+   open — so no cross-floor errand was ever going to fit inside 62. 57 tiles,
+   plus a ground-floor anchor within 12 tiles of the lift, plus LIFT_MIN, is 76.
+   That is what this is: the worst case the layout allows, with two minutes in
+   hand. It buys the rule the ground floor is built to — anything a ticket can
+   be sent to down there lives within twelve tiles of the lift. */
+const CROSS_FLOOR_BUDGET = 78;
 /* How strongly a rung's priority must predict its urgency: corr(pri, slaMult)
    has to be at least this negative. Measured, not chosen — the ladder runs
    -0.54 to -0.74 and T3, the loosest, was -0.28 when a quadrant of its P1s
    turned out to be important-but-not-urgent. Ratchet: it only ever goes down. */
 const URGENCY_SLOPE = -0.45;
 const WALK_FALLBACK = 14;          // no map parsed yet (headless planning)
+
+/* --------------------------- crossing the floors ---------------------------
+   anchorPos() answers against the LOADED map and nothing else, so a goto to
+   an anchor on the other floor found nothing and priced at WALK_FALLBACK — a
+   flat 14 minutes for a trip that really costs the walk to the lift, the lift
+   itself, and the walk from the lift at the far end. That is why no ticket
+   sent you downstairs: the queue could not tell you what the errand cost, and
+   an unpriced errand is one a player cannot triage.
+
+   Both floors are indexed once at boot, by loading each in turn and running a
+   flood fill out from every anchor. That gives a tile distance between any two
+   anchors on the same floor, for a floor that is not the one loaded, which is
+   the piece that was missing. Costs are then composed:
+
+       here -> that floor's lift  +  LIFT_MIN  +  far lift -> the anchor
+
+   ELEV is the one name both floors carry, and it is deliberately excluded
+   from ANCHOR_FLOOR: a name on two maps has no single home, and the existing
+   rule — anchors resolve against the loaded map — is the right one for it. */
+const ANCHOR_FLOOR = {};       // anchor -> the map it lives on, if only one does
+const FLOOR_DIST = {};         // map -> anchor -> anchor -> tiles
+
+function floodFrom(x, y){
+  const N = W2.W * W2.H, d = new Int32Array(N).fill(-1);
+  let q = [y * W2.W + x];
+  d[q[0]] = 0;
+  for (let step = 0; q.length; step++){
+    const next = [];
+    for (const c of q){
+      const cx = c % W2.W, cy = (c / W2.W) | 0;
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= W2.W || ny >= W2.H) continue;
+        const n = ny * W2.W + nx;
+        if (d[n] >= 0 || W2.solid[n]) continue;
+        d[n] = d[c] + 1; next.push(n);
+      }
+    }
+    q = next;
+  }
+  return d;
+}
+function indexFloors(){
+  const seen = {}, keep = W2.id;
+  for (const id in MAPS){
+    loadMap(id);
+    const names = Object.keys(W2.anchors), tab = FLOOR_DIST[id] = {};
+    for (const n of names) (seen[n] = seen[n] || []).push(id);
+    for (const a of names){
+      const p = W2.anchors[a], d = floodFrom(p[0], p[1]), row = tab[a] = {};
+      for (const b of names){
+        const q = W2.anchors[b], v = d[q[1] * W2.W + q[0]];
+        /* An anchor can sit ON its object (the lift doors), which the fill
+           never enters; step out to a walkable neighbour and add the step. */
+        if (v >= 0){ row[b] = v; continue; }
+        let best = -1;
+        for (const [dx, dy] of [[0,1],[0,-1],[-1,0],[1,0]]){
+          const nx = q[0] + dx, ny = q[1] + dy;
+          if (nx < 0 || ny < 0 || nx >= W2.W || ny >= W2.H) continue;
+          const w = d[ny * W2.W + nx];
+          if (w >= 0 && (best < 0 || w + 1 < best)) best = w + 1;
+        }
+        if (best >= 0) row[b] = best;
+      }
+    }
+  }
+  for (const n in seen) if (seen[n].length === 1) ANCHOR_FLOOR[n] = seen[n][0];
+  loadMap(keep || 'office1');
+}
+function floorOf(anchor){ return ANCHOR_FLOOR[anchor] || null; }
+function isOffFloor(anchor){
+  const h = floorOf(anchor);
+  return !!h && !!W2.id && h !== W2.id;
+}
+function floorDist(map, a, b){
+  const t = FLOOR_DIST[map];
+  return t && t[a] && t[a][b] !== undefined ? t[a][b] : null;
+}
+/* The far half of a cross-floor errand: the lift on the destination floor to
+   the anchor itself. Fixed per anchor, so it is the same for every seed. */
+function tilesFromLift(anchor){
+  const h = floorOf(anchor);
+  return h ? floorDist(h, 'ELEV', anchor) : null;
+}
+
 function tilesBetween(from, anchor){
   const a = anchorPos(anchor);
   if (!a || !W2.W || !from) return null;
@@ -5965,6 +6060,12 @@ function tilesBetween(from, anchor){
   return p ? p.length : null;
 }
 function walkCost(anchor, from){
+  if (isOffFloor(anchor)){
+    const toLift = tilesBetween(from, 'ELEV'), off = tilesFromLift(anchor);
+    if (toLift !== null && off !== null)
+      return Math.max(3, Math.round((toLift + off) * WALK_MIN_PER_TILE)) + LIFT_MIN;
+    return WALK_FALLBACK + LIFT_MIN;
+  }
   const n = tilesBetween(from, anchor);
   return n === null ? WALK_FALLBACK : Math.max(3, Math.round(n * WALK_MIN_PER_TILE));
 }
@@ -5976,23 +6077,76 @@ function walkCostFromDesk(anchor){
   const desk = role && anchorPos(role.deskAnchor || 'TERMINAL');
   return walkCost(anchor, desk);
 }
+/* Walk a ticket's remaining goto legs and price them the way the day will
+   charge them. Each leg starts where the previous one ENDED — pricing every
+   leg from the desk made a two-stop errand look like two independent trips
+   from your chair, which is neither what you do nor what it costs, and a gate
+   tester found those tickets uncompletable inside their own SLA from most of
+   the map.
+
+   The floor you are standing on is part of "where the previous leg ended". A
+   leg that crosses to the other floor leaves you at the far lift, and the next
+   leg has to be priced from there, on a map that is not the one loaded — which
+   is what FLOOR_DIST is for. Tracking the position but not the floor was the
+   shape of the bug this replaces: anchorPos() returns null off-floor, so `at`
+   silently stayed put and every leg after a cross-floor one was priced from
+   the wrong building. */
+function walkLegs(steps, si, fromPos){
+  /* `at` is null until a leg has landed somewhere, and only the leg that is
+     the ticket's CURRENT step is priced from where the player is standing —
+     anything further down the list is priced from the desk, because the
+     player is not there yet and the SLA a ticket is born with must not depend
+     on where they happened to be. Getting that subtly wrong restated 256 of
+     977 ticket/rung pairs on the first attempt at this refactor. */
+  let floor = W2.id, atName = null, at = null, mins = 0;
+  const names = [], crossed = [];
+  for (let i = si; i < steps.length; i++){
+    const g = steps[i].goto;
+    if (!g) continue;
+    const home = floorOf(g) || floor;
+    const atPos = at || (i === si ? fromPos : null);
+    let m;
+    if (home === floor){
+      /* On the loaded floor keep pricing by the same A* the game has always
+         used. FLOOR_DIST is a flood fill and comes out a tile or so different,
+         and swapping it in here would quietly restate every existing ticket's
+         SLA — it is for the floor that is NOT loaded, where there is no other
+         way to measure. */
+      if (floor === W2.id){
+        m = atPos ? walkCost(g, atPos) : walkCostFromDesk(g);
+        at = anchorPos(g) || at;
+      } else {
+        const n = atName ? floorDist(floor, atName, g) : tilesFromLift(g);
+        m = n === null ? WALK_FALLBACK : Math.max(3, Math.round(n * WALK_MIN_PER_TILE));
+      }
+    } else {
+      const toLift = (floor === W2.id)
+        ? (atPos ? tilesBetween(atPos, 'ELEV') : deskToLift())
+        : (atName ? floorDist(floor, atName, 'ELEV') : 0);
+      const off = tilesFromLift(g);
+      m = (toLift === null || off === null)
+        ? WALK_FALLBACK + LIFT_MIN
+        : Math.max(3, Math.round((toLift + off) * WALK_MIN_PER_TILE)) + LIFT_MIN;
+      floor = home; at = null;
+      crossed.push(g);
+    }
+    mins += m; atName = g;
+    names.push((ANCHOR_NAMES[g] || g).replace(/^THE /i, ''));
+  }
+  return { mins, names, crossed };
+}
+function deskToLift(){
+  const role = (typeof run !== 'undefined' && run) ? ROLES[run.rung] : null;
+  const desk = role && anchorPos(role.deskAnchor || 'TERMINAL');
+  return desk ? tilesBetween(desk, 'ELEV') : null;
+}
 function workLeft(t){
   const steps = TICKETS[t.id].steps;
-  let m = 0, at = null;
+  const here = (typeof player !== 'undefined' && player) ? [player.tx, player.ty] : null;
+  let m = walkLegs(steps, t.si, here).mins;
   for (let i = t.si; i < steps.length; i++){
     const st = steps[i];
-    /* Each leg starts where the previous one ENDED. Pricing every leg from
-       the desk made a two-stop errand — walk to the coffee machine, then walk
-       to Derek — look like two independent trips from your chair, which is
-       neither what you do nor what it costs. A gate tester found those
-       tickets uncompletable inside their own SLA from most of the map. */
-    if (st.goto){
-      const from = at || ((i === t.si && typeof player !== 'undefined' && player)
-        ? [player.tx, player.ty] : null);
-      m += from ? walkCost(st.goto, from) : walkCostFromDesk(st.goto);
-      at = anchorPos(st.goto) || at;
-    }
-    else if (st.game) m += 14;
+    if (st.game) m += 14;
     else if (st.choice) m += 7;
     else if (st.say) m += 4 * ((DIALOGUE[st.say] && DIALOGUE[st.say].t.length) || 1);
   }
@@ -6780,20 +6934,23 @@ function queueView(){
 /* What the queue row says about travel. Named destinations, and the walk
    priced by the same route maths the SLA uses — so "worth it?" is answerable
    from the row instead of only in hindsight. */
+/* The row's promise about the errand. It walks the legs through walkLegs, the
+   same function the slack column prices with, so the two numbers on one row
+   cannot disagree — they were separate loops, and only one of them knew that
+   the floor can change under you. */
 function legHint(t){
   const steps = (TICKETS[t.id] || {}).steps || [];
-  const legs = steps.slice(t.si || 0).filter(st => st.goto);
-  if (!legs.length) return '<span class="leg" style="color:#5c646e">· at your desk</span>';
-  let at = (typeof player !== 'undefined' && player) ? [player.tx, player.ty] : null, mins = 0;
-  const names = [];
-  for (const st of legs){
-    mins += at ? walkCost(st.goto, at) : walkCostFromDesk(st.goto);
-    at = anchorPos(st.goto) || at;
-    names.push((ANCHOR_NAMES[st.goto] || st.goto).replace(/^THE /i, ''));
-  }
-  const far = mins >= 25;
+  const here = (typeof player !== 'undefined' && player) ? [player.tx, player.ty] : null;
+  const L = walkLegs(steps, t.si || 0, here);
+  if (!L.names.length) return '<span class="leg" style="color:#5c646e">· at your desk</span>';
+  /* Say it is a different floor. The lift is four minutes and the walk at the
+     far end is not free, and a player who cannot see that in the row is being
+     asked to triage an errand whose cost is hidden. */
+  const via = L.crossed.length
+    ? (floorOf(L.crossed[0]) === 'ground' ? ' downstairs' : ' upstairs') : '';
+  const far = L.mins >= 25;
   return '<span class="leg" style="color:' + (far ? 'var(--alert)' : 'var(--corp)') + '">· ' +
-         names.join(' then ').toLowerCase() + ', ~' + mins + ' min walk</span>';
+         L.names.join(' then ').toLowerCase() + via + ', ~' + L.mins + ' min walk</span>';
 }
 function renderQueue(){
   const list = document.getElementById('tix-list');
@@ -12247,16 +12404,61 @@ function selfTest(runSim){
           const desk = anchorPos(R.deskAnchor);
           if (!desk) continue;                       // covered by the desk lint
           for (const a of wanted){
-            if (!anchorPos(a)) continue;             // covered by the anchor lint
-            const m = walkCost(a, desk);
+            /* An off-floor anchor does not resolve against the loaded map, so
+               this used to skip it — meaning the first ticket to send anyone
+               downstairs would have escaped the budget entirely. It is priced
+               now, against the ceiling for the trip it actually is. */
+            const away = isOffFloor(a);
+            if (!anchorPos(a) && !away) continue;    // covered by the anchor lint
+            const m = walkCost(a, desk), cap = away ? CROSS_FLOOR_BUDGET : WALK_BUDGET;
             if (m > worst){ worst = m; worstAt = R.id + '->' + a; }
-            if (m > WALK_BUDGET) over.push(R.id + '->' + a + ':' + m);
+            if (m > cap) over.push(R.id + '->' + a + ':' + m + '>' + cap);
           }
         }
         ok('no errand is further than the day can afford', !over.length,
            over.slice(0,6).join(' ') + (over.length > 6 ? ' +' + (over.length-6) : ''));
         ok('and the longest one is on record', worst > 0,
            'worst ' + worst + ' min (' + worstAt + '), budget ' + WALK_BUDGET);
+      }
+      /* THE ROW PROMISES A WALK AND THE SLACK COLUMN CHARGES ONE. They were
+         two separate loops over the same steps, and only one of them was ever
+         taught that the floor can change under you, so a cross-floor errand
+         could be advertised at one price and billed at another on the same
+         row. Both go through walkLegs now; this is what keeps them there. */
+      {
+        const savedRun = run, savedRung = run && run.rung;
+        rngInit('LEGP'); runInit('LEGP'); loadMap('office1');
+        const here = (typeof player !== 'undefined' && player) ? [player.tx, player.ty] : null;
+        const bad = [];
+        for (const id in TICKETS){
+          const T = TICKETS[id];
+          run.rung = T.tiers[0];
+          const L = walkLegs(T.steps, 0, here);
+          const promised = /~(\d+) min walk/.exec(legHint({ id:id, si:0 }));
+          if (!L.names.length){
+            if (promised) bad.push(id + ': priced a walk it does not have');
+          } else if (!promised) bad.push(id + ': ' + L.mins + ' min walk, unadvertised');
+          else if (+promised[1] !== L.mins) bad.push(id + ': says ' + promised[1] + ', costs ' + L.mins);
+        }
+        run = savedRun; if (run) run.rung = savedRung;
+        ok('the queue row promises the walk it charges', !bad.length,
+           bad.length + ': ' + bad.slice(0, 3).join(' · '));
+      }
+      /* EVERY FLOOR IS PRICED, not just the one that is loaded. anchorPos()
+         answers against the loaded map, so before FLOOR_DIST existed a goto to
+         the other floor cost a flat WALK_FALLBACK — the same 14 minutes whether
+         the errand was next to the lift or the length of the building away. */
+      {
+        const away = Object.keys(ANCHOR_FLOOR).filter(a => ANCHOR_FLOOR[a] !== W2.id);
+        const unpriced = away.filter(a => tilesFromLift(a) === null);
+        ok('every anchor knows which floor it is on', Object.keys(ANCHOR_FLOOR).length > 0 &&
+           away.length > 0, away.length + ' off-floor of ' + Object.keys(ANCHOR_FLOOR).length);
+        ok('and how far it is from that floor\'s lift', !unpriced.length, unpriced.join(','));
+        /* ELEV is on both floors, so it has no single home and must not claim
+           one — a name on two maps resolves against the loaded map, and that
+           is the rule the lift itself depends on. */
+        ok('the lift belongs to no floor in particular', !ANCHOR_FLOOR.ELEV,
+           ANCHOR_FLOOR.ELEV || 'unclaimed');
       }
       /* PRIORITY HAS TO MEAN URGENCY, because the triage rule sorts by it
          FIRST and only breaks ties on the deadline. A ticket that is valuable
@@ -14889,6 +15091,9 @@ function boot(){
   }
   bakeAtlas();
   rngInit('MENU');
+  /* Before anything asks what a walk costs. Loads each floor in turn, so it
+     has to happen before the map the player starts on is settled. */
+  indexFloors();
   loadMap('office1');
   spawnPeople();
   const s = loadGame();
