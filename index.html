@@ -871,35 +871,35 @@ function bakePortrait(look){
    docs/BALANCE.md rather than tuned around. */
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
-    gates:{ nextAt:{perf:0.53, days:3}, firedBelow:0.24, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:30, slaScale:1.0 }, deskAnchor:'DESK_PIT' },
+    gates:{ nextAt:{perf:0.69, days:3}, firedBelow:0.31, cert:null },
+    queue:{ ratePerHr:1.9, meetingMin:30, slaScale:1.0 }, deskAnchor:'DESK_PIT' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
-    gates:{ nextAt:{perf:0.45, days:3}, firedBelow:0.2, cert:null },
-    queue:{ ratePerHr:2.8, meetingMin:34, slaScale:0.96 }, deskAnchor:'DESK_PIT2' },
+    gates:{ nextAt:{perf:0.73, days:3}, firedBelow:0.33, cert:null },
+    queue:{ ratePerHr:1.9, meetingMin:34, slaScale:0.96 }, deskAnchor:'DESK_PIT2' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
-    gates:{ nextAt:{perf:0.39, days:3}, firedBelow:0.18, cert:null },
-    queue:{ ratePerHr:2.8, meetingMin:40, slaScale:0.96 }, deskAnchor:'DESK_T3' },
+    gates:{ nextAt:{perf:0.65, days:3}, firedBelow:0.29, cert:null },
+    queue:{ ratePerHr:1.3, meetingMin:40, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
-    gates:{ nextAt:{perf:0.34, days:3}, firedBelow:0.15, cert:null },
-    queue:{ ratePerHr:2.8, meetingMin:48, slaScale:0.96 }, deskAnchor:'DESK_T3' },
+    gates:{ nextAt:{perf:0.56, days:3}, firedBelow:0.25, cert:null },
+    queue:{ ratePerHr:1.3, meetingMin:48, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
-    gates:{ nextAt:{perf:0.37, days:3}, firedBelow:0.17, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:60, slaScale:0.96 }, deskAnchor:'DESK_PROJ' },
+    gates:{ nextAt:{perf:0.43, days:3}, firedBelow:0.19, cert:null },
+    queue:{ ratePerHr:1.6, meetingMin:60, slaScale:0.96 }, deskAnchor:'DESK_PROJ' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
-    gates:{ nextAt:{perf:0.37, days:3}, firedBelow:0.17, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:68, slaScale:0.96 }, deskAnchor:'DESK_PROC' },
+    gates:{ nextAt:{perf:0.43, days:3}, firedBelow:0.19, cert:null },
+    queue:{ ratePerHr:1.6, meetingMin:68, slaScale:0.96 }, deskAnchor:'DESK_PROC' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.36, days:3}, firedBelow:0.16, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:78, slaScale:0.96 }, deskAnchor:'DESK_CLIENT' },
+    gates:{ nextAt:{perf:0.35, days:3}, firedBelow:0.16, cert:null },
+    queue:{ ratePerHr:1.6, meetingMin:78, slaScale:0.96 }, deskAnchor:'DESK_CLIENT' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
-    gates:{ nextAt:{perf:0.36, days:3}, firedBelow:0.16, cert:null },
+    gates:{ nextAt:{perf:0.28, days:3}, firedBelow:0.13, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:84, slaScale:0.96 }, deskAnchor:'DESK_ARCH' },
   { id:'vcio',   title:'vCIO',          pay:135000,
-    gates:{ nextAt:{perf:0.41, days:3}, firedBelow:0.18, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:88, slaScale:0.96 }, deskAnchor:'DESK_EXEC' },
+    gates:{ nextAt:{perf:0.46, days:3}, firedBelow:0.21, cert:null },
+    queue:{ ratePerHr:1.9, meetingMin:88, slaScale:0.96 }, deskAnchor:'DESK_EXEC' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
-    gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.16, cert:null },
-    queue:{ ratePerHr:2.2, meetingMin:80, slaScale:1.05 }, deskAnchor:'DESK_CORNER' }
+    gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.25, cert:null },
+    queue:{ ratePerHr:1.6, meetingMin:80, slaScale:1.05 }, deskAnchor:'DESK_CORNER' }
 ];
 
 /* Shared fill pools — every {token} in a ticket title/line resolves from here
@@ -2284,6 +2284,88 @@ const DIALOGUE = {
     opts:[ {t:'Write the true one and let Linda soften it', fx:{time:20, rep:3, bonus:1, stress:5}},
            {t:'Write the survivable one', fx:{time:11, stress:4}},
            {t:'Write the true one and send it yourself', fx:{time:16, rep:1, stress:8}} ] },
+  /* --- the big jobs. Long tickets need long-ticket writing: the joke is not
+         a punchline, it is the accumulating weight of a thing that will not
+         end. Each closes on a choice about what you leave behind, because that
+         is what an afternoon-long job actually costs you. --- */
+  'big.sl.a':{ who:'linda', t:['Nine starters Monday. HR sent the list this morning; two of them start in Dublin.',
+    'Also — and I only found this out because Payroll asked — three people left in June.',
+    'Their accounts are still enabled. One of them still has the VPN profile.'] },
+  'big.sl.b':{ who:'sys', t:['Nine accounts, nine mailboxes, nine laptops that are not here yet.',
+    'And three that should have been closed eleven weeks ago, one of which logged in on Tuesday.'],
+    opts:[ {t:'Kill the three leavers first and write down when you did it', fx:{time:16, rep:3, bonus:1, stress:3}},
+           {t:'Do the starters — they are the ones with a deadline', fx:{time:10, rep:1, stress:6}},
+           {t:'Ask HR for a proper leavers process, in writing', fx:{time:13, rep:2, bonus:1, stress:4}} ] },
+  'big.sl.c':{ who:'sys', t:['The laptops are in the store cupboard. Six of them. For nine people.',
+    'The other three were "borrowed for a demo" in March.'],
+    opts:[ {t:'Build the six, and tell Linda about the three today', fx:{time:20, rep:3, bonus:1, stress:4}},
+           {t:'Build six and hope three people are off sick', fx:{time:12, rep:-3, stress:9}},
+           {t:'Buy three more on the emergency card and eat the invoice', fx:{time:15, rep:1, stress:6}} ] },
+  'big.fw.a':{ who:'sys', t:['The firewall swap is Tuesday at 22:00. The change was approved in April.',
+    'The rule base has 340 entries. Fourteen have comments. Two of the comments say "temp".',
+    'The person who wrote them is the reason the Croatia ticket exists.'] },
+  'big.fw.b':{ who:'sys', t:['You can move the rules across, or you can find out what they are for.',
+    'Nobody has ever chosen the second one and finished before midnight.'],
+    opts:[ {t:'Map every rule to a service before you touch anything', fx:{time:26, rep:4, bonus:1, stress:5}},
+           {t:'Lift and shift, then watch the logs all night', fx:{time:10, rep:-1, stress:11}},
+           {t:'Migrate the fourteen you understand and quarantine the rest', fx:{time:18, rep:2, bonus:1, stress:6}} ] },
+  'big.fw.c':{ who:'sys', t:['Two rules will break something on Wednesday morning. You do not know which two.'],
+    opts:[ {t:'Write the back-out plan and time it properly', fx:{time:17, rep:3, bonus:1, stress:3}},
+           {t:'Put the old box in the rack next to the new one, powered off', fx:{time:11, rep:2, bonus:1, stress:4}},
+           {t:'It will be fine', fx:{time:2, rep:-3, stress:12}} ] },
+  'big.audit.a':{ who:'linda', t:['Asset audit. The whole finance floor. The insurer wants it before Thursday.',
+    'The register is a spreadsheet last saved in 2019 by someone called J.Whitcombe.',
+    'It has a column called "Notes" and every cell in it says "see Dave".'] },
+  'big.audit.b':{ who:'sys', t:['Forty-one desks. The spreadsheet lists thirty-six machines. You count forty-four.',
+    'Three of them are under desks, unplugged, with dust on the vents.'],
+    opts:[ {t:'Serial-number everything you can physically touch', fx:{time:22, rep:3, bonus:1, stress:4}},
+           {t:'Reconcile against the spreadsheet and flag the gaps', fx:{time:14, rep:2, bonus:1, stress:3}},
+           {t:'Send the spreadsheet back and say it is not accurate', fx:{time:4, rep:-2, stress:7}} ] },
+  'big.audit.c':{ who:'sys', t:['Two of the machines under the desks are still on the domain.',
+    'One of them has a scheduled task that has been failing quietly since 2022.'],
+    opts:[ {t:'Decommission them properly and record it', fx:{time:18, rep:3, bonus:1, stress:3}},
+           {t:'Pull the network cables and move on', fx:{time:5, rep:-1, stress:5}},
+           {t:'Find out what the task was doing first', fx:{time:15, rep:2, bonus:1, stress:5}} ] },
+  'big.legal.a':{ who:'client', t:['The printer that serves Legal has been slow since the move.',
+    'Legal describe this as "a critical business issue". Legal describe the kettle this way too.',
+    'It is a P3. It has been a P3 for six weeks. It is not going to stop being raised.'] },
+  'big.legal.b':{ who:'sys', t:['It prints. It prints eventually. It prints in about ninety seconds.',
+    'The queue is fine. The driver is fine. The printer is fine.'],
+    opts:[ {t:'Follow it back to the switch, properly', fx:{time:16, rep:2, bonus:1, stress:3}},
+           {t:'Reinstall the driver and close it', fx:{time:6, rep:-2, stress:6}},
+           {t:'Tell Legal it is working as designed', fx:{time:3, rep:-3, stress:8}} ] },
+  'big.legal.c':{ who:'sys', t:['The run to Legal goes through a five-port switch on top of a filing cabinet.',
+    'It is plugged into itself. It has been plugged into itself since the move.',
+    'It has been quietly costing everyone on that floor ninety seconds at a time for six weeks.'],
+    opts:[ {t:'Fix it, label it, and put it in the notes so it stays fixed', fx:{time:14, rep:3, bonus:1, stress:2}},
+           {t:'Unplug the loop and say nothing about the cabinet', fx:{time:5, rep:1, stress:3}},
+           {t:'Raise a change to remove the switch entirely', fx:{time:12, rep:2, bonus:1, stress:3}} ] },
+  'big.dr.a':{ who:'sys', t:['The auditor would like evidence of a disaster recovery test.',
+    'The policy says annually. The last one was 2021. The person who ran it works somewhere else now.',
+    'The auditor is polite, and has put a date on the email.'] },
+  'big.dr.b':{ who:'sys', t:['The backups are running. The backups have always been running.',
+    'Nobody has restored one in front of a witness since the year of the last test.'],
+    opts:[ {t:'Run a real restore now and screenshot every step', fx:{time:28, rep:4, bonus:1, stress:6}},
+           {t:'Send the 2021 evidence and hope the date is not read', fx:{time:4, rep:-4, stress:12}},
+           {t:'Tell the auditor the truth and propose a date', fx:{time:12, rep:3, bonus:1, stress:5}} ] },
+  'big.dr.c':{ who:'sys', t:['The restore worked. It took four hours and eleven minutes.',
+    'The recovery objective in the contract you signed says two hours.'],
+    opts:[ {t:'Put the real number in the report', fx:{time:14, rep:4, bonus:1, stress:6}},
+           {t:'Report the restore, not the duration', fx:{time:6, rep:-3, stress:9}},
+           {t:'Report it, and attach what it would cost to hit two hours', fx:{time:20, rep:4, bonus:1, stress:4}} ] },
+  'big.move.a':{ who:'client', t:['{Client} are moving offices in three weeks and would like a plan.',
+    'They have already signed the lease. They did not mention it at the last review.',
+    'They have asked whether the internet "comes with the building".'] },
+  'big.move.b':{ who:'sys', t:['Three weeks. A circuit takes sixty working days. Everyone in the room knows this except the client.',
+    'It is a P4, because nothing is broken. It will be a P1 in three weeks.'],
+    opts:[ {t:'Get the circuit ordered today, before anything else', fx:{time:18, rep:4, bonus:1, stress:4}},
+           {t:'Write the plan first so they can see the problem', fx:{time:22, rep:3, bonus:1, stress:3}},
+           {t:'Tell them it cannot be done and wait to be told it must', fx:{time:5, rep:-2, stress:8}} ] },
+  'big.move.c':{ who:'sys', t:['The new floor plan is a PDF of a photograph of a whiteboard.',
+    'There are two comms cabinets on it. One of them is drawn in a corridor.'],
+    opts:[ {t:'Draw it properly and get it signed before anyone orders cable', fx:{time:21, rep:4, bonus:1, stress:3}},
+           {t:'Work from the whiteboard photo and adjust on the day', fx:{time:8, rep:-2, stress:10}},
+           {t:'Go and look at the building yourself', fx:{time:26, rep:3, bonus:1, stress:4}} ] },
   't3.croatia.a':{ who:'sys', t:['Derek is in Croatia. The thing he built has stopped.',
     'It is not documented. It is named after a Terry Pratchett character. Its logs go to a folder called "old".'] },
   't3.croatia.b':{ who:'sys', t:['You got it running. You do not entirely know why it stopped, and that will bother you at 3am.'],
@@ -3469,6 +3551,52 @@ const TICKETS = {
   'sign-off-on-the-thing': { tiers:[9,9], weight:3, sla:42, slaMult:1.9, pri:3, stress:11,
     title:'Nobody else can sign this. That is the entire job description.',
     steps:[{say:'d.sign.a'},{choice:'d.sign.b'}] },
+  /* ------------------------- THE BIG JOBS (rungs 2-8) ---------------------
+     TRIAGE ONLY MATTERS WHEN THE TICKETS ARE DIFFERENT SIZES, and for months
+     the thing supplying that difference was a bug. The server room's only door
+     faced away from the building, so every ticket that sent you to the racks
+     cost 70-90 minutes of walking; those were the fat tickets, and the day was
+     a real decision because some of the queue was enormous. Fixing the door
+     flattened the spread — the coefficient of variation of ticket work fell
+     from .74 to .45 at Relationship Manager, .60 to .38 at T3 — and the gates
+     that separate good triage from bad collapsed with it, at exactly those
+     rungs and no others.
+
+     So the spread is authored now rather than stumbled into. These are the
+     jobs that genuinely eat an afternoon: two or three stops, two boards, a
+     decision at the end you cannot take back.
+
+     THE PRIORITIES ARE THE POINT. Three of these are P1 and three are P3/P4,
+     because "big" has to be independent of "important" or the queue sorts
+     itself and there is no decision left — you would just do them in order of
+     size and be right. A fat, worthless ticket that is screaming at you is the
+     whole game: the printer that serves Legal, the office move nobody has
+     budgeted, the audit evidence for a test that never happened. */
+  'starters-and-leavers': { tiers:[2,6], weight:3, sla:74, slaMult:1.7, pri:4, stress:9,
+    title:'Nine starters Monday. And three leavers nobody mentioned.',
+    steps:[{say:'big.sl.a'},{goto:'TERMINAL'},{game:'pw',diff:3},{choice:'big.sl.b'},
+           {goto:'SHELF'},{choice:'big.sl.c'}] },
+  'firewall-swap-window': { tiers:[4,8], weight:3, sla:82, slaMult:1.6, pri:4, stress:12,
+    title:'Firewall swap Tuesday 22:00 — the rules were never documented',
+    steps:[{say:'big.fw.a'},{goto:'SERVERS'},{game:'subnet',diff:3},{choice:'big.fw.b'},
+           {goto:'TERMINAL'},{choice:'big.fw.c'}] },
+  'the-floor-audit': { tiers:[2,5], weight:3, sla:70, slaMult:1.8, pri:3, stress:7,
+    title:'Asset audit: the whole finance floor, before Thursday',
+    steps:[{say:'big.audit.a'},{goto:'SHELF'},{choice:'big.audit.b'},
+           {goto:'SERVERS'},{game:'cable',diff:2},{choice:'big.audit.c'}] },
+  'printer-that-serves-legal': { tiers:[1,5], weight:4, sla:64, slaMult:2.0, pri:2, stress:6,
+    title:'The printer that serves Legal has been "slow" since the move',
+    steps:[{say:'big.legal.a'},{goto:'PRINTER'},{choice:'big.legal.b'},
+           {goto:'SERVERS'},{game:'cable',diff:2},{choice:'big.legal.c'}] },
+  'dr-evidence-for-the-auditor': { tiers:[5,8], weight:3, sla:78, slaMult:1.7, pri:4, stress:11,
+    title:'Auditor wants DR test evidence. The last test was 2021.',
+    steps:[{say:'big.dr.a'},{goto:'SERVERS'},{game:'keep',diff:3},{choice:'big.dr.b'},
+           {goto:'CONF'},{choice:'big.dr.c'}] },
+  'office-move-fifty-desks': { tiers:[5,8], weight:4, sla:72, slaMult:2.2, pri:1, stress:8,
+    title:'{client} is moving offices in three weeks and would like a plan',
+    steps:[{say:'big.move.a'},{goto:'CONF'},{choice:'big.move.b'},
+           {goto:'SHELF'},{game:'diagram',diff:2},{choice:'big.move.c'}] },
+
   'coffee-derek': { tiers:[0,0], weight:3, sla:30, slaMult:1.4, pri:4, stress:4, from:'derek',
     title:'Coffee for DEREK before {mtg}',
     steps:[{say:'t.cof.a'},{goto:'COFFEE'},{say:'t.cof.b'},{goto:'n1'},{say:'t.cof.c'}] },
@@ -4909,10 +5037,16 @@ function rollDay(){
      was the most-dealt ticket at every rung in the game because of this line. */
   const rookie = run.rung === 0;
   const opener1 = rookie ? 'coffee-derek' : 'first-day-back';
-  if (run.day === 1 && TICKETS[opener1]) perDay[opener1] = 1;
   /* A template with no fill tokens reads the same every single time, so it gets
      one slot a day; one that names a different client each time can carry two. */
   const capOf = id => /\{\w+\}/.test(TICKETS[id].title) ? 2 : 1;
+  /* RESERVE THE WHOLE CAP, not one slot of it. Reserving a single slot was
+     enough while the opener read the same every time, but "Coffee for DEREK
+     before {mtg}" carries a fill token, so its cap is two — the bag could still
+     deal it once, the force-feed below added the second, and a first-ever day
+     opened with the same line twice whenever {mtg} rolled the same meeting.
+     The opener is HANDED to you; it has no business in the bag at all. */
+  if (run.day === 1 && TICKETS[opener1]) perDay[opener1] = capOf(opener1);
   for (let i=0;i<n;i++){
     let id = null;
     for (let tries = 0; tries < 14; tries++){
