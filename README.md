@@ -120,8 +120,10 @@ bar.
 
 Then multiplayer to a degree: a shared career leaderboard, where the same seed
 deals the same tickets and you compare whose career went better. Ghosts later.
-And more meta-progression — certifications, LinkedIn connections, other MSPs
-willing to hire you, and something worth spending banked reputation on.
+And more meta-progression — LinkedIn connections, and other MSPs willing to hire
+you. There are four certifications to bank reputation against now, and three
+perks that arrive on their own as the careers add up; there should be more of
+both.
 
 ## Under the hood
 

@@ -1007,14 +1007,62 @@ const MAPS = { office1: {
 }};
 
 /* meta-progression (slice: one cert + one perk visible, more later) */
+/* THE ONLY THING TO SPEND A CAREER ON WAS ONE EXAM. Reputation accumulates
+   across every career you have ever had, and there was a single certificate
+   costing three of it — after which banked reputation did nothing at all
+   except set the rung you are re-hired at. A roguelite is the meta layer; this
+   one had one row in it.
+
+   Every fx here is read generically by metaFx(), so a new certificate is a data
+   entry and not an engine change. The bots hold no certificates, which means
+   every number in docs/BALANCE.md is measured on the bare game — certificates
+   make it easier from a known floor, which is the only honest way round. */
 const CERTS = {
-  aplus: { name:'COMPTIA A+ (PRACTICE EXAM)', desc:'Minigames start one step easier.',
-           cost:{rep:3}, fx:{gameDiff:-1} }
+  aplus: { name:'COMPTIA A+ (PRACTICE EXAM)',
+           desc:'Minigames start one step easier.',
+           note:'The practice exam. The real one is £250 and the company will not fund it.',
+           cost:{rep:3}, fx:{gameDiff:-1} },
+  itil:  { name:'ITIL FOUNDATION',
+           desc:'One more casualty forgiven every day.',
+           note:'Two days, a workbook, and a vocabulary you will use ironically for the rest of your life.',
+           cost:{rep:6}, fx:{tolerance:1} },
+  pmp:   { name:'PRINCE2 PRACTITIONER',
+           desc:'Meetings take a fifth less of your day.',
+           note:'You will not run projects better. You will be allowed to say no to a meeting.',
+           cost:{rep:9}, fx:{meeting:0.8} },
+  cissp: { name:'CISSP',
+           desc:'Evenings cost you less. Burnout accrues a fifth slower.',
+           note:'Five years of experience required, which they check, and a fee that is not the point.',
+           cost:{rep:13}, fx:{burnout:0.8} }
 };
 const PERKS = {
-  ref: { name:'A GUY WHO KNOWS A GUY', need:{runs:2},
-         desc:'Start future careers with +1 reputation.', fx:{rep:1} }
+  ref:    { name:'A GUY WHO KNOWS A GUY', need:{runs:2},
+            desc:'Start future careers with +1 reputation.', fx:{rep:1} },
+  known:  { name:'THEY REMEMBER YOU HERE', need:{runs:5},
+            desc:'Another +1 reputation on arrival.', fx:{rep:1} },
+  scars:  { name:'YOU HAVE SEEN THIS ONE BEFORE', need:{runs:9},
+            desc:'Burnout accrues a tenth slower. You know which fires are candles.',
+            fx:{burnout:0.9} }
 };
+/* Sum every certificate and perk the profile holds. Multipliers multiply,
+   everything else adds — so two things that slow burnout compound rather than
+   one silently overwriting the other. */
+function metaFx(key){
+  const mult = key === 'meeting' || key === 'burnout';
+  let v = mult ? 1 : 0;
+  for (const c of (meta.certs || [])){
+    const f = CERTS[c] && CERTS[c].fx && CERTS[c].fx[key];
+    if (f === undefined) continue;
+    v = mult ? v * f : v + f;
+  }
+  for (const p in PERKS){
+    if (!metaHasPerk(p)) continue;
+    const f = PERKS[p].fx[key];
+    if (f === undefined) continue;
+    v = mult ? v * f : v + f;
+  }
+  return v;
+}
 
 /* --------------------------------- people --------------------------------- */
 /* sched entries are [minutes-since-9:00, anchor]. Anchors: n1..n9 from map
@@ -4383,7 +4431,7 @@ function runInit(seed){
           queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[], pendingScenes:[], seen:{},
           scores:[], breaches:0, resolved:0, aces:0, daysAtTop:0, satOn:{}, promoted:false,
           burned:[], earned:0, stakesDone:0, rungSince:0, warned:{} };
-  for (const p in PERKS) if (metaHasPerk(p)) run.rep += PERKS[p].fx.rep || 0;
+  run.rep += metaFx('rep');
 }
 function newRun(seed){
   runInit(seed);
@@ -4526,7 +4574,7 @@ function rollDay(){
      calendar, and is the best part of anyone's week. The opener is never
      cancelled; the standup is load-bearing satire. */
   {
-    const budget = ROLES[run.rung].queue.meetingMin;
+    const budget = ROLES[run.rung].queue.meetingMin * metaFx('meeting');
     if (typeof budget === 'number'){
       const kept = []; let spent = 0;
       for (const e of events){
@@ -5532,7 +5580,7 @@ function endDay(){
      Breaches beyond that tolerance dilute the average, so WHICH tickets you
      let burn is the decision the day is really asking about. */
   const arrived = run.resolved + run.breaches;
-  const tolerance = Math.max(2, Math.round(arrived * BREACH_TOLERANCE));
+  const tolerance = Math.max(2, Math.round(arrived * BREACH_TOLERANCE) + metaFx('tolerance'));
   /* Forgiveness goes to the CHEAPEST casualties, lowest priority first. You
      are allowed to drop tickets — you are not allowed to choose badly which. */
   const burned = run.burned.slice().sort((a,b) => a - b);
@@ -5582,8 +5630,9 @@ function endDay(){
   const eod = run.stress;
   /* burnout = the bad evenings, plus plain career entropy: even a perfect run
      ends eventually — promotion outraces it or it wins. That's the roguelite. */
-  run.burnout = clamp(run.burnout + BURN.entropy + Math.max(0, eod - BURN.thresh) * BURN.rate
-                      + Math.max(0, run.coffee - BURN.freeCups) * BURN.sleepDebt, 0, 100);
+  run.burnout = clamp(run.burnout + (BURN.entropy + Math.max(0, eod - BURN.thresh) * BURN.rate
+                      + Math.max(0, run.coffee - BURN.freeCups) * BURN.sleepDebt)
+                      * metaFx('burnout'), 0, 100);
   /* the weekend, technically — every fifth day the body claws a little back */
   const weekend = run.day % 5 === 0;
   /* Burnout used to be a bar filling on a schedule — it did nothing at all
@@ -6272,8 +6321,7 @@ function abandonScore(g){
 }
 function openGame(id, diff, onDone){
   G.state = 'modal'; G.modal = { kind:'game' };
-  const cert = meta.certs.includes('aplus');
-  let d = diff + (cert ? -1 : 0);
+  let d = diff + metaFx('gameDiff');
   if (run && run.coffee >= 3) d += 1;          // the jitters: cup four was a choice
   /* A meter that ten systems write to and nothing ever reads is decoration.
      Stress is what the hands-on work is supposed to cost you, so it costs you:
@@ -6288,7 +6336,7 @@ function openGame(id, diff, onDone){
   document.body.classList.add('gameopen');
   /* on the easiest games there is no difficulty left to remove, so the cert
      pays out as one forgiven slip instead of doing nothing at all */
-  MG.forgive = cert ? 1 : 0;
+  MG.forgive = metaFx('gameDiff') < 0 ? 1 : 0;
   MG.gid = id; MG.onDone = onDone;
   /* Held open on first sight, one keypress away forever after. The clock is
      paused behind it either way: reading the rules is not the shift. */
@@ -8165,20 +8213,42 @@ function actSetup(){
   if (posEl)  posEl.textContent  = JOB_POSTING[at].pos;
   if (perkEl) perkEl.textContent = JOB_POSTING[at].perk +
     (at > 0 ? ' You have done this before, which they know, and which is why the number is what it is.' : '');
-  /* one-time cert shop row */
-  const old = document.getElementById('certrow');
-  if (old) old.remove();
-  if (!meta.certs.includes('aplus') && meta.rep >= CERTS.aplus.cost.rep){
+  /* THE STUDY LIST. This was one hardcoded row for one certificate, so the
+     screen could not show a second one even after the table had four. It is
+     built from CERTS now: everything you do not hold, cheapest first, with the
+     ones you cannot afford yet greyed rather than hidden — a locked row you can
+     see is a reason to come back, and an invisible one is not a feature. */
+  for (const el of [...document.querySelectorAll('.certrow')]) el.remove();
+  const setup = document.getElementById('s-setup');
+  const owned = meta.certs || [];
+  const shelf = Object.keys(CERTS)
+    .filter(k => !owned.includes(k))
+    .sort((a,b) => CERTS[a].cost.rep - CERTS[b].cost.rep);
+  for (const k of shelf){
+    const C = CERTS[k], can = meta.rep >= C.cost.rep;
     const row = document.createElement('div');
-    row.id = 'certrow'; row.className = 'row';
-    const b = mkBtn(row, 'STUDY: ' + CERTS.aplus.name + ' (-' + CERTS.aplus.cost.rep + ' REP)', () => {
-      meta.certs.push('aplus'); meta.rep -= CERTS.aplus.cost.rep;
-      saveGame(); sfx('promo'); row.remove();
+    row.className = 'row certrow';
+    const b = mkBtn(row, (can ? 'STUDY: ' : 'LOCKED: ') + C.name +
+                    ' (' + C.cost.rep + ' REP)', () => {
+      if (meta.rep < C.cost.rep) return;
+      meta.certs.push(k); meta.rep -= C.cost.rep;
+      saveGame(); sfx('promo');
       toast('CERTIFIED. THE FRAME COSTS EXTRA.', 'ok', 3000);
+      actSetup();
     }, true);
     b.style.fontSize = '8px';
-    document.getElementById('s-setup').insertBefore(row, document.getElementById('s-setup').lastElementChild);
+    if (!can){ b.disabled = true; b.style.opacity = '.45'; }
+    b.title = C.desc + ' — ' + C.note;
+    setup.insertBefore(row, setup.lastElementChild);
   }
+  /* what you are carrying, so the screen is a record and not just a shop */
+  const held = document.createElement('p');
+  held.className = 'hint certrow'; held.style.margin = '8px 0 0';
+  held.textContent = owned.length
+    ? 'You hold: ' + owned.map(k => CERTS[k] ? CERTS[k].name : k).join(' · ') +
+      '. Reputation banked: ' + meta.rep + '.'
+    : 'No certifications. Reputation banked: ' + meta.rep + '.';
+  setup.insertBefore(held, setup.lastElementChild);
   show('s-setup');
 }
 function act(a){
@@ -10015,6 +10085,46 @@ function selfTest(runSim){
          seenPos.size >= ROLES.length - 1 && !mismatch,
          (mismatch || seenPos.size + ' distinct postings across ' + ROLES.length + ' carries'));
       show(null); G.state = 'title';
+    }
+    /* A CERTIFICATE THAT DOES NOTHING IS A PRICE TAG. Reputation used to buy
+       exactly one exam and then nothing at all forever, and the plumbing was
+       hardcoded to that one id in two places — so a second entry in the table
+       would have been bought, banked, displayed, and inert. Every fx a cert
+       declares has to be a key metaFx() can actually read, every cert has to
+       change what metaFx returns, and the screen has to offer all of them. */
+    {
+      const savedCerts = (meta.certs || []).slice(), savedRep = meta.rep;
+      const KNOWN = ['gameDiff','rep','meeting','tolerance','burnout'];
+      const unread = [], inert = [];
+      for (const k in CERTS){
+        for (const f in CERTS[k].fx) if (!KNOWN.includes(f)) unread.push(k + '.' + f);
+        meta.certs = []; const before = KNOWN.map(f => metaFx(f)).join(',');
+        meta.certs = [k];  const after  = KNOWN.map(f => metaFx(f)).join(',');
+        if (before === after) inert.push(k);
+      }
+      meta.certs = savedCerts;
+      ok('every certificate declares an effect the game reads',
+         !unread.length, unread.join(' '));
+      ok('and holding it actually changes something', !inert.length, inert.join(' '));
+      /* the study list is built from the table, not from one hardcoded row */
+      meta.certs = []; meta.rep = 99;
+      actSetup();
+      const rows = document.querySelectorAll('.certrow button').length;
+      meta.certs = savedCerts; meta.rep = savedRep; actSetup();
+      show(null); G.state = 'title';
+      ok('the study list offers every certificate you do not hold',
+         rows >= Object.keys(CERTS).length, rows + ' rows for ' + Object.keys(CERTS).length + ' certs');
+      /* and two things that slow burnout must compound, not overwrite */
+      const savedRuns = meta.runsPlayed;
+      meta.certs = ['cissp']; meta.runsPlayed = 99;
+      const both = metaFx('burnout');
+      meta.certs = []; const perkOnly = metaFx('burnout');
+      meta.certs = ['cissp']; meta.runsPlayed = 0; const certOnly = metaFx('burnout');
+      meta.certs = savedCerts; meta.runsPlayed = savedRuns; meta.rep = savedRep;
+      ok('two things that slow burnout compound',
+         both < certOnly && both < perkOnly,
+         'both ' + both.toFixed(3) + ' vs cert ' + certOnly.toFixed(3) +
+         ' vs perk ' + perkOnly.toFixed(3));
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could

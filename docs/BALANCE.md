@@ -596,6 +596,37 @@ SLA on a rung rather than fail if it were wrong:
 The first one earned its place immediately: `DESK_ARCH` was written at [34,18],
 which is a server rack.
 
+## Reputation bought one exam, and then nothing, forever
+
+Reputation accumulates across every career you have ever had. There was a single
+certificate costing three of it, and after that banked reputation did nothing at
+all except set the rung you are re-hired at. For a roguelite, the meta layer is
+the game; this one had one row in it. The plumbing was hardcoded to that one id
+in two places, so a second entry in the table would have been bought, banked,
+displayed, and completely inert.
+
+Four certificates now, read generically through `metaFx()`: A+ makes the boards
+a step easier, ITIL forgives one more casualty a day, PRINCE2 takes a fifth off
+the meeting budget, CISSP slows burnout by a fifth. Three perks arrive on their
+own as the careers add up, the last of them slowing burnout a further tenth.
+
+**The bots hold no certificates**, so every number in this file is measured on
+the bare game and certificates only ever make it easier from a known floor. That
+is the only honest way round, and it is why the ladder table did not move when
+this landed. What did move is `meta.js`, which plays whole careers and therefore
+does earn the perks: **12 of 24 players reach retirement at 13.3 careers**,
+against 11 at 14.3.
+
+Four invariants, because "a certificate that does nothing" is a price tag:
+
+    every certificate declares an effect the game reads
+    and holding it actually changes something
+    the study list offers every certificate you do not hold
+    two things that slow burnout compound
+
+The last one is the one that would have gone wrong silently: two multipliers
+where the second overwrites the first look identical until somebody holds both.
+
 ## The ratchets
 
 | name | value | meaning | direction |
