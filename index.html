@@ -5349,7 +5349,13 @@ function objectiveText(){
        feedback saying why. Driven through real key events, that is exactly
        what happened. TAB works from anywhere and from any facing, so it is
        the one an instruction is allowed to name. */
-    return atTerminal() ? 'THIS IS YOUR DESK — PRESS TAB TO OPEN THE QUEUE'
+    /* And do not send them to an empty queue. taughtQueue is set the moment
+       the first ticket lands, so for the whole of this branch the queue has
+       nothing in it — "PRESS TAB TO OPEN THE QUEUE" was an instruction whose
+       reward is "Queue zero", for the fifteen minutes before 9:20. Name the
+       control, say there is nothing in it, and point at the thing there
+       actually is to do, which is the floor. */
+    return atTerminal() ? 'THIS IS YOUR DESK — TAB IS THE QUEUE. NOTHING IN IT YET.'
                         : 'FIND YOUR DESK — FOLLOW THE AMBER ARROW';
   }
   if (run.queue.length)
@@ -10985,6 +10991,19 @@ function selfTest(runSim){
         const promised = /AMBER ARROW/.test(objectiveText());
         if (promised !== !!objectiveTarget())
           bad.push('line and arrow disagree at ' + x + ',' + y);
+      }
+      /* AND IT NEVER SENDS YOU TO AN EMPTY QUEUE. The instruction line is the
+         one thing in the game that is always on screen telling the player what
+         to do, so it does not get to name an action whose whole result is
+         "Queue zero. Do not say it out loud." */
+      run.queue.length = 0;
+      for (const [x, y] of [[T[0], T[1]], [T[0]-6, T[1]]]){
+        at(x, y);
+        for (const taught of [false, true]){
+          run.taughtQueue = taught;
+          if (/OPEN THE QUEUE/.test(objectiveText()))
+            bad.push('sent to an empty queue at ' + x + ',' + y + (taught ? ' (taught)' : ''));
+        }
       }
       run = keepRun; G.state = keepState;
       loadMap('office1'); spawnPeople();
