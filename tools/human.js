@@ -82,7 +82,13 @@ async function open(o){
      rather than thrown. */
   const crashes = [];
   page.on('pageerror', e => crashes.push('pageerror: ' + e.message));
-  page.on('console', m => { if (m.type() === 'error') crashes.push('console: ' + m.text()); });
+  /* A file:// page always fails to fetch SOMETHING in a sandbox — the manifest,
+     the service worker — and it arrives as a console error indistinguishable
+     from a real fault at a glance. Every run has reported "crashes 1" for
+     months because of it, which is exactly how a real crash gets ignored. */
+  const NETNOISE = /net::ERR_|Failed to load resource|ServiceWorker|manifest/i;
+  page.on('console', m => { if (m.type() === 'error' && !NETNOISE.test(m.text()))
+    crashes.push('console: ' + m.text()); });
 
   const target = o.url || ('file://' + path.resolve(o.file || 'index.html'));
   await page.goto(target, { waitUntil:'load' });
@@ -208,6 +214,7 @@ if (require.main === module){
     console.log('text  ', JSON.stringify((await s.read()).slice(0, 12)));
     console.log('click ', JSON.stringify((await s.clickables()).slice(0, 8)));
     console.log('crashes', s.crashes.length);
+    for (const c of s.crashes) console.log('   ' + c.slice(0,160));
     await s.close();
     console.log('HUMAN DRIVER OK');
   })();
