@@ -7651,7 +7651,7 @@ function reviewScreen(dayPerf, eod, promo, ending){
         : '') +
       '<br><span class="hint" style="margin:0">P1 is worth ' + STAKES[4] + ', P2 ' + STAKES[3] +
       ', P3 ' + STAKES[2] + ', P4 ' + STAKES[1] +
-      '. Closing one P1 beats closing three P4s. That is the whole job.</span></dd>' : '') +
+      '. Closing one P1 beats closing ' + numWord(p4sBeaten()) + ' P4s. That is the whole job.</span></dd>' : '') +
     '<dt>Tickets resolved</dt><dd>' + run.resolved + ' (' + run.aces + ' aced)</dd>' +
     '<dt>SLA breaches</dt><dd style="color:' + (run.breaches ? 'var(--alert)' : 'var(--ok)') + '">' +
       run.breaches + (ls && run.breaches
@@ -15184,6 +15184,32 @@ function selfTest(runSim){
       ok('docs: the stated rule is generated from STAKES',
          stakesRule().indexOf(String(STAKES[4])) >= 0 &&
          stakesRule().indexOf(String(STAKES[1])) >= 0);
+      /* AND IT IS ARITHMETICALLY TRUE. It said "one P1 outweighs 7 P4s" — the
+         P1 is worth seven and seven P4s are worth seven, so the trade the
+         handbook told you to make came out exactly level. Generated is not the
+         same as correct: check the claim against the sum it is a claim about,
+         and check both screens that state it agree on the number. */
+      {
+        const n = p4sBeaten();
+        ok('docs: the P1-versus-P4s trade the game states is one a player wins',
+           n * STAKES[1] < STAKES[4] && (n + 1) * STAKES[1] >= STAKES[4],
+           n + ' P4s = ' + (n * STAKES[1]) + ' against a P1 at ' + STAKES[4] +
+           '; ' + (n+1) + ' would be ' + ((n+1) * STAKES[1]));
+        /* both surfaces, from the same function, saying the same number */
+        const saidHb = (stakesRule().match(/outweighs (\d+) P4s/) || [])[1];
+        const savedRun = run, savedState = G.state;
+        rngInit('P4-TEST'); runInit('P4-TEST'); rollDay();
+        run.clock = DAY_MIN; run.queue = []; run.resolved = 3; run.stakesDone = 9;
+        run.earned = 6; run.scores = [.7,.7,.7]; run.breaches = 0; run.burned = [];
+        endDay();
+        const html = document.getElementById('r-stats').innerHTML;
+        if (run) run.pendingEnd = null;
+        run = savedRun; G.state = savedState;
+        ok('docs: the evening and the handbook state the same trade',
+           +saidHb === n && html.indexOf('beats closing ' + numWord(n) + ' P4s') >= 0,
+           'handbook ' + saidHb + ', evening ' +
+           ((html.match(/beats closing (\w+) P4s/) || [])[1] || 'silent') + ', truth ' + n);
+      }
       /* THE HANDBOOK DOES NOT GET TO REMEMBER. As prose it claimed a vCIO
          spends "a third of the week" in meetings — meetingMin is 88 against a
          480-minute day, which is a fifth — and put the executive suite
@@ -15793,10 +15819,18 @@ function drawTestReport(){
    TELLS you can never drift. Playtesters read the review every night for a
    week and could not work out what performance measured, because this
    sentence existed only as a comment in the source. */
+/* The largest number of P4s one P1 actually BEATS. It was
+   ceil(STAKES[4]/STAKES[1]), which is seven, and seven P4s are seven points
+   against a P1's seven — a tie, not a win. A player who read "one P1 outweighs
+   7 P4s" and dropped the P1 to clear seven P4s came out exactly level and had
+   been told they would come out ahead. One under, which is also right when the
+   stakes stop dividing evenly: at P1=7, P4=2 it is three, because four P4s
+   would be eight. */
+function p4sBeaten(){ return Math.max(1, Math.ceil(STAKES[4] / STAKES[1]) - 1); }
 function stakesRule(){
   return 'A P1 is worth ' + STAKES[4] + ' points, a P2 ' + STAKES[3] + ', a P3 ' + STAKES[2] +
          ', a P4 ' + STAKES[1] + '. Your day is scored on the share of those points you ' +
-         'protect — so one P1 outweighs ' + Math.ceil(STAKES[4]/STAKES[1]) + ' P4s.';
+         'protect — so one P1 outweighs ' + p4sBeaten() + ' P4s.';
 }
 function writeHandbook(){
   const q = document.getElementById('tix-rule');
