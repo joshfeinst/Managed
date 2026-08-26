@@ -1128,16 +1128,16 @@ const MAPS = { office1: {
     '#........#......................#..tttttt..#',
     '#p.......#....qc...qc.......Tc..#..7tttt...#',
     '#........D......................D..........#',
-    '####D#####################D##########D####o#',
+    '#lllDlllllllllllllllllllllDllllllllllDllllo#',
     '#.........................................e#',
     '#............................9............e#',
     '#########D######D########D#########D########',
-    '#kkKkVk......#......#........#.............#',
-    '#,,,,,,......#..HH..#........#.............#',
-    '#,,,,,,..U...#..HH..#....R...#..SSSSSSSS...#',
-    '#C,,,,,..U...#......#........#.............#',
-    '#,,,,,5......#..FF..#........#..SSSSSSSS...#',
-    '#,,A,,,......#......#........#.............#',
+    '#kkKkVk......#......#........#sssssssssssss#',
+    '#,,,,,,......#..HH..#........#sssssssssssss#',
+    '#,,,,,,..U...#..HH..#....R...#ssSSSSSSSSsss#',
+    '#C,,,,,..U...#......#........#sssssssssssss#',
+    '#,,,,,5......#..FF..#........#ssSSSSSSSSsss#',
+    '#,,A,,,......#......#........#sssssssssssss#',
     '#,,,,,,......#############WWWWWWW#D#########',
     '#,,,,x,......#.dq..dq..dq....FF.....dq..dq.#',
     '#,,,,,,......D.............................#',
@@ -5109,7 +5109,11 @@ const PW_RULES = PW_BAD.map(b => b.rule);
    renderer. Fixed-timestep sim lives in S5; this is space, not time.
    ========================================================================== */
 const LEGEND = {
-  '#':{w:4}, 'w':{w:6}, 'W':{w:20}, 'o':{w:28}, 'p':{w:29},
+  /* The atlas has baked a wainscoted wall since the first build and no glyph
+     could place it, so it had never been drawn. It goes on the corridor's
+     north face, which is the one wall on floor two that everybody walks past
+     and nobody works at — exactly where an office spends its money. */
+  '#':{w:4}, 'l':{w:5}, 'w':{w:6}, 'W':{w:20}, 'o':{w:28}, 'p':{w:29},
   '.':{f:1}, ',':{f:2}, 's':{f:3}, 'm':{f:27},
   'G':{o:7}, 'E':{o:18, act:'elevator', anchor:'ELEV'},
   /* THE SECOND SHAFT. One lift, at the west end of a forty-four-tile floor,
@@ -12186,6 +12190,39 @@ function selfTest(runSim){
         }
         loadMap('office1'); spawnPeople();
         ok('level: no room in the building is empty', !empty.length, empty.join(' · '));
+
+        /* ART THE GAME BAKES AND NEVER DRAWS. The same disease as a sound
+           nobody plays, and just as invisible: the atlas has baked a
+           wainscoted wall and a server-room floor since the first build, and
+           neither had ever appeared on a map — the wall because no glyph could
+           place it, the floor because the legend had a glyph for it and no map
+           used it, so the server room was carpeted like the helpdesk pit.
+           Which slots are painted is read off the atlas itself rather than
+           from a list somebody has to remember to update. */
+        {
+          const [probe, pg] = cv(TILE, TILE);
+          const painted = [];
+          for (let i = 0; i < ATLAS_N; i++){
+            pg.clearRect(0, 0, TILE, TILE);
+            pg.drawImage(atlas, i * TILE, 0, TILE, TILE, 0, 0, TILE, TILE);
+            const d = pg.getImageData(0, 0, TILE, TILE).data;
+            for (let k = 3; k < d.length; k += 4) if (d[k] > 0){ painted.push(i); break; }
+          }
+          const drawn = new Set();
+          for (const fid in MAPS){
+            loadMap(fid);
+            for (let i = 0; i < W2.W * W2.H; i++){
+              if (W2.base[i] !== 255) drawn.add(W2.base[i]);
+              if (W2.obj[i]) drawn.add(W2.obj[i]);
+            }
+          }
+          loadMap('office1'); spawnPeople();
+          /* 0 is the void the renderer falls back to; it is baked on purpose
+             so a bad index shows as something rather than as nothing */
+          const idle = painted.filter(i => i !== 0 && !drawn.has(i));
+          ok('art: every tile the atlas bakes is a tile some floor uses',
+             !idle.length, idle.join(' ') + (idle.length ? ' — place it or stop baking it' : ''));
+        }
       }
 
       /* AND WHEN SOMEBODY SAYS "MY DESK", THE ARROW GOES TO THEIR DESK. The
