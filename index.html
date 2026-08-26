@@ -6467,8 +6467,44 @@ const REVIEW_LINES = {
     'You will open your laptop at home tonight. You know you will. You will not fix anything.'
   ]
 };
+/* THE EVENING HAS TO MEAN THE SAME THING AT EVERY DESK. These bands were
+   absolute — .80 great, .60 good, .40 poor — which was fine while every rung
+   scored in the same range and became a lie the moment the rungs were tuned
+   individually. After the 2026-08-26 pass a FLAWLESS day at Solutions
+   Architect scored .575 and read "Derek looked at your queue, then at you,
+   then just... exhaled", while a sloppy day on the Project Team scored .629
+   and got told it closed the ones that mattered. The number the player is
+   actually judged on is the bar in front of them, so that is what the evening
+   is measured against now, and the same words mean the same thing all the way
+   up the ladder. */
+function reviewBar(rung){
+  const G = ROLES[rung].gates;
+  /* the top rung has nothing to be promoted to, so its bar is reconstructed
+     from the floor by the ratio the whole ladder uses */
+  return G.nextAt ? G.nextAt.perf : clamp(G.firedBelow / 0.45, 0, 1);
+}
+/* ...and the yardstick is the SPAN, not the bar itself. Banding straight off
+   the bar was the first attempt and it was wrong in the other direction: the
+   bar is a PROMOTION threshold, cleared by the best three-day window of a
+   career, so an average flawless day sits below it and nine rungs out of ten
+   told a player who had done everything right that the day got away from them
+   around eleven.
+
+   What the evening is actually reporting is where today sat between the two
+   numbers that decide your career — the floor they fire you under and the bar
+   they promote you over. Measured across the ladder, a flawless day lands at
+   80-90% of that span and a sloppy one at 29-54%, which is what these
+   fractions are cut to. */
+const REVIEW_BANDS = { great: 1.00, good: 0.70, poor: 0.40 };
+function reviewBand(p, rung){
+  const bar = reviewBar(rung), floor = ROLES[rung].gates.firedBelow;
+  const at = (p - floor) / Math.max(1e-6, bar - floor);
+  return at >= REVIEW_BANDS.great ? 'great'
+       : at >= REVIEW_BANDS.good  ? 'good'
+       : at >= REVIEW_BANDS.poor  ? 'poor' : 'bad';
+}
 function reviewLine(p){
-  const band = p >= .8 ? 'great' : p >= .6 ? 'good' : p >= .4 ? 'poor' : 'bad';
+  const band = reviewBand(p, run.rung);
   /* the very top and the very bottom read differently once you are senior */
   if (band === 'bad' && run.rung >= 7)
     return 'Nobody will say anything about today. That is not the same as nobody noticing, and you know which one it is.';
@@ -10561,14 +10597,14 @@ function selfTest(runSim){
       const savedRunR = run;
       rngInit('RVW'); runInit('RVW');
       const seen = new Set(), crossed = [];
-      const bandOf = p => p >= .8 ? 'great' : p >= .6 ? 'good' : p >= .4 ? 'poor' : 'bad';
+      const bandOf = (p, rung) => reviewBand(p, rung);
       for (let rung = 0; rung < ROLES.length; rung++)
         for (let d = 1; d <= 12; d++)
           for (const p of [.95, .85, .7, .62, .5, .45, .3, .1]){
             run.rung = rung; run.day = d;
             const line = reviewLine(p);
             seen.add(line);
-            const b = bandOf(p);
+            const b = bandOf(p, rung);
             for (const other of ['great','good','poor','bad'])
               if (other !== b && REVIEW_LINES[other].indexOf(line) >= 0)
                 crossed.push(b + '->' + other);
@@ -10577,6 +10613,28 @@ function selfTest(runSim){
          seen.size >= 16, seen.size + ' distinct evenings');
       ok('and a good day never reads out a bad one',
          !crossed.length, [...new Set(crossed)].join(' '));
+      /* AND THE SAME WORDS MEAN THE SAME THING AT EVERY DESK. The bands were
+         absolute while the rungs were tuned individually, so a flawless day at
+         Solutions Architect (.575) read out the line about Derek exhaling at
+         your queue and a sloppy day on the Project Team (.629) was told it had
+         closed the ones that mattered. What is pinned is the relationship, not
+         the numbers: clearing your own bar reads well, and being at the floor
+         they fire you under reads badly, whatever rung you are standing on. */
+      {
+        const wrong = [];
+        for (let rung = 0; rung < ROLES.length; rung++){
+          const bar = reviewBar(rung), floor = ROLES[rung].gates.firedBelow;
+          const span = bar - floor, at = f => reviewBand(floor + span * f, rung);
+          if (at(1.00) !== 'great') wrong.push(ROLES[rung].id + ':bar=' + at(1.00));
+          if (at(0.85) !== 'good')  wrong.push(ROLES[rung].id + ':flawless=' + at(0.85));
+          if (at(0.45) !== 'poor')  wrong.push(ROLES[rung].id + ':sloppy=' + at(0.45));
+          if (at(0.00) !== 'bad')   wrong.push(ROLES[rung].id + ':floor=' + at(0.00));
+          if (reviewBand(floor * .5, rung) !== 'bad')
+            wrong.push(ROLES[rung].id + ':under');
+        }
+        ok('a flawless day reads well at every rung and a sloppy one does not',
+           !wrong.length, wrong.join(' '));
+      }
       run = savedRunR;
     }
     /* THE DESK MOVES, AND IT HAS TO BE A REAL PLACE. Every role shipped with
