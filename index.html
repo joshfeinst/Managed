@@ -1025,8 +1025,8 @@ const ANCHOR_NAMES = {
   TERMINAL:'THE HELPDESK TERMINAL', COFFEE:'THE COFFEE MACHINE', PRINTER:'THE PRINTER',
   DESK_PIT:'YOUR DESK — THE FAR END OF THE PIT', DESK_PIT2:'YOUR DESK — NEARER THE WINDOW',
   DESK_T3:'YOUR DESK — BESIDE THE TERMINAL', DESK_PROJ:'YOUR DESK — THE PROJECT ROOM',
-  DESK_PROC:'YOUR DESK — THE PROJECT ROOM', DESK_CLIENT:'YOUR DESK — THE CLIENT SIDE',
-  DESK_ARCH:'YOUR DESK — THE CLIENT SIDE', DESK_EXEC:'YOUR DESK — THE QUIET SUITE',
+  DESK_PROC:'YOUR DESK — THE PROJECT ROOM', DESK_CLIENT:'YOUR DESK — THE CLIENT SUITE',
+  DESK_ARCH:'YOUR DESK — THE DRAWING BOARD', DESK_EXEC:'YOUR DESK — THE QUIET SUITE',
   DESK_CORNER:'YOUR DESK — THE CORNER',
   VEND:'THE VENDING MACHINE', ARCADE:'THE ARCADE CABINET', COOLER:'THE WATER COOLER',
   SHELF:'THE SUPPLY SHELF', ELEV:'THE LIFT', ELEV_E:'THE EAST LIFT', SERVERS:'THE SERVER ROOM',
@@ -1034,7 +1034,7 @@ const ANCHOR_NAMES = {
   /* Two floors, two receptions, and the queue row only ever shows a name —
      so the one upstairs says which floor it is on. */
   LOBBY:'THE SECOND-FLOOR LOBBY', HALL:'THE HALLWAY', HALLE:'THE EAST HALLWAY',
-  SOUTH:'THE SOUTH WING', PITMID:'THE HELPDESK PIT',
+  SOUTH:'THE CLIENT SUITE', PITMID:'THE HELPDESK PIT',
   RECEPTION:'THE FRONT DESK', POST:'THE POST ROOM', MEET_A:'MEETING ROOM ONE',
   MEET_B:'MEETING ROOM TWO', FRONT:'THE FRONT DOORS',
   STORES:'THE STORE ROOM', CANTEEN:'THE CANTEEN', ACCOUNTS:'THE ACCOUNTS OFFICE',
@@ -1068,17 +1068,17 @@ const MAPS = { office1: {
     '#C,,,,,..U...#......#........#.............#',
     '#,,,,,5......#..FF..#........#..SSSSSSSS...#',
     '#,,A,,,......#......#........#.............#',
-    '#,,,,,,......#####################D#########',
-    '#,,,,x,......#.............................#',
+    '#,,,,,,......#############WWWWWWW#D#########',
+    '#,,,,x,......#.dq..dq..dq....FF.....dq..dq.#',
     '#,,,,,,......D.............................#',
-    '#,,,,,,......#.............................#',
-    '############################################'
+    '#,,,,,,......#...UU..f.....x...UU.....f....#',
+    '######################p#############p#######'
   ],
   /* Named anchors the schedules and goto steps use; auto-anchors are also
      derived from interactables (COFFEE, PRINTER, TERMINAL, ELEV, ARCADE,
      COOLER, VEND, RACKS) as the open tile south of the prop. */
   anchors:{ HALL:[21,11], HALLE:[38,11], CONF:[36,6], LOBBY:[4,7],
-            KITCHEN:[9,15], KITCHEN2:[10,17], SERVERS:[35,17], SOUTH:[26,21], PITMID:[20,5],
+            KITCHEN:[9,15], KITCHEN2:[10,17], SERVERS:[35,17], SOUTH:[26,22], PITMID:[20,5],
             /* YOUR DESK, AND IT MOVES. The plan always said the desk should
                relocate as you climb the same map, and every role shipped with
                deskAnchor:'TERMINAL' — one chair for nine promotions. These are
@@ -1091,7 +1091,13 @@ const MAPS = { office1: {
                also the mechanic. */
             DESK_PIT:[15,7], DESK_PIT2:[20,7], DESK_T3:[28,7],
             DESK_PROJ:[24,15], DESK_PROC:[24,18],
-            DESK_CLIENT:[34,15], DESK_ARCH:[38,17],
+            /* OUT OF THE SERVER ROOM. Both of these were parked between two
+               rows of racks — the Relationship Manager had twelve of them
+               within three tiles and the Solutions Architect ten — while the
+               map called both desks THE CLIENT SIDE. There was no client side;
+               the south strip was eighty-seven tiles of empty corridor and
+               these two desks had nowhere else to go. It is a room now. */
+            DESK_CLIENT:[20,22], DESK_ARCH:[37,22],
             DESK_EXEC:[38,3], DESK_CORNER:[38,2] }
 },
 /* ------------------------- THE GROUND FLOOR -----------------------------
@@ -2388,6 +2394,13 @@ const DIALOGUE = {
     opts:[ {t:'Get the notebook into the knowledge base with his name on it', fx:{time:16, rep:5, bonus:1, stress:2}},
            {t:'Raise a standing ticket so the work exists on paper', fx:{time:9, rep:3, bonus:1, stress:2}},
            {t:'Tell him to stop doing work nobody has asked for', fx:{time:3, rep:-4, stress:5}} ] },
+
+  't.wb.a':   { who:'sys', t:['The whiteboard on the client suite wall has DO NOT ERASE written across the top corner in a different pen.',
+    'Underneath it is a diagram of something with eleven boxes, four of which are crossed out, and an arrow going off the edge of the board to a word that is now half a handprint.'] },
+  't.wb.b':   { who:'sys', t:['Nobody in the building will admit to having drawn it, and nobody will let anybody clean it.'],
+    opts:[ {t:'Photograph it, redraw it properly, and put both in the knowledge base', fx:{time:18, rep:5, bonus:1, stress:2}},
+           {t:'Photograph it and leave the board exactly as it is', fx:{time:7, rep:2, bonus:1, stress:2}},
+           {t:'Clean it. It has been a year.', fx:{time:4, rep:-4, stress:9}} ] },
 
   't.mac.a':  { who:'linda', t:['Mackenzie has told {client} we can have it done by the end of the month. Nobody has told us what "it" is.',
     'Go and look at her desk. It is the one at the far end that has quietly become part of the conference table.'] },
@@ -3993,6 +4006,9 @@ const TICKETS = {
   'callum-has-been-doing-it-anyway': { tiers:[0,4], weight:3, sla:85, slaMult:2.8, pri:1, stress:3,
     title:'Callum has been rebuilding the spare laptops for a week and nobody asked him to',
     steps:[{say:'t.app.a'},{goto:'n9'},{choice:'t.app.b'}] },
+  'do-not-erase': { tiers:[4,8], weight:3, sla:75, slaMult:2.5, pri:1, stress:4,
+    title:'The whiteboard in the client suite says DO NOT ERASE and has said so since March',
+    steps:[{say:'t.wb.a'},{goto:'SOUTH'},{choice:'t.wb.b'}] },
   'what-mackenzie-sold-them': { tiers:[3,7], weight:3, sla:60, slaMult:1.9, pri:3, stress:7,
     title:'{Client} have been promised something and the only person who knows what is not at her desk',
     steps:[{say:'t.mac.a'},{goto:'n7'},{choice:'t.mac.b'}] },
@@ -11949,6 +11965,100 @@ function selfTest(runSim){
           if (!any) noWork.push(ROLES[ri].id);
         }
         ok('level: every rung has work that takes it downstairs', !noWork.length, noWork.join(' '));
+
+      /* NOBODY'S DESK IS IN THE SERVER ROOM. Two of them were: the
+         Relationship Manager sat with twelve racks within three tiles and the
+         Solutions Architect with ten, and the map called both desks THE CLIENT
+         SIDE. There was no client side — the south strip was eighty-seven
+         tiles of empty corridor, and these two desks had nowhere else to go,
+         so they went in with the servers and the name went on regardless.
+         A room is what its walls contain: flood the one holding SERVERS,
+         without crossing a doorway, and no desk may be inside it. */
+      {
+        loadMap('office1'); spawnPeople();
+        const srv = anchorPos('SERVERS');
+        const room = new Set();
+        if (srv){
+          const isDoor = (x, y) => W2.base[cellIx(x, y)] === 8;
+          let fr = [srv]; room.add(srv[0] + ',' + srv[1]);
+          while (fr.length){
+            const nx = [];
+            for (const [x, y] of fr)
+              for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]){
+                const a = x + dx, c = y + dy, k = a + ',' + c;
+                if (a < 0 || c < 0 || a >= W2.W || c >= W2.H) continue;
+                if (solidAt(a, c) || isDoor(a, c) || room.has(k)) continue;
+                room.add(k); nx.push([a, c]);
+              }
+            fr = nx;
+          }
+        }
+        const inServers = ROLES.filter(R => {
+          const p = anchorPos(R.deskAnchor || 'TERMINAL');
+          return p && room.has(p[0] + ',' + p[1]);
+        }).map(R => R.id + ' (' + ANCHOR_NAMES[R.deskAnchor] + ')');
+        ok('level: nobody has to sit inside the server room',
+           room.size > 0 && !inServers.length,
+           room.size ? inServers.join(' · ') : 'could not find the server room');
+
+        /* AND NO ROOM IN THE BUILDING IS EMPTY. The south strip was eighty-seven
+           walkable tiles with no prop, no anchor anybody used, nobody's desk and
+           nobody's schedule in it — a room the size of the helpdesk pit that the
+           game had no reason to draw. A room has to contain at least one thing:
+           something you can use, somebody who stands there, a desk that is
+           yours at some rung, or somewhere an errand sends you. */
+        const sentTo = new Set();
+        for (const tid in TICKETS)
+          for (const st of TICKETS[tid].steps || []) if (st.goto) sentTo.add(st.goto);
+        const roleDesks = new Set(ROLES.map(R => R.deskAnchor || 'TERMINAL'));
+        const stops = new Set();
+        for (const nid in NPCS) for (const [, a] of NPCS[nid].sched || []) stops.add(a);
+        const empty = [];
+        for (const fid in MAPS){
+          loadMap(fid); spawnPeople();
+          const isDoor = (x, y) => W2.base[cellIx(x, y)] === 8;
+          const seen = new Set();
+          for (let y = 0; y < W2.H; y++) for (let x = 0; x < W2.W; x++){
+            if (solidAt(x, y) || isDoor(x, y) || seen.has(x + ',' + y)) continue;
+            const cells = []; let fr = [[x, y]]; seen.add(x + ',' + y);
+            while (fr.length){
+              const nx = [];
+              for (const c of fr){ cells.push(c);
+                for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]){
+                  const a = c[0]+dx, d = c[1]+dy, k = a + ',' + d;
+                  if (a<0||d<0||a>=W2.W||d>=W2.H||solidAt(a,d)||isDoor(a,d)||seen.has(k)) continue;
+                  seen.add(k); nx.push([a,d]);
+                } }
+              fr = nx;
+            }
+            if (cells.length < 12) continue;          // an alcove is not a room
+            const inRoom = new Set(cells.map(c => c[0] + ',' + c[1]));
+            let reason = null;
+            for (const [cx, cy] of cells){
+              for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]){
+                const a = cx+dx, d = cy+dy;
+                if (a<0||d<0||a>=W2.W||d>=W2.H) continue;
+                const act = W2.act[cellIx(a, d)];
+                if (solidAt(a, d) && act && act !== 'door'){ reason = 'prop ' + act; break; }
+              }
+              if (reason) break;
+            }
+            if (!reason)
+              for (const a in W2.anchors){
+                const q = W2.anchors[a];
+                if (!inRoom.has(q[0] + ',' + q[1])) continue;
+                if (sentTo.has(a)) { reason = 'errand ' + a; break; }
+                if (roleDesks.has(a)) { reason = 'desk ' + a; break; }
+                if (stops.has(a)) { reason = 'somebody stands at ' + a; break; }
+              }
+            if (!reason) empty.push(fid + ' [' +
+              Math.min(...cells.map(c=>c[0])) + ',' + Math.min(...cells.map(c=>c[1])) + '] ' +
+              cells.length + ' tiles');
+          }
+        }
+        loadMap('office1'); spawnPeople();
+        ok('level: no room in the building is empty', !empty.length, empty.join(' · '));
+      }
 
       /* AND WHEN SOMEBODY SAYS "MY DESK", THE ARROW GOES TO THEIR DESK. The
          payroll errand walks you to the accounts office on the ground floor
