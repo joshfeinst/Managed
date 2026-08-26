@@ -82,3 +82,20 @@ budget landed is stale; everything set from it needs redoing.
       triage 7-12, not the 2-vs-24 the old single-seed reading claimed, so the
       boards matter more than the objection assumed. Worth his call on whether
       craft should feed the day score harder.
+
+## The standing job (2026-08-26, after the overnight run)
+
+**Three rungs need content, not another pass at their bars.** project, procure
+and solarch separate good triage from bad by 9, 8 and 11 points — the narrowest
+on the ladder — and on a rung that narrow both columns of `GATE_DEBT` move
+together, so lowering the bar lets bad play through and raising it locks good
+play out. Measured both ways; neither works.
+
+What fixed vCIO when it was in this position was **cheaper tickets** (more
+closures a day, so a day's triage decision is made across more items). What
+fixed the senior rungs generally was **more genuinely droppable work**. Those
+are the two levers that have actually moved this number.
+
+Everything else is in `docs/BALANCE.md`, and the rule that matters most:
+`bars.js` and `meta.js` both get run after any content lands, and when they
+disagree the one that plays whole careers is the one that is right.
