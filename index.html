@@ -1038,8 +1038,12 @@ const ANCHOR_NAMES = {
   RECEPTION:'THE FRONT DESK', POST:'THE POST ROOM', MEET_A:'MEETING ROOM ONE',
   MEET_B:'MEETING ROOM TWO', FRONT:'THE FRONT DOORS',
   STORES:'THE STORE ROOM', CANTEEN:'THE CANTEEN', ACCOUNTS:'THE ACCOUNTS OFFICE',
-  n1:"DEREK'S DESK", n2:"RAJ'S DESK", n3:"KAYLA'S DESK", n4:'THE FOURTH DESK',
-  n6:"BRENDA'S DESK", n7:"MACKENZIE'S DESK", n8:"LINDA'S OFFICE", n9:'THE HALLWAY'
+  /* n5 had no name at all, because nothing had ever sent anybody there. The
+     first ticket that did would have printed the raw anchor: "GO TO n5 —
+     FOLLOW THE ARROW", and a queue row reading "· n5, ~31 min walk". */
+  n1:"DEREK'S DESK", n2:"RAJ'S DESK", n3:"KAYLA'S DESK", n4:"YVONNE'S DESK",
+  n5:"NOOR'S DESK", n6:"BRENDA'S DESK", n7:"MACKENZIE'S DESK",
+  n8:"LINDA'S OFFICE", n9:'THE HALLWAY'
 };
 const MAPS = { office1: {
   name:'PROACTIVE IT PARTNERS — FLOOR 2',
@@ -2364,6 +2368,34 @@ const DIALOGUE = {
     opts:[ {t:'Fix the actual causes and show them what they were', fx:{time:22, rep:4, bonus:1, stress:4}},
            {t:'Clear the obvious things and reboot it', fx:{time:9, bonus:1, stress:2}},
            {t:'Order a new one and let the next person find out', fx:{time:5, rep:-2, stress:3}} ] },
+  't.fin.a':  { who:'yvonne', t:['The bank changed the export last night. Nobody told anybody. It opens as one column, forty thousand rows deep, and every field is inside it separated by a semicolon.',
+    'The invoice run is tonight. I can do it by hand. I have done it by hand. I would rather not do it by hand.'] },
+  't.fin.b':  { who:'sys', t:['It is a delimiter, and it will be a delimiter again next month, and the month after that.'],
+    opts:[ {t:'Fix tonight\'s file and give her something that fixes every one after it', fx:{time:20, rep:5, bonus:1, stress:4}},
+           {t:'Split tonight\'s file for her and get the run out', fx:{time:11, rep:2, bonus:1, stress:3}},
+           {t:'Show her the import wizard and leave her to it', fx:{time:5, rep:-2, stress:5}} ] },
+
+  't.cmp.a':  { who:'noor', t:['The access review is due on Friday. I pulled the list. A third of it is people who left, and four of them still have everything.',
+    'I have asked for a leavers process since 2021. I have the emails. I am not going to send them again, because I have worked out that sending them is what stops anybody doing anything about it.'] },
+  't.cmp.b':  { who:'sys', t:['You can close the review or you can close the reason there is a review.'],
+    opts:[ {t:'Disable the leavers today and write the process while it is fresh', fx:{time:24, rep:5, bonus:1, stress:5}},
+           {t:'Disable the four with everything and sign the review', fx:{time:12, rep:2, bonus:1, stress:4}},
+           {t:'Sign the review. It is a review, not a project.', fx:{time:4, rep:-3, stress:6}} ] },
+
+  't.app.a':  { who:'callum', t:['I have been doing the spare laptops. There was no ticket. There is never a ticket for them, so I did them.',
+    'Eleven so far. I wrote down what I did on each one, in a notebook, because I did not know where else to put it.'] },
+  't.app.b':  { who:'sys', t:['The notebook is better than the asset register and has been for some time.'],
+    opts:[ {t:'Get the notebook into the knowledge base with his name on it', fx:{time:16, rep:5, bonus:1, stress:2}},
+           {t:'Raise a standing ticket so the work exists on paper', fx:{time:9, rep:3, bonus:1, stress:2}},
+           {t:'Tell him to stop doing work nobody has asked for', fx:{time:3, rep:-4, stress:5}} ] },
+
+  't.mac.a':  { who:'linda', t:['Mackenzie has told {client} we can have it done by the end of the month. Nobody has told us what "it" is.',
+    'Go and look at her desk. It is the one at the far end that has quietly become part of the conference table.'] },
+  't.mac.b':  { who:'sys', t:['There is an open notebook on it, a mug that is not hers, and a sticky note on the monitor with a date that is not the date she gave them.'],
+    opts:[ {t:'Wait for her and get the scope out of her while she is standing there', fx:{time:22, rep:5, bonus:1, stress:5}},
+           {t:'Write down what you think she sold and send it to her to correct', fx:{time:13, rep:3, bonus:1, stress:3}},
+           {t:'Build what the sticky note says and hope the two agree', fx:{time:7, rep:-3, stress:8}} ] },
+
   'h.fix.a':  { who:'client', t:['"I had a look at it myself first, to save you the trouble."',
     'They have uninstalled something. They cannot remember which thing. It is definitely worse.'] },
   'h.fix.b':  { who:'sys', t:['The original fault would have taken four minutes.'],
@@ -3946,6 +3978,24 @@ const TICKETS = {
   'already-fixed-it': { tiers:[1,4], weight:3, sla:28, slaMult:1.5, pri:4, stress:9,
     title:'{User} has already fixed it, and now it is worse',
     steps:[{say:'h.fix.a'},{choice:'h.fix.b'}] },
+
+  /* THREE COLLEAGUES NOBODY WAS EVER SENT TO. Yvonne, Noor and Callum have
+     desks, schedules, faces and small talk, and not one ticket in the game
+     walked you to any of them — two of the three had never said a line inside
+     a ticket at all. They were scenery with a pulse. Measured: eleven desks
+     in the building, eight of them destinations, these three not. */
+  'the-bank-file-is-one-column': { tiers:[2,6], weight:3, sla:55, slaMult:1.8, pri:3, stress:6,
+    title:'The bank file opens as one long column and the invoice run is tonight',
+    steps:[{say:'t.fin.a'},{goto:'n4'},{choice:'t.fin.b'}] },
+  'access-review-of-the-departed': { tiers:[4,8], weight:3, sla:70, slaMult:2.2, pri:2, stress:5,
+    title:'The access review is due and a third of the list is people who left',
+    steps:[{say:'t.cmp.a'},{goto:'n5'},{choice:'t.cmp.b'}] },
+  'callum-has-been-doing-it-anyway': { tiers:[0,4], weight:3, sla:85, slaMult:2.8, pri:1, stress:3,
+    title:'Callum has been rebuilding the spare laptops for a week and nobody asked him to',
+    steps:[{say:'t.app.a'},{goto:'n9'},{choice:'t.app.b'}] },
+  'what-mackenzie-sold-them': { tiers:[3,7], weight:3, sla:60, slaMult:1.9, pri:3, stress:7,
+    title:'{Client} have been promised something and the only person who knows what is not at her desk',
+    steps:[{say:'t.mac.a'},{goto:'n7'},{choice:'t.mac.b'}] },
 
   'licence-expired-quietly': { tiers:[2,5], weight:4, sla:30, slaMult:1.5, pri:4, stress:9,
     title:'The licence expired on Saturday and nothing said so until now',
@@ -11926,6 +11976,32 @@ function selfTest(runSim){
         }
         ok('content: a ticket that says "my desk" sends you to that desk',
            !wrongRoom.length, wrongRoom.slice(0,3).join(' · '));
+
+        /* EVERY PLACE THE JOB CAN SEND YOU HAS A NAME. n5 had none — nothing
+           had ever sent anybody to it — so the first ticket that did would
+           have printed the raw anchor at the player: "GO TO n5 — FOLLOW THE
+           ARROW", and a queue row reading "· n5, ~31 min walk". */
+        const nameless = [...sent].filter(a => !ANCHOR_NAMES[a]);
+        ok('content: every place a ticket sends you has a name a player can read',
+           !nameless.length, nameless.join(' '));
+
+        /* AND EVERY DESK IN THE BUILDING IS SOMEWHERE THE JOB SENDS YOU.
+           Yvonne, Noor, Callum and Mackenzie had desks, schedules, faces and
+           small talk, and not one ticket walked you to any of them; two of the
+           four had never spoken a line inside a ticket at all. A colleague you
+           can only meet by wandering past is scenery with a pulse. */
+        const deskAnchors = Object.keys(ANCHOR_NAMES).filter(a => /^n[1-9]$/.test(a));
+        const strangers = deskAnchors.filter(a => !sent.has(a));
+        ok('content: every desk in the building is somewhere a ticket sends you',
+           !strangers.length, strangers.map(a => a + ' (' + ANCHOR_NAMES[a] + ')').join(' '));
+        const mute = Object.keys(NPCS).filter(id => {
+          for (const tid in TICKETS)
+            for (const st of TICKETS[tid].steps || [])
+              for (const k of [st.say, st.choice])
+                if (DIALOGUE[k] && DIALOGUE[k].who === id) return false;
+          return true;
+        });
+        ok('content: everybody in the building speaks inside a ticket', !mute.length, mute.join(' '));
       }
       }
 
