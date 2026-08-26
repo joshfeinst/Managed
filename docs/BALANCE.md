@@ -1362,6 +1362,13 @@ it.
 Careers: **18 of 24 reach retirement at skill .85**, averaging 10.3 careers, and
 every one of the twenty-four reached Director at least once.
 
+Re-measured 2026-08-26 after the six cross-floor tickets landed: **19 of 24,
+averaging 11.5**, with one player topping out at relationship manager. The
+rungs themselves did not move — the table above is still what `ladder.js`
+reads off the shipped file — so the extra career is the errands downstairs
+costing what they claim. The intermediate reading of 24/24 at 9.4 was the
+skipped leg, and is written up under "Crossing the floors" below.
+
 65 events, 268 tickets, 641 dialogue nodes, 10 people, 12 boards, 342 self-tests.
 
 ### The helpdesk had no board of its own
@@ -1436,6 +1443,136 @@ could — after the board that threw on `draw()`, the clipped-looking dispatch
 line that was only mid-typewriter, and THE ELEVATOR on the sign. **Look at the
 game.** The suite proves the game is correct, not that it is right.
 
+## The floor the queue could not describe (2026-08-26, fourth pass)
+
+Three bugs, all found by measuring or by looking, none by running the suite —
+which passed 345/345 throughout.
+
+**The queue row was cutting 89% of its own tickets in half.** `#tix` was 600px
+wide. Measured across all 268 tickets, that clipped 114 titles outright, and
+once `legHint()` is appended into the same cell it clipped 238 — so the
+walk-cost hint, which exists precisely so a player can see a P4 is a two-hour
+round trip *before* taking it, was ellipsed off the end of nearly every row. A
+shipped feature, invisible.
+
+| panel | title cell | titles clipped |
+|---|---|---|
+| 600px | 392px | 114 (43%) |
+| 680px | 472px | 12 (4%) |
+| 720px | 512px | 0 |
+
+The fix is layout, not 114 rewrites: 720px, the hint on its own line, and the
+title wraps rather than clips. At 720px, 247 of 268 titles are one line and
+even with every `{fill}` at its longest none reaches three.
+
+The first version of the guard measured `TICKETS[id].title` — the template —
+and passed clean. A screenshot then caught two rows still cut: `{user}` is
+"Janet" in the template and "the temp whose badge never worked" on screen. Any
+test of what a box holds has to resolve the fills first.
+
+**The dialogue box grew off the top of the screen.** `#dlg` is bottom-anchored
+and grows upward and nothing bounded it. Rendered at 400x300 — a size
+`visual.js` already drives — 72 nodes grew past the top edge, `i.day1` by
+165px: the intern's first scene, the opening conversation of a new career,
+with its speaker and first lines above the screen. `visual.js` passes that
+window because it never opens a dialogue there, and the suite had never
+rendered the box at all: it is DOM, and 641 nodes had only ever been checked
+as data.
+
+Written to measure at the tester's own window, the new guard passed at
+verify.js's 1280x720 while proving nothing — which is exactly how the bug
+shipped. It shrinks `#view` to 400x225 first. It also drives `openDlg` and
+`dlgPaint` rather than a replica: the first draft rebuilt the box by hand,
+which measures the CSS and nothing else, and deleting the renderer's own
+scroll-into-view left that version green.
+
+**A lint that reports work that is not work.** `tools/audit.js` checked two
+line lengths against numbers picked without measuring anything and reported 91
+problems that were not problems. Options are DOM buttons with no nowrap and no
+fixed height: they *wrap*, and at every viewport from 400x300 up not one of
+the 21 flagged ever overflowed. Titles really were being cut, but by px in a
+392px cell — the longest title that fits is 63 characters and the shortest
+that clips is 55, so a character count was never going to answer it. Both
+checks are deleted rather than left to disagree with the self-test.
+
+The dominance check went from FAIL to a report. Read at face value it flags 57
+nodes and most of them are the game working: "Attend. Somebody must know what
+it is for" is *meant* to cost you, and the option's own text is the warning.
+Three were a real authoring slip — the plain fix-it option written with no rep
+field at all beside a do-nothing option carrying `rep:1`, so leaving a fault
+alone beat repairing it on every axis at once. `t2.unfix.b` nearly got "fixed"
+here too and should not have: "Document what they did, in detail, in the
+ticket" losing rep and the bonus reads as diligence punished until you read
+the scene, where it is a paper trail written to blame the client.
+
+## Crossing the floors, and the leg nobody walked
+
+`anchorPos()` answers against the LOADED map and nothing else, so a `goto` to
+an anchor on the other floor resolved to nothing and cost `WALK_FALLBACK`: a
+flat 14 minutes whether the errand was beside the lift or the length of the
+building away. That is why no ticket had ever sent anyone downstairs.
+
+Both floors are indexed once at boot — load each in turn, flood fill out from
+every anchor, keep the tile distances and positions. A crossing then composes
+as `here -> this floor's lift + LIFT_MIN + far lift -> the anchor`. `ELEV` is
+the one name both floors carry and is deliberately excluded from
+`ANCHOR_FLOOR`: a name on two maps has no single home.
+
+`CROSS_FLOOR_BUDGET = 78`, measured rather than picked. The architect's desk
+is 57 tiles from the lift — 60 minutes before the doors open — so no crossing
+was ever going to fit inside `WALK_BUDGET`'s 62. It buys the rule the ground
+floor is built to: anything a ticket can be sent to down there lives within
+twelve tiles of the lift.
+
+The walk-budget lint is per rung now. A ticket is only ever dealt inside its
+own tiers, so pricing the architect's desk against an errand that stops at T2
+measured a walk nobody takes — and that fiction was deciding how far from the
+lift the ground floor was allowed to put anything.
+
+| anchor | tiles from the ground lift | who can be sent there |
+|---|---|---|
+| RECEPTION | 9 | every rung |
+| MEET_A | 12 | every rung; written for relmgr and up |
+| POST | 25 | T2 to procurement |
+| MEET_B | 36 | scenery |
+| FRONT | 21 | scenery |
+
+**Then the six new tickets took retirement from 18 of 24 to 24 of 24, and the
+day-score decomposition said nothing had changed** — every rung within 0.02,
+gaps equal or better. Both were true.
+
+`advanceStep` resolved a goto with `anchorPos()` and read the null it got for
+anything downstairs as "no such step": `si++` and carry on, as though the walk
+had happened. Every cross-floor ticket was priced for a trip and never made
+anyone take it — a long window, four to seven stakes, and none of the cost.
+The bot did the same thing for the same reason, `walkTo(null)` returning
+having charged nothing, so the simulation agreed with the game about a walk
+neither of them did. That is why the per-day numbers looked innocent, and it
+is the sharpest example yet of the rule that a measurement can only see what
+the model models.
+
+Four sites had each grown their own copy of the leg walk: `advanceStep`,
+`simDay`, `ticketWork`, and `legHint`/`workLeft`. They share `walkLegs` now,
+which tracks the floor as well as the tile.
+
+| build | retire | careers to win |
+|---|---|---|
+| before any of this | 18/24 | 10.5 |
+| pricing + new floor, no tickets | 18/24 | 10.5 |
+| tickets, leg skipped | 24/24 | 9.4 |
+| tickets, leg walked | 19/24 | 11.5 |
+
+The middle two rows are the point. The pricing and the floor moved nothing on
+their own, which is what a refactor verified at 0 diffs across 977 ticket/rung
+pairs should do; the tickets moved everything, in the wrong direction, for a
+reason no score decomposition could see.
+
+**The reception-floor-as-a-data-centre mistake, made twice.** The store room
+was built with `S` and came out full of server racks — three comment lines
+below the note recording the first time that happened. Found by looking at it.
+Scenery glyphs `h` and `v` carry SHELF's and VEND's art with no anchor and no
+act, because using `H` and `V` directly would give both names two homes.
+
 ## The ratchets
 
 | name | value | meaning | direction |
@@ -1450,6 +1587,8 @@ game.** The suite proves the game is correct, not that it is right.
 | own tickets / own events | 22 / 5 | content whose home is that rung and nowhere lower | may only rise |
 | `MEETING_GAP` | 12 | minutes a day must leave between two meetings | may only rise |
 | `LIFT_MIN` | 4 | what a floor change costs, each way | may only rise |
+| `CROSS_FLOOR_BUDGET` | 78 | worst desk-to-anchor errand that crosses floors | may only fall |
+| `QUEUE_TITLE_LINES` | 2 | lines a ticket title may take in its queue row | may only fall |
 
 Two were re-baselined on 2026-08-25 in the direction a ratchet is not supposed
 to move. Both because the old number was measured on the 4.4x bot, not because

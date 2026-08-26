@@ -253,3 +253,60 @@ desks are `n4`, `n5` and `n9`, which were the last free NPC anchors on the map.
   judgement, which no other board in the game is. Finding it took three
   harnesses and a screenshot; the screenshot is the one that found that nothing
   had ever called a board's `draw()`.
+
+## 2026-08-26 (third pass) — downstairs
+
+The brief was: fix any pre-existing bugs in the levels first, then cross-floor
+pricing so tickets can send you to the ground floor, then build that floor out.
+In that order, and it mattered: the level pass found two shipped bugs that
+nothing in a 345-test suite could see, and the cross-floor work found a third
+that only a *measurement* could see.
+
+**Fixed before anything new was built:**
+
+- The queue row clipped 238 of 268 tickets once the walk-cost hint was in the
+  same cell. The hint was added so a player could see a P4 is a two-hour round
+  trip before taking it; it was ellipsed off the end of nearly every row.
+- The dialogue box grew off the top of the frame in a small window — 72 nodes
+  at 400x300, `i.day1` by 165px. `visual.js` drives that window and passes,
+  because it never opens a dialogue there.
+- `tools/audit.js` was reporting 91 non-problems from two character counts I
+  picked without measuring anything. Deleted; the self-test measures the
+  rendered box instead. Its dominance check is a report now, not a defect list.
+- Two content bugs it was right about: two VPN tickets with the same title
+  overlapping at rungs 2-4, and a vCIO ticket priced at two points for a walk,
+  two choices and ten stress, so burning it always beat working it.
+- Three dialogue nodes where the plain "fix it" option carried no rep at all
+  and "leave it" carried `rep:1`.
+
+**Then the crossing.** `FLOOR_DIST`/`FLOOR_POS` index both floors at boot;
+`walkLegs` prices a leg that changes floor and is now the single copy of that
+walk, shared by `workLeft`, `legHint`, `ticketWork` and the budget lint. The
+ground floor was replanned around the lift, which cannot move — `ELEV` is
+[1,1] on both maps — and rebuilt from a car park into a reception hall, two
+meeting rooms, a manager's office, a post room, a stationery store and a
+canteen. Six tickets go down there.
+
+**And the one only a measurement could find.** Those six tickets took careers
+reaching retirement from 18/24 to 24/24 while the day-score decomposition said
+nothing had changed. `advanceStep` resolved a `goto` with `anchorPos()`, which
+answers for the loaded map, and read the null it got for anything downstairs
+as "no such step" — so every cross-floor ticket was priced for a trip nobody
+took. The bot skipped it too, for the same reason, which is why no per-day
+number moved. 19/24 at 11.5 careers once the leg is actually walked.
+
+## What is left
+
+- **The ground floor has no events of its own.** Six tickets go down there and
+  two NPCs live there, but nothing in `EVENTS` happens on that floor. A fire
+  drill, a client arriving early, the landlord's contractor — the floor can
+  carry a scene, and does not have one.
+- **`MEET_B` and `FRONT` are scenery.** 36 and 21 tiles from the lift, so
+  nothing can be sent to them inside `CROSS_FLOOR_BUDGET`. Either they earn a
+  reason to exist or the floor should say so.
+- **54 nodes still carry a dominated option** and that is deliberate — they are
+  jokes with a price tag. The list is a report in `tools/audit.js`. It is worth
+  re-reading occasionally for the narrow case that is a bug: a dead option that
+  reads as the *competent* one.
+- The `GATE_DEBT` table is unchanged and still describes rungs no human has
+  reached.
