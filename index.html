@@ -1220,6 +1220,38 @@ const DIALOGUE = {
   't2.pay.a':  { who:'client', t:['Payroll cannot print. The run closes at 3pm. It is 2:04pm.',
     'Payroll prints to one device. It has printed to one device since before you were hired.'] },
   't2.pay.b':  { who:'sys', t:['Fixed with eleven minutes to spare. Nobody will ever know how close that was, which is the job.'] },
+  /* ------------------------- PROMOTION SCENES -----------------------------
+     One per rung, played on the first morning of the new job by the person who
+     gave it to you. Nine gates used to fire in total silence. Each one is
+     written to do the same job: name what changes, and be slightly wrong about
+     it in the way a real handover is wrong. */
+  'promo.t1': { who:'linda', t:['You are off the intern rota. Congratulations, that is the good news.',
+    'The bad news is the same sentence. You get your own queue now — your name on it, your numbers at the end of the month.',
+    'Nobody will tell you which tickets matter. Working that out is the promotion.'] },
+  'promo.t2': { who:'linda', t:['T2. You get the admin rights, which means you can now break things properly.',
+    'You will notice the queue looks quieter. It is not quieter. The tickets are just bigger and they arrive with somebody\'s name attached.',
+    'When you change something, ask who is downstream of it. Nobody documents that. Ask anyway.'] },
+  'promo.t3': { who:'linda', t:['T3. Everything the other two could not close comes to you now.',
+    'That is not a compliment about your ability. It is a description of the routing.',
+    'The good part: nobody escalates past you on the desk. The bad part is in that same sentence, if you look at it.'] },
+  'promo.project': { who:'mackenzie', t:['Project Team. You are off the queue — properly off it, not "off it but still helping".',
+    'The work stops being things that are broken and starts being dates that were promised by people who have never done the work.',
+    'Nothing you own here will be finished today. Get used to carrying it overnight.'] },
+  'promo.procure': { who:'mackenzie', t:['Procurement. You will hate this for a month and then you will understand the whole company.',
+    'You cannot fix anything from this chair. You can only price it, chase it, and explain why it has not arrived.',
+    'Everything Project Team promises, you get blamed for. That is not a warning, it is the job description.'] },
+  'promo.relmgr': { who:'linda', t:['Relationship Manager. You stop owning the work and start owning how they feel about the work.',
+    'Those are different jobs and the second one is harder, because a ticket can be closed and a feeling cannot.',
+    'You will meet clients who are furious about an account where every single SLA was met. Both things are true at once. Get comfortable there.'] },
+  'promo.solarch': { who:'linda', t:['Solutions Architect. You draw it, and then you live in the drawing.',
+    'Nobody argues with a design in the room. They argue with it in eighteen months, when it is load-bearing and you are the only one who remembers why.',
+    'Write down why. Not what — why. The what is obvious from the diagram and the why is the only thing that ages.'] },
+  'promo.vcio': { who:'linda', t:['vCIO. The horizon is three years now and the room is a board.',
+    'They will not ask you what is broken. They will ask what it costs, what it is worth, and whether the thing you recommended four years ago was right.',
+    'Some of those four-year-old recommendations will be yours. That is the part nobody warns you about.'] },
+  'promo.director': { who:'sys', t:['Director of IT. The owner shook your hand and used your first name twice.',
+    'There is nobody above you now, which sounds like the reward and is actually the change: nothing arrives pre-decided, and nothing can be escalated.',
+    'Linda reports to you as of this morning. She has been here longer than you have. Neither of you is going to mention it.'] },
   /* ---------------------- DIRECTOR OF IT (rung 9) -------------------------- */
   'd.owner.a': { who:'sys', t:['The owner has made two coffees and carried them to the meeting room himself, which he has never done.',
     'Whatever this is, he has decided it already and would like you to agree with it warmly.'] },
@@ -4988,6 +5020,16 @@ function endDay(){
     run.gateStreak = 0; run.firedStreak = 0; run.rungSince = run.perfHist.length;
     run.stress = Math.round(run.stress * .6);
     run.burnout = Math.max(0, run.burnout - BURN.promoRelief);
+    /* SOMEBODY SAYS SOMETHING. Nine gates could fire and not one of them spoke:
+       the rung number went up, the review said PROMOTED, and the next morning
+       you were simply somewhere else with different tickets. A promotion in
+       this game is the only thing a whole career is aimed at and it was a
+       silent increment. It is queued rather than shown here because the review
+       screen owns this frame — pendingScenes plays it first thing on the new
+       rung's first morning, which is also where it belongs: you find out what
+       the job is from the person who gave it to you. */
+    const scene = 'promo.' + ROLES[run.rung].id;
+    if (DIALOGUE[scene]) (run.pendingScenes = run.pendingScenes || []).push(scene);
   } else if (promo) promo = false;             // fired is fired
   /* Everything the review screen needs to draw itself again, banked BEFORE the
      day rolls over. Quitting while the review is on screen used to lose it for
@@ -7876,6 +7918,30 @@ function selfTest(runSim){
          Math.abs(1 / BOT_TILES_PER_MIN - WALK_MIN_PER_TILE) < 1e-9,
          'bot ' + (1 / BOT_TILES_PER_MIN).toFixed(3) + ' vs player ' + WALK_MIN_PER_TILE);
       run = savedRun; G.state = savedState;
+    }
+    /* A PROMOTION SAYS SOMETHING. Nine gates could fire and not one of them
+       spoke — the rung number went up, the review printed PROMOTED, and next
+       morning you were somewhere else with different tickets. A whole career is
+       aimed at this moment and it was a silent increment. */
+    {
+      const savedRun = run;
+      const missing = ROLES.slice(1).filter(R => !DIALOGUE['promo.' + R.id]).map(R => R.id);
+      ok('every rung you can be promoted INTO has something to say about it',
+         missing.length === 0, missing.join(' '));
+      /* and the promotion actually queues it, rather than the scene merely
+         existing somewhere in the file */
+      QUIET = true; rngInit('PROMO'); runInit('PROMO'); rollDay();
+      run.rung = 0; run.pendingScenes = [];
+      run.perfHist = [.9, .9]; run.rungSince = 0;
+      run.clock = DAY_MIN; run.resolved = 4; run.stakesDone = 9; run.earned = 8.6;
+      run.scores = [.9,.9,.9,.9]; run.breaches = 0; run.burned = []; run.burnLog = [];
+      endDay();
+      const queued = (run && run.pendingScenes || []).map(x => (x && x.id) || x);
+      ok('and a real promotion queues that rung\'s scene',
+         run && run.rung === 1 && queued.indexOf('promo.t1') >= 0,
+         'rung ' + (run ? run.rung : '?') + ', queued [' + queued.join(' ') + ']');
+      if (run) run.pendingEnd = null;
+      run = savedRun; G.state = 'title';
     }
     /* A RUNG'S CALENDAR IS PART OF WHAT THE RUNG IS. Every event fired at every
        rung until now, so a Director sat through the intern's standup and a
