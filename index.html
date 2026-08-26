@@ -1591,6 +1591,18 @@ const DIALOGUE = {
            {t:'Send the real diagram — they asked for the architecture', fx:{time:3, rep:-3, stress:6}},
            {t:'Four boxes, and be in the room to narrate it', fx:{time:7, rep:4, bonus:1, stress:2}} ] },
   /* -------------------- RELATIONSHIP MANAGER (rung 6) ---------------------- */
+  'q.budg.a': { who:'linda', t:['Next year\'s budget. It is four percent smaller than this year\'s and everything in it costs eleven percent more.',
+    'Three of these lines are the ones that stop the company being on the news. You already know which three.'] },
+  'q.budg.b': { who:'sys', t:['Whatever you cut, you will be asked about it in eight months, in a room, by someone holding a printout.'],
+    opts:[ {t:'Submit it with the cuts named and justified in writing', fx:{time:16, rep:3, bonus:1, stress:4}},
+           {t:'Submit it', fx:{time:5, bonus:1, stress:3}},
+           {t:'Submit the number they asked for and flag the risk verbally', fx:{time:8, rep:-1, stress:6}} ] },
+  'q.three.a': { who:'sys', t:['Policy requires three quotes. You have one.',
+    'The second vendor stopped replying in March. The third has sent a PDF that is a photograph of a different PDF.'] },
+  'q.three.b': { who:'sys', t:['You could make the numbers work by Friday, or you could make them true.'],
+    opts:[ {t:'Chase properly and miss Friday', fx:{time:19, rep:2, bonus:1, stress:5}},
+           {t:'Document why only one quote was obtainable', fx:{time:11, rep:2, bonus:1, stress:3}},
+           {t:'Ask the one vendor for two more quotes', fx:{time:4, rep:-3, stress:4}} ] },
   'r.churn.a': { who:'sys', t:['{client} used to send four emails a day. They have sent none this month.',
     'Nothing is broken. Nothing has been raised. That is what makes it a P1.'] },
   'r.churn.b': { who:'sys', t:['Silence from a client is either contentment or a procurement process, and you have about a week to find out which.'],
@@ -2421,6 +2433,12 @@ const TICKETS = {
      can sign, and the harder it gets to admit which part of it was nonsense.
      These are the tickets you are allowed to let burn. Finding out that you
      are allowed is the lesson of the rung. */
+  'the-budget-round': { tiers:[5,9], weight:4, sla:48, slaMult:2.1, pri:3, stress:8,
+    title:'Next year\'s IT budget, and it is smaller than this year\'s',
+    steps:[{say:'q.budg.a'},{game:'quote',diff:2},{choice:'q.budg.b'}] },
+  'three-quotes-required': { tiers:[5,9], weight:3, sla:54, slaMult:2.3, pri:2, stress:6,
+    title:'Policy needs three quotes. Two vendors have stopped replying.',
+    steps:[{say:'q.three.a'},{game:'quote',diff:1},{choice:'q.three.b'}] },
   'expenses-rejected': { tiers:[5,9], weight:4, sla:64, slaMult:2.4, pri:1, stress:3,
     title:'Your expense claim was rejected. It is for £4.20.',
     steps:[{say:'x.exp.a'},{choice:'x.exp.b'}] },
@@ -5807,6 +5825,14 @@ let MG = null;
    have finished at. The retry is capped here, so walking out of a botched
    board can never beat having finished it, and an accidental alt-tab on a
    clean board costs nothing. */
+/* ONE definition of what a quote line is worth, because this game prices the
+   same line in two places — live scoring and the abandon path — and this file
+   has already been bitten once by pricing the same thing twice: the walk cost
+   was 0.238 in the bot and 1.05 for a player for weeks. A mutation proving it:
+   changing the copy in abandonScore broke nothing any test could see. */
+function quoteLineValue(r){
+  return r.pick === 0 ? 1 : r.pick === 1 ? .7 : (r.must ? 0 : .45);
+}
 function abandonScore(g){
   if (!g) return 0;
   if (g.kind === 'cable') return cableScore(g);
@@ -5830,6 +5856,12 @@ function abandonScore(g){
        ones already carved wrong stay wrong — that is the whole point. */
     const left = g.sites.length - g.at;
     return g.sites.length ? (g.right + (g.ran ? 0 : left)) / g.sites.length : 1;
+  }
+  if (g.kind === 'quote'){
+    /* nothing is committed until submit, so an abandoned quote is worth what
+       the board currently reads — not what it might have become */
+    if (g.total() > g.budget) return .15;
+    return clamp(g.rows.reduce((a, r) => a + quoteLineValue(r), 0) / g.rows.length, 0, 1);
   }
   if (g.kind === 'script'){
     /* the best it could still finish at: every remaining box banked honestly
@@ -5935,6 +5967,23 @@ const SUBNET_PREFIXES = [
 const SUBNET_SITES = ['WAREHOUSE', 'FRONT OFFICE', 'THE PORTACABIN', 'CCTV',
   'GUEST WIFI', 'THE LAB', 'DESPATCH', 'MEETING ROOMS', 'THE PRINTER VLAN',
   'DOOR ENTRY', 'THE FLOOR', 'RECEPTION'];
+/* Procurement's board is a constraint, not a sequence: every line is visible
+   and every choice is reversible right up until you submit, because that is
+   what a quote IS. The trap is not forgetting something, it is wanting the
+   good one everywhere and discovering that the budget disagrees. */
+const QUOTE_LINES = [
+  { n:'FIREWALL RENEWAL',      must:true  },
+  { n:'BACKUP RETENTION',      must:true  },
+  { n:'ENDPOINT PROTECTION',   must:true  },
+  { n:'SWITCH REPLACEMENT',    must:false },
+  { n:'WIFI FOR THE WAREHOUSE',must:false },
+  { n:'SPARE LAPTOPS',         must:false },
+  { n:'UPS BATTERIES',         must:false },
+  { n:'MEETING ROOM SCREENS',  must:false },
+  { n:'PROJECT MANAGEMENT',    must:false },
+  { n:'OUT-OF-HOURS COVER',    must:true  }
+];
+const QUOTE_TIERS = ['PROPER', 'ADEQUATE', 'CHEAPEST'];
 /* --------------------------- how to play each one -------------------------
    A minigame that opens straight into a live board with a six-pixel hint bar
    is a game assuming you have already played it. Every one of these now opens
@@ -6011,6 +6060,20 @@ const GAME_BRIEF = {
     ],
     watch: 'A /28 holds 14, not 16 — the network and the broadcast are not yours. ' +
            'One size too generous fits fine and starves the last site on the list.'
+  },
+  quote: {
+    what: 'Finance have given you a number and it is not enough. Every line has ' +
+          'three prices. Lines marked with ! are the ones you were told not to ' +
+          'cheapen.',
+    keys: [
+      ['UP / DOWN', 'move between lines'],
+      ['1 2 3', 'proper, adequate, cheapest'],
+      ['E', 'submit the quote'],
+      ['CLICK', 'or click any price'],
+      ['', 'nothing is committed until you submit']
+    ],
+    watch: 'Over budget and finance send the whole thing back. Cheapest on a ! line ' +
+           'is worth nothing at all, however much it saved.'
   },
   blast: {
     what: 'You can make this change. That was never the question. The question ' +
@@ -6535,6 +6598,116 @@ const GAMES = {
           wrapTxt(this.flashTxt, 240, 228, 340, this.flashOk ? '#4ade80' : '#d64541', 6);
       } };
   }},
+  /* --------------------------- THE SHORTFALL (PROCURE) --------------------
+     Not a sequence trap like the address plan — everything is on screen and
+     every line can be changed until you submit. The difficulty is that you
+     want the good one everywhere and cannot have it, and the three lines you
+     are not allowed to cheap out on are marked, so cheapening them is never a
+     mistake. It is a decision, which is the entire job. */
+  quote: { init(diff){
+    const k = 4 + Math.min(diff, 2);
+    const pool = QUOTE_LINES.slice();
+    const lines = [];
+    /* at least two MUSTs, so the constraint always bites */
+    const musts = pool.filter(l => l.must), rest = pool.filter(l => !l.must);
+    const take = a => a.splice(Ri('game', a.length), 1)[0];
+    for (let i = 0; i < 2 && musts.length; i++) lines.push(take(musts));
+    const others = musts.concat(rest);
+    while (lines.length < k && others.length) lines.push(take(others));
+    for (let a2 = lines.length - 1; a2 > 0; a2--){
+      const b = Ri('game', a2 + 1); [lines[a2], lines[b]] = [lines[b], lines[a2]];
+    }
+    const rows = lines.map(l => {
+      const proper = 8 + Ri('game', 10);              // thousands, roughly
+      const adequate = Math.max(3, proper - 2 - Ri('game', 4));
+      const cheap = Math.max(1, adequate - 1 - Ri('game', 3));
+      return { n:l.n, must:l.must, cost:[proper, adequate, cheap], pick:1 };
+    });
+    /* The budget is set from the plan's own floor: MUSTs at ADEQUATE and the
+       rest at CHEAPEST, plus enough slack for two upgrades. So a compliant
+       quote always exists and a perfect one never does. */
+    const floor = rows.reduce((a, r) => a + r.cost[r.must ? 1 : 2], 0);
+    const slack = 3 + Ri('game', 5);
+    return { kind:'quote', rows, cur:0, budget: floor + slack, submitted:false,
+      flash:0, flashTxt:'', flashOk:false, click:null,
+      obj:'FINANCE HAVE GIVEN YOU A NUMBER. IT IS NOT ENOUGH.',
+      hint:'UP/DOWN A LINE · 1 2 3 SETS ITS TIER · E SUBMITS',
+      rowRect(i){ return [70, 84 + i*20, 340, 18]; },
+      tierRect(i, t){ return [236 + t*58, 84 + i*20, 54, 18]; },
+      btns: [ { x:330, y:212, w:130, h:18, k:'send', cap:'E  SUBMIT QUOTE' } ],
+      total(){ return this.rows.reduce((a, r) => a + r.cost[r.pick], 0); },
+      act(k){ if (k === 'send') this.send(); },
+      send(){
+        if (this.total() > this.budget){
+          this.flash = .9; this.flashOk = false;
+          this.flashTxt = 'OVER BUDGET BY ' + (this.total() - this.budget) + 'K. FINANCE WILL NOT SIGN IT.';
+          sfx('err'); return;
+        }
+        this.submitted = true; this.flash = .6; this.flashOk = true;
+        this.flashTxt = 'SUBMITTED AT ' + this.total() + 'K OF ' + this.budget + 'K'; sfx('ui');
+      },
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.submitted){
+          if (this.flash > 0) return;
+          /* what each line is worth: the good one is worth having, the cheap
+             one on something you were told not to cheapen is worth nothing */
+          let sum = this.rows.reduce((a, r) => a + quoteLineValue(r), 0);
+          if (this.forgive){
+            const worst = this.rows.filter(r => r.must && r.pick === 2)[0];
+            if (worst){ this.forgive--; sum += .7; }
+          }
+          this.score = clamp(sum / this.rows.length, 0, 1);
+          this.finished = true; return;
+        }
+        if (press.up)   this.cur = (this.cur + this.rows.length - 1) % this.rows.length;
+        if (press.down) this.cur = (this.cur + 1) % this.rows.length;
+        const set = t => { this.rows[this.cur].pick = t; sfx('ui'); };
+        if (press.one) set(0); if (press.two) set(1); if (press.three) set(2);
+        let go = press.use;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (let i = 0; i < this.rows.length; i++){
+            if (inRect(pt, ...this.rowRect(i))) this.cur = i;
+            for (let t = 0; t < 3; t++)
+              if (inRect(pt, ...this.tierRect(i, t))){ this.cur = i; this.rows[i].pick = t; sfx('ui'); }
+          }
+          for (const b of this.btns) if (inRect(pt, b.x - b.w/2, b.y, b.w, b.h)) go = true;
+        }
+        if (go) this.send();
+      },
+      draw(){
+        mgPanel('THE SHORTFALL', this.hint);
+        txt(this.obj, 240, 60, '#8d8778', 6, 'center');
+        const tot = this.total(), over = tot > this.budget;
+        txt('QUOTED ' + tot + 'K', 70, 74, over ? '#d64541' : '#4ade80', 7);
+        txt('BUDGET ' + this.budget + 'K', 410, 74, '#c9c4b8', 7, 'right');
+        this.rows.forEach((r, i) => {
+          const [rx, ry, rw, rh] = this.rowRect(i);
+          if (i === this.cur){ ctx.fillStyle = '#1d2530'; ctx.fillRect(rx, ry, rw, rh); }
+          ctx.strokeStyle = i === this.cur ? '#2f7fbe' : '#252c34';
+          ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
+          txt(r.n, rx + 6, ry + 12, r.must ? '#ffb02e' : '#c9c4b8', 6);
+          if (r.must) txt('!', rx + 226, ry + 12, '#ffb02e', 6);
+          for (let t = 0; t < 3; t++){
+            const [tx, ty, tw, th] = this.tierRect(i, t);
+            const on = r.pick === t;
+            const bad = on && t === 2 && r.must;
+            ctx.fillStyle = on ? (bad ? '#3a1c1c' : '#1b2b1e') : '#161b21';
+            ctx.fillRect(tx, ty, tw, th);
+            ctx.strokeStyle = on ? (bad ? '#d64541' : '#4ade80') : '#343b44';
+            ctx.strokeRect(tx + .5, ty + .5, tw - 1, th - 1);
+            txt(r.cost[t] + 'K', tx + tw/2, ty + 12,
+                on ? (bad ? '#d64541' : '#e8e4da') : '#6b6559', 6, 'center');
+          }
+        });
+        txt('PROPER', 263, 80, '#8d8778', 5, 'center');
+        txt('ADEQUATE', 321, 80, '#8d8778', 5, 'center');
+        txt('CHEAPEST', 379, 80, '#8d8778', 5, 'center');
+        if (this.flash > 0)
+          wrapTxt(this.flashTxt, 240, 232, 340, this.flashOk ? '#4ade80' : '#d64541', 6);
+      } };
+  }},
   blast: { init(diff){
     /* the group you are changing is not also one of its own members: it comes
        out of the pool before anything is built from it */
@@ -6721,7 +6894,8 @@ function drawBrief(g){
 }
 const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
                     jargon:'JARGON TRANSLATION', script:'BY THE SCRIPT',
-                    blast:'BLAST RADIUS', subnet:'THE ADDRESS PLAN' };
+                    blast:'BLAST RADIUS', subnet:'THE ADDRESS PLAN',
+                    quote:'THE SHORTFALL' };
 function mgPanel(title, hint){
   ctx.fillStyle = 'rgba(8,10,13,.88)'; ctx.fillRect(0,0,VW,VH);
   ctx.fillStyle = '#12161b'; ctx.fillRect(60, 26, 360, 214);
@@ -8236,6 +8410,61 @@ function selfTest(runSim){
            'site 0 wanted ' + c.sites[0].want.cidr + ' and was given one size up');
       }
       MG = savedMG2;
+    }
+    /* THE SHORTFALL makes two promises and they pull against each other: a
+       quote that finance will sign ALWAYS exists, and a quote with the good
+       one on every line NEVER fits. A board where everything is affordable is
+       a form, and one where nothing is is a wall. */
+    {
+      const savedMG3 = MG;
+      let compliant = 0, allProper = 0, greedyScore = 0, floorScore = 0, n = 0;
+      for (let i = 0; i < 24; i++){
+        rngInit('QT-' + i);
+        const g = GAMES.quote.init(2);
+        /* the floor: MUSTs adequate, everything else cheapest */
+        g.rows.forEach(r => r.pick = r.must ? 1 : 2);
+        if (g.total() <= g.budget) compliant++;
+        const f = g.total();
+        /* the greedy quote: the good one everywhere */
+        g.rows.forEach(r => r.pick = 0);
+        if (g.total() <= g.budget) allProper++;
+        /* and what each is actually worth once submitted */
+        const play = pick => { rngInit('QT-' + i);
+          const h = GAMES.quote.init(2); h.rows.forEach(pick);
+          h.send(); h.flash = 0; h.step(0);
+          return h.finished ? h.score : .15; };
+        greedyScore += play(r => r.pick = 0);
+        floorScore  += play(r => r.pick = r.must ? 1 : 2);
+        void f; n++;
+      }
+      ok('a quote finance will sign always exists',
+         compliant === n, compliant + '/' + n + ' plans had an affordable floor');
+      ok('and the good one on every line never fits',
+         allProper === 0, allProper + '/' + n + ' plans could afford PROPER throughout');
+      ok('cheapening what you were told not to is worth less than being frugal',
+         floorScore / n > .55, 'the compliant floor scores ' + (floorScore/n).toFixed(3));
+      ok('and a quote that busts the budget is worth almost nothing',
+         greedyScore / n < .25, 'the greedy quote scores ' + (greedyScore/n).toFixed(3));
+      /* The ! penalty needs asking directly. The compliant floor never
+         cheapens a MUST, so deleting the penalty outright left every test
+         above green — the cheapest-everything quote is AFFORDABLE, which is
+         exactly why it has to be punished on merit rather than on price. */
+      {
+        let cheapAll = 0, m = 0;
+        for (let i = 0; i < 24; i++){
+          rngInit('QT-' + i);
+          const h = GAMES.quote.init(2);
+          h.rows.forEach(r => r.pick = 2);
+          h.send(); h.flash = 0; h.step(0);
+          if (h.finished){ cheapAll += h.score; m++; }
+        }
+        ok('cheapest on every line is affordable, and still the worst quote',
+           m === 24 && cheapAll / Math.max(1,m) < floorScore / n - .15,
+           'cheapest-everything scores ' + (cheapAll/Math.max(1,m)).toFixed(3) +
+           ' against a compliant floor of ' + (floorScore/n).toFixed(3) +
+           ' (submitted on ' + m + '/24)');
+      }
+      MG = savedMG3;
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could
