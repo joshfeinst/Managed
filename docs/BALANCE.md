@@ -1244,6 +1244,33 @@ left to remove, pays out as a forgiven slip instead. So what the new invariant
 pins is the **wiring**, board by board, since that is precisely the part a bot
 cannot reach. Unwiring either half fails it across all eleven boards.
 
+## A sound nobody plays is a sound that is not in the game
+
+`phone` — a handset ringing twice — sat in `SFX` for the whole life of the
+project and was never once called, on a board that is literally a phone call.
+There is no way to notice this by playing, because the missing sound is the one
+you have never heard, and no harness listens.
+
+So it is counted instead: every recipe must be reachable from the source or
+named as deliberate (`step` and `door` are, because constant footsteps would be
+unbearable). Unwiring `phone` fails it, and so does adding a new recipe without
+wiring it.
+
+**The lint has to match conditional call sites, and the first version did not.**
+The grep that found `phone` also reported `fired` dead — and `fired` is played,
+by `sfx(kind === 'retired' || kind === 'shortof' ? 'promo' : 'fired')` on the
+ending screen. A literal-only pattern misses every ternary in the file.
+
+That is not a harmless false positive. **A lint that reports work already done
+is worse than no lint, because the fix is a duplicate**, and that is exactly
+what happened: `fired` was wired a second time at the top of `careerOver()` and
+would have played twice, overlapping itself, at the most dramatic moment a
+career has. It was caught only because the mutation test refused to fail —
+removing the new line left the suite green, which is the signal that the line
+was never doing anything.
+
+The mutation discipline earned its keep on a test of the mutation discipline.
+
 ## The ratchets
 
 | name | value | meaning | direction |

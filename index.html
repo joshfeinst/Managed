@@ -6181,7 +6181,11 @@ function advanceStep(){
   if (t.paidStep !== t.si){ t.paidStep = t.si; run.clock += stepCost(st); }
   if (st.say){ openDlg(st.say, t.fills, () => { t.si++; advanceStep(); }); return; }
   if (st.choice){ openDlg(st.choice, t.fills, () => { t.si++; advanceStep(); }, null, t); return; }
-  if (st.game){ openGame(st.game, st.diff, score => { t.gameScores.push(score); t.si++; advanceStep(); }); return; }
+  if (st.game){
+    /* the call board opens with a handset ringing, which is what `phone` was
+       written for and had never been used for */
+    if (st.game === 'script') sfx('phone');
+    openGame(st.game, st.diff, score => { t.gameScores.push(score); t.si++; advanceStep(); }); return; }
   t.si++; advanceStep();
 }
 function resolveTicket(t){
@@ -10749,6 +10753,41 @@ function selfTest(runSim){
            !wrong.length, wrong.join(' '));
       }
       run = savedRunR;
+    }
+    /* A SOUND NOBODY PLAYS IS A SOUND THAT IS NOT IN THE GAME. `phone` — a
+       handset ringing twice — sat in SFX for the whole life of the project
+       and was never once called, on a board that is literally a phone call.
+
+       There is no way to notice this by playing, because the missing sound is
+       the one you have never heard, and no harness listens. So it is counted
+       instead: every recipe is either reachable from the source or named here
+       as deliberate, and adding a recipe without wiring it fails.
+
+       It has to match CONDITIONAL call sites too. The grep that found `phone`
+       also said `fired` was dead, and `fired` is played by
+       `sfx(kind === 'retired' || ... ? 'promo' : 'fired')` — a literal-only
+       pattern misses every ternary in the file, and a lint that reports work
+       already done is worse than no lint, because the fix is a duplicate.
+       That is exactly what happened here: `fired` was wired a second time and
+       would have played twice, overlapping itself, on the ending screen. */
+    {
+      const DELIBERATE = new Set(['step', 'door']);
+      const src = (document.querySelector('script:not([src])') ||
+                   { textContent:'' });
+      const all = Array.from(document.querySelectorAll('script:not([src])'))
+                       .map(n => n.textContent).join('\n');
+      void src;
+      const dead = [];
+      for (const name in SFX){
+        if (DELIBERATE.has(name)) continue;
+        /* the call site, not the definition — sfx('name') with either quote */
+        if (!new RegExp("sfx\\((?:'|\")" + name + "(?:'|\")\\)").test(all)
+            && !new RegExp("sfx\\([^)]*'" + name + "'").test(all)) dead.push(name);
+      }
+      ok('every sound in the game is a sound the game plays',
+         !dead.length, dead.join(' ') + (dead.length ? ' — wire it or list it' : ''));
+      ok('and the sounds nobody plays are named on purpose',
+         [...DELIBERATE].every(n => SFX[n]), [...DELIBERATE].join(' '));
     }
     /* THE ONE CERTIFICATE NO BOT CAN SEE. Every number in docs/BALANCE.md is
        measured on the bare game because the bots hold no certificates, and
