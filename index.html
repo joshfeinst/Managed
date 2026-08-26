@@ -927,7 +927,7 @@ const FILLS = {
      neutral, and the self-test keeps it that way. */
   user:   ['Janet','Dale','the office manager','the new hire','Doug from accounting',
            'the front desk','Sharon','the warehouse guy','Marcy','the night dispatcher',
-           'Gary in shipping','the practice manager','Priya','the owner\'s brother',
+           'Trevor in shipping','the practice manager','Priya','the owner\'s brother',
            'the temp whose badge never worked','Kev from the van'],
   device: ['laptop','desktop','the conference room TV','a label printer','the timeclock',
            'an iPad','the security camera DVR','a USB hub shaped like a cat',
@@ -14776,6 +14776,26 @@ function selfTest(runSim){
       dlg = keepDlg; G.state = keepState; G.modal = keepModal;
       ok('no scene shows the player a {token} it failed to fill', !raw.length,
          raw.length + ': ' + raw.slice(0, 4).join(' · '));
+    }
+    /* NOBODY IN THE BUILDING IS ALSO A NAME IN A POOL. This has been fixed by
+       hand twice — a compliance lead called Priya against the {user} pool's
+       Priya, and then GARY, the client who "was just in the area" and walks
+       the office, against "Gary in shipping". A player reads a ticket about
+       Gary, sees GARY standing in the lobby with a nameplate, and goes to
+       talk to him. Twice by hand is the point at which it becomes a lint. */
+    {
+      const cast = Object.keys(NPCS).map(id => NPCS[id].name.toLowerCase());
+      const dupes = cast.filter((n, i) => cast.indexOf(n) !== i);
+      const clash = [];
+      for (const k in FILLS)
+        for (const v of FILLS[k]){
+          const t = String(v).toLowerCase();
+          for (const n of cast)
+            if (t === n || t.split(' ')[0] === n) clash.push(k + ':"' + v + '" is ' + n.toUpperCase());
+        }
+      ok('no two people in the building share a name', !dupes.length, dupes.join(','));
+      ok('and nobody in a fill pool is somebody who walks the office',
+         !clash.length, clash.join(' · '));
     }
     /* WHOEVER {user} TURNS OUT TO BE. The pool holds Janet, Dale, Sharon, Gary
        in shipping, Priya and the owner's brother, and four tickets wrote "he"
