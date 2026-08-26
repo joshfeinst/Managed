@@ -1591,6 +1591,18 @@ const DIALOGUE = {
            {t:'Send the real diagram — they asked for the architecture', fx:{time:3, rep:-3, stress:6}},
            {t:'Four boxes, and be in the room to narrate it', fx:{time:7, rep:4, bonus:1, stress:2}} ] },
   /* -------------------- RELATIONSHIP MANAGER (rung 6) ---------------------- */
+  'a.built.a': { who:'client', t:['They would like the as-built diagram before the audit.',
+    'There is a diagram. It is from 2019, it is a screenshot inside a Word document, and two of the boxes on it were decommissioned by somebody who has since been promoted twice.'] },
+  'a.built.b': { who:'sys', t:['Whatever you send them becomes the truth for the next four years.'],
+    opts:[ {t:'Walk the racks and draw what is actually there', fx:{time:27, rep:4, bonus:1, stress:6}},
+           {t:'Correct the two boxes you know are wrong', fx:{time:13, rep:1, bonus:1, stress:3}},
+           {t:'Send the 2019 one with the date changed', fx:{time:3, rep:-4, stress:8}} ] },
+  'a.resil.a': { who:'sys', t:['The design says resilient. It has said resilient since the day you wrote it.',
+    'Nobody has pulled a cable to check, because pulling a cable to check is how you find out, and finding out is an incident with your name on it.'] },
+  'a.resil.b': { who:'sys', t:['You can test it properly or you can keep saying the word.'],
+    opts:[ {t:'Book the window and fail it over for real', fx:{time:25, rep:4, bonus:1, stress:9}},
+           {t:'Test the half you are least sure about', fx:{time:15, rep:2, bonus:1, stress:5}},
+           {t:'Write "resilient" and move on', fx:{time:3, rep:-3, stress:6}} ] },
   'r.qbr2.a': { who:'sys', t:['The quarterly review is at two o\'clock. The numbers are the numbers.',
     'Uptime is fine. Ticket volume is up, because the thing you warned them about in March happened in July. Nobody in the room was in the March meeting.'] },
   'r.qbr2.b': { who:'sys', t:['You will be asked, gently, whether things are on track.'],
@@ -2451,6 +2463,12 @@ const TICKETS = {
      can sign, and the harder it gets to admit which part of it was nonsense.
      These are the tickets you are allowed to let burn. Finding out that you
      are allowed is the lesson of the rung. */
+  'as-built-is-a-rumour': { tiers:[7,9], weight:4, sla:50, slaMult:2.0, pri:3, stress:9,
+    title:'{client} want the as-built diagram. There is a diagram.',
+    steps:[{say:'a.built.a'},{game:'diagram',diff:2},{choice:'a.built.b'}] },
+  'resilience-on-paper': { tiers:[7,9], weight:3, sla:44, slaMult:1.9, pri:4, stress:10,
+    title:'The design says resilient. Nobody has ever pulled a cable to check.',
+    steps:[{say:'a.resil.a'},{game:'diagram',diff:3},{choice:'a.resil.b'}] },
   'the-quarterly-review': { tiers:[6,9], weight:4, sla:46, slaMult:2.1, pri:3, stress:9,
     title:'{client}\'s QBR is at two and the numbers are the numbers',
     steps:[{say:'r.qbr2.a'},{game:'keep',diff:2},{choice:'r.qbr2.b'}] },
@@ -5892,6 +5910,13 @@ function abandonScore(g){
     const v = x => clamp((x - 3) / (g.goal - 3), 0, 1);
     return (v(g.c) + v(g.t) + v(g.m)) / 3;
   }
+  if (g.kind === 'diagram'){
+    /* the best it could still finish at: everything left, found, and nothing
+       further marked wrongly. Wrong marks already made stand. */
+    const hit = [...g.marked].filter(i => g.spofs.includes(i)).length;
+    const over = Math.max(0, g.marked.size - hit - (g.forgive || 0));
+    return clamp(1 - over * .25, 0, 1);
+  }
   if (g.kind === 'script'){
     /* the best it could still finish at: every remaining box banked honestly
        and the call resolved, each of which costs one more turn */
@@ -6035,6 +6060,11 @@ const RM_MOVES = [
   { t:'Say no, and say why, and mean it',              fx:{c:-2, t: 3, m: 2} },
   { t:'Promise a date you have not checked',           fx:{c: 2, t:-3, m: 0} }
 ];
+/* The architect's board needs names that could plausibly be on a drawing
+   nobody has updated since the drawing was made. */
+const SA_NODES = ['CORE-SW', 'DIST-A', 'DIST-B', 'FIREWALL', 'WAN-1', 'WAN-2',
+  'ESX-01', 'ESX-02', 'SAN', 'DC-01', 'DC-02', 'APP-TIER', 'DB-TIER',
+  'WAREHOUSE-SW', 'FLOOR-SW', 'VPN-GW', 'BACKUP', 'PRINT-SRV', 'WIFI-CTRL'];
 /* --------------------------- how to play each one -------------------------
    A minigame that opens straight into a live board with a six-pixel hint bar
    is a game assuming you have already played it. Every one of these now opens
@@ -6139,6 +6169,20 @@ const GAME_BRIEF = {
     ],
     watch: 'All three have to finish past the white line. A hand that gets all ' +
            'three home always exists — it is never the comfortable one.'
+  },
+  diagram: {
+    what: 'The drawing, as built. Mark every box that takes something else down ' +
+          'with it if it fails. You may pull a few out to see what happens — ' +
+          'not enough of them to be sure.',
+    keys: [
+      ['UP / DOWN', 'move between boxes'],
+      ['1', 'mark or unmark this box'],
+      ['E', 'test it — spends an outage window'],
+      ['2', 'submit the drawing'],
+      ['CLICK', 'a box marks it; the buttons do the rest']
+    ],
+    watch: 'CORE-SW is not the answer, it is the thing everything is measured from. ' +
+           'Marking a box that strands nothing costs more than missing one.'
   },
   blast: {
     what: 'You can make this change. That was never the question. The question ' +
@@ -6882,6 +6926,161 @@ const GAMES = {
         if (this.flash > 0) wrapTxt(this.flashTxt, 240, 232, 340, '#4ade80', 6);
       } };
   }},
+  /* ------------------------- THE DIAGRAM (SOLARCH) ------------------------
+     A new verb: you can TEST. Pull a box out of the drawing and watch what
+     goes dark — but only a few times, and never enough times to be certain
+     about everything. What is left has to be read off the picture, which is
+     the actual job: the drawing is right there, it has been right there for
+     years, and nobody looked at it. */
+  diagram: { init(diff){
+    const n = 6 + Math.min(diff, 3);
+    const names = SA_NODES.slice(1);
+    const take = a => a.splice(Ri('game', a.length), 1)[0];
+    let nodes = null, spofs = null, guard = 0, worthReading = false;
+    const reach = (ns, without) => {
+      const seen = new Set([0]), q = [0];
+      while (q.length){
+        const i = q.shift();
+        for (const j of ns[i].link){
+          if (j === without || i === without) continue;
+          if (!seen.has(j)){ seen.add(j); q.push(j); }
+        }
+      }
+      return seen;
+    };
+    do {
+      const pool = names.slice();
+      nodes = [{ name:'CORE-SW', link:[], depth:0 }];
+      for (let i = 1; i <= n; i++){
+        /* hang it off something already drawn — a tree first, so everything
+           is reachable and the depths lay out left to right */
+        const up = 1 + Ri('game', i) - 1;
+        const parent = Math.max(0, Math.min(up, i - 1));
+        nodes.push({ name: pool.length ? take(pool) : 'NODE-' + i, link:[parent],
+                     depth: nodes[parent].depth + 1 });
+        nodes[parent].link.push(i);
+      }
+      /* then a couple of second paths, which is what makes reading it worth
+         anything: some of these boxes genuinely do not matter */
+      const extra = 1 + Ri('game', 2);
+      for (let e = 0; e < extra; e++){
+        const a2 = 1 + Ri('game', n), b2 = 1 + Ri('game', n);
+        if (a2 === b2 || nodes[a2].link.includes(b2)) continue;
+        nodes[a2].link.push(b2); nodes[b2].link.push(a2);
+      }
+      /* a box is a single point of failure if pulling it strands anything */
+      spofs = [];
+      for (let i = 1; i < nodes.length; i++)
+        if (reach(nodes, i).size < nodes.length - 1) spofs.push(i);
+      /* A drawing is only worth reading if some box with things hanging off it
+         is nevertheless safe, because a second path reaches them. Without that
+         the answer is "every box that is not a leaf" and the picture is
+         decoration — which is what a third of generated boards were, since the
+         extra edges land between two leaves as often as anywhere useful. */
+      worthReading = nodes.some((nd, k) =>
+        k > 0 && nd.link.length > 1 && !spofs.includes(k));
+    } while ((spofs.length < 2 || spofs.length > n - 2 || !worthReading) && guard++ < 80);
+    /* lay it out by depth, staggered so the lines are readable */
+    const byDepth = {};
+    nodes.forEach((nd, i) => { (byDepth[nd.depth] = byDepth[nd.depth] || []).push(i); });
+    for (const d in byDepth){
+      const col = byDepth[d], x = 84 + (+d) * 62;
+      col.forEach((i, k) => {
+        nodes[i].x = x;
+        nodes[i].y = 96 + (k - (col.length - 1) / 2) * 26;
+      });
+    }
+    return { kind:'diagram', nodes, spofs, cur:1, probes: 4 - Math.min(diff, 2),
+      dark:null, darkOf:-1, submitted:false, marked:new Set(),
+      flash:0, flashTxt:'', flashOk:false, click:null,
+      obj:'MARK EVERY BOX THAT TAKES SOMETHING ELSE DOWN WITH IT',
+      hint:'UP/DOWN A BOX · 1 MARKS IT · E TESTS IT · 2 SUBMITS',
+      nodeRect(i){ const nd = this.nodes[i]; return [nd.x - 26, nd.y - 8, 52, 16]; },
+      btns: [ { x:110, y:214, w:96, h:16, k:'mark',  cap:'1  MARK' },
+              { x:220, y:214, w:96, h:16, k:'probe', cap:'E  TEST' },
+              { x:342, y:214, w:110, h:16, k:'send', cap:'2  SUBMIT' } ],
+      act(k){
+        if (k === 'send'){ this.submitted = true; return; }
+        if (k === 'mark'){
+          if (this.marked.has(this.cur)) this.marked.delete(this.cur);
+          else this.marked.add(this.cur);
+          sfx('ui'); return;
+        }
+        if (k === 'probe'){
+          if (this.probes <= 0){
+            this.flash = .8; this.flashOk = false;
+            this.flashTxt = 'NO MORE OUTAGE WINDOWS. READ THE DRAWING.'; sfx('err'); return;
+          }
+          this.probes--;
+          const seen = reach(this.nodes, this.cur);
+          this.dark = seen; this.darkOf = this.cur;
+          const lost = this.nodes.length - 1 - seen.size;
+          this.flash = 1.2; this.flashOk = lost === 0;
+          this.flashTxt = lost
+            ? 'PULL ' + this.nodes[this.cur].name + ': ' + lost + ' BOX' + (lost>1?'ES':'') + ' GO DARK'
+            : 'PULL ' + this.nodes[this.cur].name + ': EVERYTHING ELSE STAYS UP';
+          sfx('ui');
+        }
+      },
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.flash <= 0 && this.darkOf >= 0){ this.dark = null; this.darkOf = -1; }
+        if (this.submitted){
+          if (this.flash > 0) return;
+          const hit = [...this.marked].filter(i => this.spofs.includes(i)).length;
+          let over = Math.max(0, this.marked.size - hit - (this.forgive || 0));
+          this.hit = hit; this.over = over;
+          this.score = clamp(hit / Math.max(1, this.spofs.length) - over * .25, 0, 1);
+          this.finished = true; return;
+        }
+        const last = this.nodes.length - 1;
+        if (press.up)   this.cur = this.cur <= 1 ? last : this.cur - 1;
+        if (press.down) this.cur = this.cur >= last ? 1 : this.cur + 1;
+        let k = press.one ? 'mark' : press.use ? 'probe' : press.two ? 'send' : null;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (let i = 1; i < this.nodes.length; i++)
+            if (inRect(pt, ...this.nodeRect(i))){ this.cur = i; k = k || 'mark'; }
+          for (const b of this.btns)
+            if (inRect(pt, b.x - b.w/2, b.y, b.w, b.h)) k = b.k;
+        }
+        if (k) this.act(k);
+      },
+      draw(){
+        mgPanel('THE DIAGRAM', this.hint);
+        txt(this.obj, 240, 58, '#8d8778', 6, 'center');
+        txt('OUTAGE WINDOWS LEFT: ' + this.probes, 240, 70,
+            this.probes ? '#c9c4b8' : '#ffb02e', 6, 'center');
+        /* links first, so boxes sit on top of them */
+        ctx.strokeStyle = '#2a323b'; ctx.lineWidth = 1;
+        for (let i = 0; i < this.nodes.length; i++)
+          for (const j of this.nodes[i].link){
+            if (j < i) continue;
+            const A = this.nodes[i], B = this.nodes[j];
+            const off = this.dark && (i === this.darkOf || j === this.darkOf ||
+                        !this.dark.has(i) || !this.dark.has(j));
+            ctx.strokeStyle = off ? '#3a1c1c' : '#2a323b';
+            ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+          }
+        this.nodes.forEach((nd, i) => {
+          const [rx, ry, rw, rh] = this.nodeRect(i);
+          const isDark = this.dark && i !== 0 && !this.dark.has(i);
+          const pulled = i === this.darkOf;
+          const on = i === this.cur;
+          ctx.fillStyle = pulled ? '#3a1c1c' : isDark ? '#241a1a' : (i === 0 ? '#1b2b1e' : '#161b21');
+          ctx.fillRect(rx, ry, rw, rh);
+          ctx.strokeStyle = on ? '#2f7fbe' : this.marked.has(i) ? '#ffb02e'
+                          : pulled || isDark ? '#d64541' : '#343b44';
+          ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
+          txt(nd.name, nd.x, nd.y + 3,
+              pulled || isDark ? '#d64541' : this.marked.has(i) ? '#ffb02e'
+              : i === 0 ? '#4ade80' : '#c9c4b8', 5, 'center');
+        });
+        txt('MARKED: ' + this.marked.size, 70, 202, '#ffb02e', 6);
+        if (this.flash > 0)
+          wrapTxt(this.flashTxt, 240, 236, 340, this.flashOk ? '#4ade80' : '#d64541', 6);
+      } };
+  }},
   blast: { init(diff){
     /* the group you are changing is not also one of its own members: it comes
        out of the pool before anything is built from it */
@@ -7070,7 +7269,8 @@ const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
                     jargon:'JARGON TRANSLATION', script:'BY THE SCRIPT',
                     blast:'BLAST RADIUS', subnet:'THE ADDRESS PLAN',
                     quote:'THE SHORTFALL',
-                    keep:'KEEPING EVERYBODY' };
+                    keep:'KEEPING EVERYBODY',
+                    diagram:'THE DIAGRAM' };
 function mgPanel(title, hint){
   ctx.fillStyle = 'rgba(8,10,13,.88)'; ctx.fillRect(0,0,VW,VH);
   ctx.fillStyle = '#12161b'; ctx.fillRect(60, 26, 360, 214);
@@ -8685,6 +8885,51 @@ function selfTest(runSim){
          clientFirstWins === 0,
          'client-first play got everybody home on ' + clientFirstWins + '/' + n + ' hands');
       MG = savedMG4;
+    }
+    /* THE DIAGRAM rests on one thing: you are never given enough outage
+       windows to test your way to the answer. If probes >= the boxes that
+       matter, the board is a button you press N times and the drawing is
+       decoration. It also has to be a real graph — some boxes genuinely do
+       not strand anything, or marking everything wins. */
+    {
+      const savedMG5 = MG;
+      let short = 0, hasSafe = 0, allReach = 0, markAll = 0, n = 0;
+      for (let i = 0; i < 24; i++){
+        rngInit('DG-' + i);
+        const g = GAMES.diagram.init(2);
+        /* the claim is that you cannot test every BOX — you do not know which
+           are the ones that matter, so probes-vs-spofs was the wrong
+           comparison and passed on only 10 boards in 24 while the board was
+           in fact perfectly safe. */
+        if (g.probes < g.nodes.length - 1) short++;
+        /* Leaves are trivially safe — in a pure tree EVERY leaf is, and the
+           board collapses to "spot the boxes with one line coming out". What
+           has to exist is a box with things hanging off it that STILL strands
+           nothing, because there is a second path. That is the only reason to
+           read the drawing rather than count lines. */
+        if (g.nodes.some((nd, k) => k > 0 && nd.link.length > 1 && !g.spofs.includes(k)))
+          hasSafe++;
+        /* every box is drawn connected to the core, or it is not a drawing */
+        const seen = new Set([0]), q = [0];
+        while (q.length){ const a2 = q.shift();
+          for (const b2 of g.nodes[a2].link) if (!seen.has(b2)){ seen.add(b2); q.push(b2); } }
+        if (seen.size === g.nodes.length) allReach++;
+        /* and marking the whole drawing must not be a winning strategy */
+        for (let k = 1; k < g.nodes.length; k++) g.marked.add(k);
+        g.submitted = true; g.flash = 0; g.step(0);
+        markAll += g.finished ? g.score : 1;
+        n++;
+      }
+      ok('the drawing is always fully connected',
+         allReach === n, allReach + '/' + n + ' drawings reached every box');
+      ok('you never get enough outage windows to test every box',
+         short === n, short + '/' + n + ' had fewer windows than boxes');
+      ok('and a box with things hanging off it can still strand nothing',
+         hasSafe >= n * .8,
+         hasSafe + '/' + n + ' drawings had a second path worth reading');
+      ok('marking the whole drawing is not a strategy',
+         markAll / n < .3, 'mark-everything scores ' + (markAll/n).toFixed(3));
+      MG = savedMG5;
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could
