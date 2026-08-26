@@ -1034,26 +1034,26 @@ const MAPS = { office1: {
 ground: {
   name:'PROACTIVE IT PARTNERS — GROUND FLOOR',
   map:[
-    '###wwwwww##wwwwwww####wwwwwww###wwwwwwww####',
-    '#,,,,,,,,,,,,,,,,,,,#.........#..........x##',
-    '#EP,,,,,,,,,,,,,,,,,#.........#...........##',
-    '#E,,,,,,,,,,,,,,,,,,#..tttt...#...ttttt...##',
-    '#,,,,,,NNNNN,,,,,,,,#..tttt...#...ttttt...##',
-    '#,,,,,,,,,,,,,,,,,,,#.........#...........##',
-    '#,,,,,,,,,,,,,,,,,,,#.........#...........##',
-    '#,,,U,f,,,,,,,,,,,,,GGGGDGGGGGGGGGGDGGGGGG##',
-    '#,,,U,f,,,,,,,,,,,,,####D##########D########',
-    '#,,,,,,,,,,,,,,,,,,,......................##',
-    '#,,,,,,,,,,,,,,,,,,,................ddq...##',
-    '#,,f,,,,,,,,,,,,,,,,...BBBBB..BBBBB.......##',
-    '#,,,,,,,,,,,,,,,,,,,......................##',
-    '#,,f,,,,,,,,,,,,,,,,...BBBBB..............##',
-    '#,,,,,,,,,,,,,,,,,,,......................##',
-    '#,,,,,,,,,,,,,,,,,,,......................##',
+    '###wwwwww####wwwwwww###wwwwwww####wwwwww####',
+    '#,,,,,,,,,,#.........#.........#...........#',
+    '#EP,,,,,,,,#..cccc...#..cccc...#...dq......#',
+    '#E,,,,,,,,,D..tttt...#..tttt...#...dq......#',
+    '#,,,,,,,,,,#..cccc...#..cccc...#.....f.....#',
+    '#,,NNNNN,,,#.........#.........#...........#',
+    '#,,,,,,,,,,GGGGGGGGGGGGGGDGGGGGGGGGGDGGGGGG#',
+    '#,,,,,,,,,,................................#',
+    '#,,,,,,,,,,####D###########D#########D######',
+    '#,,,,,,,,,,...........#.........#..........#',
+    '#,,UU,,,f,,.BBBBB.....#.hhhhhhh.#..tt..tt..#',
+    '#,,,,,,,,,,...........#.........#..cc..cc..#',
+    '#,,UU,,,,,,.BBBBB.....#.hhhhhhh.#..........#',
+    '#,,,,,,,,,,...........#.........#..tt..tt..#',
+    '#,,f,,,,f,,....dq.....#.hhhhhhh.#..cc..cc..#',
+    '#,,,,,,,,,,...........#.........#...f...vv.#',
     '########DD##################################',
     '############################################',
   ],
-  anchors:{ RECEPTION:[9,5], POST:[36,12], MEET_A:[25,5], MEET_B:[36,5],
+  anchors:{ RECEPTION:[5,6], POST:[17,10], MEET_A:[13,3], MEET_B:[23,3],
             FRONT:[8,15] }
 }};
 
@@ -4769,6 +4769,14 @@ const LEGEND = {
   /* the post room pile. It was rack art at first and the room read as a
      second data centre, which is the one thing a reception floor is not. */
   'B':{o:32, act:'parcels'},
+  /* Shelving and a vending machine as SCENERY. The anchored versions of both
+     already exist upstairs — H is SHELF, V is VEND — and putting those glyphs
+     on the ground floor would give each name two homes, which is how an
+     anchor on one floor silently answers a goto meant for the other. Same
+     art, no anchor, no act. The store room was built with S first and came
+     out full of server racks: the reception-floor-as-data-centre mistake,
+     made a second time, three comment lines below the note about it. */
+  'h':{o:30}, 'v':{o:14},
   't':{o:19}, 'k':{o:21}, 'A':{o:22, act:'arcade', anchor:'ARCADE'},
   'C':{o:23, act:'cooler', anchor:'COOLER'}, 'F':{o:24},
   'U':{o:25, act:'couch'}, 'N':{o:26}, 'H':{o:30, act:'shelf', anchor:'SHELF'},
@@ -12393,17 +12401,29 @@ function selfTest(runSim){
          seniors are supposed to sit further from the pit, not in a different
          postcode. */
       {
-        const wanted = new Set();
-        for (const id in TICKETS)
-          for (const st of TICKETS[id].steps) if (st.goto) wanted.add(st.goto);
+        /* Per rung, not across all of them. A ticket is only ever dealt
+           inside its own tiers, so pricing the architect's desk against an
+           errand that stops at T2 measures a walk nobody takes — and that
+           fiction is what decides how far from the lift the ground floor is
+           allowed to put anything. */
+        const wantedAt = ROLES.map(() => new Set());
+        for (const id in TICKETS){
+          const T = TICKETS[id];
+          for (const st of T.steps){
+            if (!st.goto) continue;
+            for (let r = T.tiers[0]; r <= T.tiers[1] && r < ROLES.length; r++)
+              wantedAt[r].add(st.goto);
+          }
+        }
         const over = []; let worst = 0, worstAt = '';
-        for (const R of ROLES){
+        for (let ri = 0; ri < ROLES.length; ri++){
+          const R = ROLES[ri];
           /* price it the way the game does, from the desk, but without
              borrowing run.rung — a lint that edits the run to read it is a
              lint that can leave the run somewhere it did not start */
           const desk = anchorPos(R.deskAnchor);
           if (!desk) continue;                       // covered by the desk lint
-          for (const a of wanted){
+          for (const a of wantedAt[ri]){
             /* An off-floor anchor does not resolve against the loaded map, so
                this used to skip it — meaning the first ticket to send anyone
                downstairs would have escaped the budget entirely. It is priced
