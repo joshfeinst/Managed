@@ -40,6 +40,102 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
     /* Each board gets a driver per policy. A driver takes the live state and
        performs ONE move; the runner loops it until the board finishes. */
     const DRIVE = {
+      /* ---- the five original boards ---------------------------------------
+         Added after the sweep found a shallow-copy bug in one of the six new
+         ones. These have been through human playtest waves, which is why they
+         were not first, and is not a reason to leave them unmeasured. */
+      cable: {
+        /* the cursor has to STEP PAST a cable it has already plugged, or the
+           driver picks the same one forever and the board never terminates —
+           which is what happened, 0 of 40 finished, and it was the harness
+           that was wrong, not the board */
+        perfect: g => {
+          if (g.side === 0){
+            let i = g.left.findIndex(l => g.linked[l.i] < 0);
+            if (i < 0) return;
+            g.cur = i; g.pickL = i; g.side = 1; g.cur = 0; return;
+          }
+          const Lc = g.left[g.pickL];
+          const want = g.right.findIndex(r => r.i === Lc.i);
+          g.cur = want;
+          if (!g.linked.includes(want)){
+            g.linked[Lc.i] = want; g.side = 0; g.cur = g.pickL; g.pickL = -1;
+          }
+        },
+        /* plugs the first free port it sees, whether or not it is the right one */
+        careless: g => {
+          if (g.side === 0){
+            let i = g.left.findIndex(l => g.linked[l.i] < 0);
+            if (i < 0) return;
+            g.pickL = i; g.side = 1; g.cur = 0; return;
+          }
+          const Lc = g.left[g.pickL];
+          let port = -1;
+          for (let i = 0; i < g.n; i++) if (!g.linked.includes(i)){ port = i; break; }
+          if (port < 0) return;
+          if (Lc.i !== g.right[port].i) g.mistakes++;
+          /* it is still holding the cable after a wrong port, so it takes the
+             right one next — the mistake is already on the board */
+          const want = g.right.findIndex(r => r.i === Lc.i);
+          g.linked[Lc.i] = want; g.side = 0; g.cur = g.pickL; g.pickL = -1;
+        },
+        random: g => {
+          if (g.side === 0){
+            let i = g.left.findIndex(l => g.linked[l.i] < 0);
+            if (i < 0) return;
+            g.pickL = i; g.side = 1; g.cur = 0; return;
+          }
+          const Lc = g.left[g.pickL];
+          const port = Ri('game', g.n);
+          if (g.linked.includes(port) || Lc.i !== g.right[port].i) g.mistakes++;
+          const want = g.right.findIndex(r => r.i === Lc.i);
+          g.linked[Lc.i] = want; g.side = 0; g.cur = g.pickL; g.pickL = -1;
+        }
+      },
+      pw: {
+        /* PERFECT is judging each one correctly — approving the clean ones AND
+           rejecting the broken ones. Crediting only the approvals made the
+           perfect driver into the careless one, and the board read 47/47/53
+           as though it had no game in it. */
+        perfect:  g => { g.right++; g.at++; },
+        careless: g => { if (g.items[g.at].ok) g.right++; g.at++; },   // approves everything
+        random:   g => { const guess = Ri('game', 2) === 0;
+          if (guess === g.items[g.at].ok) g.right++; g.at++; }
+      },
+      jargon: {
+        perfect:  g => { g.right++; g.at++; },
+        careless: g => { if (g.rounds[g.at].opts[0].ok) g.right++; g.at++; },   // always the first
+        random:   g => { const j = Ri('game', 3);
+          if (g.rounds[g.at].opts[j].ok) g.right++; g.at++; }
+      },
+      blast: {
+        perfect:  g => { g.all.forEach(nd => { if (nd.hits && !nd.group) nd.marked = true; });
+          g.applied = true; },
+        careless: g => { g.all.forEach(nd => { if (!nd.group) nd.marked = true; });
+          g.applied = true; },
+        random:   g => { g.all.forEach(nd => { if (!nd.group && Ri('game',2)) nd.marked = true; });
+          g.applied = true; }
+      },
+      script: {
+        /* driven through the board's own cards() and play(), not by poking its
+           state — the scoring reads turns, lies and resolved together, and a
+           driver that sets them by hand is measuring itself */
+        /* Half the marks are the script and half are the call, so firing the
+           fix the moment it arms throws away every box still unbanked — which
+           is what the first driver did, and it read 76% as if the board were
+           unwinnable. Bank everything first, then resolve. A box the caller
+           has already answered still counts as banked and costs one lie, and
+           with four boxes that trade is worth taking: +0.125 of the script
+           half against -0.075 of the call half. */
+        perfect: g => {
+          const cs = g.cards();
+          const j = cs.findIndex(c => c.k === 'qa');
+          if (j >= 0){ g.play(j); return; }
+          g.play(cs[3].armed ? 3 : 2);       // stall until it arms, then say it
+        },
+        careless: g => { g.play(0); },
+        random: g => { g.play(Ri('game', 4)); }
+      },
       subnet: {
         perfect: g => { const s = g.sites[g.at]; if (s) g.cur = SUBNET_PREFIXES.indexOf(s.want); g.take(); },
         careless: g => { g.cur = 0; g.take(); },

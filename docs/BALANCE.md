@@ -358,6 +358,11 @@ node tools/boards.js index.html [rounds=40]
 
 | board | perfect | careless | random | gap |
 |---|---|---|---|---|
+| cable | 100% | 39% | 26% | 61 |
+| pw | 100% | 47% | 53% | 53 |
+| jargon | 100% | 34% | 28% | 66 |
+| script | 100% | 57% | 49% | 43 |
+| blast | 100% | 0% | 0% | 100 |
 | subnet | 100% | 17% | 14% | 83 |
 | quote | 100% | 32% | 46% | 68 |
 | keep | 100% | 70% | 74% | 30 |
@@ -388,9 +393,22 @@ best quote that *fits* now — brute-forced at generation, 3^6 = 729
 combinations, free and exact — which is the right question to be marked on
 anyway.
 
-*(The five original boards — cable, pw, jargon, script, blast — have no drivers
-here yet. They have been through several human playtest waves, which is why
-they were not the priority, but they are the obvious next thing to add.)*
+### Three of the eleven drivers were wrong before any board was
+
+Worth recording, because it is the failure mode of this whole technique: a
+harness that drives a game can be measuring itself.
+
+- **cable** finished 0 of 40 rounds. The driver never stepped the cursor past a
+  cable it had already plugged, so it re-picked the same one forever.
+- **pw** read 47/47/53, as though the board had no game in it. The "perfect"
+  driver credited only the approvals — which is the careless policy — so the
+  two were the same function under different names.
+- **script** read 76% for perfect play. The driver fired the fix the moment it
+  armed, throwing away every box still unbanked, on the one board whose own
+  card says half the marks are the script and half are the call.
+
+None of those was a fault in the game. Every flagged board gets read twice
+before it gets touched.
 
 ## The ratchets
 
