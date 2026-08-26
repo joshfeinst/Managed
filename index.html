@@ -11261,6 +11261,26 @@ function selfTest(runSim){
       }
       run = savedRunR;
     }
+    /* AND THE RUNG'S OWN BOARD HAS TO BE ON THE RUNG'S OWN TICKETS. Six
+       bespoke minigames were written for rungs four to nine, one each, and a
+       board is only that rung's signature if the rung's OWN work opens it —
+       a ticket inherited from three rungs below carrying the board around is
+       not the same thing at all, and would satisfy any check that only asks
+       whether the board is reachable. */
+    {
+      const SIGNATURE = { 4:'subnet', 5:'quote', 6:'keep', 7:'diagram',
+                          8:'paper', 9:'weekend' };
+      const orphan = [];
+      for (const r in SIGNATURE){
+        const rung = +r, board = SIGNATURE[r];
+        const own = Object.keys(TICKETS).filter(id =>
+          TICKETS[id].tiers[0] === rung &&
+          TICKETS[id].steps.some(st => st.game === board));
+        if (!own.length) orphan.push(ROLES[rung].id + ':' + board);
+      }
+      ok('each rung deals its own signature board off its own tickets',
+         !orphan.length, orphan.join(' '));
+    }
     /* THE BUILDING IS IN BRITAIN AND HAS TO SOUND LIKE IT. Found by taking a
        screenshot rather than by reading the file: the office called the same
        object a lift in one line of prose and THE ELEVATOR on the sign the
