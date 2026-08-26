@@ -66,11 +66,14 @@ Rates and bars are a **matched pair** and must be set together from
 `tools/bars.js --sweep`, never by hand. The sweep taken before the meeting
 budget landed is stale; everything set from it needs redoing.
 
-- [ ] Re-sweep deal rates under the meeting budget, set rates and bars together
-- [ ] Re-baseline `GATE_DEBT` / `GATE_DEBT_BUDGET` / `GATE_REACH` and say why
-- [ ] Relationship Manager and Solutions Architect separated good triage from
-      bad by only 3–9 points at every rate tried. If the re-sweep does not fix
-      them, they need shorter work, not a different bar — write it down rather
-      than tuning around it.
-- [ ] Full battery: verify, visual, save, meta, marathon, gate --ladder
-- [ ] `docs/BALANCE.md` final table
+- [x] Re-sweep deal rates under the meeting budget, set rates and bars together
+- [x] Re-baseline `GATE_DEBT` / `GATE_DEBT_BUDGET` and say why — 69 → 52
+- [x] relmgr/solarch fixed by the meeting budget + senior time scale, not by a bar
+- [x] Full battery: verify, visual, save, meta, burn, human, templates, gate --ladder
+- [x] `docs/BALANCE.md` rewritten — three causes, all measured
+- [ ] **vCIO is the weakest rung left.** Bad triage clears 3–4 seeds in 12 and
+      the good/bad gap is 6 points, the narrowest on the ladder. A five-day gate
+      fixes it and costs the top of the ladder (see BALANCE.md) — so it needs
+      content: more genuinely droppable work in the vCIO pool, or cheaper
+      tickets so more of the day is decisions rather than one long meeting.
+- [ ] Put the minigame question to Josh with a real rung in front of him.

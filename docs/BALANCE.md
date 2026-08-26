@@ -217,6 +217,37 @@ reason. With the bars re-cut, bad triage now backs into a promotion on 1–4
 seeds in 12. **That is the real number**, it is recorded as the new ratchet
 floor, and it may only fall. vCIO's 4/12 is the worst and the one to fix first.
 
+### The five-day gate: measured, and rejected
+
+The gate fires on the **best rolling window** of a career, so a three-day window
+in an eight-day career gives six chances and a bad player only needs one lucky
+streak. That is exactly how sloppy triage backs into a promotion. Widening the
+senior gates to five days was measured and it worked on that axis:
+
+| rung | sloppy clears @3d | @5d |
+|---|---|---|
+| project | 25% | 8% |
+| procure | 38% | 17% |
+| relmgr | 29% | 8% |
+| solarch | 29% | 4% |
+| vcio | 25% | 8% |
+
+`gate.js --ladder` liked it too: total debt 52 → 45. **Both tools said ship it.**
+
+`tools/meta.js` — which plays whole careers rather than rungs — said the
+opposite, and it was right: **3 of 8 careers reaching retirement became 0 of 8,
+best rung DIRECTOR became procure.** At four days it was still 0 of 8 (best
+rung solarch). Careers are burnout-limited, so every extra day a gate demands is
+a day not spent climbing, and requiring five good days on five senior rungs put
+the top of the ladder outside a career's budget entirely.
+
+**Reverted to three days.** The trade is that bad triage clears 1–4 seeds in 12
+at the top, recorded as `GATE_DEBT.loose` and unfixed.
+
+The lesson is about the tools, not the window: two harnesses measuring rungs
+agreed on a change that a harness measuring *careers* showed was ruinous.
+Anything touching gate shape gets `meta.js` run against it before it lands.
+
 ### Bar placement (`tools/bars.js`, 24 seeds x 10 days)
 
 Healthy = good triage clears ≥60% of seeds, bad triage ≤30%. **Eight of nine
