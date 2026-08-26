@@ -7668,7 +7668,13 @@ function reviewScreen(dayPerf, eod, promo, ending){
      prints NaN% at a player is never acceptable, and the two are set in
      startCommute — which every real day goes through, and which a restored
      save or a future entry point might not. */
-  const speed = run.resolved ? Math.round((run.speedSum || 0) / run.resolved * 100) : 0;
+  /* NULL, NOT ZERO, WHEN NOTHING WAS MEASURED. Craft already said "nothing
+     hands-on today" on a day with no boards; Speed printed "0% of each
+     ticket's waiting room still unused — higher is better" on a day with no
+     closed tickets, which is not a slow day, it is no data, and it reads as
+     the worst score on the screen. A day where everything burned is exactly
+     the evening a player is least able to argue with it. */
+  const speed = run.resolved ? Math.round((run.speedSum || 0) / run.resolved * 100) : null;
   const qual  = run.qualN ? Math.round(run.qualSum / run.qualN * 100) : null;
   const gate  = role0.gates.nextAt;
   const ls    = run.lastScore;
@@ -7705,7 +7711,8 @@ function reviewScreen(dayPerf, eod, promo, ending){
             (ls.worstPri ? ' (worst: a P' + ls.worstPri + ')' : '')
                       : ', none held against you')
         : '') + '</dd>' +
-    '<dt>Speed</dt><dd>' + speed + '% of each ticket\'s waiting room still unused — higher is better</dd>' +
+    '<dt>Speed</dt><dd>' + (speed === null ? 'nothing closed today'
+      : speed + '% of each ticket\'s waiting room still unused — higher is better') + '</dd>' +
     '<dt>Craft</dt><dd>' + (qual === null ? 'nothing hands-on today'
       : qual + '% across ' + run.qualN + ' hands-on job' + (run.qualN === 1 ? '' : 's')) + '</dd>' +
     '<dt>Performance</dt><dd><b>' + Math.round(dayPerf*100) + '%</b> — ' + perfName(dayPerf) +
@@ -14564,6 +14571,40 @@ function selfTest(runSim){
       ok('review: the evening names them on screen',
          /What it cost you/.test(html) && html.indexOf('Coffee for DEREK') >= 0,
          html.indexOf('Coffee for DEREK') >= 0 ? '' : 'ticket titles absent');
+      /* AND IT DOES NOT REPORT A MEASUREMENT IT NEVER TOOK. Speed printed
+         "0% of each ticket's waiting room still unused — higher is better" on
+         an evening where nothing was closed, which is no data wearing the
+         costume of the worst possible score — on exactly the evening a player
+         is least able to argue with it. Craft had this right and Speed did
+         not; both are checked, in both directions, so blanking them
+         unconditionally cannot pass either. */
+      {
+        const bare = () => document.getElementById('r-stats').textContent;
+        const dry = () => {
+          rngInit('DRY'); runInit('DRY'); rollDay();
+          run.clock = DAY_MIN; run.queue = []; run.resolved = 0; run.qualN = 0;
+          run.speedSum = 0; run.qualSum = 0; run.stakesDone = 0; run.earned = 0;
+          run.scores = []; run.breaches = 0; run.burned = [];
+          endDay(); const t = bare(); if (run) run.pendingEnd = null; return t;
+        };
+        const wet = () => {
+          rngInit('WET'); runInit('WET'); rollDay();
+          run.clock = DAY_MIN; run.queue = []; run.resolved = 4; run.qualN = 3;
+          run.speedSum = 4 * .42; run.qualSum = 3 * .81;
+          run.stakesDone = 9; run.earned = 7; run.scores = [.8,.8,.8,.8];
+          run.breaches = 0; run.burned = [];
+          endDay(); const t = bare(); if (run) run.pendingEnd = null; return t;
+        };
+        const d = dry(), w = wet();
+        ok('review: a day that closed nothing reports no speed, not a zero',
+           /nothing closed today/.test(d) && !/0% of each ticket/.test(d) &&
+           /nothing hands-on today/.test(d),
+           (d.match(/Speed[^A-Z]*/) || ['?'])[0].slice(0, 60));
+        ok('review: a day that closed something still reports its speed',
+           /% of each ticket/.test(w) && /% across 3 hands-on jobs/.test(w),
+           (w.match(/Speed[^A-Z]*/) || ['?'])[0].slice(0, 60));
+        run = null; G.state = 'title';
+      }
       ok('review: it says whether you had started them',
          /never started|part-way in|never picked up/.test(html));
 
