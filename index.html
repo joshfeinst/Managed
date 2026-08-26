@@ -10651,6 +10651,53 @@ function selfTest(runSim){
       }
       run = savedRunR;
     }
+    /* A CAREER HAS TO END IN THE RIGHT PLACE FOR THE RIGHT REASON, and nothing
+       in this suite had ever played one to its end. Every gate, bar, rate and
+       ratchet is measured a rung at a time; the shape of a whole career — how
+       far you get, how long you last, and what finally stops you — was assumed.
+
+       Played out, the assumption held, which is the only reason it is worth
+       pinning: a slacker is fired inside a week without leaving the pit, a
+       careless one is fired around T1, and a careful one climbs to T3 or the
+       Project Team and is stopped by burnout rather than by Linda. One career
+       takes you about a third of the way up and the meta layer carries the
+       rest, which is exactly the roguelite the plan describes.
+
+       What this guards is the ORDER, not the numbers: care must out-climb
+       carelessness and out-last it. A change that lets sloppy triage climb
+       higher than careful triage would pass every other test in this file. */
+    {
+      const career = (skill, order, extra) => {
+        const savedMetaC = JSON.stringify(meta);
+        meta = { certs:[], rep:0, conn:0, runsPlayed:0, best:{ days:0, rung:0 } };
+        rngInit('ARC-' + skill); runInit('ARC-' + skill);
+        let g = 0, end = 'timeout', rung = 0, day = 0;
+        while (run && g++ < 60){
+          startCommute(); if (!run) break;
+          simDay(skill, Object.assign({ order, pick:'best' }, extra || {}));
+          if (!run) break;
+          rung = run.rung; day = run.day;
+          if (run.pendingEnd){ end = run.pendingEnd; startCommute(); break; }
+        }
+        if (run) run = null;
+        meta = JSON.parse(savedMetaC);
+        return { end, rung, day };
+      };
+      const slack = career(0.35, 'slack', { slack:true });
+      const care  = career(1.00, 'pridead');
+      ok('a slacker is fired, in the pit, inside a fortnight',
+         slack.end === 'fired' && slack.rung === 0 && slack.day <= 14,
+         slack.end + ' at ' + ROLES[slack.rung].id + ' day ' + slack.day);
+      ok('care climbs further than carelessness', care.rung > slack.rung,
+         ROLES[care.rung].id + ' vs ' + ROLES[slack.rung].id);
+      ok('and lasts longer doing it', care.day > slack.day,
+         care.day + ' days vs ' + slack.day);
+      /* and it is burnout that stops a good career, not the sack — the run
+         ender the plan names, reached by the player who did nothing wrong */
+      ok('a careful career is ended by burnout, not by Linda',
+         care.end === 'burnout' || care.end === 'retired',
+         care.end + ' at ' + ROLES[care.rung].id + ' day ' + care.day);
+    }
     /* THE DESK MOVES, AND IT HAS TO BE A REAL PLACE. Every role shipped with
        deskAnchor:'TERMINAL' — one chair for nine promotions — and the field is
        what tickets are PRICED from, so a desk that does not exist or cannot be

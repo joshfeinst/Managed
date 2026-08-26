@@ -1110,6 +1110,41 @@ had, so it is worth writing down. The shipped bars are the hand-tuned ones,
 because those are what the full battery and 24 careers were actually measured
 against; the tool is for the next time the scoring moves underneath them.
 
+## Nothing had ever played a career to its end
+
+Every gate, bar, rate and ratchet in this file is measured a rung at a time.
+The shape of a whole career — how far you get, how long you last, and what
+finally stops you — was assumed for the entire life of the project.
+
+Played out, five personas over sixty careers, each starting from scratch at the
+intern desk with no banked reputation:
+
+| persona | ending | best rung | median rung | median days |
+|---|---|---|---|---|
+| slacker | fired 12/12 | intern | intern | 5 |
+| sloppy | fired 10, burnout 2 | t2 | t1 | 12 |
+| coffee-abuser | fired 9, burnout 3 | t2 | t1 | 18 |
+| ordinary | burnout 7, fired 5 | t3 | t2 | 17 |
+| diligent | burnout 11, fired 1 | project | t3 | 16 |
+
+The assumption held, which is the only reason it is worth pinning. A slacker is
+fired inside a week without leaving the pit — the original plan's target was
+"slacker fired by day 5" and it lands on 5 exactly. A careless career ends
+around T1 with a sacking. A careful one climbs to T3 or the Project Team and is
+stopped by **burnout**, not by Linda: the run-ender the plan names, reached by
+the player who did nothing wrong.
+
+**Neither win ending appears in a single career, and that is correct.** One
+career takes you about a third of the way up; the meta layer — reputation
+banked, next career started higher — carries the rest. `meta.js` reports 17 of
+24 players retiring precisely because it plays up to fourteen careers each.
+
+The new invariant guards the ORDER, not the numbers: care must out-climb
+carelessness and out-last it, and a careful career must end in burnout rather
+than the sack. A change that let sloppy triage climb higher than careful triage
+would pass every other test in this file. Zeroing the intern's fired floor
+fails it; flattening `STAKES` so priority is worthless fails six tests.
+
 ## The ratchets
 
 | name | value | meaning | direction |
