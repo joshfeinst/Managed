@@ -19,12 +19,21 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0; background:var(--void); color:var(--paper); font-family:var(--body);
-  overflow:hidden; -webkit-user-select:none; user-select:none;}
+  overflow:hidden; -webkit-user-select:none; user-select:none;
+  /* a tap is an instruction, not a text selection: no blue flash, no long-press
+     callout, no 300ms wait for a second tap that is not coming */
+  -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;}
 #stage{position:fixed; inset:0; display:grid; place-items:center;
   background:radial-gradient(ellipse at 50% 40%, #1b1f25 0%, #14161a 65%, #0b0c0e 100%);}
 #frame{position:relative; line-height:0;
   box-shadow:0 0 0 1px var(--line), 0 24px 70px -18px #000, 0 0 50px -18px #2f7fbe33;}
-canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:block; background:#000;}
+canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:block; background:#000;
+  /* a tap on the world is a move, never a zoom: without this a phone waits
+     300ms for a second tap before delivering the first, and a two-finger
+     stretch scales the page instead of doing nothing */
+  touch-action:none;}
+body{touch-action:manipulation}
+.screen, #tix{touch-action:pan-y}
 
 /* ---------------- DOM overlays: HUD, dialogue, ticket panel ---------------- */
 /* IT WRAPS RATHER THAN CLIPS. At 400x300 the row ran past the frame and took
@@ -40,11 +49,11 @@ canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:bloc
 /* The HUD does not take clicks — except this. SAVE & QUIT lives behind the
    pause menu and the pause menu lived behind Escape, so the one thing a
    mouse-only player could not do mid-day was stop playing. */
-#hud #h-pause{pointer-events:auto; font-family:var(--pix); font-size:.72em; letter-spacing:.12em;
-  background:#161b21; color:var(--paper); border:1px solid var(--line); padding:5px 8px;
-  cursor:pointer; line-height:1}
-#hud #h-pause:hover{background:#1d2632; border-color:var(--corp); color:#fff}
-#hud #h-pause:focus-visible{outline:2px solid var(--corp); outline-offset:2px}
+#hud #h-pause,#hud #h-queue-btn{pointer-events:auto; font-family:var(--pix); font-size:.72em;
+  letter-spacing:.12em; background:#161b21; color:var(--paper); border:1px solid var(--line);
+  padding:5px 8px; cursor:pointer; line-height:1}
+#hud #h-pause:hover,#hud #h-queue-btn:hover{background:#1d2632; border-color:var(--corp); color:#fff}
+#hud #h-pause:focus-visible,#hud #h-queue-btn:focus-visible{outline:2px solid var(--corp); outline-offset:2px}
 #obj{position:absolute; left:0; right:0; top:0; display:none; justify-content:center;
   pointer-events:none; margin-top:calc(var(--hudh, 26px) + 4px);}
 /* An objective you cannot act on, printed over the thing you are reading. The
@@ -73,7 +82,7 @@ body.panelopen #obj, body.screenopen #obj{display:none !important}
   #hud .grp{gap:7px}
   #hud .grp:last-child .lab{display:none}
   #hud .meter{width:34px; height:7px}
-  #hud #h-pause{padding:3px 5px; letter-spacing:.02em}
+  #hud #h-pause, #hud #h-queue-btn{padding:3px 5px; letter-spacing:0; font-size:.62em}
 }
 #hud .lab{color:var(--dim); font-size:.78em; letter-spacing:.08em; text-transform:uppercase}
 #hud b{font-weight:700}
@@ -262,6 +271,62 @@ input[type=range]{accent-color:var(--corp); width:150px}
 .grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px 22px; text-align:left; width:min(720px,92vw)}
 .ctl{display:flex; justify-content:space-between; gap:10px; font-size:clamp(11px,1.6vh,14px); border-bottom:1px dotted #2a313a; padding:5px 0}
 .ctl span:last-child{color:var(--dim); text-align:right}
+
+/* ---------------------------- ON A FINGER --------------------------------
+   Everything under body.touch is driven by (hover:none) and (pointer:coarse),
+   which is a question about the PRIMARY input rather than a guess at the
+   device, and which the browser re-answers on its own when the input changes.
+   Nothing asks the player what they are on.
+
+   A tap has no hover to preview with and a finger is about 9mm across, so the
+   two things that change are size and spacing. 44px is the number both
+   platform guidelines landed on from the same research. */
+body.touch .btn, body.touch .mi, body.touch #d-opts .opt,
+body.touch #tix .row, body.touch #tix header .x,
+body.touch #hud #h-pause, body.touch #hud #h-queue-btn{
+  min-height:44px; min-width:44px; display:flex; align-items:center; justify-content:center;}
+body.touch #tix .row{display:grid}
+body.touch #d-opts .opt, body.touch .mi{justify-content:flex-start}
+/* The two controls leave the HUD on a touch device and become a fixed pair in
+   the bottom corner, which is where a thumb already is in both orientations —
+   in the HUD they were either overlaying a quarter of the world in landscape
+   or sitting at the top of the screen in portrait, which is the one place a
+   thumb cannot comfortably reach. */
+body.touch #hud #h-pause, body.touch #hud #h-queue-btn{
+  position:fixed; z-index:6; font-size:.9em; padding:0 14px; min-width:88px;
+  right:max(10px, env(safe-area-inset-right));
+  background:rgba(22,27,33,.94); border-color:var(--corp);}
+body.touch #hud #h-queue-btn{bottom:calc(max(10px, env(safe-area-inset-bottom)) + 52px)}
+body.touch #hud #h-pause{bottom:max(10px, env(safe-area-inset-bottom))}
+/* a tap that lands on nothing should still feel like it landed */
+body.touch .btn:active, body.touch .mi:active, body.touch #d-opts .opt:active,
+body.touch #tix .row:active{filter:brightness(1.3)}
+
+/* PORTRAIT. A sixteen-by-nine canvas on a 390x844 phone is 219px tall and the
+   game was drawing it in the middle of the screen with six hundred pixels of
+   black above and below it -- 26% of the phone in use. The canvas cannot get
+   any wider, so the HUD comes out from on top of it and sits underneath in
+   space that was doing nothing, which both uses the screen and gives the
+   controls room to be 44px. */
+#rotate{display:none; position:absolute; left:0; right:0; top:100%; justify-content:center;
+  padding:14px 12px 0; pointer-events:none}
+#rotate span{font-family:var(--pix); font-size:8px; line-height:1.7; letter-spacing:.06em;
+  color:var(--dim); text-align:center; max-width:30ch}
+@media (pointer:coarse) and (orientation:portrait){
+  #stage{place-items:start center; padding-top:max(8px, env(safe-area-inset-top))}
+  #frame{padding-bottom:var(--hudh, 44px)}
+  #hud{top:auto; bottom:0; background:linear-gradient(180deg, rgba(8,10,13,.86), rgba(8,10,13,.96));
+       border-top:1px solid var(--line)}
+  #obj{top:auto; bottom:calc(var(--hudh, 44px) + 4px); margin-top:0}
+  #keyhint{display:none !important}
+  #rotate{display:flex}
+}
+
+/* the objective banner is drawn over the world in landscape, so keep it clear
+   of the floating controls */
+@media (pointer:coarse) and (orientation:landscape){
+  #obj span{max-width:60%}
+}
 </style>
 
 <div id="stage">
@@ -279,11 +344,16 @@ input[type=range]{accent-color:var(--corp); width:150px}
         <span><span class="lab">stress</span> <span class="meter" id="h-stressm"><i style="width:0%"></i></span></span>
         <span><span class="lab">burnout</span> <span class="meter burn" id="h-burnm"><i style="width:0%"></i></span></span>
         <span><span class="lab">coffee</span> <b id="h-coffee">☕0</b></span>
+        <button id="h-queue-btn" data-act="queue" aria-label="Open the service queue" title="Service queue">QUEUE</button>
         <button id="h-pause" data-act="pause" aria-label="Pause, or save and quit" title="Pause · save and quit">PAUSE</button>
       </div>
     </div>
 
     <div id="obj"><span id="obj-t"></span></div>
+    <!-- Portrait on a phone can only ever give a 16:9 canvas the width of the
+         screen, so the sensible thing is to say so once, where the space it is
+         talking about already is. Shown by CSS alone; there is no state. -->
+    <div id="rotate"><span>TURN THE PHONE SIDEWAYS — THERE IS MORE OFFICE THAT WAY</span></div>
     <div id="keyhint"><span>CLICK TO WALK, USE AND TALK · WASD MOVE · SHIFT RUN · E USE · TAB QUEUE · ESC PAUSE</span></div>
 
     <div id="dlg">
@@ -10614,6 +10684,12 @@ function act(a){
     case 'closequeue': if (G.modal && G.modal.kind === 'tix') closeModalToWork(); break;
     /* the HUD's only clickable thing: Escape by mouse, and with it SAVE & QUIT */
     case 'pause': if (G.state === 'work' || G.modal) pauseGame(); break;
+    /* TAB has no finger. The queue is the game's one indispensable panel and
+       the only way in from across the room was a key. */
+    case 'queue':
+      if (G.modal && G.modal.kind === 'tix') closeModalToWork();
+      else if (run && (G.state === 'work' || G.modal)){ if (G.modal) closeModalToWork(); openQueue(); }
+      break;
     case 'newrun': actSetup(); break;
     case 'reroll':
       document.getElementById('seedbox').value = 'JOB-' + (1000 + (Math.random()*9000|0));
@@ -11501,6 +11577,58 @@ function selfTest(runSim){
           fr.style.width = keptW; hudBox.style.display = keptDisp; hudUpdate();
           ok('ui: nothing in the HUD is cut off on a narrow window',
              !lost.length, lost.join(', '));
+        }
+        /* A FINGER IS NOT A MOUSE. Two things it needs that a mouse does not:
+           a way to open the queue that is not TAB — the panel the whole game
+           runs through, and the only way in from across the room was a key —
+           and controls it can actually hit. body.touch is set from
+           (hover:none) and (pointer:coarse), which asks about the primary
+           INPUT rather than guessing at the device and re-answers itself when
+           a keyboard is attached; nothing asks the player which they are. The
+           class can be set by hand, so the sizes are measurable from here. */
+        {
+          const qb = document.getElementById('h-queue-btn');
+          const wasTouch = document.body.classList.contains('touch');
+          const wasHud = document.getElementById('hud').style.display;
+          document.body.classList.add('touch');
+          hudShow(true);
+          /* measure them SHOWING. A control that is display:none reports 0x0,
+             and 0 is not larger than 44, so a test that forgets to open the
+             panel fails for the wrong reason — or worse, passes because the
+             loop skipped it. */
+          const pauseScreen = document.getElementById('s-pause');
+          const pauseWasHidden = pauseScreen.hidden;
+          pauseScreen.hidden = false;
+          const qWasOpen = !!(G.modal && G.modal.kind === 'tix');
+          if (!qWasOpen) openQueue();
+          renderQueue();
+          const small = [];
+          for (const sel of ['#h-queue-btn', '#h-pause', '#s-pause .btn', '#tix .row']){
+            const el = document.querySelector(sel);
+            if (!el){ small.push(sel + ':missing'); continue; }
+            const r = el.getBoundingClientRect();
+            if (!r.width || !r.height){ small.push(sel + ':not showing'); continue; }
+            if (r.height < 44 || r.width < 44)
+              small.push(sel + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+          }
+          if (!qWasOpen) closeModalToWork();
+          pauseScreen.hidden = pauseWasHidden;
+          document.getElementById('hud').style.display = wasHud;
+          if (!wasTouch) document.body.classList.remove('touch');
+          ok('touch: every control a finger needs is at least 44px',
+             !small.length, small.join(' '));
+          /* the world must not answer a tap with a zoom */
+          const ta = getComputedStyle(document.getElementById('view')).touchAction;
+          ok('touch: a tap on the world is a move, not a zoom', ta && ta !== 'auto', ta);
+          /* and QUEUE opens the queue, and closes it again */
+          const st0 = G.state, md0 = G.modal;
+          closeModalToWork(); G.state = 'work';
+          act('queue'); const opened = !!G.modal && G.modal.kind === 'tix';
+          act('queue'); const closed = !G.modal;
+          G.state = st0; G.modal = md0;
+          ok('touch: the queue has a control that is not a key',
+             !!qb && qb.dataset.act === 'queue' && opened && closed,
+             'button ' + !!qb + ' · opens ' + opened + ' · closes ' + closed);
         }
         ok('ui: the pause menu, and SAVE & QUIT with it, can be reached by mouse',
            !!pb && live && seen && paused,
@@ -16691,11 +16819,19 @@ function clickAdvance(ev){
 addEventListener('pointerdown', clickAdvance);
 
 function boot(){
-  if (matchMedia('(hover:none) and (pointer:coarse)').matches){
-    const el = document.getElementById('bootline');
-    if (el) el.textContent = 'keyboard required — this one needs a real desk';
-    toast('MANAGED NEEDS A KEYBOARD. FITTINGLY, IT IS A DESK JOB.', 'red', 12000);
-  }
+  /* IT KNOWS, AND IT NO LONGER MINDS. This used to greet every phone with
+     "keyboard required — this one needs a real desk" and a twelve-second red
+     toast, which was true when nothing but a key could open the queue or leave
+     a panel. The detection is the useful half and it stays: hover:none and
+     pointer:coarse together mean the PRIMARY input is a finger, which is a
+     capability question rather than a guess at the device, and it is live —
+     attach a keyboard to a tablet and the query flips on its own. Nothing here
+     asks the player which they are. */
+  const finger = matchMedia('(hover:none) and (pointer:coarse)');
+  const setTouch = () => document.body.classList.toggle('touch', finger.matches);
+  setTouch();
+  if (finger.addEventListener) finger.addEventListener('change', setTouch);
+  else if (finger.addListener) finger.addListener(setTouch);
   bakeAtlas();
   rngInit('MENU');
   /* Before anything asks what a walk costs. Loads each floor in turn, so it

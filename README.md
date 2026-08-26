@@ -41,6 +41,29 @@ Inside a minigame, H brings back the rules card. F1 shows a log of your day in
 plain English if you want to see what happened. F4 runs the game's own
 self-tests if you're curious.
 
+**The mouse plays the whole game on its own.** Click a patch of floor to walk
+there, click a machine or a person to walk over and use them, click to advance
+anything, and there are QUEUE and PAUSE buttons in the corner of the HUD.
+Nothing needs the keyboard except typing a job posting ID.
+
+### On a phone
+
+It works out that it is on a phone by itself. There is no switch, and there
+does not need to be one: the page asks `(hover:none) and (pointer:coarse)`,
+which is a question about the *primary input* — is it a finger — rather than a
+guess at the device from its name. That is automatic, it is right about
+touchscreen laptops and tablets with keyboards attached, and it re-answers
+itself the moment the input changes, so pairing a keyboard to an iPad flips the
+game back to its desktop layout while it is running.
+
+What changes when it is a finger: every control grows to at least 44px, the two
+it needs most — QUEUE and PAUSE — float in the bottom corner where a thumb
+already is, a tap on the world is a move rather than a zoom, and in portrait
+the HUD comes out from on top of the canvas and sits underneath it. Landscape
+is the better way to hold it and the game says so once, in the space it is
+talking about. Installed from the browser's *Add to Home Screen*, it launches
+fullscreen and landscape and works offline.
+
 ## A day at Proactive
 
 You clock in at 9:00 and the shift is eight game-hours. Working a ticket costs
@@ -157,9 +180,10 @@ were invisible to the ones that came before them.
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 398 in-game self-tests |
+| `verify.js` | boots it and runs the 401 in-game self-tests |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
 | `mouseonly.js` | plays from the title screen to a worked ticket without pressing a single key, because the handbook's first line promises the mouse can |
+| `touch.js` | plays it on a 390x844 phone with taps alone, in both orientations, and measures what a finger can reach |
 | `playday.js` | plays past the first ticket — follows markers, answers dialogue, leaves boards it cannot solve |
 | `liftride.js` | takes a downstairs ticket and rides the lift with real clicks and keys |
 | `visual.js` | screenshots every screen and board at four window sizes, asserting no text lands on the canvas |

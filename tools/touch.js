@@ -86,16 +86,6 @@ const MIN_TAP = 44;
   step('double-tap zoom is off on the game surface',
        /manipulation|none/.test(sniff.touchAction), 'touch-action: ' + sniff.touchAction);
 
-  /* 2. how much of the phone does the game use? */
-  const fit = await page.evaluate(() => {
-    const r = document.getElementById('frame').getBoundingClientRect();
-    return { w: Math.round(r.width), h: Math.round(r.height),
-             vw: innerWidth, vh: innerHeight,
-             pct: Math.round((r.width * r.height) / (innerWidth * innerHeight) * 100) };
-  });
-  step('the game fills a reasonable share of the screen', fit.pct >= 45,
-       fit.w + 'x' + fit.h + ' of ' + fit.vw + 'x' + fit.vh + ' = ' + fit.pct + '%');
-
   /* 3. start a career with taps */
   step('a career can be started', await tapEl('#titlemenu [data-act="newrun"]'));
   step('...the posting screen accepts a tap', await tapEl('#s-setup [data-act="start"]'));
@@ -129,9 +119,46 @@ const MIN_TAP = 44;
   }
   step('tapping the floor walks you there', await near() <= 1, 'distance ' + await near());
 
+  /* HOW MUCH OF THE PHONE DOES IT USE, and is what it does not use a
+     failure? The canvas is a fixed sixteen-by-nine, so in portrait its height
+     is decided the moment its width is: 390 wide is 219 tall and no layout can
+     change that. What CAN be wrong is failing to use the width, or putting the
+     controls somewhere a thumb cannot reach. So: landscape is measured on
+     area, portrait on whether it takes the whole width and whether the things
+     you tap are in the bottom third of the screen. */
+  const fit = await page.evaluate(() => {
+    const r = document.getElementById('frame').getBoundingClientRect();
+    const v = document.getElementById('view').getBoundingClientRect();
+    const btns = ['#h-queue-btn', '#h-pause'].map(sel => {
+      const e = document.querySelector(sel); if (!e) return null;
+      const b = e.getBoundingClientRect(); return { sel, mid: b.top + b.height/2 };
+    }).filter(Boolean);
+    return { w: Math.round(r.width), h: Math.round(r.height),
+             vw: innerWidth, vh: innerHeight,
+             pct: Math.round((r.width * r.height) / (innerWidth * innerHeight) * 100),
+             widthUsed: Math.round(v.width / innerWidth * 100),
+             thumb: btns.length === 2 && btns.every(b => b.mid > innerHeight * 0.66),
+             btns: btns.map(b => b.sel + '@' + Math.round(b.mid)).join(' ') };
+  });
+  if (LANDSCAPE)
+    step('the game fills the screen in landscape', fit.pct >= 60,
+         fit.w + 'x' + fit.h + ' of ' + fit.vw + 'x' + fit.vh + ' = ' + fit.pct + '%');
+  else {
+    step('the canvas takes the whole width in portrait', fit.widthUsed >= 98,
+         fit.widthUsed + '% of ' + fit.vw + 'px (16:9 makes it ' + Math.round(fit.w*9/16) +
+         ' tall, and no layout can change that)');
+    step('...and what you tap is in the bottom third, where a thumb is',
+         fit.thumb, fit.btns + ' of ' + fit.vh);
+  }
+
   /* 6. the queue, from anywhere — Tab has no finger */
   const qOpen = () => page.evaluate(() =>
     getComputedStyle(document.getElementById('tix')).display !== 'none');
+  /* walking to the terminal means tapping the terminal, which opens the queue
+     by itself — start from closed, or the QUEUE button is measured toggling it
+     shut and the harness reports a working control as broken */
+  await page.evaluate(() => { if (G.modal) closeModalToWork(); });
+  await page.waitForTimeout(200);
   const qBtn = await page.evaluate(() => !!document.querySelector('#h-queue-btn, [data-act="queue"]'));
   step('there is a way to open the queue that is not a key', qBtn,
        qBtn ? '' : 'TAB only — a finger cannot reach the queue away from the terminal');
@@ -160,6 +187,11 @@ const MIN_TAP = 44;
   step('every control is big enough for a finger', !small.length,
        small.length ? small.slice(0, 4).join(', ') + (small.length > 4 ? ' +' + (small.length-4) : '') : '');
 
+  /* a ticket can land while this is running and open a scene over the panel;
+     clear it first, or the close button is measured through a dialogue box */
+  for (let i = 0; i < 20 && await page.evaluate(() => typeof dlg !== 'undefined' && !!dlg); i++)
+    await tapEl('#d-opts .opt') || await tapEl('#dlg');
+  if (!(await qOpen())) await tapEl('#h-queue-btn, [data-act="queue"]');
   if (await qOpen()) await tapEl('#tix header .x');
   step('the queue closes with a tap', !(await qOpen()));
 
