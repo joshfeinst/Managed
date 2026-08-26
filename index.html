@@ -835,37 +835,52 @@ function bakePortrait(look){
    heavier, and burnout is what eventually ends the career.
    Only the intern rung is content-complete in the v0.1 slice; the rest of the
    ladder is real data so the systems and tests see the whole shape. */
+/* ratePerHr TAPERS DOWN THE LADDER, and it has to. It was 3.0 on eight
+   consecutive rungs — one number copy-pasted from T1 to vCIO — while the
+   tickets underneath it got steadily longer: bigger slaMult, more walking,
+   more branches. So the day kept dealing twenty-four tickets and a flawless
+   bot's closures fell from 7.6 a day at T1 to 1.9 at vCIO. Since the day is
+   scored on the share of the pool you protect, that collapsed perf from 48%
+   to 14% — under a 46% bar and under a 0.27 firing floor, which means a
+   flawless vCIO was fired on arrival and every gate above Project Team was
+   decoration.
+
+   These numbers are derived, not chosen: measured closures per day at each
+   rung, divided by 0.36 — the share of its queue a flawless intern actually
+   works — then spread over the eight-hour day. The senior rungs deal a
+   handful of enormous things, which is what the fiction said all along and
+   what the data now agrees with. Re-measure with tools/bars.js. */
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
     gates:{ nextAt:{perf:0.44, days:3}, firedBelow:0.20, cert:null },
     queue:{ ratePerHr:2.75, slaScale:1.0 }, deskAnchor:'TERMINAL' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
     gates:{ nextAt:{perf:0.45, days:3}, firedBelow:0.21, cert:null },
-    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.5, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
     gates:{ nextAt:{perf:0.46, days:3}, firedBelow:0.22, cert:null },
-    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:2.15, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
     gates:{ nextAt:{perf:0.45, days:3}, firedBelow:0.23, cert:null },
-    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:1.9, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
     gates:{ nextAt:{perf:0.45, days:3}, firedBelow:0.24, cert:null },
-    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:1.5, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
     gates:{ nextAt:{perf:0.46, days:3}, firedBelow:0.24, cert:null },
-    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:1.3, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
     gates:{ nextAt:{perf:0.46, days:3}, firedBelow:0.25, cert:null },
-    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:1.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
     gates:{ nextAt:{perf:0.46, days:3}, firedBelow:0.26, cert:null },
-    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:0.85, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'vcio',   title:'vCIO',          pay:135000,
     gates:{ nextAt:{perf:0.46, days:3}, firedBelow:0.27, cert:null },
-    queue:{ ratePerHr:3.0, slaScale:0.96 }, deskAnchor:'TERMINAL' },
+    queue:{ ratePerHr:0.7, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
     gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.38, cert:null },
-    queue:{ ratePerHr:2.2, slaScale:1.05 }, deskAnchor:'TERMINAL' }
+    queue:{ ratePerHr:1.1, slaScale:1.05 }, deskAnchor:'TERMINAL' }
 ];
 
 /* Shared fill pools — every {token} in a ticket title/line resolves from here
@@ -1158,6 +1173,90 @@ function chatPick(id, day, count, n){
    option text may use {token} fills resolved at ticket build. */
 const DIALOGUE = {
   /* --------------------------- Director dialogue -------------------------- */
+  /* ----- senior chaff: the tickets you are allowed to let burn ----------- */
+  'x.exp.a':   { who:'sys', t:['Your expense claim has been rejected. A receipt is missing.',
+    'The claim is for four pounds twenty. You have now spent nine minutes on it.'] },
+  'x.exp.b':   { who:'sys', t:['There is a form. There is always a form.'],
+    opts:[ {t:'Resubmit with the receipt, properly', fx:{time:11, bonus:1, stress:2}},
+           {t:'Write it off and never claim parking again', fx:{time:2, stress:1, bonus:1}},
+           {t:'Reply-all to Finance about the cost of processing it', fx:{time:6, rep:-1, stress:3}} ] },
+  'x.cal.a':   { who:'sys', t:['A recurring meeting appears in your calendar every Tuesday.',
+    'It has no agenda. The organiser left in 2022. Six people still attend it, and every one of them thinks somebody else needs it.'] },
+  'x.cal.b':   { who:'sys', t:['You are the most senior person in the invite.'],
+    opts:[ {t:'Cancel it and say why, in writing', fx:{time:8, rep:3, bonus:1}},
+           {t:'Decline yours and leave the rest to it', fx:{time:2, bonus:1, stress:1}},
+           {t:'Attend. Somebody must know what it is for.', fx:{time:26, stress:5}} ] },
+  'x.lic.a':   { who:'client', t:['{User} needs a £40-a-month licence approved.',
+    'The approval form has eleven fields, four of which ask for the business case, in different words.'] },
+  'x.lic.b':   { who:'sys', t:['You could approve this in four seconds if the form let you.'],
+    opts:[ {t:'Approve it, then rewrite the form', fx:{time:19, rep:3, bonus:1, stress:3}},
+           {t:'Approve it and move on', fx:{time:4, bonus:1}},
+           {t:'Ask for the business case, as the form intends', fx:{time:9, rep:-2, stress:2}} ] },
+  'x.pr.a':    { who:'mackenzie', t:['Marketing would like a quote from you for the press release.',
+    'They have written one already. It says you are "excited to partner on this transformation journey". They would like you to approve yourself saying it.'] },
+  'x.pr.b':    { who:'sys', t:['Nobody will read it. It will outlive you on the website.'],
+    opts:[ {t:'Rewrite it into something a human said', fx:{time:14, rep:2, bonus:1, stress:2}},
+           {t:'Approve it verbatim', fx:{time:2, bonus:1, stress:2}},
+           {t:'Decline to be quoted', fx:{time:5, rep:-1, bonus:1}} ] },
+  'x.off.a':   { who:'brenda', t:['Please vote on the venue for the offsite.',
+    'There are three options. Two of them are the same hotel. The third is that hotel\'s conference annexe.'] },
+  'x.off.b':   { who:'sys', t:['The poll closes Friday and will be ignored.'],
+    opts:[ {t:'Vote, and say the third one is the same hotel', fx:{time:6, rep:1, bonus:1}},
+           {t:'Vote for the first one', fx:{time:1, bonus:1}},
+           {t:'Ask whether the offsite is a good use of the budget', fx:{time:12, rep:-1, stress:4}} ] },
+  'x.ven.a':   { who:'sys', t:['"Great connecting!" says a man you have never met, on LinkedIn, at 06:40.',
+    'He would like fifteen minutes to understand your roadmap. He has attached a case study about a company in a different industry on a different continent.'] },
+  'x.ven.b':   { who:'sys', t:['He will follow up on Thursday. He always does.'],
+    opts:[ {t:'Reply once, politely, and close the door', fx:{time:7, bonus:1, stress:1}},
+           {t:'Ignore it', fx:{time:1, bonus:1, stress:2}},
+           {t:'Take the call — you never know', fx:{time:24, stress:6}} ] },
+  'x.slide.a': { who:'linda', t:['"Just one slide. For the board. Nothing fancy."'] },
+  'x.slide.b': { who:'linda', t:['It is not going to be one slide and you both know it.'],
+    opts:[ {t:'One slide. Hold the line.', fx:{time:16, rep:3, bonus:1, stress:3}},
+           {t:'Build the eleven she actually wants', fx:{time:34, rep:1, bonus:1, stress:7}},
+           {t:'Send last quarter\'s with the date changed', fx:{time:4, rep:-2, stress:4}} ] },
+  'x.park.a':  { who:'brenda', t:['Two people want space fourteen. Both have escalated to you.',
+    'One of them has a doctor\'s note. The other one has been here nineteen years. Neither will accept a different space.'] },
+  'x.park.b':  { who:'sys', t:['This is not an IT matter. It has become one because you answered the email.'],
+    opts:[ {t:'Decide it, in writing, and take the blame', fx:{time:13, rep:2, bonus:1, stress:6}},
+           {t:'Hand it back to Facilities where it lives', fx:{time:4, bonus:1, stress:1}},
+           {t:'Let them work it out between themselves', fx:{time:2, rep:-1, stress:3}} ] },
+  'x.card.a':  { who:'sys', t:['The card is going round. It has reached your desk in a brown envelope.',
+    'The name on the front is not one you recognise, and the envelope has now been opened, so you cannot ask.'] },
+  'x.card.b':  { who:'sys', t:['Everyone before you has written "Happy Birthday!" and a name.'],
+    opts:[ {t:'Ask Brenda quietly who it is', fx:{time:8, rep:2, bonus:1}},
+           {t:'Write "All the best" and pass it on', fx:{time:3, bonus:1, stress:1}},
+           {t:'Pass it on unsigned', fx:{time:1, rep:-1, stress:2}} ] },
+  'x.own.a':   { who:'sys', t:['Your laptop is four years old and due a refresh.',
+    'The request needs sign-off from the Head of IT. You are the Head of IT. The system will not let you approve your own request, and the only person who can override that is the Head of IT.'] },
+  'x.own.b':   { who:'sys', t:['Somebody built this rule to prevent exactly one kind of fraud, years ago.'],
+    opts:[ {t:'Route it through Finance and document the gap', fx:{time:17, rep:2, bonus:1, stress:3}},
+           {t:'Keep the four-year-old laptop', fx:{time:2, bonus:1, stress:2}},
+           {t:'Have Raj approve it', fx:{time:6, rep:-1, bonus:1, stress:3}} ] },
+  'x.bake.a':  { who:'brenda', t:['You have been volunteered as a judge for the charity bake-off.',
+    'You were volunteered in a meeting you did not attend, by someone who has since told everyone you were delighted.'] },
+  'x.bake.b':  { who:'sys', t:['It is for charity, which is the part that makes it impossible to decline.'],
+    opts:[ {t:'Judge it properly, and be kind about it', fx:{time:21, rep:3, bonus:1, stress:2}},
+           {t:'Judge it, briefly', fx:{time:9, rep:1, bonus:1, stress:1}},
+           {t:'Send apologies and a donation', fx:{time:4, rep:-1, bonus:1, stress:2}} ] },
+  'x.pr2.a':   { who:'client', t:['The printer on floor two.',
+    'You have a corner office, a budget, and nine rungs of career behind you, and the printer on floor two is still the printer on floor two.'] },
+  'x.pr2.b':   { who:'sys', t:['You know exactly what is wrong with it. You have known for years.'],
+    opts:[ {t:'Fix it yourself, one last time', fx:{time:15, rep:2, bonus:1, stress:2}},
+           {t:'Raise it with the supplier, properly', fx:{time:11, rep:1, bonus:1, stress:3}},
+           {t:'Replace it out of your own budget, today', fx:{time:8, rep:3, bonus:1, stress:4}} ] },
+  'x.surv.a':  { who:'sys', t:['The engagement survey results are in. Morale is down eleven points.',
+    'You commissioned the survey. The free-text answers mention "leadership" thirty-one times and none of them are compliments.'] },
+  'x.surv.b':  { who:'sys', t:['You can read all of them, or you can read the summary somebody else wrote.'],
+    opts:[ {t:'Read every free-text answer', fx:{time:29, rep:3, bonus:1, stress:9}},
+           {t:'Read the summary and act on the top three', fx:{time:14, rep:2, bonus:1, stress:4}},
+           {t:'Note it and schedule a follow-up survey', fx:{time:5, rep:-2, stress:3}} ] },
+  'x.desk.a':  { who:'sys', t:['The desk booking system needs an owner.',
+    'It is not an IT system. It runs on a spreadsheet. Everyone is looking at you because it has a login page, and anything with a login page is yours.'] },
+  'x.desk.b':  { who:'sys', t:['Owning it costs you an hour a month, forever.'],
+    opts:[ {t:'Own it and do it properly', fx:{time:18, rep:2, bonus:1, stress:4}},
+           {t:'Own it and give it to Raj', fx:{time:7, rep:-1, bonus:1, stress:2}},
+           {t:'Refuse, and say which team it belongs to', fx:{time:10, rep:1, bonus:1, stress:5}} ] },
   't9.cut.a':   { who:'client', t:['{client}\'s cutover is Saturday. The rollback plan is one sentence long.',
     'The sentence is "restore from backup". You wrote that sentence, once, nine rungs ago, and someone approved it then too.'] },
   't9.cut.b':   { who:'sys', t:['You are not a pair of hands in somebody else\'s window any more. You are the signature.'],
@@ -2281,6 +2380,63 @@ const TICKETS = {
   'intern-hire': { tiers:[9,9], weight:3, sla:60, slaMult:2.5, pri:1, stress:5,
     title:'Six intern CVs. One of them is you, ten years ago.',
     steps:[{say:'t9.hire.a'},{choice:'t9.hire.b'}] },
+
+  /* ------------------ WHAT SENIORITY IS ACTUALLY MADE OF ------------------
+     Measured, not guessed: the disposable share of the queue collapses as you
+     climb — 25% of an intern's day is genuinely droppable, against 6% of a
+     vCIO's. Every senior ticket had been authored as important, because
+     everything a vCIO touches feels important, and the result was a rung with
+     nothing cheap left to sacrifice. Triage stops being a decision when every
+     option costs the same, which is why bad triage scored as well as good
+     triage above Procurement and the gates up there were decoration.
+
+     So here is the junk. It is not filler — it is the joke the whole game is
+     about: the higher you go, the more of your day is nonsense that only you
+     can sign, and the harder it gets to admit which part of it was nonsense.
+     These are the tickets you are allowed to let burn. Finding out that you
+     are allowed is the lesson of the rung. */
+  'expenses-rejected': { tiers:[5,9], weight:4, sla:64, slaMult:2.4, pri:1, stress:3,
+    title:'Your expense claim was rejected. It is for £4.20.',
+    steps:[{say:'x.exp.a'},{choice:'x.exp.b'}] },
+  'calendar-no-agenda': { tiers:[5,9], weight:4, sla:58, slaMult:2.3, pri:1, stress:4,
+    title:'Recurring invite, no agenda, organiser left in 2022',
+    steps:[{say:'x.cal.a'},{choice:'x.cal.b'}] },
+  'licence-forty-quid': { tiers:[5,9], weight:4, sla:62, slaMult:2.4, pri:1, stress:3,
+    title:'{User} needs your approval for a £40 licence. The form has eleven fields.',
+    steps:[{say:'x.lic.a'},{choice:'x.lic.b'}] },
+  'press-release-quote': { tiers:[6,9], weight:4, sla:60, slaMult:2.3, pri:1, stress:4,
+    title:'Marketing want a quote from you about digital transformation',
+    steps:[{say:'x.pr.a'},{choice:'x.pr.b'}] },
+  'offsite-venue-poll': { tiers:[5,9], weight:3, sla:70, slaMult:2.6, pri:1, stress:2,
+    title:'Vote on the offsite venue. Three options. Same hotel.',
+    steps:[{say:'x.off.a'},{choice:'x.off.b'}] },
+  'vendor-was-great': { tiers:[5,9], weight:4, sla:66, slaMult:2.5, pri:1, stress:3,
+    title:'A vendor you have never met says it was great connecting',
+    steps:[{say:'x.ven.a'},{choice:'x.ven.b'}] },
+  'one-slide-for-linda': { tiers:[5,9], weight:4, sla:54, slaMult:2.2, pri:2, stress:6,
+    title:'Linda needs one slide. It will not be one slide.',
+    steps:[{say:'x.slide.a'},{goto:'n1'},{choice:'x.slide.b'}] },
+  'parking-space-politics': { tiers:[6,9], weight:3, sla:56, slaMult:2.3, pri:1, stress:5,
+    title:'Two people want the same parking space and both escalated to you',
+    steps:[{say:'x.park.a'},{choice:'x.park.b'}] },
+  'birthday-card-going-round': { tiers:[5,9], weight:3, sla:68, slaMult:2.5, pri:1, stress:2,
+    title:'The card is going round. You do not know whose it is.',
+    steps:[{say:'x.card.a'},{goto:'COOLER'},{choice:'x.card.b'}] },
+  'approve-your-own-laptop': { tiers:[6,9], weight:3, sla:72, slaMult:2.6, pri:1, stress:3,
+    title:'Your laptop refresh needs sign-off from the Head of IT',
+    steps:[{say:'x.own.a'},{choice:'x.own.b'}] },
+  'bake-off-judge': { tiers:[5,9], weight:3, sla:74, slaMult:2.7, pri:1, stress:2,
+    title:'You have been volunteered as a judge for the charity bake-off',
+    steps:[{say:'x.bake.a'},{choice:'x.bake.b'}] },
+  'the-printer-on-two': { tiers:[6,9], weight:4, sla:50, slaMult:2.1, pri:1, stress:4,
+    title:'The printer on floor two. Still.',
+    steps:[{say:'x.pr2.a'},{goto:'PRINTER'},{choice:'x.pr2.b'}] },
+  'engagement-survey-results': { tiers:[6,9], weight:3, sla:60, slaMult:2.4, pri:2, stress:7,
+    title:'The engagement survey says morale is down. You commissioned it.',
+    steps:[{say:'x.surv.a'},{choice:'x.surv.b'}] },
+  'desk-booking-owner': { tiers:[5,9], weight:3, sla:66, slaMult:2.5, pri:2, stress:5,
+    title:'The desk booking system needs an owner. Everyone is looking at you.',
+    steps:[{say:'x.desk.a'},{choice:'x.desk.b'}] },
 
   /* ---------------------------- T2 HELPDESK (rung 2) ----------------------
      "Your queue is quieter and every ticket in it is heavier — you close
@@ -4058,6 +4214,19 @@ function rollDay(){
       arrivals.unshift(makeArrival('coffee-derek', 20, role));
     }
   }
+  /* THE LAST DAY DEALS THE BIG MIGRATION. It was a weighted draw like any
+     other, so the ending the whole career aims at could simply not turn up —
+     and on the days it did, it arrived at a random hour with no more ceremony
+     than a printer jam. On the final day at the top it is guaranteed, early,
+     and it is the only thing on the board that can change which ending you
+     get. Any copy the bag happened to deal is removed first so it cannot land
+     twice. */
+  if (lastDayAtTop() && TICKETS['cutover-weekend']){
+    for (let i = arrivals.length - 1; i >= 0; i--)
+      if (arrivals[i].id === 'cutover-weekend') arrivals.splice(i, 1);
+    seen['cutover-weekend'] = (seen['cutover-weekend'] || 0) + 1;
+    arrivals.unshift(makeArrival('cutover-weekend', 24, role));
+  }
   const events = [];
   /* One event opened 88% of every day of every career: the same standup, from
      the same person, forever. The morning rotates now — it is still usually a
@@ -4892,6 +5061,10 @@ function resolveTicket(t){
   run.earned = (run.earned || 0) + stakes * score;
   run.stakesDone = (run.stakesDone || 0) + stakes;
   run.scores.push(score); run.resolved++;
+  /* THE WIN CONDITION. The pitch was always "survive to Director and land the
+     Big Migration"; the code only ever counted the days. Landing it is now the
+     difference between the two retirements. */
+  if (t.id === 'cutover-weekend') run.landedMigration = true;
   if (score >= ACE) run.aces++;      // .80 aced four tickets in five; it meant nothing
   /* work costs something: each ticket leaves residue, heavier as the stakes
      rise with rank — this is what eventually burns a career down */
@@ -5023,7 +5196,8 @@ function endDay(){
      next morning. Being fired with no idea which day did it is not feedback. */
   const ending = run.firedStreak >= 2 ? 'fired'
                : run.burnout >= 100 ? 'burnout'
-               : (!role.gates.nextAt && run.daysAtTop >= role.gates.retireAfterDays) ? 'retired'
+               : (!role.gates.nextAt && run.daysAtTop >= role.gates.retireAfterDays)
+                 ? (run.landedMigration ? 'retired' : 'shortof')
                : null;
   /* The promotion is applied HERE, once, before anything reads the rung. It
      used to be applied after the ending check returned, so a promotion earned
@@ -5089,7 +5263,7 @@ function reviewScreen(dayPerf, eod, promo, ending){
   document.getElementById('r-eyebrow').textContent = 'end of day ' + run.day;
   document.getElementById('r-title').textContent =
     ending === 'fired' ? 'YOUR LAST DAY' : ending === 'burnout' ? 'YOU ARE DONE IN'
-    : ending === 'retired' ? 'THE LAST FRIDAY' : promo ? 'PROMOTED.' : 'DAILY PERFORMANCE REVIEW';
+    : (ending === 'retired' || ending === 'shortof') ? 'THE LAST FRIDAY' : promo ? 'PROMOTED.' : 'DAILY PERFORMANCE REVIEW';
   const role0 = ROLES[run.rung];
   /* `|| 0` on the sums, not just a guard on the divisor. A review screen that
      prints NaN% at a player is never acceptable, and the two are set in
@@ -5175,7 +5349,8 @@ function reviewScreen(dayPerf, eod, promo, ending){
     ending === 'fired' ? run.firedStreak + ' days running under ' + bar +
       '% and the conversation writes itself. Linda did not enjoy it either, she says.'
     : ending === 'burnout' ? 'Burnout hit 100%. You are not fired; you are simply finished, which is worse and quieter.'
-    : ending === 'retired' ? 'You held the top of the ladder long enough to walk out on your own terms.'
+    : ending === 'retired' ? 'You held the top of the ladder long enough to walk out on your own terms, and you signed the thing nobody else would sign.'
+    : ending === 'shortof' ? 'You held the top of the ladder long enough to walk out on your own terms. The cutover is still on the board.'
     : promo ? 'Linda shook your hand for exactly one pump. There is a cake with someone else\'s name crossed out. You have made it.'
     : warn || reviewLine(dayPerf);
   const act = document.getElementById('r-actions'); act.innerHTML = '';
@@ -5197,7 +5372,7 @@ function careerOver(kind){
   if (run) run.pendingEnd = null;
   G.state = 'over';
   meta.runsPlayed++;
-  meta.rep += Math.floor(run.rep / 2) + (kind === 'retired' ? 5 : 0);
+  meta.rep += Math.floor(run.rep / 2) + (kind === 'retired' ? 5 : kind === 'shortof' ? 2 : 0);
   meta.best.days = Math.max(meta.best.days, run.day);
   meta.best.rung = Math.max(meta.best.rung, run.rung);
   /* what the next recruiter believes. Climbing raises it; being let go costs
@@ -5218,26 +5393,35 @@ function careerOver(kind){
       : savedRun.rung >= 6
       ? ['MANAGED OUT', 'Nobody said the word. The standing meeting stopped appearing, then your name came off the org chart, and Linda asked whether you had thought about consulting. Day ' + savedRun.day + '.']
       : ['LET GO', '"We\'re restructuring the support function," said Linda, restructuring you specifically out of the building. Day ' + savedRun.day + '.'],
-    retired: ['RETIRED (LEGEND)', 'You survived to Director and walked out on a Friday with a box of desk plants and every password in your head. They will be calling you within a month. Consulting rates apply.']
+    /* TWO RETIREMENTS, because there were none you could lose. The career
+       ended in a win the moment you had survived three evenings at the top,
+       whatever you had actually done with them, and the Big Migration — the
+       thing the pitch says the whole climb is FOR — was a weighted draw that
+       might not even turn up. It turns up on the last day now, and which of
+       these two you read depends on whether you signed it. */
+    retired: ['RETIRED (LEGEND)', 'You landed the cutover, and then you walked out on a Friday with a box of desk plants and every password in your head. Nothing fell over on the Saturday. Nobody will ever know how close that was, which is the whole job, and you are the only person who will ever know you did it. They will be calling you within a month. Consulting rates apply.'],
+    shortof: ['RETIRED', 'You left on a Friday with a box of desk plants and every password in your head, and you left the cutover on somebody else\'s desk. It went ahead without you. You heard about the Saturday from a group chat you are still in, three weeks later, in a message that began "you\'ll enjoy this". You did not enjoy it. Nobody blamed you. That was somehow worse.']
   };
   const [title, note] = texts[kind];
   document.getElementById('o-eyebrow').textContent = 'exit interview — ' + savedRun.seed;
   document.getElementById('o-title').textContent = title;
-  document.getElementById('o-title').style.color = kind === 'retired' ? 'var(--ok)' : 'var(--alert)';
+  document.getElementById('o-title').style.color = kind === 'retired' ? 'var(--ok)' : kind === 'shortof' ? 'var(--amber)' : 'var(--alert)';
   document.getElementById('o-stats').innerHTML =
     '<dt>Days survived</dt><dd>' + savedRun.day + '</dd>' +
     '<dt>Final title</dt><dd>' + ROLES[savedRun.rung].title + '</dd>' +
     '<dt>Days on the queue</dt><dd>' + savedRun.perfHist.length + '</dd>' +
-    '<dt>Reputation banked</dt><dd>+' + (Math.floor(savedRun.rep/2) + (kind==='retired'?5:0)) + ' (total ' + meta.rep + ')</dd>' +
+    '<dt>Reputation banked</dt><dd>+' + (Math.floor(savedRun.rep/2) + (kind==='retired'?5:kind==='shortof'?2:0)) + ' (total ' + meta.rep + ')</dd>' +
     '<dt>Careers lived</dt><dd>' + meta.runsPlayed + '</dd>';
   document.getElementById('o-note').textContent = kind === 'retired'
     ? 'Retirement unlocks nothing further. That is the joke.'
+    : kind === 'shortof'
+    ? 'The cutover was on your last day\'s queue. It is always on your last day\'s queue.'
     : 'Reputation follows you. The next job posting starts a new career with everything you\'ve banked.';
   const act = document.getElementById('o-actions'); act.innerHTML = '';
   mkBtn(act, 'NEW CAREER ▶', () => actSetup());
   mkBtn(act, 'TITLE SCREEN', () => toTitle(), true);
   show('s-over');
-  sfx(kind === 'retired' ? 'promo' : 'fired');
+  sfx(kind === 'retired' || kind === 'shortof' ? 'promo' : 'fired');
 }
 
 /* ------------------------------- save / load ------------------------------ */
@@ -8101,6 +8285,70 @@ function selfTest(runSim){
         TICKETS[id].stress >= HEAVY && stakesOf(id) === STAKES[1]);
       ok('content: nothing that can burn you out is worth the least',
          !wrong.length, wrong.join(',') + ' (stress>=' + HEAVY + ' at P4 — inverted pri?)');
+    }
+    /* Three: the climax has to actually SHOW UP. It was a weighted draw, so
+       the career could end in the ending it is named after without the ticket
+       ever being dealt — and then the win was "you survived three evenings",
+       which is not what the game promised anybody. */
+    {
+      const savedRunM = run, savedG = typeof G !== 'undefined' ? G.state : null;
+      const dealtOn = d => {
+        rngInit('JOB-TEST'); runInit('JOB-TEST');
+        run.rung = ROLES.length - 1; run.day = 12; run.daysAtTop = d;
+        rollDay();
+        return run.plan.arrivals.filter(a => a.id === 'cutover-weekend').length;
+      };
+      const need = ROLES[ROLES.length-1].gates.retireAfterDays;
+      const onLast = dealtOn(need - 1), before = dealtOn(0);
+      ok('the last day at the top deals the Big Migration, exactly once',
+         onLast === 1, 'last day ' + onLast + ', an ordinary day ' + before);
+      /* and LANDING it is what picks the ending. Asserting only that the two
+         texts differ passes happily while endDay hands out the same ending to
+         everybody — which is exactly what the mutation showed, so this drives
+         the real selection instead of the two texts. */
+      const savedMetaM = JSON.stringify(meta);
+      const endWith = landed => {
+        rngInit('JOB-TEST'); runInit('JOB-TEST');
+        run.rung = ROLES.length - 1; run.day = 14;
+        run.daysAtTop = need - 1;            // this evening is the one
+        run.clock = DAY_MIN + 1; run.queue = []; run.crashes = [];
+        run.resolved = 6; run.stakesDone = 12; run.earned = 12 * .7;
+        run.scores = new Array(6).fill(.7); run.breaches = 0; run.burned = [];
+        run.landedMigration = !!landed;
+        endDay();
+        const e = run && run.pendingEnd; if (run) run.pendingEnd = null;
+        return e;
+      };
+      const won = endWith(true), lost = endWith(false);
+      ok('landing the migration is what picks which retirement you get',
+         won === 'retired' && lost === 'shortof', won + ' / ' + lost);
+      /* AND THE WIN IS REACHABLE. Setting the flag by hand tests the branch and
+         not the game: with the recording line deleted entirely, everything above
+         still passed. This plays the actual last day and asks whether a Director
+         who plays it well signs the thing — which is the only ending the whole
+         career is aimed at, so it had better not depend on the seed. */
+      let landed = 0; const tries = 6;
+      for (let i = 0; i < tries; i++){
+        rngInit('WIN-' + i); runInit('WIN-' + i);
+        run.rung = ROLES.length - 1; run.day = 14; run.daysAtTop = need - 1;
+        rollDay(); simDay(1.0, { order:'pridead' });
+        if (run && run.landedMigration) landed++;
+        if (run) run.pendingEnd = null;
+      }
+      ok('a Director who plays the last day well lands the migration',
+         landed >= tries - 1, landed + '/' + tries + ' seeds');
+      /* and the two do not read the same once chosen */
+      const textOf = k => { rngInit('JOB-TEST'); runInit('JOB-TEST');
+        run.rung = ROLES.length - 1; run.day = 14; careerOver(k);
+        return document.getElementById('o-title').textContent + '|' +
+               document.getElementById('o-note').textContent; };
+      const wt = textOf('retired'), lt = textOf('shortof');
+      ok('and the two retirements do not read the same',
+         wt !== lt && /LEGEND/.test(wt) && !/LEGEND/.test(lt),
+         wt.slice(0,24) + ' / ' + lt.slice(0,24));
+      Object.assign(meta, JSON.parse(savedMetaM));
+      run = savedRunM; show(null);
+      if (savedG !== null && typeof G !== 'undefined') G.state = savedG;
     }
     /* Two: the climax. Landing the Big Migration is the win condition, so the
        migration has to be the heaviest thing a Director can be dealt. It was

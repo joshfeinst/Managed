@@ -22,6 +22,7 @@ const target = process.argv[2] || '/home/user/managed/index.html';
 const SEEDS = +(process.argv[3] || 16);
 const DAYS  = +(process.argv[4] || 8);
 const SWEEP = process.argv.includes('--sweep');
+const WINDOW = process.argv.includes('--window');
 async function launch(){ try { return await chromium.launch(); } catch(e){
   const base = process.env.PLAYWRIGHT_BROWSERS_PATH || '/opt/pw-browsers';
   for (const d of fs.readdirSync(base).filter(x => x.startsWith('chromium'))){
@@ -36,6 +37,66 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   page.on('pageerror', e => console.log('PAGEERROR ' + e.message));
   await page.goto('file://' + target);
   await page.waitForFunction(() => typeof simDay === 'function' && typeof ROLES !== 'undefined');
+
+  if (WINDOW){
+    /* The other dial. Senior rungs deal few, heavy tickets, so a single unlucky
+       P1 swings the day's share enormously — seed noise drowns skill. Averaging
+       more days shrinks that noise by sqrt(n) without touching the queue. This
+       asks how many days each gate needs before good triage outruns bad. */
+    const rows = await page.evaluate(({ SEEDS, DAYS }) => {
+      SAVE_SUSPEND = true; QUIET = true;
+      const play = (seed, skill, days, rung, order) => {
+        const o = []; QUIET = true; rngInit(seed); runInit(seed);
+        if (run) run.rung = rung;
+        for (let d = 0; d < days && run && !run.pendingEnd; d++){
+          rollDay(); simDay(skill, { order: order || 'pridead' });
+          if (!run) break;
+          o.push(run.perfHist[run.perfHist.length - 1]);
+          if (run.pendingEnd) break; startCommute();
+        }
+        run = null; return o;
+      };
+      const pct = (a,p) => { const b=a.slice().sort((x,y)=>x-y);
+        return b[Math.min(b.length-1, Math.floor(p/100*b.length))]; };
+      const seeds = Array.from({length:SEEDS},(_,i)=>'GATE-'+i);
+      const rows = [];
+      for (let r = 0; r < ROLES.length; r++){
+        if (!ROLES[r].gates.nextAt) continue;
+        /* play each career ONCE, then re-window the same day series — the
+           window is a reading of the days, not a different game */
+        const T = seeds.map(s => play(s, 1.0,  DAYS, r, 'pridead' ));
+        const L = seeds.map(s => play(s, 0.35, DAYS, r, 'worstpri'));
+        const best = (ds, w) => { let b = 0;
+          for (let i = 0; i + w <= ds.length; i++)
+            b = Math.max(b, ds.slice(i, i+w).reduce((a,c)=>a+c,0)/w);
+          return b; };
+        const tried = [];
+        for (const w of [3,4,5,6,8,10]){
+          if (w > DAYS) continue;
+          const t = T.map(ds => best(ds,w)), l = L.map(ds => best(ds,w));
+          tried.push({ w, tp25:pct(t,25), tp50:pct(t,50), lp50:pct(l,50),
+                       lp90:pct(l,90), gap:pct(t,25)-pct(l,90) });
+        }
+        rows.push({ id:ROLES[r].id, now:ROLES[r].gates.nextAt.days, tried });
+      }
+      return rows;
+    }, { SEEDS, DAYS });
+    const p = v => (v*100).toFixed(0).padStart(3) + '%';
+    console.log('GATE-WINDOW SWEEP — ' + SEEDS + ' seeds x ' + DAYS + ' days\n');
+    console.log('  rung      win | flaw p25  p50 | sloppy p50  p90 |  gap');
+    for (const r of rows){
+      const win = r.tried.filter(t=>t.gap>0).sort((a,b)=>b.gap-a.gap)[0];
+      for (const t of r.tried)
+        console.log('  ' + (t.w===r.tried[0].w ? r.id.padEnd(9) : ' '.repeat(9)) +
+          String(t.w).padStart(3) + 'd |' + p(t.tp25) + ' ' + p(t.tp50) + ' |' +
+          p(t.lp50) + ' ' + p(t.lp90) + ' |' + (t.gap*100).toFixed(0).padStart(5) +
+          (win && t.w===win.w ? '  <-- widest' : ''));
+      console.log(win ? '            -> ' + win.w + 'd, bar between ' + p(win.lp90).trim() +
+        ' and ' + p(win.tp25).trim() + ' (now ' + r.now + 'd)\n'
+        : '            -> no window separates good triage from bad (now ' + r.now + 'd)\n');
+    }
+    await browser.close(); process.exit(0);
+  }
 
   if (SWEEP){
     /* Triage only matters when the day is oversubscribed. Too many tickets and
