@@ -1967,3 +1967,89 @@ is n4, upstairs in the pit. The line named one room and the arrow pointed at
 another, four seconds apart, in the same ticket. The guard is mechanical: a
 named speaker who says "my desk" is describing somewhere, and it has to be
 somewhere the errand goes.
+
+## Twelfth pass — the evening, and the board the career is aimed at
+
+### The board the whole career is aimed at could not be played with a pointer
+
+WHOSE SATURDAY is the Big Migration: a Director's last Friday deals it, and
+landing it is the entire difference between RETIRED and RETIRED (LEGEND).
+Clicking a job on it moved the cursor and nothing else. Handing that job to
+somebody was on 1, 2, 3 and 4 and nowhere else, so a pointer could reach the
+rows and the SUBMIT button — and SUBMIT can only ever answer "SOMETHING ON THAT
+LIST HAS NOBODY AGAINST IT". A click also latches `use`, so clicking a job *was*
+pressing submit: the first thing a mouse player did on that board was get told
+off. On a phone that is where the run ends, on the one board it is aimed at.
+
+Three harnesses had passed over it. `keys.js` proved every key its how-to card
+promises is live, and proved every rectangle it declares does something —
+neither asks whether the rectangles are *enough*. `touch.js` said PHONE OK
+without ever opening a minigame: every check in it was DOM, so "playable with
+taps alone" was a claim about the menus. And its how-to card was the only one in
+the game with no pointer row on it at all, which was the tell nobody read.
+
+Two invariants now. In the game: **every board is opened, clicked with nothing
+but its own declared rectangles, and required to reach a result** — any result,
+not a good one. A board is two kinds of rectangle, one you select with and one
+you act with, so the driver picks a thing and then does something to it, which
+is what the card tells a player to do. In `touch.js`: the same, but through real
+taps at real pixels on a 390x844 phone, in both orientations. Restoring the
+shipped `weekend` step fails the first with `weekend:never finished` and the
+second with `every minigame can be finished with taps alone — weekend`.
+
+What the in-game one does *not* prove: that a rectangle is where the board
+*draws* the thing. It aims with the board's own rects, so a rect and its
+renderer can drift together and it stays green. That is what `visual.js` and a
+screenshot are for.
+
+That board also announced FIVE THINGS while dealing `4 + min(diff,2)` — the
+wrong number of jobs on two difficulties out of three.
+
+### Four things the evening said that the evening did not do
+
+Found by forcing every terminal screen at every rung and *reading* it, rather
+than asserting against the template that produced it.
+
+- **A Director was sold a promotion discount.** Goodwill printed "lowers the
+  PROMOTION BAR by 7.0 points (as much as it ever buys)" on every Director
+  evening including THE LAST FRIDAY. There is no rung above Director — the
+  screen omits the *Promotion needs* row for exactly that reason, then quoted
+  the bar two lines later. At the top it buys nothing; half of it banks.
+- **The evening a career ends planned the promotion.** The same two rows
+  appeared under YOUR LAST DAY and YOU ARE DONE IN. The window is still
+  computed — the save and the exit interview read it — it is simply not
+  something to tell someone there is no tomorrow for.
+- **"Retirement unlocks nothing further"** sat two rows under "Reputation
+  banked +17". Retiring banks five more than any other ending, which is most of
+  a CISSP, and carries you back in at vCIO.
+- **Being let go quietly costs a rung** off `meta.carry` — the only thing in
+  this game that walks backwards — under a note promising the next career starts
+  with everything you banked.
+
+And one number had two names ten seconds apart: the morning card called
+`run.rep` "Reputation" while the evening called it Goodwill, and "Reputation
+banked" already belonged to `meta.rep`, which is a different quantity and the
+one that buys certificates.
+
+Two of the guards had to be proven against an over-correction as well as
+against the bug: dropping the promotion row for everybody, and taking the bar
+out of the goodwill line entirely, are both caught by the guard that requires an
+ordinary evening below the top to still be told both.
+
+### Every errand in the game, walked
+
+`boards.js` plays the minigames and `playday.js` plays one day. Neither walks
+every ticket, so a goto that cannot be reached, a step that never turns over, or
+a marker on a floor the player cannot get to only shows up on the ticket it is
+in — and there are 284 of them. `tools/errands.js` deals each at the lowest rung
+that can receive it and drives the real step machine: 284 errands, 95 markers,
+11 lift rides, nothing teleported.
+
+Walking to a marker's *coordinates* is not arriving. The two floors share a
+coordinate space, so a ticket whose destination floor got lost still lands the
+player on a tile of the right shape upstairs and the step turns over as though
+the trip had happened — which is the exact shape of the cross-floor bug this
+game shipped once already. The anchor each step names is checked after the step
+turns over: it has to resolve on the map that is loaded, and the player has to
+be standing next to it. Dropping the destination floor fails 11 errands with
+"walked to ACCOUNTS and arrived on office1, where there is no ACCOUNTS".

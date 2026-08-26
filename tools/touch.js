@@ -195,6 +195,62 @@ const MIN_TAP = 44;
   if (await qOpen()) await tapEl('#tix header .x');
   step('the queue closes with a tap', !(await qOpen()));
 
+  /* 8. THE BOARDS. Every check above is DOM: buttons, panels, the queue. The
+     minigames are the one layer drawn on the canvas, and this harness had
+     never opened one — so "PHONE OK" was a claim about the menus. WHOSE
+     SATURDAY, the board a Director's last Friday turns on, could not be
+     played with a pointer at all and nothing here noticed.
+     Each board is opened and finished with real taps at real pixels, through
+     the same touch -> click -> canvasPoint path a thumb uses. */
+  await page.evaluate(() => { if (G.modal) closeModalToWork(); });
+  const boards = await page.evaluate(() => Object.keys(GAMES));
+  const unplayable = [];
+  for (const gid of boards){
+    const opened = await page.evaluate((id) => {
+      window.__done = false;
+      openGame(id, 2, () => { window.__done = true; });
+      return !!MG;
+    }, gid);
+    if (!opened){ unplayable.push(gid + ' would not open'); continue; }
+    /* the how-to card is dismissed by tapping it, like anything else */
+    for (let i = 0; i < 4 && await page.evaluate(() => !!(MG && MG.brief)); i++)
+      await tapView(240, 200);
+    for (let pass = 0; pass < 12; pass++){
+      if (await page.evaluate(() => window.__done || !MG)) break;
+      const rs = await page.evaluate(() => {
+        const g = MG; if (!g) return null;
+        const n = (g.rows && g.rows.length) || (g.tasks && g.tasks.length) ||
+                  (g.hand && g.hand.length) || (g.sites && g.sites.length) ||
+                  (g.qs && g.qs.length) || (g.steps && g.steps.length) ||
+                  (g.items && g.items.length) || 0;
+        const pick = [], act = [], btn = [];
+        if (g.leftRect) for (let i = 0; i < (g.n||0); i++) pick.push(g.leftRect(i));
+        if (g.rowRect)  for (let i = 0; i < n; i++) pick.push(g.rowRect(i));
+        if (g.cardRect) for (let i = 0; i < 4; i++) pick.push(g.cardRect(i));
+        if (g.nodeRect && g.nodes) for (let i = 0; i < g.nodes.length; i++) pick.push(g.nodeRect(i));
+        if (g.rightRect) for (let i = 0; i < (g.n||0); i++) act.push(g.rightRect(i));
+        if (g.personRect) for (let i = 0; i <= (g.staff ? g.staff.length : 0); i++) act.push(g.personRect(i));
+        if (g.tierRect) for (let i = 0; i < n; i++) for (let t = 0; t < 3; t++) act.push(g.tierRect(i,t));
+        if (g.optRect)  for (let i = 0; i < 4; i++) act.push(g.optRect(i));
+        for (const b of (g.btns||[])) btn.push([b.x - b.w/2, b.y, b.w, b.h]);
+        return { pick, act, btn };
+      });
+      if (!rs) break;
+      const seq = rs.pick.length && rs.act.length
+        ? rs.pick.flatMap(p => [p, ...rs.act])
+        : rs.pick.concat(rs.act);
+      for (const [x,y,w,h] of seq.concat(rs.btn)){
+        if (await page.evaluate(() => window.__done || !MG)) break;
+        await tapView(x + w/2, y + h/2);
+      }
+      await page.waitForTimeout(400);
+    }
+    if (!(await page.evaluate(() => window.__done))) unplayable.push(gid);
+    await page.evaluate(() => { MG = null; window.__done = false; if (G.modal) closeModalToWork(); });
+  }
+  step('every minigame can be finished with taps alone', !unplayable.length,
+       unplayable.length ? unplayable.join(', ') : boards.length + ' boards played to a result');
+
   console.log('');
   if (errs.length) console.log('page errors: ' + errs.length + '\n  ' + errs[0] + '\n');
   console.log(fails.length

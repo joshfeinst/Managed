@@ -180,10 +180,11 @@ were invisible to the ones that came before them.
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 402 in-game self-tests |
+| `verify.js` | boots it and runs the 411 in-game self-tests |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
 | `mouseonly.js` | plays from the title screen to a worked ticket without pressing a single key, because the handbook's first line promises the mouse can |
-| `touch.js` | plays it on a 390x844 phone with taps alone, in both orientations, and measures what a finger can reach |
+| `touch.js` | plays it on a 390x844 phone with taps alone, in both orientations, measures what a finger can reach, and plays all twelve boards to a result |
+| `errands.js` | walks every ticket in the game — deals it, follows every marker it puts down, takes the lift when the marker is downstairs, and requires the ticket to close |
 | `playday.js` | plays past the first ticket — follows markers, answers dialogue, leaves boards it cannot solve |
 | `liftride.js` | takes a downstairs ticket and rides the lift with real clicks and keys |
 | `visual.js` | screenshots every screen and board at four window sizes, asserting no text lands on the canvas |
