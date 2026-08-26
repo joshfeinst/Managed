@@ -871,31 +871,31 @@ function bakePortrait(look){
    docs/BALANCE.md rather than tuned around. */
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
-    gates:{ nextAt:{perf:0.772, days:3}, firedBelow:0.347, cert:null },
+    gates:{ nextAt:{perf:0.763, days:3}, firedBelow:0.343, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:30, slaScale:1.0 }, deskAnchor:'DESK_PIT' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
-    gates:{ nextAt:{perf:0.756, days:3}, firedBelow:0.34, cert:null },
+    gates:{ nextAt:{perf:0.703, days:3}, firedBelow:0.316, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:34, slaScale:0.96 }, deskAnchor:'DESK_PIT2' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
-    gates:{ nextAt:{perf:0.635, days:3}, firedBelow:0.286, cert:null },
+    gates:{ nextAt:{perf:0.636, days:3}, firedBelow:0.286, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:40, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
-    gates:{ nextAt:{perf:0.631, days:3}, firedBelow:0.284, cert:null },
+    gates:{ nextAt:{perf:0.596, days:3}, firedBelow:0.268, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:48, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
-    gates:{ nextAt:{perf:0.624, days:3}, firedBelow:0.281, cert:null },
+    gates:{ nextAt:{perf:0.643, days:3}, firedBelow:0.289, cert:null },
     queue:{ ratePerHr:1.5, meetingMin:60, slaScale:0.96 }, deskAnchor:'DESK_PROJ' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
-    gates:{ nextAt:{perf:0.513, days:3}, firedBelow:0.231, cert:null },
+    gates:{ nextAt:{perf:0.527, days:3}, firedBelow:0.237, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:68, slaScale:0.96 }, deskAnchor:'DESK_PROC' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.501, days:3}, firedBelow:0.225, cert:null },
+    gates:{ nextAt:{perf:0.543, days:3}, firedBelow:0.244, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:78, slaScale:0.96 }, deskAnchor:'DESK_CLIENT' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
-    gates:{ nextAt:{perf:0.611, days:3}, firedBelow:0.275, cert:null },
+    gates:{ nextAt:{perf:0.608, days:3}, firedBelow:0.274, cert:null },
     queue:{ ratePerHr:1.7, meetingMin:84, slaScale:0.96 }, deskAnchor:'DESK_ARCH' },
   { id:'vcio',   title:'vCIO',          pay:135000,
-    gates:{ nextAt:{perf:0.641, days:3}, firedBelow:0.288, cert:null },
+    gates:{ nextAt:{perf:0.629, days:3}, firedBelow:0.283, cert:null },
     queue:{ ratePerHr:1.7, meetingMin:88, slaScale:0.96 }, deskAnchor:'DESK_EXEC' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
     gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.31, cert:null },
@@ -1095,7 +1095,24 @@ const NPCS = {
   gary:      { name:'GARY', role:'Client · "was just in the area"',
     look:{skin:0,hair:5,shirt:'#8a6845'},
     sched:[[150,'LOBBY'],[240,'HALL'],[330,'LOBBY']],
-    talk:'sm.gary', visitor:true }
+    talk:'sm.gary', visitor:true },
+  /* THE SENIOR FLOOR HAD THE SAME SEVEN FACES. The cast was written for the
+     helpdesk pit, and a player spends the back half of a career upstairs
+     looking at exactly the people they sat next to on day one. These three
+     belong to the other end of the building. */
+  yvonne:  { name:'YVONNE', role:'Finance Manager · has read the contract all the way to the end',
+    look:{skin:1,hair:3,shirt:'#4d5f7a',glasses:true,smile:false},
+    sched:[[0,'n4'],[105,'PRINTER'],[135,'n4'],[375,'COOLER'],[405,'n4']],
+    talk:'sm.yvonne' },
+  noor:    { name:'NOOR', role:'Compliance Lead · has been right since 2021 and is still waiting',
+    look:{skin:2,hair:0,shirt:'#2f6f6a',hairLong:true},
+    sched:[[0,'n5'],[75,'CONF'],[120,'n5'],[240,'SERVERS'],[285,'n5']],
+    talk:'sm.noor' },
+  callum:  { name:'CALLUM', role:'Apprentice, second year · does the jobs nobody has put a ticket on',
+    look:{skin:0,hair:5,shirt:'#3b4b8a',tie:'#d9c17a'},
+    sched:[[0,'n9'],[150,'COFFEE'],[180,'n9'],[345,'VEND'],[375,'n9']],
+    talk:'sm.callum' }
+
 };
 
 
@@ -1263,7 +1280,69 @@ const CHAT = {
       'I wrote my password down but I wrote it down somewhere clever.',
       'Do you do phones? My phone’s doing a thing. Not now. But do you?'
     ]
+  },
+  /* THE SENIOR FLOOR'S OWN VOICES. Three people the back half of a career is
+     actually spent among, written to disagree with each other: the one who
+     knows what everything cost, the one who knows what it risks, and the one
+     nobody has got round to telling anything. */
+  yvonne: {
+    when: [
+      { if:r => r.rung >= 8, t:'You sign things now. Do you know what happens to a signature? It goes in a folder and stops being an opinion.' },
+      { if:r => r.rung <= 2, t:'You are on the helpdesk, so you have never seen an invoice. Everything you did today is on one.' },
+      { if:r => r.clock > 420, t:'Whatever you are about to start lands in next month. I am not being difficult. That is just where the line is.' },
+      { if:r => r.breaches >= 3, t:'Three of them went past. I will find out on the twenty-eighth, in a credit note, written by me.' }
+    ],
+    any: [
+      'Everything you call a project, I call a number that has already been spent.',
+      'I have read the contract to the end. There is a clause on page nine everybody has been ignoring since 2019.',
+      'A discount is not a discount. It is a price we are held to at renewal, forever, by people who were not there.',
+      'Somebody put four thousand pounds on the emergency card in March. Nobody has told me what for. I know what for.',
+      'Margin is not greed. Margin is whether Callum still has a job in April.',
+      'When you say "we absorbed it", the person you mean is me.',
+      'A purchase order is two people agreeing before it costs money. That is all it is. It is not very much to ask.',
+      'The renewal has been eleven days away for eleven days, because nobody has opened it.',
+      'I can tell you what every hour of that outage cost. Nobody has ever asked me before deciding.'
+    ]
+  },
+  noor: {
+    when: [
+      { if:r => r.rung >= 7, t:'You are senior enough to fix this now. That is not a compliment. That is an invoice.' },
+      { if:r => r.breaches >= 3, t:'Three breaches. I am not going to say anything. I am going to write it down, which is worse.' },
+      { if:r => r.burnout > 50, t:'You look the way the risk register reads.' },
+      { if:r => r.coffee >= 3, t:'That is your third. I am obliged to notice things. It is the whole job.' }
+    ],
+    any: [
+      'I raised it in 2021. It is still on the register. I am not bitter. I am just extremely good at waiting.',
+      'Everybody agrees with me in the room. The room ends and so does the agreement.',
+      'The policy says annually and the last one was three years ago. Both are true at once. That is the problem.',
+      'I do not want anybody punished. I want the thing that happened to be able to not happen again.',
+      'The insurer asks yes or no about things that are neither. I still have to pick one. I pick the true one.',
+      'A control nobody follows is not a control. It is a sentence in a document about a control.',
+      'When it goes wrong they will ask who knew. I keep a list so the answer is never "nobody".',
+      'Shadow IT is people solving a problem you told them you would solve in June.',
+      'Every exception was temporary. I have a folder of temporary going back four years.'
+    ]
+  },
+  callum: {
+    when: [
+      { if:r => r.rung <= 1, t:'You started after me. I do not mind. I am only saying it because nobody else is going to say it for me.' },
+      { if:r => r.rung >= 6, t:'You used to sit down there. You could mention that. In a meeting. At some point.' },
+      { if:r => r.stress > 72, t:'Do you want me to take the phones for an hour? I have done the training. Twice.' },
+      { if:r => r.queue.length >= 5, t:'I can do two of those. Not the ones you think. The other two.' }
+    ],
+    any: [
+      'I do the jobs that never get a ticket. So there is no record of them, so there is no record of me.',
+      'My assessor asked what I do here. I said "whatever is left". She wrote down "flexible".',
+      'Nobody has shown me the change process. I have worked it out from being told off twice.',
+      'I fixed the label printer and did not raise a ticket. I am learning that was the wrong lesson.',
+      'Second year. Somebody once explained the apprentice levy to me at length and I still do not know who pays it.',
+      'I know where everything is because I am the one who put it there. That is not the same as being told.',
+      'Derek says I ask too many questions. Derek is the entire reason I have to.',
+      'The store cupboard key is in the store cupboard. I have raised this. I will raise it again.',
+      'When it is quiet I read old tickets. You can tell which ones were closed at ten to six.'
+    ]
   }
+
 };
 /* A pure hash of who / which day / how many times you have spoken. No RNG
    stream is touched, so talking to people can never shift the seeded content
@@ -2906,7 +2985,245 @@ const DIALOGUE = {
            {t:'"We will make it work."', fx:{stress:5, bonus:1}},
            {t:'Forward it to Linda without comment', fx:{stress:-2, rep:-1}} ] },
   'e.printerq':{ who:'sys', t:['A queue has formed at the printer. Not for the printer — for you. Three people are holding pieces of paper and eye contact.'] },
-  'e.outage': { who:'sys', t:['Half the internet is down — some cloud region has fallen over. Every phone lights up. None of it is yours to fix, and all of it is your problem.'] }
+  'e.outage': { who:'sys', t:['Half the internet is down — some cloud region has fallen over. Every phone lights up. None of it is yours to fix, and all of it is your problem.'] },
+  'e.pit.induction': { who:'sys', t:['Induction. The room with the whiteboard nobody cleans, run by somebody covering for the person who normally runs it.',
+    'You are issued a badge that opens the front door and not the room where the kit is. You are shown the fire exits, the kitchen rota, and a login belonging to a D. Whitcombe.',
+    'The rest is covered in the second induction. It is not mentioned again.'] },
+  'e.pit.drill': { who:'sys', t:['The alarm goes at eleven and does not stop. It is a drill. It runs to the end whether or not you are on a call, and you are on a call.',
+    'Assembly point C is the far end of the car park, past the skip. Brenda has a clipboard and reads out every name on it, including two people who left in March.',
+    'Nine minutes in light rain. Inside, on the other side of a door you are not allowed to open, {client} rings back for the third time.'] },
+  'e.pit.process': { who:'sys', t:['Kayla walks you through the process. The process is a spreadsheet.',
+    'A tab per client. One column is coloured and one is not, and the colours mean something. Kayla knows what they mean. The man who chose them left before the lease was renewed.',
+    'Kayla asks if that is all clear. Raj says it is.'],
+    opts:[ {t:'Say it is clear, and work the colours out when one of them matters', fx:{time:5, rep:-1, stress:6}},
+           {t:'Ask the room what amber means', fx:{time:14, rep:3, bonus:1, stress:6}},
+           {t:'Ask Kayla afterwards, then put the key at the top of the tab', fx:{time:12, rep:1, bonus:1, stress:3}} ] },
+  'e.pit.leaving': { who:'sys', t:['The kitchen at two. There is a card going round and a supermarket cake with somebody\'s name on it in icing gel.',
+    'It is Priya, from Finance, after eleven years. You have not met Priya. She is the one who checks the licence counts against what the clients are billed, and she has always done it from memory.',
+    'The speeches run twenty minutes. Two people say she is the reason anything works. Nobody says who does it from Monday.'],
+    opts:[ {t:'Ask Priya to show you the licence check before she goes, and write it down', fx:{time:14, rep:3, bonus:1, stress:4}},
+           {t:'Put it to Linda afterwards that nobody has been named', fx:{time:9, rep:2, bonus:1, stress:7}},
+           {t:'Sign the card in the four inches left, take a slice, go back to the queue', fx:{time:4, rep:-1, stress:3}} ] },
+  'e.pit.cupboard': { who:'brenda', t:['You have been drinking the machine coffee since you got here. The machine is for clients, and for people who have not asked.',
+    'The cafetiere is mine, so it stays my side of the sink. The cups on the left are the good ones. If Raj asks, you do not know where any of this is.',
+    'And you are sitting in the broken chair. Take the one from the desk under the window. Nobody has claimed it and nobody is going to.'] },
+
+  'e.hd1.starter': { who:'sys', t:['{Client} has a new starter. She is in reception with a lanyard, a notebook, and no account.',
+    'The request came in on Friday, to the address at the bottom of Mackenzie\'s email signature. That address is a distribution list with one member, and he left in March.',
+    'The account takes ten minutes to build. She has been sitting there since nine, and she is being very good about it.'] },
+  'e.hd1.calibration': { who:'sys', t:['Quality calibration. Six of you in the small room, scoring the same recorded call so that everyone scores it the same way.',
+    'The call runs four minutes. The fault is fixed by minute two. The agent did not use the caller\'s name three times, did not signpost the hold, and did not offer the branded close.',
+    'It scores sixty-one. The room is asked whether it agrees.'],
+    opts:[ {t:'Agree the score and write the three phrases on a card for the top of your monitor', fx:{time:12, rep:-1, stress:6}},
+           {t:'Say the fault was fixed at minute two, and ask which of the other thirty-nine points the caller noticed', fx:{time:23, rep:3, bonus:1, stress:8}},
+           {t:'Agree the score in the room, then offer to draft a fourth scored line for whether the fault was fixed', fx:{time:26, rep:2, bonus:1, stress:4}} ] },
+  'e.hd1.shortcuts': { who:'kayla', t:['Fifteen minutes, and you can stop escalating password resets.',
+    'Three things. You can reset from the console without raising a ticket. Ctrl-Shift-N skips the four screens nobody reads. You can close a call from the keypad without going back to the desktop.',
+    'It is ninety seconds a call. I have worked out what that comes to over a week. I have not told anyone upstairs and I am not going to.'] },
+
+  'e.hd2.handover': { who:'derek', t:['Handover. Quiet night. Something went off on {client}\'s backup job around four, and then it cleared on its own.',
+    'I didn\'t raise it, because it cleared. If it comes back it will be the same thing. You\'ll know it when you see it.',
+    'The other one is in your queue. I have put "spoke to them" in the notes. {User} was fine about it.'] },
+  'e.hd2.matrix': { who:'sys', t:['Escalation workshop. The triage matrix is up on the screen. Four quadrants, drawn in 2021. A laminated copy is still stuck to a monitor that was replaced in March.',
+    'Everyone agrees it is a good matrix. T1 escalate on the phrase "the user is quite senior", which is not one of the quadrants. T3 send things back with "T2 can do this", which is also not one of the quadrants.',
+    'Linda asks who would like to own the refresh.'],
+    opts:[ {t:'Take it, and rebuild it from last month\'s actual escalations', fx:{time:18, rep:4, bonus:1, stress:5}},
+           {t:'Say the matrix is fine and the problem is that nobody reads it', fx:{time:5, rep:-2, stress:4}},
+           {t:'Offer an hour a week sitting with T1 instead of a document', fx:{time:12, rep:3, bonus:1, stress:6}} ] },
+  'e.hd2.filter': { who:'kayla', t:['You\'re working the whole queue. Don\'t. Eleven of those are waiting on the client, and one is waiting on a licence nobody can buy until Thursday, because the person with the company card is on leave.',
+    'I have made you a view. It drops anything where the last update was ours. It is saved under your name, so it is there tomorrow.',
+    'That is twelve gone. They are still open. They are just not yours this afternoon.'] },
+
+  'e.hd3.blameless': { who:'sys', t:['Post-incident review for Tuesday. Nine people, an hour of the day, and the timeline up on the screen.',
+    'At 14:06 the service was restarted by hand. The timeline does not say by whom. Linda gets to the end of the slide and leaves it there.',
+    'It was you. It was the correct thing to do at 14:06, and it is a different sort of question at half ten on a Thursday.'],
+    opts:[ {t:'Say it was you, and take the room through what 14:06 looked like at the time', fx:{time:14, rep:3, bonus:1, stress:7}},
+           {t:'Ask to rebuild the timeline from the logs before anyone answers', fx:{time:24, rep:3, bonus:1, stress:3}},
+           {t:'Let the pause run until Linda moves to the next slide', fx:{time:4, rep:-2, stress:9}} ] },
+  'e.hd3.amnesty': { who:'sys', t:['Knowledge amnesty. Two hours in which nothing undocumented is anyone\'s fault. Derek has brought a mug and a notebook with a rubber band round it.',
+    'He starts with the scheduler. The service account was his and is now nobody\'s, and the password is in an envelope in the safe in his handwriting. It is correct. He gets through eight more things without opening a laptop.',
+    'Nothing is fixed. There is a page now with the scheduler on it, and Derek has stopped being the only copy.'] },
+  'e.hd3.problemboard': { who:'linda', t:['Problem review. One item on the agenda. {Client} again, same fault, same time of day, since March.',
+    'The permanent fix is a switch. Eleven hundred pounds, sitting between two budgets, and neither of them is mine. Until someone owns it, the workaround holds.',
+    'The workaround is you, at ten to seven, on your own phone. The form calls that mitigated, so mitigated is what I have put.'] },
+
+  'vx.insur.a': { who:'sys', t:['The cyber insurance renewal for {client} arrived as a PDF with form fields that will not accept more than sixty characters.',
+    'Question 14. "Is multi-factor authentication enforced on all remote access?" Yes or No. There is no third box.',
+    'It is enforced on all remote access except the two accounts that break when it is: the finance director\'s, and the one the payroll bureau logs in with.'] },
+  'vx.insur.b': { who:'sys', t:['The broker has mentioned, helpfully, that most clients tick Yes.'],
+    opts:[ {t:'Tick No and attach a one-page note setting out the two exceptions', fx:{time:12, rep:3, bonus:1, stress:4}},
+           {t:'Tick Yes. It is ninety-five per cent true and renewal is Friday', fx:{time:4, rep:-4, stress:9}},
+           {t:'Fix both accounts this week, then tick Yes and mean it', fx:{time:26, rep:4, bonus:1, stress:9}} ] },
+  'vx.merge.a': { who:'mackenzie', t:['"Small one. Eleven heads. They complete on the first and the MD wants them on our email by the Monday after."',
+    '"I know. I did say it might be coming. I think I said it to Linda."'] },
+  'vx.merge.b': { who:'sys', t:['The eleven share four logins. The server is under a desk in Warrington and the backup is a USB drive that goes home at weekends, which is more than nothing.',
+    'Moving them by the Monday is possible. Everything that makes it possible is something you would not sign off in any other week.'],
+    opts:[ {t:'Go and see the office before you agree to a date', fx:{time:26, rep:4, bonus:1, stress:6}},
+           {t:'Give the eleven new accounts on our tenant and leave their server alone until the spring', fx:{time:16, rep:3, bonus:1, stress:8}},
+           {t:'Take the four logins across as they are and work out who is who later', fx:{time:5, rep:-4, stress:11}} ] },
+  'vx.switch.a': { who:'sys', t:['The core stack went end of support in March. Not end of life. End of support, which means it works exactly as well as it did in February.',
+    'Three of the four units were bought in 2016. The fourth went in during 2019 to replace one that died, and it is the only one anyone remembers paying for.'] },
+  'vx.switch.b': { who:'sys', t:['The refresh is eleven thousand pounds. The outage it prevents has not happened yet and might not happen for four years.'],
+    opts:[ {t:'Quote the full refresh with the failure odds written out year by year', fx:{time:23, rep:4, bonus:1, stress:6}},
+           {t:'Propose one unit a year for four years and hold the spares budget', fx:{time:16, rep:3, bonus:1, stress:5}},
+           {t:'Source two cold spares off the secondary market and say nothing further', fx:{time:6, rep:-3, stress:8}} ] },
+  'vx.risk.a': { who:'sys', t:['The risk register has fourteen entries. Eleven have been amber since 2022, carried across from the spreadsheet the register replaced.',
+    'Risk 7 is marked accepted. The man who accepted it left in January. There is no field for un-accepting a risk.'] },
+  'vx.risk.b': { who:'sys', t:['Linda wants the register shorter. {Client} wants it greener. These are not the same request and only one of them is about risk.'],
+    opts:[ {t:'Close the four risks that are genuinely gone and evidence each closure', fx:{time:18, rep:3, bonus:1, stress:5}},
+           {t:'Re-score all fourteen against the estate as it is now and let the colours land', fx:{time:27, rep:4, bonus:1, stress:10}},
+           {t:'Roll it forward unchanged. It was accurate last quarter', fx:{time:5, rep:-3, stress:4}} ] },
+  'vx.risk.c': { who:'linda', t:['"Risk 7. Before Thursday. Who owns it now."'],
+    opts:[ {t:'Name {client}\'s operations director, and tell her yourself before the meeting', fx:{time:20, rep:4, bonus:1, stress:6}},
+           {t:'Take it yourself for one quarter, in writing, with a review date', fx:{time:12, rep:2, bonus:1, stress:11}},
+           {t:'Leave the leaver\'s name in the owner field and footnote it', fx:{time:4, rep:-3, stress:6}} ] },
+  'vx.lic.a': { who:'sys', t:['{Client} pays for forty-one licences. Thirty-three people work there.',
+    'Four of the extra eight are leavers, three are shared mailboxes that never needed one, and the last is the scan-to-email account on the third floor printer.',
+    'The anniversary is the fourteenth. After the fourteenth the count is fixed for a year.'] },
+  'vx.lic.b': { who:'mackenzie', t:['"Before you send that. If we drop eight seats the monthly drops, and the monthly is how the account looks in the review."',
+    '"Not saying don\'t. Just something to be aware of."'],
+    opts:[ {t:'Drop all eight and put the saving in the review as a saving', fx:{time:12, rep:4, bonus:1, stress:7}},
+           {t:'Drop five, hold three against the roles {client} is hiring into', fx:{time:19, rep:3, bonus:1, stress:3}},
+           {t:'Leave the count where it is until the review is done', fx:{time:4, rep:-4, stress:8}} ] },
+  'vx.strat.a': { who:'sys', t:['Last year\'s IT strategy ran to forty pages and took eleven weeks. The portal says it has been opened twice. One of those was you, checking a typo.',
+    'They have asked for this year\'s. Same scope, same length, same fee, and the request came in warmly.'] },
+  'vx.strat.b': { who:'sys', t:['The estate diagram is current again, which was the only part of last year\'s document anyone actually used.'],
+    opts:[ {t:'Write it as four decisions with dates and owners, and nothing else', fx:{time:20, rep:3, bonus:1, stress:9}},
+           {t:'Give them the forty pages they asked for, with the four decisions on page one', fx:{time:27, rep:4, bonus:1, stress:6}},
+           {t:'Reissue last year\'s with the dates moved on twelve months', fx:{time:6, rep:-4, stress:5}} ] },
+  'vx.strat.c': { who:'client', t:['"Can you present it. Twenty minutes, at the end, after the finance item."'],
+    opts:[ {t:'Take the twenty minutes and cut the content to fit twelve', fx:{time:16, rep:3, bonus:1, stress:5}},
+           {t:'Ask for the slot before finance instead, and say plainly why', fx:{time:10, rep:2, bonus:1, stress:8}},
+           {t:'Send it round beforehand and stay at your desk', fx:{time:5, rep:-2, stress:3}} ] },
+  'vx.click.a': { who:'linda', t:['"{Client}\'s chairman clicked a link on Sunday afternoon. He typed his password into the page, then rang his son-in-law about it, who rang us at seven."',
+    '"The account is locked and the password is changed. There is a board call at eleven and you are on it."'] },
+  'vx.click.b': { who:'sys', t:['Nothing was taken. The mailbox rules are clean, and the sign-in log shows one failed attempt from a hosting range in Frankfurt at 02:14 and nothing since.',
+    'The board will not want to hear that nothing happened. They will hear it as nothing being done.'],
+    opts:[ {t:'Walk them through the timeline minute by minute and name the control that held', fx:{time:16, rep:4, bonus:1, stress:6}},
+           {t:'Use the call to get conditional access signed off while they are frightened', fx:{time:22, rep:5, bonus:1, stress:11}},
+           {t:'Say it is contained and hand back to the chair', fx:{time:6, rep:-3, stress:4}} ] },
+  'vx.spend.a': { who:'sys', t:['{Client} has moved its year end to March. This year is therefore eleven months long, and the capital budget was set for twelve.',
+    'The refresh you scheduled for month twelve now falls into a financial year that does not exist yet.'] },
+  'vx.spend.b': { who:'client', t:['"Can you make it fit. We would rather not go back to the board twice in one year."'],
+    opts:[ {t:'Pull the refresh into the eleven months and take it out of contingency', fx:{time:12, rep:-1, stress:10}},
+           {t:'Get the carry-forward into the stub year agreed in writing by their finance director', fx:{time:18, rep:3, bonus:1, stress:5}},
+           {t:'Go back to the board once, with both years on a single page', fx:{time:24, rep:4, bonus:1, stress:9}} ] },
+  'vx.buss.a': { who:'derek', t:['"The scheduler. That one\'s fine. It has been fine for nine years."',
+    '"It runs on the box under the bench. There is a note in the drawer. Not that drawer."'] },
+  'vx.buss.b': { who:'sys', t:['The mitigation is a document nobody has written. The only person who could write it is the risk.',
+    'Putting it in the board pack makes it a board item. Leaving it out makes it yours in 2029.'],
+    opts:[ {t:'Book two hours with Derek and write it down while he is talking', fx:{time:24, rep:4, bonus:1, stress:6}},
+           {t:'Log it as a named key-person risk with no mitigation and a review date', fx:{time:10, rep:3, bonus:1, stress:9}},
+           {t:'Leave it off the register. It has been fine for nine years', fx:{time:5, rep:-3, stress:4}} ] },
+  'vx.buss.c': { who:'linda', t:['"If his name goes in a board pack, he will hear about it from someone who is not you."'],
+    opts:[ {t:'Show Derek the paragraph before it goes anywhere', fx:{time:14, rep:4, bonus:1, stress:8}},
+           {t:'Take the name out and describe the system precisely enough that it is obvious', fx:{time:11, rep:2, bonus:1, stress:4}},
+           {t:'Send it. It is accurate', fx:{time:3, rep:-3, stress:9}} ] },
+
+  'dx.dir9head.a': { who:'sys', t:['Finance have modelled next year with eleven people in it. There are twelve.',
+    'The model does not say which eleven. That part was left blank on purpose, and the blank is yours.'] },
+  'dx.dir9head.b': { who:'linda', t:['I have put them in the order I would do it in, if it were mine to do.',
+    'Raj is at the bottom because he is the newest. It is the only fair reason I could find and it is not a good one.'] },
+  'dx.dir9head.c': { who:'sys', t:['It is a list until you sign it. After that it is a Tuesday morning in a small room with the blinds down.'],
+    opts:[ {t:'Take the whole reduction out of contractors and carry the Q3 overrun yourself', fx:{time:22, rep:4, bonus:1, stress:9}},
+           {t:'Sign the list as Linda ordered it and have the conversation yourself, today', fx:{time:18, rep:2, bonus:1, stress:12}},
+           {t:'Ask HR to run it as voluntary and see who puts their hand up', fx:{time:8, rep:-2, stress:7}} ] },
+  'dx.dir9two.a': { who:'sys', t:['The acquisition completed at eight. IT found out at nine, from the press release, which was accurate.',
+    'Two domains. Two ticketing systems. Two service desks that each believe they are the service desk.'] },
+  'dx.dir9two.b': { who:'sys', t:['Nothing merges on its own. The first decision is which of the two things survives.',
+    'The one that does not belongs to people who are sitting in this room and have just been bought.'],
+    opts:[ {t:'Keep their tickets, keep our identity, and write down why in one page', fx:{time:20, rep:4, bonus:1, stress:6}},
+           {t:'Standardise on ours, ninety days, no exceptions', fx:{time:8, rep:-3, stress:9}},
+           {t:'Run both behind one front door for a year and staff that door properly', fx:{time:16, rep:2, bonus:1, stress:5}} ] },
+  'dx.dir9two.c': { who:'mackenzie', t:['I have already been round their four biggest. Honestly, it could not have gone better.',
+    'I told them nothing changes. They were so relieved.'],
+    opts:[ {t:'Write the honest change note yourself before she sends anything else', fx:{time:14, rep:3, bonus:1, stress:5}},
+           {t:'Let it stand for a quarter and handle the difference as it turns up', fx:{time:5, rep:-3, stress:9}},
+           {t:'Go with her to the next four and say the true version out loud in the room', fx:{time:24, rep:5, bonus:1, stress:8}} ] },
+  'dx.dir9clock.a': { who:'sys', t:['Derek rang at twenty past seven. Derek does not ring.',
+    'He had been tidying a mailbox and found a rule that nobody in the company made.'] },
+  'dx.dir9clock.b': { who:'derek', t:['It has been running since the fourteenth. Forward, then delete the forward. Tidy, really.',
+    'Seventy-two hours starts when we became aware. We became aware at twenty past seven.'] },
+  'dx.dir9clock.c': { who:'sys', t:['Seventy-two hours is three days. It is also a Friday, a weekend, and a Monday you can already see the shape of.',
+    'There is nobody above you to sign this instead.'],
+    opts:[ {t:'Notify now with what is known and commit in writing to a supplementary report', fx:{time:20, rep:5, bonus:1, stress:11}},
+           {t:'Give forensics twenty-four hours so the notification is right the first time', fx:{time:26, rep:3, bonus:1, stress:7}},
+           {t:'Wait for legal to confirm it meets the threshold before starting anything', fx:{time:6, rep:-4, stress:12}} ] },
+  'dx.dir9admin.a': { who:'sys', t:['The administrators have written to suppliers rather than customers. You are on the list twice, as both.',
+    'The circuits are still up. They stay up until somebody stops paying the wholesale carrier, and nobody named in the letter is that somebody.'] },
+  'dx.dir9admin.b': { who:'sys', t:['Forty-one client sites sit on their network. Seven of them have no second route at all, including {client}.',
+    'The contract is now an asset in somebody else\'s estate.'],
+    opts:[ {t:'Order replacement circuits for the seven bare sites today, at list price', fx:{time:22, rep:4, bonus:1, stress:7}},
+           {t:'Pay the next invoice early and keep the sites where they are', fx:{time:6, rep:-2, stress:9}},
+           {t:'Ring the wholesale carrier directly and ask to novate the lot', fx:{time:16, rep:3, bonus:1, stress:6}} ] },
+  'dx.dir9admin.c': { who:'sys', t:['Derek has their carrier account numbers in a text file dated 2017. He wrote them down at onboarding because he did not trust them then either.',
+    'What he does not have, and has never had, is the authority to use them.'],
+    opts:[ {t:'Use the numbers tonight and put the letter of intent to the carrier in writing yourself', fx:{time:14, rep:3, bonus:1, stress:9}},
+           {t:'Wait for the administrator to confirm the position in writing first', fx:{time:9, rep:0, stress:11}},
+           {t:'Ring the seven bare clients first and have each of them authorise the move on their own account', fx:{time:20, rep:4, bonus:1, stress:6}} ] },
+  'dx.dir9policy.a': { who:'client', t:['Section four point two. No change without five working days\' notice and a named approver.',
+    'You wrote that. We signed it. We are only asking you to do what it says.'] },
+  'dx.dir9policy.b': { who:'sys', t:['The change is a certificate on a public endpoint at {client}, and it expires on Thursday. Five working days from now is next Wednesday.',
+    'The policy is good. You wrote it in a week when nothing was expiring.'],
+    opts:[ {t:'Follow the policy, let it lapse, and tell them in writing exactly what will happen', fx:{time:10, rep:3, bonus:1, stress:11}},
+           {t:'Raise it as an emergency change and be the named approver yourself', fx:{time:16, rep:2, bonus:1, stress:5}},
+           {t:'Do it quietly on Thursday evening and log it as routine maintenance', fx:{time:5, rep:-5, stress:8}} ] },
+  'dx.dir9leave.a': { who:'kayla', t:['Four weeks. I have put it in writing so it is on paper before anyone asks me to think about it.',
+    'It is not the money. It is thirty per cent the money. The rest is that I have done the same eleven months three times.'] },
+  'dx.dir9leave.b': { who:'sys', t:['She closes more than the two below her together and has never once made it look like work.',
+    'Everything she has just said is in the retention paper you wrote in February. You wrote it, and then the budget round happened.'] },
+  'dx.dir9leave.c': { who:'sys', t:['You can match the money by Friday. You cannot match the eleven months.'],
+    opts:[ {t:'Counter with the money and one named piece of work that is hers outright', fx:{time:18, rep:4, bonus:1, stress:7}},
+           {t:'Let her go well, take the handover in writing, and keep the reference warm', fx:{time:12, rep:2, bonus:1, stress:5}},
+           {t:'Counter with money alone and hope it holds until the summer', fx:{time:6, rep:-2, stress:9}} ] },
+  'dx.dir9sixty.a': { who:'sys', t:['The number came back at sixty per cent of the ask, with a note thanking you for a very thorough submission.',
+    'The missing forty is not a line. It is the three lines you put at the bottom because you thought they were obviously going to be cut.'] },
+  'dx.dir9sixty.b': { who:'sys', t:['Sixty per cent buys the backup replacement or the identity work. It does not buy both.',
+    'Both are on the risk register in your handwriting.'],
+    opts:[ {t:'Fund identity, defer backup, and sign the accepted risk under your own name', fx:{time:16, rep:3, bonus:1, stress:7}},
+           {t:'Do both at sixty per cent scope and put the rest in next year\'s ask', fx:{time:10, rep:-3, stress:9}},
+           {t:'Move backup off capital onto a monthly service line and rebuild the case', fx:{time:24, rep:4, bonus:1, stress:6}} ] },
+  'dx.dir9sixty.c': { who:'linda', t:['Did the training line survive.',
+    'I only ask because I told them it had. In March. When two of them asked me whether it was worth staying.'],
+    opts:[ {t:'Protect the training line and take the shortfall out of your own tooling', fx:{time:14, rep:5, bonus:1, stress:9}},
+           {t:'Tell her plainly that it is gone and leave her to tell them', fx:{time:6, rep:-1, stress:8}},
+           {t:'Split it: half the courses, and the certifications they actually asked for', fx:{time:18, rep:3, bonus:1, stress:4}} ] },
+  'dx.dir9reg.a': { who:'sys', t:['The letter is one page. It thanks you for your time in advance and asks three questions about a subject access request from January.',
+    'It gives you until the nineteenth. It does not say what happens on the twentieth, and you find that you would rather it did.'] },
+  'dx.dir9reg.b': { who:'sys', t:['The request was handled by someone who has since left. Her mailbox was archived correctly, which is the only part of this that went to plan.',
+    'What is missing is not the data. It is the record of what was done with it.'] },
+  'dx.dir9reg.c': { who:'sys', t:['You can answer the three questions as asked, or you can go back and rebuild the whole timeline first.',
+    'One of those is a week. The other is a paragraph you will be reading back for a long time.'],
+    opts:[ {t:'Answer the three questions exactly, in writing, with the gap declared plainly', fx:{time:20, rep:5, bonus:1, stress:9}},
+           {t:'Reconstruct the full timeline first, even though it takes the week', fx:{time:26, rep:3, bonus:1, stress:5}},
+           {t:'Have the solicitors send a holding reply and ask for an extension', fx:{time:9, rep:-2, stress:6}} ] },
+  'dx.dir9war.a': { who:'sys', t:['The renewal is fourteen pages of yes and no. The broker has helpfully pre-filled it from last year.',
+    'Question nine asks whether multi-factor authentication is enforced on all remote access. Last year you answered yes. Last year it was.'] },
+  'dx.dir9war.b': { who:'sys', t:['Four service accounts were exempted in April so the finance integration would run. It runs.',
+    'Yes here is a warranty, not an opinion. If it is wrong the policy is not reduced, it is void, and it is void on the one day you needed it.'],
+    opts:[ {t:'Answer yes and write the four exemptions out in full in the notes box', fx:{time:14, rep:3, bonus:1, stress:6}},
+           {t:'Fix the four accounts this week and answer yes on Friday', fx:{time:24, rep:5, bonus:1, stress:7}},
+           {t:'Sign it as pre-filled and add the exemptions to the risk register', fx:{time:5, rep:-4, stress:11}} ] },
+
+  'sm.yvonne': { who:'yvonne', t:['They are on thirty-day terms. They pay on day fifty-two. Every time, on the fifty-second day, as though it were a policy.',
+    'You put eleven hours on Tuesday. Tuesday was eight hours long. I am not doing anything about it, and I would like you to know that I saw it.',
+    'The out-of-hours rate is in the contract, on page nine. In four years nobody has charged it once.',
+    'Mackenzie has quoted four days. It is a six-day job. I raised it, and was told that the relationship is the important part.',
+    'Your parking receipt is a photograph of a parking receipt on a passenger seat. It is approved. We will not be discussing it again.',
+    'Renewal is in March. In March they will call it a surprise.'] },
+  'sm.noor': { who:'noor', t:['The phishing test went out at nine. Forty-one people reported it. Six of them reported it by forwarding it to the whole company, to warn them.',
+    'I am not asking you to change the password. I am asking where it is written down. Those are different questions.',
+    'We passed the audit. What they audited was the policy. The estate was not in the room.',
+    'Derek has an exception. It was granted as a temporary measure. It was temporary in 2021.',
+    'Three of the top five items on the risk register are the same server, described three ways.',
+    'MFA goes on the finance mailbox on Monday. I have said Monday four times, and each time it has been a different Monday.'] },
+  'sm.callum': { who:'callum', t:['I wrote it down while I was doing it. It took the same amount of time.',
+    'The wildcard certificate expired on Friday. I renewed it. I did not put it in the group chat, in case it was somebody\'s.',
+    'My account was made by copying the last apprentice. I am in seven groups. I have never used any of them.',
+    'Fourteen months, and nobody has told me what half of those servers do. I have made a list.',
+    'College is on Thursdays. This term it is subnetting, which I already knew. The lecturer is enjoying himself, so I have not said.',
+    'Raj told me not to touch the label printer. I would like to know why. I have decided not to find out.'] }
+
 };
 
 /* --------------------------------- tickets -------------------------------- */
@@ -3861,7 +4178,74 @@ const TICKETS = {
     steps:[{say:'o.nowt.a'},{choice:'o.nowt.b'}] },
   'onsite-the-new-office': { tiers:[4,8], weight:1, sla:92, slaMult:2.0, pri:3, stress:8,
     title:'{client} has taken a second floor and nothing is in it yet',
-    steps:[{say:'o.new.a'},{choice:'o.new.b'},{goto:'ELEV'}] }
+    steps:[{say:'o.new.a'},{choice:'o.new.b'},{goto:'ELEV'}] },
+  /* ------------------------- vCIO, CONTINUED (rung 8) ---------------------
+     The rung had 18 templates of its own against the intern's 35, so five days
+     out of six a vCIO was working somebody else's queue in a better chair.
+     Nothing here is broken. Everything here is a decision with a number on it
+     and a three-year consequence, taken by someone who will not be in the room
+     when it arrives. pri is INVERTED: pri:4 renders P1 and is worth 7. */
+  'vcio-insurance-question-14': { tiers:[8,8], weight:4, sla:44, slaMult:1.9, pri:3, stress:9,
+    title:'Cyber insurance renewal: question 14 has two boxes',
+    steps:[{say:'vx.insur.a'},{choice:'vx.insur.b'}] },
+  'vcio-acquisition-four-logins': { tiers:[8,8], weight:3, sla:60, slaMult:2.1, pri:2, stress:8,
+    title:'Acquisition completes on the first: eleven staff, four logins',
+    steps:[{say:'vx.merge.a'},{game:'paper',diff:3},{choice:'vx.merge.b'}] },
+  'vcio-stack-out-of-support': { tiers:[8,8], weight:3, sla:56, slaMult:2.2, pri:2, stress:7,
+    title:'Core switch stack went end of support in March',
+    steps:[{goto:'SERVERS'},{say:'vx.switch.a'},{choice:'vx.switch.b'}] },
+  'vcio-risk-register-amber': { tiers:[8,8], weight:3, sla:74, slaMult:2.5, pri:1, stress:6,
+    title:'Risk register review: eleven ambers and a leaver',
+    steps:[{say:'vx.risk.a'},{choice:'vx.risk.b'},{choice:'vx.risk.c'}] },
+  'vcio-licence-true-up': { tiers:[8,8], weight:4, sla:42, slaMult:1.9, pri:3, stress:8,
+    title:'Licence true-up before the fourteenth',
+    steps:[{say:'vx.lic.a'},{game:'keep',diff:2},{choice:'vx.lic.b'}] },
+  'vcio-strategy-opened-twice': { tiers:[8,8], weight:2, sla:78, slaMult:2.7, pri:1, stress:5,
+    title:'This year\'s IT strategy, same scope as last year\'s',
+    steps:[{goto:'CONF'},{say:'vx.strat.a'},{game:'diagram',diff:2},{choice:'vx.strat.b'},{choice:'vx.strat.c'}] },
+  'vcio-chairman-clicked-sunday': { tiers:[8,8], weight:3, sla:36, slaMult:1.5, pri:4, stress:12,
+    title:'Chairman clicked a link on Sunday, board call at eleven',
+    steps:[{say:'vx.click.a'},{choice:'vx.click.b'}] },
+  'vcio-eleven-month-year': { tiers:[8,8], weight:3, sla:58, slaMult:2.1, pri:2, stress:7,
+    title:'Financial year is eleven months long this year',
+    steps:[{say:'vx.spend.a'},{goto:'CONF'},{choice:'vx.spend.b'}] },
+  'vcio-key-person-named': { tiers:[8,8], weight:2, sla:62, slaMult:2.2, pri:2, stress:10,
+    title:'Key-person risk has a name and the name is Derek',
+    steps:[{goto:'SHELF'},{say:'vx.buss.a'},{choice:'vx.buss.b'},{choice:'vx.buss.c'}] },
+
+  /* ---------------------- DIRECTOR, CONTINUED (rung 9) --------------------
+     Nothing arrives pre-decided and nothing can be escalated. That is the whole
+     difference between this desk and every one below it, and it is why the
+     satire at the top is not absurdity but WEIGHT — the language stays
+     completely ordinary while the stakes stop being. */
+  'dir9-headcount-of-one': { tiers:[9,9], weight:2, sla:52, slaMult:1.9, pri:3, stress:11,
+    title:'Finance have modelled the team at eleven and there are twelve',
+    steps:[{say:'dx.dir9head.a'},{say:'dx.dir9head.b'},{choice:'dx.dir9head.c'}] },
+  'dir9-two-of-everything': { tiers:[9,9], weight:2, sla:68, slaMult:2.1, pri:2, stress:9,
+    title:'The acquisition completed at eight and there are two of everything',
+    steps:[{say:'dx.dir9two.a'},{goto:'CONF'},{game:'diagram',diff:3},{choice:'dx.dir9two.b'},{choice:'dx.dir9two.c'}] },
+  'dir9-seventy-two-hours': { tiers:[9,9], weight:2, sla:38, slaMult:1.5, pri:4, stress:12,
+    title:'Derek rang at twenty past seven and the clock is already running',
+    steps:[{say:'dx.dir9clock.a'},{say:'dx.dir9clock.b'},{choice:'dx.dir9clock.c'}] },
+  'dir9-supplier-administration': { tiers:[9,9], weight:3, sla:48, slaMult:1.9, pri:3, stress:10,
+    title:'The connectivity supplier is in administration and the circuits are still up',
+    steps:[{say:'dx.dir9admin.a'},{choice:'dx.dir9admin.b'},{goto:'SERVERS'},{choice:'dx.dir9admin.c'}] },
+  'dir9-policy-four-two': { tiers:[9,9], weight:4, sla:58, slaMult:2.2, pri:2, stress:7,
+    title:'A client is reading your own change policy back to you',
+    steps:[{say:'dx.dir9policy.a'},{choice:'dx.dir9policy.b'}] },
+  'dir9-kayla-notice': { tiers:[9,9], weight:3, sla:54, slaMult:1.7, pri:4, stress:8,
+    title:'Kayla has given notice and every reason she gives is correct',
+    steps:[{say:'dx.dir9leave.a'},{say:'dx.dir9leave.b'},{choice:'dx.dir9leave.c'}] },
+  'dir9-sixty-per-cent': { tiers:[9,9], weight:3, sla:78, slaMult:1.6, pri:4, stress:8,
+    title:'The budget came back at sixty per cent with a note thanking you',
+    steps:[{say:'dx.dir9sixty.a'},{goto:'CONF'},{game:'quote',diff:2},{choice:'dx.dir9sixty.b'},{choice:'dx.dir9sixty.c'}] },
+  'dir9-letter-with-a-date': { tiers:[9,9], weight:3, sla:62, slaMult:2.2, pri:2, stress:9,
+    title:'The regulator has three questions and a date of the nineteenth',
+    steps:[{say:'dx.dir9reg.a'},{say:'dx.dir9reg.b'},{choice:'dx.dir9reg.c'}] },
+  'dir9-warranty-question-nine': { tiers:[9,9], weight:4, sla:46, slaMult:1.9, pri:3, stress:9,
+    title:'Every answer on the insurance renewal is a warranty',
+    steps:[{say:'dx.dir9war.a'},{goto:'PRINTER'},{game:'paper',diff:2},{choice:'dx.dir9war.b'}] }
+
 };
 
 /* --------------------------------- events --------------------------------- */
@@ -3938,7 +4322,39 @@ const EVENTS = {
   'outage':   { when:{at:110, chance:.12}, scene:'e.outage', fx:{time:9, stress:6} },
   'onboard':  { when:{at:75,  chance:.18}, scene:'e.onboard', fx:{time:7, stress:3} },
   'salesguy': { when:{at:225, chance:.22}, scene:'e.sales', fx:{time:6, stress:5} },
-  'printerq': { when:{at:320, chance:.2},  scene:'e.printerq', fx:{time:5, stress:2} }
+  'printerq': { when:{at:320, chance:.2},  scene:'e.printerq', fx:{time:5, stress:2} },
+  /* THE PIT HAD NO CALENDAR. Every senior rung shipped five bespoke meetings
+     and the intern desk — the first thing every player ever sees — had none of
+     its own at all: its whole week was the shared pool everybody gets. These
+     are the meetings rung zero is actually made of, and not one of them is
+     about technology. It is about the building, the badge, the rota and the
+     coffee, because that is what the first fortnight anywhere is about. */
+  'pit.induction': { when:{at:30, chance:.30, tiers:[0,0]}, scene:'e.pit.induction', fx:{time:26, stress:5} },
+  'pit.drill': { when:{at:120, chance:.26, tiers:[0,0]}, scene:'e.pit.drill', fx:{time:18, stress:4} },
+  'pit.process': { when:{at:196, chance:.24, tiers:[0,0]}, scene:'e.pit.process', fx:{time:20, stress:5} },
+  'pit.leaving': { when:{at:300, chance:.24, tiers:[0,0]}, scene:'e.pit.leaving', fx:{time:16, stress:4} },
+  'pit.cupboard': { when:{at:356, chance:.26, tiers:[0,0]}, scene:'e.pit.cupboard', fx:{time:20, stress:-4} },
+
+  /* T1: the meetings are about VOLUME. You are a number in somebody's
+     dashboard, coached toward a target that is measured wrong, in a room where
+     everybody knows it is measured wrong. */
+  'hd1.starter': { when:{at:44, chance:.30, tiers:[1,1]}, scene:'e.hd1.starter', fx:{time:11, stress:6} },
+  'hd1.calibration': { when:{at:188, chance:.24, tiers:[1,1]}, scene:'e.hd1.calibration', fx:{time:16, stress:5} },
+  'hd1.shortcuts': { when:{at:302, chance:.22, tiers:[1,1]}, scene:'e.hd1.shortcuts', fx:{time:14, stress:-4} },
+
+  /* T2: the meetings are about the BOUNDARY. What T1 should have solved, what
+     should go to T3, and a triage matrix nobody applies. Squeezed from both
+     ends, blamed by both, and the only person who knows how it got here. */
+  'hd2.handover': { when:{at:20, chance:.32, tiers:[2,2]}, scene:'e.hd2.handover', fx:{time:12, stress:6} },
+  'hd2.matrix': { when:{at:138, chance:.22, tiers:[2,2]}, scene:'e.hd2.matrix', fx:{time:10, stress:4} },
+  'hd2.filter': { when:{at:288, chance:.20, tiers:[2,2]}, scene:'e.hd2.filter', fx:{time:6, stress:-6} },
+
+  /* T3: the meetings are about ROOT CAUSE, which is a polite way of asking
+     one tired person to be more than one person. */
+  'hd3.blameless': { when:{at:110, chance:.26, tiers:[3,3]}, scene:'e.hd3.blameless', fx:{time:12, stress:4} },
+  'hd3.amnesty': { when:{at:200, chance:.20, tiers:[3,3]}, scene:'e.hd3.amnesty', fx:{time:26, stress:-4} },
+  'hd3.problemboard': { when:{at:288, chance:.31, tiers:[3,3]}, scene:'e.hd3.problemboard', fx:{time:20, stress:5} }
+
 };
 
 /* minigame flavour data */
@@ -4707,6 +5123,18 @@ const FORGIVEN = .25;
    against a 70% bar. Triage is the job; the first third of a deliberately
    overfull day is the triage, not the failure. */
 const BREACH_TOLERANCE = .20;
+/* How many rungs of your own history keep arriving at full rate, and how fast
+   the ones beyond that fade. Swept: at 4 and .45 the taper is a no-op, because
+   the floor of 1 in the bag absorbs it. Two and 1.8 moves the own-voice share
+   of the queue by 4 to 13 points at every rung above T3 — Project Team 26->30,
+   Procurement 22->31, Director 25->39 — and still deals the pit's running gags
+   to a vCIO about every other day, which is the right frequency for a joke
+   that is supposed to follow you your whole career.
+
+   It plateaus there, and that is the honest limit of a weighting fix: at vCIO
+   there are 18 templates written for the rung against 126 eligible, so no
+   amount of reweighting can make the day mostly its own. The rest is supply. */
+const QUEUE_MEMORY = 2, QUEUE_FADE = 1.8;
 const FIRE_GRACE = 3;          // days at the very start of a career that cannot end it
 /* Ladder content debt, measured 2026-08-25 before the ladder build began:
    six promotions deal nothing the rung below could not, and six pairs of rungs
@@ -4927,6 +5355,19 @@ const DUCK_DEBT = .55;         // burnout per point of stress dodged rather than
 /* what the calendar invite is actually called */
 const EV_NAMES = {
   standup:'morning standup', allhands:'all-hands', pizza:'pizza in the kitchen',
+  /* the pit's own week */
+  'pit.induction':'induction (part one)', 'pit.drill':'fire drill',
+  'pit.process':'the process walkthrough', 'pit.leaving':'a leaving do',
+  'pit.cupboard':'Brenda would like a word',
+  /* T1: volume */
+  'hd1.starter':'new starter kit-out', 'hd1.calibration':'call quality calibration',
+  'hd1.shortcuts':'the shortcuts session',
+  /* T2: the boundary */
+  'hd2.handover':'on-call handover', 'hd2.matrix':'triage matrix review',
+  'hd2.filter':'the filter meeting',
+  /* T3: root cause */
+  'hd3.blameless':'post-incident review', 'hd3.amnesty':'knowledge amnesty',
+  'hd3.problemboard':'problem board',
   'h.queue':'queue review', 'h.buddy':'shadowing Raj', 'h.script':'new call script',
   'h.oncall':'on-call handover', 'h.cab':'change advisory board',
   'h.escal':'escalation review', 'h.kb':'knowledge base amnesty',
@@ -5117,9 +5558,30 @@ function rollDay(){
   const bag = [];
   const seen = run.seen || (run.seen = {});
   for (const id of elig){
-    /* weight decays with how often this career has already dealt it, so the
-       first days show breadth instead of the same printer three times */
-    const w = Math.max(1, Math.round(TICKETS[id].weight * 4 / (1 + 1.6 * (seen[id] || 0))));
+    /* THE PROMOTION HAS TO CHANGE THE WORK. A vCIO's queue was 16% vCIO
+       tickets. The other 84% was inherited: eleven templates are dealt at
+       every rung from the pit to the corner office, and a wide band with a
+       flat weight means the printer jam is exactly as likely at the top of the
+       ladder as it was on day one. Measured across the ladder, the share of a
+       rung's queue written FOR that rung ran 100% at intern, 37% at T2 and
+       16-19% at Relationship Manager, Solutions Architect and vCIO — so the
+       three hardest rungs to reach were the three that felt least like
+       anywhere new.
+
+       Work you did four rungs ago now arrives less often. Not never: the floor
+       below keeps every template at weight 1, so the printer follows you your
+       whole career, which is the joke — it just stops being the job.
+
+       Distance is measured from the ticket's HOME rung (tiers[0]), not from
+       the middle of its band, because that is what separates a helpdesk
+       template that travels from a senior template with a wide range. The
+       legacy app the developer retired away from is written at T3 and is still
+       perfectly good vCIO content; "the CEO needs gift cards" is not. */
+    const away = Math.max(0, run.rung - TICKETS[id].tiers[0] - QUEUE_MEMORY);
+    const w = Math.max(1, Math.round(
+      TICKETS[id].weight * 4
+      / (1 + 1.6 * (seen[id] || 0))
+      / (1 + QUEUE_FADE * away)));
     for (let i=0;i<w;i++) bag.push(id);
   }
   /* Day one is your first day: a lighter queue, and the first ticket is a
@@ -10769,6 +11231,36 @@ function selfTest(runSim){
            !wrong.length, wrong.join(' '));
       }
       run = savedRunR;
+    }
+    /* A PROMOTION HAS TO CHANGE THE WORK, AND THE WEEK. There is already a
+       lint that every rung can fill its own day, but it counts everything
+       ELIGIBLE at that rung — which is satisfied entirely by inheritance. A
+       vCIO could reach 126 templates and have written for it. Measured, the
+       share of a vCIO's dealt queue authored for the vCIO desk was 16%, and
+       the calendar was worse: the intern pit, the first thing every player
+       sees, had five bespoke meetings at every senior rung to compare against
+       and not one of its own.
+
+       So what is counted is the rung's OWN voice — templates and meetings
+       whose home is this rung and nowhere lower. Ratchets: they only rise. */
+    {
+      const OWN_TICKETS = 22, OWN_EVENTS = 5;
+      const thinT = [], thinE = [];
+      for (let r = 0; r < ROLES.length; r++){
+        const t = Object.keys(TICKETS).filter(id => TICKETS[id].tiers[0] === r).length;
+        /* an event with no tiers at all belongs to everybody, so it is nobody's
+           own — those are the shared pool the whole building shares */
+        const e = Object.keys(EVENTS).filter(id => {
+          const w = EVENTS[id].when;
+          return w && w.tiers && w.tiers[0] === r;
+        }).length;
+        if (t < OWN_TICKETS) thinT.push(ROLES[r].id + ':' + t);
+        if (e < OWN_EVENTS)  thinE.push(ROLES[r].id + ':' + e);
+      }
+      ok('every rung has a queue written for it, not just one it inherits',
+         !thinT.length, thinT.join(' ') + ' (need ' + OWN_TICKETS + ')');
+      ok('and a week of its own, not just the building\'s',
+         !thinE.length, thinE.join(' ') + ' (need ' + OWN_EVENTS + ')');
     }
     /* A SCENE NOTHING OPENS IS A SCENE NOBODY READS. Third instance of the
        same class in a day, after the sound nobody plays and the prop nobody
