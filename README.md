@@ -69,13 +69,18 @@ stake. A P1 is worth seven times a P4. Dropping tickets is expected, and there's
 some forgiveness for your first casualties. Dropping the wrong ones is what
 hurts.
 
-Measured across 40 seeds, the two strategies that work are *protect the big
-ones* and *close what you can actually finish*, and they're within two points of
-each other — so there's no single right answer, which is the point. The two that
-lose you the most are doing the least important thing first, and **working the
-queue in the order it arrived**. Those two score the same. Going in order is
-exactly as expensive as choosing badly, and it feels like diligence the whole
-time you're doing it.
+Measured across 24 seeds, the two strategies that work are *protect the big
+ones* (71.0%) and *close what you can actually finish* (71.3%) — a third of a
+point apart, so there is no single right answer, which is the point. Two things
+lose you the most: doing the least important thing first (59.6%), and **working
+the queue in the order it arrived** (62.3%). Going in order costs you nearly
+as much as choosing badly, and it feels like diligence the whole time you are
+doing it.
+
+Skill at the minigames is worth almost as much as good triage — a 9.9-point
+spread between fumbling every board and acing them, against 11.7 points between
+the best triage rule and the worst. Judgement leads, hands are a close second,
+and neither one alone is enough.
 
 Some other things worth knowing:
 

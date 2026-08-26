@@ -1171,6 +1171,44 @@ The duplicate-key lint also earned its keep on the way in: `p.lic.a` and
 pair would have silently won and quietly replaced a shipped Procurement ticket's
 dialogue with a Project Team one.
 
+## Craft versus triage, resolved
+
+This has been an open question for Josh since the day craft was re-weighted, on
+the grounds that craft measured 3-8 points against triage's 7-12 and might need
+to feed the day score harder. Measured cleanly at 24 seeds after the ladder pass
+(`tools/dials.js`):
+
+| triage rule | day score | | skill | day score |
+|---|---|---|---|---|
+| shortest-first | **71.3%** | | .95 | **69.0%** |
+| priority-then-deadline | 71.0% | | .75 | 65.8% |
+| priority-first | 69.5% | | .55 | 62.3% |
+| newest-first | 67.9% | | .35 | 59.1% |
+| earliest-deadline | 65.8% | | | |
+| oldest-first | 62.3% | | | |
+| longest-first | 60.9% | | | |
+| worst-priority-first | 59.6% | | | |
+
+**Triage spread 11.7 points, craft spread 9.9.** No change needed. Judgement
+leads and hands are a close second, which is the balance the design wants — the
+note in `resolveTicket` about two human testers running craft at 20-27% while
+triaging better than the "flawless" bot is the reason craft must never lead, and
+9.9 against 11.7 is as close as it should get.
+
+Two things fell out of the same table:
+
+**Priority-first has caught up with shortest-first.** They were 1.8 points apart
+when the README's central claim was corrected; they are now 0.3 apart, inside
+the noise. The game no longer pays you more for skimming small tickets than for
+protecting important ones — `URGENT_GRACE` did that, because a P1 you defer can
+now survive long enough to be worth deferring for.
+
+**The bottom of the table is no longer a tie.** The README said doing the least
+important thing first and working in arrival order scored the same. They are now
+59.6% and 62.3%, 2.7 points apart, with longest-first between them at 60.9%.
+Corrected in the README rather than left to rot, which is what happened to the
+last central claim.
+
 ## The ratchets
 
 | name | value | meaning | direction |
