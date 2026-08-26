@@ -82,8 +82,11 @@ Some other things worth knowing:
 - Work tickets at your terminal, or hit Tab from anywhere.
 - Some tickets need you to physically go somewhere, and the game draws you a
   route.
-- Grab a ticket when it lands and work it straight through and you'll score full
-  marks. The clock you're racing is the one that runs while it sits there.
+- Grab a ticket when it lands and work it straight through and you win the
+  promptness half outright, on any template — the clock you're racing is the one
+  that runs while it sits there, not the one that runs while you're on it. What
+  you do once you're in it is the rest: how the minigame goes, and which of the
+  three things you decide to do about it.
 - The first time you meet a minigame it opens on a card explaining what it is,
   which keys do what, and what costs you marks. H brings it back later.
 - Every rung has its own boards, and they are the rung. The intern patches

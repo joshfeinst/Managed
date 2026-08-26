@@ -883,16 +883,16 @@ const ROLES = [
     gates:{ nextAt:{perf:0.34, days:3}, firedBelow:0.15, cert:null },
     queue:{ ratePerHr:2.8, meetingMin:48, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
-    gates:{ nextAt:{perf:0.4, days:3}, firedBelow:0.18, cert:null },
+    gates:{ nextAt:{perf:0.37, days:3}, firedBelow:0.17, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:60, slaScale:0.96 }, deskAnchor:'DESK_PROJ' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
-    gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
+    gates:{ nextAt:{perf:0.37, days:3}, firedBelow:0.17, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:68, slaScale:0.96 }, deskAnchor:'DESK_PROC' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
     gates:{ nextAt:{perf:0.36, days:3}, firedBelow:0.16, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:78, slaScale:0.96 }, deskAnchor:'DESK_CLIENT' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
-    gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
+    gates:{ nextAt:{perf:0.36, days:3}, firedBelow:0.16, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:84, slaScale:0.96 }, deskAnchor:'DESK_ARCH' },
   { id:'vcio',   title:'vCIO',          pay:135000,
     gates:{ nextAt:{perf:0.41, days:3}, firedBelow:0.18, cert:null },
@@ -2596,6 +2596,34 @@ const DIALOGUE = {
   't.onsite.a':{ who:'derek', t:['{client} needs someone physically present. It is ninety minutes each way and the fault is, per the phone call, "the internet".'] },
   't.onsite.b':{ who:'sys', t:['You arrive. It is a switch that somebody has unplugged to charge a phone. It has been unplugged for nine days.'] },
 
+  't.onsite.c':{ who:'sys', t:['Ninety minutes each way. You could also try to talk somebody through it.'],
+    opts:[ {t:'Drive out. Do it properly, once.', fx:{time:66, rep:4, bonus:1, stress:5}},
+           {t:'Try the phone first, drive if it fails', fx:{time:38, rep:2, bonus:1, stress:7}},
+           {t:'Talk them through it and hope', fx:{time:16, rep:-1, stress:6}} ] },
+  'o.hands.a': { who:'sys', t:['{client}\'s cutover needs somebody physically in the building on the day.',
+    'Everything else can be done remotely. This cannot, because at some point a cable has to come out of one hole and go into another one, and there is nobody there who will do it.'] },
+  'o.hands.b': { who:'sys', t:['Whoever goes loses the day. Whoever does not go finds out on Monday.'],
+    opts:[ {t:'Go yourself. It is your plan.', fx:{time:70, rep:5, bonus:1, stress:8}},
+           {t:'Send somebody and be on the phone all day', fx:{time:32, rep:2, bonus:1, stress:10}},
+           {t:'Talk the client\'s own people through it', fx:{time:22, rep:-2, stress:9}} ] },
+  'o.you.a':   { who:'mackenzie', t:['{client} has asked for you personally. Not the team, not the account — you, by name.',
+    'This is either the best thing that has happened this quarter or the beginning of a problem, and there is no way to tell which from here.'] },
+  'o.you.b':   { who:'sys', t:['Going says you are the sort of company where a person comes out. Not going says something too.'],
+    opts:[ {t:'Go, and take somebody who can take it over', fx:{time:68, rep:5, bonus:1, stress:7}},
+           {t:'Go', fx:{time:62, rep:4, bonus:1, stress:5}},
+           {t:'Send the person whose account it actually is', fx:{time:14, rep:-2, stress:4}} ] },
+  'o.nowt.a':  { who:'client', t:['{client} insists this needs a site visit.',
+    'It does not need a site visit. It needs somebody to open a laptop and look at a setting, and they have refused to do that twice, politely, in writing.'] },
+  'o.nowt.b':  { who:'sys', t:['Three hours of your day against a relationship that has been fine for six years.'],
+    opts:[ {t:'Go, and make it worth the drive while you are there', fx:{time:64, rep:4, bonus:1, stress:4}},
+           {t:'Offer a video call at a time that suits them', fx:{time:24, rep:2, bonus:1, stress:5}},
+           {t:'Explain again why it does not need a visit', fx:{time:11, rep:-3, stress:7}} ] },
+  'o.new.a':   { who:'sys', t:['{client} has taken the second floor. Nothing is in it. They move in on the 14th.',
+    'There is a photograph attached of an empty room with one network socket in it, which somebody has circled.'] },
+  'o.new.b':   { who:'sys', t:['Everything about this is easier before there are desks in the way.'],
+    opts:[ {t:'Go now, survey it properly, come back with a plan', fx:{time:68, rep:5, bonus:1, stress:6}},
+           {t:'Ask for floor plans and a photograph of every wall', fx:{time:30, rep:2, bonus:1, stress:6}},
+           {t:'Quote it off the photograph', fx:{time:9, rep:-3, stress:8}} ] },
   't.guest.a':{ who:'client', t:['{client} would like the guest wifi password. They had it this morning. They have written it down somewhere safe.'] },
   't.guest.b':{ who:'sys', t:['You could rotate it monthly like the policy says, or you could accept what this is.'],
     opts:[ {t:'Print it on a card for the front desk', fx:{rep:1, time:5}},
@@ -3576,9 +3604,39 @@ const TICKETS = {
   'audit-evidence': { tiers:[8,9], weight:3, sla:75, slaMult:3.2, pri:3, stress:7,
     title:'{client}\'s auditor wants evidence the policy was ever followed',
     steps:[{say:'t.eviD.a'},{game:'pw',diff:3},{choice:'t.eviD.b'}] },
-  'onsite-drive': { tiers:[3,8], weight:2, sla:90, slaMult:1.9, pri:2, stress:6,
+  /* WEIGHT 1, ALL OF THEM. At weight 2 across four senior rungs these arrived
+     about once a day, and a thing that eats a third of the shift arriving once
+     a day is not a big decision, it is the day. Measured: Procurement's
+     good-versus-bad gap halved, 11 points to 5. An on-site should be the
+     biggest call you make in a week and the rarest.
+
+     And the drive is 62-70 minutes, not the 92-104 it was first written at.
+     botPick with no policy takes option ZERO, and the going option is listed
+     first on every one of these — so the bot drives out every single time and
+     pays the worst case, which is not what a person does. Sixty-six minutes is
+     still by a distance the largest single charge in the game; the next biggest
+     thing you can agree to costs 34.
+
+     THE DRIVE COSTS WHAT THE DRIVE COSTS. This said "ninety minutes each way"
+     and then charged you a walk to the lift and a cable board — about eleven
+     minutes. An on-site is the largest single decision in a day: it is worth a
+     lot and it eats a third of the shift, and the alternative is always trying
+     to talk somebody through it down the phone. That choice is the ticket. */
+  'onsite-drive': { tiers:[3,8], weight:1, sla:90, slaMult:1.9, pri:3, stress:6,
     title:'{client} needs someone on site. Someone is you.',
-    steps:[{say:'t.onsite.a'},{goto:'ELEV'},{say:'t.onsite.b'},{game:'cable',diff:2}] }
+    steps:[{say:'t.onsite.a'},{choice:'t.onsite.c'},{goto:'ELEV'},{say:'t.onsite.b'},{game:'cable',diff:2}] },
+  'onsite-cutover-hands': { tiers:[4,8], weight:1, sla:96, slaMult:2.0, pri:4, stress:9,
+    title:'{client}\'s cutover needs hands in the building on the day',
+    steps:[{say:'o.hands.a'},{choice:'o.hands.b'},{goto:'ELEV'}] },
+  'onsite-they-asked-for-you': { tiers:[5,9], weight:1, sla:88, slaMult:1.9, pri:3, stress:7,
+    title:'{client} has asked for you personally. Not the team. You.',
+    steps:[{say:'o.you.a'},{choice:'o.you.b'},{goto:'ELEV'}] },
+  'onsite-nothing-is-wrong': { tiers:[3,7], weight:1, sla:84, slaMult:1.9, pri:2, stress:5,
+    title:'{client} insists it needs a visit. It does not need a visit.',
+    steps:[{say:'o.nowt.a'},{choice:'o.nowt.b'}] },
+  'onsite-the-new-office': { tiers:[4,8], weight:1, sla:92, slaMult:2.0, pri:3, stress:8,
+    title:'{client} has taken a second floor and nothing is in it yet',
+    steps:[{say:'o.new.a'},{choice:'o.new.b'},{goto:'ELEV'}] }
 };
 
 /* --------------------------------- events --------------------------------- */
@@ -4520,8 +4578,8 @@ const GATE_DEBT = {
      performance FALLS as a career runs on — burnout compounds and the nights
      give back less — so a rung reached on day 12 is played by a worse player
      than the same rung would be on day 3. That is the next problem. */
-  tight: { intern:3, t1:3, t2:4, t3:4, project:5, procure:2,
-           relmgr:4, solarch:3, vcio:3 },
+  tight: { intern:3, t1:3, t2:4, t3:5, project:5, procure:4,
+           relmgr:4, solarch:2, vcio:2 },
   /* seeds out of 12 on which SLOPPY play clears it anyway.
      THIS COLUMN WENT UP, 2026-08-26, and it is not the regression it looks
      like. It was zero on every rung because the bars were so high that
@@ -4533,7 +4591,7 @@ const GATE_DEBT = {
      it may only fall from here.
      vCIO's 4/12 is the worst of them and the one to fix first. */
   loose: { intern:1, t1:1, t2:1, t3:1, project:2, procure:3,
-           relmgr:2, solarch:2, vcio:2 }
+           relmgr:2, solarch:4, vcio:3 }
 };
 /* 45. The loose column is one seed in twelve on eight rungs of nine — bad
    triage almost never promotes now, where a week ago it did so on up to four
@@ -4548,23 +4606,35 @@ const GATE_DEBT = {
    DIRECTOR on 6 of 24 players, at an average of 14.7 careers against 12.6.
    The game got harder because it got bigger. Shrinking the new content back
    out of the queue would have bought the number and lost the rungs. */
-/* 49, and back under. The eighteen mid-ladder tickets that pushed this to 50
-   were mostly P1s and P2s, which made the middle of the ladder heavier without
-   making it more decidable — the droppable share of the queue read 12% at T2,
-   9% at T3 and 7% at Project Team against the intern's 25%. Triage is choosing
-   what to drop, and there was nothing cheap to choose.
+/* 50, up from 46, for the on-site visit — and this one is a mechanic rather
+   than a tuning slip, so here is the whole trade.
 
-   Twelve more, all of them things you are allowed to let burn: a second monitor
-   when you get a chance, a meeting-room clock two teams now schedule against
-   deliberately, a chair request that bounced out of Facilities because the
-   routing rules saw the word "computer". T2 26%, T3 22%, Project 20% now, and
-   every narrow rung's good-versus-bad gap widened with it — project 9 -> 12,
-   procure 8 -> 11, relmgr 9 -> 11.
+   An on-site is the biggest single call in a day: sixty-odd minutes against a
+   day of 480, or you try to talk somebody through it down the phone for
+   twenty. It is the only decision in the game at that scale and it is what the
+   lift has been promising since the first commit. Five tickets carry it, all
+   at weight 1, so it lands about once a week rather than once a day.
 
-   Which is the third time this exact fix has worked, after the senior rungs and
-   after vCIO: a rung that will not separate wants cheap work in it, not a
-   different bar. */
-const GATE_DEBT_BUDGET = 46;      /* chaff at the top too, 2026-08-26 */
+   It costs four points of debt: t3 and procure lose a seed of flawless reach,
+   solarch and vCIO gain two of sloppy. What it buys is measured too —
+   tools/meta.js went from 15 of 24 players reaching retirement to SEVENTEEN,
+   and the worst rung any of those 24 finished on rose from procure to relmgr.
+
+   Two caveats worth carrying, because both would mislead somebody later:
+
+   - botPick with no policy takes option ZERO, and every on-site lists the
+     going option first. So the bot drives out every single time and pays the
+     worst case. A person would not. Every number above is therefore the
+     pessimistic reading of this mechanic.
+   - gate.js measures 12 seeds x 8 days and bars.js measures 24 x 12. They
+     disagree by three or four points of debt at the margin, and bars.js reads
+     eight of nine rungs healthy on exactly this build. The ratchet is the
+     smaller sample, which is the conservative choice, not the accurate one.
+
+   Procurement is now the narrowest rung on the ladder at 8 points and the one
+   rung bars.js still calls misplaced. It has already had its chaff; the gap is
+   structural. It is the named next job. */
+const GATE_DEBT_BUDGET = 50;      /* the on-site visit, 2026-08-26 */
 /* How many POINTS short of its own bar flawless play falls at the intern gate.
    19 on 2026-08-25 21:0x, the first measurement ever taken with the bot walking
    at a player's speed. Every earlier number in this file — GATE_DEBT above,
@@ -5601,6 +5671,8 @@ const PROP_LINES = {
    does, it says so. */
 function elevatorLine(){
   const r = run.rung;
+  if (run.active && /^onsite/.test(run.active.id))
+    return 'DOWN TO THE CAR PARK. NINETY MINUTES EACH WAY AND A SANDWICH AT A SERVICE STATION.';
   return r >= 9 ? 'IT GOES TO OTHER FLOORS. SO, IT TURNS OUT, DID YOUR CAREER.'
        : r >= 7 ? 'IT GOES TO OTHER FLOORS. YOU HAVE BEEN TO TWO OF THEM THIS WEEK.'
        : r >= 4 ? 'IT GOES TO OTHER FLOORS. YOUR CAREER IS STARTING TO.'
@@ -10477,6 +10549,30 @@ function selfTest(runSim){
          both < certOnly && both < perkOnly,
          'both ' + both.toFixed(3) + ' vs cert ' + certOnly.toFixed(3) +
          ' vs perk ' + perkOnly.toFixed(3));
+    }
+    /* THE DRIVE HAS TO COST WHAT THE DRIVE COSTS. The one on-site ticket in the
+       game said "ninety minutes each way" and charged you a walk to the lift and
+       a cable board — about eleven minutes. An on-site is the largest single
+       decision in a day: worth a lot, and it eats a third of the shift. If the
+       expensive option is not expensive, there is no decision in it. */
+    {
+      const onsite = Object.keys(TICKETS).filter(id => /^onsite/.test(id));
+      const cheap = [], noChoice = [];
+      for (const id of onsite){
+        const steps = TICKETS[id].steps || [];
+        const node = steps.map(st => st.choice).filter(Boolean).map(n => DIALOGUE[n])[0];
+        if (!node || !node.opts){ noChoice.push(id); continue; }
+        const times = node.opts.map(o => (o.fx && o.fx.time) || 0);
+        /* going has to be a big number, and staying has to be a much smaller one */
+        if (Math.max.apply(null, times) < 60) cheap.push(id + ':' + Math.max.apply(null, times));
+        if (Math.min.apply(null, times) > Math.max.apply(null, times) * .5)
+          cheap.push(id + ':no-cheap-option');
+      }
+      ok('every on-site visit is a decision, not a step',
+         !noChoice.length, noChoice.join(' '));
+      ok('and driving out costs most of the day', !cheap.length, cheap.join(' '));
+      ok('there is more than one place the lift goes',
+         onsite.length >= 4, onsite.length + ' on-site tickets');
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could

@@ -86,8 +86,10 @@ budget landed is stale; everything set from it needs redoing.
 ## The standing job (2026-08-26, after the overnight run)
 
 **Done, mostly** — twelve droppable tickets took project 9 -> 12, procure
-8 -> 11 and relmgr 9 -> 11. Solutions Architect is the one still at 11 with a
-4/12 loose row, and it is the last rung whose queue is under 20% droppable.
+8 -> 11 and relmgr 9 -> 11. **Procurement** is the one left: 8 points, the narrowest on the ladder, and the
+only rung bars.js still calls misplaced. It has had its chaff already, so the
+gap is structural — the levers left are cheaper tickets there, or a wider stakes
+spread in its pool.
 
 The original note, kept because the rule generalises: project, procure
 and solarch separated good triage from bad by 9, 8 and 11 points — the narrowest

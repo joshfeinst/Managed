@@ -708,6 +708,42 @@ It is pinned now, next to the triage edge it belongs with:
 
     gate: working the queue in order is as bad as working it backwards
 
+## The lift finally goes somewhere
+
+There was one on-site ticket. Its prose said *"ninety minutes each way"* and it
+charged you a walk to the lift and a cable board — about eleven minutes. The
+largest decision an MSP day contains cost less than a printer jam.
+
+Five now, all at weight 1 so one lands about once a week. Each is the same
+shape and it is the real dilemma: **drive out and lose sixty-odd minutes of a
+480-minute day, or try to talk somebody through it down the phone for twenty.**
+It is the only decision in the game at that scale.
+
+| | |
+|---|---|
+| `GATE_DEBT` | 46 → **50** |
+| t3, procure | one seed of flawless reach each |
+| solarch, vCIO | two seeds of sloppy each |
+| `meta.js` | 15 of 24 → **17 of 24** reaching retirement |
+| worst rung any of 24 finished on | procure → **relmgr** |
+
+**Two caveats, because both would mislead somebody later:**
+
+`botPick` with no policy takes option **zero**, and every on-site lists the
+going option first. The bot therefore drives out *every single time* and pays
+the worst case; a person would not. Every number above is the pessimistic
+reading of this mechanic. It also means option ORDER is a balance input across
+the whole game, which nothing had noticed before.
+
+`gate.js` measures 12 seeds × 8 days; `bars.js` measures 24 × 12. They disagree
+by three or four points of debt at the margin, and `bars.js` reads eight of nine
+rungs healthy on exactly this build. **The ratchet is the smaller sample** —
+that is the conservative choice, not the accurate one.
+
+Procurement is now the narrowest rung on the ladder at 8 points, and the one
+`bars.js` still calls misplaced. It has already had its chaff; the gap is
+structural. It is the named next job.
+
 ## The ratchets
 
 | name | value | meaning | direction |
