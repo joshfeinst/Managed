@@ -1220,6 +1220,91 @@ const DIALOGUE = {
   't2.pay.a':  { who:'client', t:['Payroll cannot print. The run closes at 3pm. It is 2:04pm.',
     'Payroll prints to one device. It has printed to one device since before you were hired.'] },
   't2.pay.b':  { who:'sys', t:['Fixed with eleven minutes to spare. Nobody will ever know how close that was, which is the job.'] },
+  /* ------------------------ PROJECT TEAM (rung 4) ------------------------- */
+  'p.kick.a': { who:'mackenzie', t:['Kickoff is in forty minutes. The client thinks we are building one thing and the statement of work describes another.',
+    'The statement of work is two pages and one of them is the logo.'] },
+  'p.kick.b': { who:'sys', t:['You can find out what the project is now, in front of everyone, or in six weeks, in front of everyone.'],
+    opts:[ {t:'Walk the room through what is actually in scope, line by line', fx:{time:20, rep:3, bonus:1}},
+           {t:'Nod along and write the real scope up afterwards', fx:{time:10, rep:1, stress:5}},
+           {t:'Let Derek run it. Derek sold it.', fx:{time:4, rep:-2, stress:8}} ] },
+  'p.gantt.a': { who:'derek', t:['I told them three days because three days is what they wanted to hear.',
+    'It is basically three days. Four. It is a four-day job.'] },
+  'p.gantt.b': { who:'sys', t:['It is eleven days. You have counted them twice and it is eleven days both times.'],
+    opts:[ {t:'Re-plan it honestly and take the meeting where somebody is disappointed', fx:{time:22, rep:3, bonus:1}},
+           {t:'Plan for eleven, report three, and hope', fx:{time:8, rep:-3, stress:12}},
+           {t:'Deliver three days of it and call that phase one', fx:{time:14, rep:1, bonus:1, stress:4}} ] },
+  'p.cut.a': { who:'client', t:['We have told the whole company Friday. The email has gone out. There is a cake.',
+    'You have not been given the credentials to test with, but Friday.'] },
+  'p.cut.b': { who:'sys', t:['Nobody has switched this on once. The cake is not a technical control.'],
+    opts:[ {t:'Move the date and own it in writing today', fx:{time:16, rep:4, bonus:1, stress:3}},
+           {t:'Cut over Friday and be on site all weekend', fx:{time:10, rep:-1, stress:14}},
+           {t:'Cut over Friday for one department only', fx:{time:18, rep:2, bonus:1, stress:6}} ] },
+  'p.cro.a': { who:'client', t:['{User} set all of this up. {User} is in Croatia. {User} does not have signal.',
+    'We think the password might be the name of the old office.'] },
+  'p.cro.b': { who:'sys', t:['There is a documented break-glass procedure. It was written by {User}, in Croatia.'],
+    opts:[ {t:'Break the glass properly, with the client on the call as witness', fx:{time:20, rep:3, bonus:1}},
+           {t:'Guess the old office name', fx:{time:6, rep:-1, stress:9}},
+           {t:'Wait for the 9th and re-plan around it', fx:{time:8, rep:1, stress:4}} ] },
+  'p.verb.a': { who:'client', t:['We agreed on the call that migration included the archive. It is in our notes.',
+    'Their notes are a photograph of a whiteboard.'] },
+  'p.verb.b': { who:'sys', t:['It is not in the scope. It is four days of work. They are not wrong that somebody said something.'],
+    opts:[ {t:'Price it as a change and explain why calmly', fx:{time:16, rep:3, bonus:1}},
+           {t:'Absorb it to keep the relationship sweet', fx:{time:6, rep:1, stress:11}},
+           {t:'Send them the signed scope with the line highlighted', fx:{time:8, rep:-2, stress:5}} ] },
+  'p.lic.a': { who:'mackenzie', t:['We are eleven licences short for go-live. Procurement says the PO cycle is three weeks.',
+    'Go-live is in nine days. I have said this to three people and they all nodded.'] },
+  'p.lic.b': { who:'sys', t:['Trials last thirty days. Go-live plus thirty days is somebody else\'s problem, which is a sentence worth being careful about.'],
+    opts:[ {t:'Escalate the PO and get it signed this week', fx:{time:18, rep:3, bonus:1}},
+           {t:'Start eleven trials and diarise the cliff', fx:{time:8, rep:-1, stress:8}},
+           {t:'Go live for the other forty and stage the eleven', fx:{time:14, rep:2, bonus:1, stress:3}} ] },
+  'p.own.a': { who:'client', t:['That app? That is finance. Finance says it is operations. Operations says it came with the building.',
+    'It has an icon of a fax. It is load-bearing.'] },
+  'p.own.b': { who:'sys', t:['Somebody signs off the migration or nobody does, and if nobody does it is you.'],
+    opts:[ {t:'Find the actual user and make them the owner in writing', fx:{time:20, rep:3, bonus:1}},
+           {t:'Migrate it and hope it is nobody\'s', fx:{time:10, rep:-2, stress:12}},
+           {t:'Leave it, document it, and put it in the risk log', fx:{time:12, rep:1, bonus:1}} ] },
+  'p.par.a': { who:'sys', t:['The old system and the new system have both been live since March. Everybody uses whichever one they prefer.',
+    'The data has been diverging for four months. Quietly. Politely.'] },
+  'p.par.b': { who:'client', t:['We would rather not switch the old one off. It has been fine.'],
+    opts:[ {t:'Set a shutdown date and reconcile the divergence first', fx:{time:22, rep:3, bonus:1}},
+           {t:'Switch it off on Friday and let them discover which one they needed', fx:{time:6, rep:-3, stress:12}},
+           {t:'Make the old one read-only today', fx:{time:14, rep:2, bonus:1, stress:3}} ] },
+  'p.raj.a': { who:'raj', t:['I can do your migration or I can do the queue. I cannot do both and the queue has an SLA.',
+    'You used to sit right there. You know what the queue does at eleven.'] },
+  'p.raj.b': { who:'sys', t:['Every date in this plan has RAJ under it and none of them asked him.'],
+    opts:[ {t:'Book his time formally and take the fight to Linda', fx:{time:18, rep:3, bonus:1}},
+           {t:'Ask him for a favour, again', fx:{time:6, rep:-2, stress:9}},
+           {t:'Re-plan around him and lose the week', fx:{time:14, rep:1, stress:4}} ] },
+  'p.cup.a': { who:'mackenzie', t:['We need photographs of the comms cupboard at {client} before we can quote the cabling.',
+    'It is an hour each way. Nobody has ever seen this cupboard.'] },
+  'p.cup.b': { who:'sys', t:['Somebody on site could photograph it in ninety seconds if anybody on site would answer the phone.'],
+    opts:[ {t:'Drive out and do it properly with a tape measure', fx:{time:26, rep:2, bonus:1}},
+           {t:'Get the receptionist to send phone pictures', fx:{time:8, rep:1, bonus:1, stress:2}},
+           {t:'Quote it from the last site that looked similar', fx:{time:4, rep:-2, stress:7}} ] },
+  'p.fw.a': { who:'sys', t:['Three hundred and forty rules. Fourteen have comments. One comment says "ask Dave".',
+    'Dave left in 2016. The rule is still permitting something to somewhere.'] },
+  'p.fw.b': { who:'sys', t:['Copy them all and you migrate 2011 into 2026. Cull them and you find out what they did.'],
+    opts:[ {t:'Migrate the documented ones and log the rest for review', fx:{time:24, rep:3, bonus:1}},
+           {t:'Copy all 340 verbatim — it will work, definitionally', fx:{time:8, rep:-1, stress:6}},
+           {t:'Cull anything not hit in ninety days', fx:{time:18, rep:2, bonus:1, stress:8}} ] },
+  'p.train.a': { who:'sys', t:['You booked the room, built the deck and brought the handouts. Two people accepted. Neither came.',
+    'The contract says training was delivered. Technically, it was delivered at.'] },
+  'p.train.b': { who:'client', t:['Can you just send the slides round?'],
+    opts:[ {t:'Record it once and send the link, and log attendance honestly', fx:{time:16, rep:3, bonus:1}},
+           {t:'Send the slides and mark it complete', fx:{time:4, rep:-1, stress:3}},
+           {t:'Rebook it and chase the managers personally', fx:{time:14, rep:2, stress:5}} ] },
+  'p.stat.a': { who:'mackenzie', t:['The weekly report goes to the client board tonight. Last week it was green.',
+    'It has been green since kickoff. It has never once been green.'] },
+  'p.stat.b': { who:'sys', t:['Amber costs you a difficult call tonight. Green costs you the whole thing in three weeks.'],
+    opts:[ {t:'Report amber with the recovery plan attached', fx:{time:18, rep:4, bonus:1, stress:4}},
+           {t:'Green again. It might still come good.', fx:{time:4, rep:-4, stress:13}},
+           {t:'Green, with the risks listed underneath in small type', fx:{time:10, rep:-1, stress:7}} ] },
+  'p.hand.a': { who:'sys', t:['Handover to support. You wrote the runbook. You know nobody reads the runbook.',
+    'You know because you did not read them either, and you were right there.'] },
+  'p.hand.b': { who:'raj', t:['Is this the one with the fax icon?'],
+    opts:[ {t:'Walk them through it in person until somebody can repeat it back', fx:{time:22, rep:4, bonus:1}},
+           {t:'Send the runbook and close the project', fx:{time:5, rep:-2, stress:6}},
+           {t:'Stay on as escalation for two weeks', fx:{time:12, rep:2, bonus:1, stress:6}} ] },
   't2.rst.a':  { who:'client', t:['They deleted "2023 FINAL" and need it by lunch. It is 11:20.',
     'There is also a "2023 FINAL v2" and a "2023 FINAL (USE THIS)". They do not want those.'] },
   't2.rst.b':  { who:'sys', t:['The backup is there. Restoring it over the live folder is how you make today much worse.'],
@@ -1632,6 +1717,18 @@ const DIALOGUE = {
 
   /* events */
   'e.standup':{ who:'linda', t:['Standup. Yesterday: tickets. Today: tickets. Blockers: morale. Same time tomorrow.'] },
+  'e.p.standup':{ who:'mackenzie', t:['Project standup. Nine people. Four of them are here to hear one sentence that does not concern them.',
+    'Somebody says "no blockers" while visibly blocked.'] },
+  'e.p.slip':  { who:'sys', t:['The date has moved. Nobody moved it — it moved on its own, over three weeks, four days at a time.',
+    'Everyone in the room already knew. This is the meeting where it becomes true out loud.'] },
+  'e.p.change':{ who:'derek', t:['Change control. I have brought eleven changes and described all of them as clarifications.'],
+    opts:[ {t:'Price them as changes, one by one, in front of him', fx:{time:12, rep:3}},
+           {t:'Wave them through and eat the days', fx:{time:2, rep:-2, stress:9}},
+           {t:'Accept three, price eight', fx:{time:8, rep:1, stress:3}} ] },
+  'e.p.steerco':{ who:'linda', t:['Steering committee. Thirty-four minutes, of which six are about the project and twenty-eight are about who says what to the client.',
+    'You are asked for a number. Any number. They want it to be a Tuesday.'] },
+  'e.p.lessons':{ who:'sys', t:['Lessons learned. The same four lessons as last time, learned again, written down again, in a document filed next to the last one.',
+    'Lesson one is always "engage stakeholders earlier". Nobody has ever done this.'] },
   'e.allhands':{ who:'sys', t:['ALL-HANDS: 45 slides on "synergizing the customer journey". Slide 32 is just a stock photo of a lighthouse.'] },
   'e.pizza':  { who:'sys', t:['Surprise pizza party! In lieu of raises. The pizza is from the cheap place. Morale is legally required to improve.'] },
   'e.fire':   { who:'sys', t:['Fire drill. Everyone stands in the parking lot pretending they wouldn\'t grab the servers first.'] },
@@ -1839,6 +1936,55 @@ const TICKETS = {
     title:'"Please close, I sorted it myself"',
     steps:[{say:'t1.self.a'},{game:'script',diff:1},{choice:'t1.self.b'}] },
 
+  /* ---------------------- PROJECT TEAM (rung 4) --------------------------
+     The rung where the unit of pain changes. On the helpdesk a thing is broken
+     and you fix it; here nothing is broken, and it is still your fault. The
+     work outlives the day, the dates were promised by somebody who has never
+     done the work, and the queue you came from is still running underneath
+     you eating the hours you costed. Priorities here are dates, not fires.
+     pri is INVERTED in this table: pri:4 renders P1 and is worth 7. */
+  'kickoff-no-scope': { tiers:[4,7], weight:4, sla:38, slaMult:1.8, pri:4, stress:8,
+    title:'Kickoff call for {client} — nobody can find the scope document',
+    steps:[{say:'p.kick.a'},{choice:'p.kick.b'}] },
+  'gantt-by-sales': { tiers:[4,6], weight:4, sla:34, slaMult:1.7, pri:4, stress:9,
+    title:'The plan says three days. The plan was written by Derek.',
+    steps:[{say:'p.gantt.a'},{choice:'p.gantt.b'}] },
+  'cutover-friday': { tiers:[4,8], weight:4, sla:30, slaMult:1.5, pri:4, stress:10,
+    title:'Go-live is Friday and the thing has never been switched on',
+    steps:[{say:'p.cut.a'},{game:'blast',diff:2},{choice:'p.cut.b'}] },
+  'contact-in-croatia': { tiers:[4,7], weight:3, sla:42, slaMult:2.0, pri:3, stress:8,
+    title:'Only {User} has the passwords and {User} is in Croatia until the 9th',
+    steps:[{say:'p.cro.a'},{choice:'p.cro.b'}] },
+  'agreed-on-the-call': { tiers:[4,8], weight:3, sla:36, slaMult:1.8, pri:3, stress:9,
+    title:'{client}: "we agreed this on the call" — we did not agree this on the call',
+    steps:[{say:'p.verb.a'},{choice:'p.verb.b'}] },
+  'eleven-licences-short': { tiers:[4,6], weight:3, sla:46, slaMult:2.1, pri:3, stress:7,
+    title:'Eleven licences short. The purchase order takes three weeks.',
+    steps:[{say:'p.lic.a'},{choice:'p.lic.b'}] },
+  'app-nobody-owns': { tiers:[4,7], weight:3, sla:50, slaMult:2.2, pri:3, stress:8,
+    title:'Migrate the app. Nobody at {client} will admit to owning the app.',
+    steps:[{say:'p.own.a'},{goto:'SERVERS'},{game:'jargon',diff:2},{choice:'p.own.b'}] },
+  'parallel-run-month-four': { tiers:[4,8], weight:3, sla:48, slaMult:2.1, pri:2, stress:7,
+    title:'The one-week parallel run is in its fourth month',
+    steps:[{say:'p.par.a'},{choice:'p.par.b'}] },
+  'critical-path-is-raj': { tiers:[4,6], weight:3, sla:40, slaMult:1.9, pri:3, stress:9,
+    title:'The critical path is RAJ, and RAJ is on the helpdesk today',
+    steps:[{say:'p.raj.a'},{goto:'n2'},{choice:'p.raj.b'}] },
+  'photograph-a-cupboard': { tiers:[4,7], weight:2, sla:58, slaMult:2.6, pri:2, stress:4,
+    title:'Site survey: somebody must drive to {client} and photograph a cupboard',
+    steps:[{say:'p.cup.a'},{goto:'ELEV'},{choice:'p.cup.b'}] },
+  'firewall-rules-2011': { tiers:[4,7], weight:3, sla:52, slaMult:2.3, pri:2, stress:8,
+    title:'Migrate 340 firewall rules. The newest one is from 2011.',
+    steps:[{say:'p.fw.a'},{game:'blast',diff:3},{choice:'p.fw.b'}] },
+  'training-nobody-attends': { tiers:[4,8], weight:2, sla:56, slaMult:2.5, pri:1, stress:3,
+    title:'Run the training session. Two people booked. Nobody came.',
+    steps:[{say:'p.train.a'},{choice:'p.train.b'}] },
+  'status-report-green': { tiers:[4,8], weight:3, sla:44, slaMult:2.0, pri:2, stress:9,
+    title:'The status report is due and the status report says GREEN',
+    steps:[{say:'p.stat.a'},{choice:'p.stat.b'}] },
+  'handover-to-your-old-desk': { tiers:[4,8], weight:2, sla:54, slaMult:2.4, pri:1, stress:6,
+    title:'Hand the project over to the helpdesk. You know exactly what they will say.',
+    steps:[{say:'p.hand.a'},{goto:'TERMINAL'},{choice:'p.hand.b'}] },
   'coffee-derek': { tiers:[0,0], weight:3, sla:30, slaMult:1.4, pri:4, stress:4, from:'derek',
     title:'Coffee for DEREK before {mtg}',
     steps:[{say:'t.cof.a'},{goto:'COFFEE'},{say:'t.cof.b'},{goto:'n1'},{say:'t.cof.c'}] },
@@ -1985,6 +2131,14 @@ const TICKETS = {
    moment the clock passes them — the queue does not care. */
 const EVENTS = {
   'standup':  { when:{at:10, chance:.9},  scene:'e.standup', fx:{time:8, stress:2} },
+  /* PROJECT TEAM. The calendar is the job now: every one of these is a meeting
+     about whether a date is still true, which is a different kind of day from
+     the helpdesk's interruptions. */
+  'p.standup':{ when:{at:14, chance:.55, tiers:[4,8]}, scene:'e.p.standup', fx:{time:14, stress:3} },
+  'p.slip':   { when:{at:128, chance:.30, tiers:[4,8]}, scene:'e.p.slip',    fx:{time:18, stress:8} },
+  'p.change': { when:{at:196, chance:.26, tiers:[4,7]}, scene:'e.p.change',  fx:{time:16, stress:6} },
+  'p.steerco':{ when:{at:262, chance:.24, tiers:[4,8]}, scene:'e.p.steerco', fx:{time:34, stress:7} },
+  'p.lessons':{ when:{at:352, chance:.20, tiers:[4,8]}, scene:'e.p.lessons', fx:{time:20, stress:-4} },
   'allhands': { when:{at:240, chance:.22}, scene:'e.allhands', fx:{time:30, stress:5} },
   'pizza':    { when:{at:185, chance:.15}, scene:'e.pizza', fx:{time:10, stress:-8} },
   'firedrill':{ when:{at:150, chance:.1},  scene:'e.fire', fx:{time:12, stress:1} },
@@ -2906,6 +3060,9 @@ const DUCK_DEBT = .55;         // burnout per point of stress dodged rather than
 /* what the calendar invite is actually called */
 const EV_NAMES = {
   standup:'morning standup', allhands:'all-hands', pizza:'pizza in the kitchen',
+  'p.standup':'project standup', 'p.slip':'the date has moved',
+  'p.change':'change control', 'p.steerco':'steering committee',
+  'p.lessons':'lessons learned',
   firedrill:'fire drill', birthday:'a birthday card', tour:'client tour',
   vending:'the vending machine incident', thermo:'thermostat dispute',
   audit:'security audit', recruiter:'a recruiter call', outage:'client outage',
@@ -3055,6 +3212,11 @@ function newRun(seed){
 }
 function metaHasPerk(p){ return PERKS[p].need.runs !== undefined && meta.runsPlayed >= PERKS[p].need.runs; }
 
+/* when.tiers is [lo,hi] on the rung ladder, absent meaning "every rung". */
+function eventFitsRung(w){
+  if (!w || !w.tiers) return true;
+  return run.rung >= w.tiers[0] && run.rung <= w.tiers[1];
+}
 function rollDay(){
   /* The floor plan must exist before the day is priced, or an errand's SLA is
      computed from the flat fallback at plan time and its live slack from the
@@ -3134,7 +3296,7 @@ function rollDay(){
      morning meeting straight on top of it meant a new player pressed a key
      sixteen times and watched half an hour go by before they could walk. */
   const MORNINGS = ['standup', 'allhands', 'firedrill', 'outage'];
-  const morningPool = MORNINGS.filter(id => EVENTS[id]);
+  const morningPool = MORNINGS.filter(id => EVENTS[id] && eventFitsRung(EVENTS[id].when));
   const opener = morningPool.length && R('world') < .82
     ? morningPool[(R('world') * R('world') * morningPool.length) | 0]   // standup still leads
     : null;
@@ -3143,6 +3305,10 @@ function rollDay(){
     if (id === opener) continue;
     if (MORNINGS.indexOf(id) >= 0 && opener) continue;   // one meeting to open with
     if (first && EVENTS[id].when.at < 150) continue;     // your first morning is your own
+    /* A rung's meetings are part of what the rung IS. Every event fired at
+       every rung until now, so a Director sat through the same standup as the
+       intern and the promotion changed the tickets but never the calendar. */
+    if (!eventFitsRung(EVENTS[id].when)) continue;
     if (R('world') < EVENTS[id].when.chance) events.push({ at:EVENTS[id].when.at, id });
   }
   events.sort((a,b)=>a.at-b.at);
@@ -6907,8 +7073,13 @@ function selfTest(runSim){
         /* "on the phone", not "phone". A bare \bphone\b flagged "my phone kept
            buzzing so I pressed yes", which is a handset in somebody's pocket
            and not a call at all — the lint has to mean what the board means. */
+        /* A LIVE call you are taking right now, which is what the board is. Not
+           a kickoff call, which is a meeting, and not "we agreed on the call",
+           which is an argument about a conversation that already happened. A
+           bare \bcall\b flagged both of those the moment Project Team landed. */
         const callish = Object.keys(TICKETS).filter(id =>
-          /\bcalls?\b|\bcaller\b|on the phone|on the line/i.test(TICKETS[id].title));
+          /on the phone|on the line|\bcaller\b|live [\w ]{0,12}call|calling (?:about|on behalf)/i
+            .test(TICKETS[id].title));
         const wrong = callish.filter(id =>
           !TICKETS[id].steps.some(st => st.game === 'script'));
         ok('a ticket about a phone call opens the phone-call board',
@@ -6983,6 +7154,27 @@ function selfTest(runSim){
          Math.abs(1 / BOT_TILES_PER_MIN - WALK_MIN_PER_TILE) < 1e-9,
          'bot ' + (1 / BOT_TILES_PER_MIN).toFixed(3) + ' vs player ' + WALK_MIN_PER_TILE);
       run = savedRun; G.state = savedState;
+    }
+    /* A RUNG'S CALENDAR IS PART OF WHAT THE RUNG IS. Every event fired at every
+       rung until now, so a Director sat through the intern's standup and a
+       promotion changed the tickets but never the meetings. Gated on
+       when.tiers, and measured over thirty days because the events are
+       chance-rolled and a single day proves nothing. */
+    {
+      const savedRun = run;
+      const countAt = (rung, pfx) => { let c = 0;
+        for (let i = 0; i < 30; i++){
+          QUIET = true; rngInit('EV' + i); runInit('EV' + i);
+          run.rung = rung; run.day = 3; rollDay();
+          c += run.plan.events.filter(e => e.id.indexOf(pfx) === 0).length;
+          run = null;
+        }
+        return c; };
+      const atIntern = countAt(0, 'p.'), atProject = countAt(4, 'p.');
+      ok('a rung only gets the meetings that belong to it',
+         atProject > 0 && atIntern === 0,
+         'project meetings over 30 days — intern ' + atIntern + ', project team ' + atProject);
+      run = savedRun;
     }
     /* NOTHING THE GAME ASKS YOU TO USE MAY BE WALLED IN. Every interactable is
        reached by standing next to it and facing it, so an act tile with no
