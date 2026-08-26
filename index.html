@@ -2241,7 +2241,16 @@ const DIALOGUE = {
 /* --------------------------------- tickets -------------------------------- */
 /* steps: {say:node} | {goto:anchor} | {game:id,diff} | {choice:node}.
    sla in game-minutes (scaled by role slaScale). weight biases the draw.
-   from: npc originator (else a client from FILLS is stamped on). */
+   from: npc originator (else a client from FILLS is stamped on).
+
+   pri IS STORED INVERTED. Display = 5 - pri. So pri:4 renders P1 and is worth
+   STAKES[4] = the most; pri:1 renders P4 and is worth the least. Write the
+   number you want the player to see, and you have written its opposite. This
+   is the single most dangerous field in the file: triage is the axis that
+   separates a promoted career from a fired one by roughly 24 points, where
+   craft separates flawless from mediocre by 2, so an inverted pri does not
+   make a ticket slightly wrong, it inverts the decision the day is scored on.
+   It has been got wrong once already — see the Director block below. */
 const TICKETS = {
   /* -------------------------- DIRECTOR OF IT (rung 9) ---------------------
      The five the adjudicated plan kept out of thirteen designed: the ones that
@@ -2249,20 +2258,27 @@ const TICKETS = {
      ever been and every row has your name in the approver field.
 
      Everything else proposed for this rung was cut — it is the least-reached
-     content in the game and eight of those tickets could have run at T3. */
-  'cutover-weekend': { tiers:[9,9], weight:4, sla:70, slaMult:2.6, pri:1, stress:10,
+     content in the game and eight of those tickets could have run at T3.
+
+     All five of these were originally authored with DISPLAYED priority in the
+     pri field (see the inversion note at the top of TICKETS). That made "Derek
+     would like fifteen minutes" the most valuable ticket a Director can close
+     and the company's entire migration the least — inverting triage on the one
+     rung that is the win condition. Corrected here; guarded by the "the
+     migration is the heaviest thing on a Director's desk" invariant. */
+  'cutover-weekend': { tiers:[9,9], weight:4, sla:70, slaMult:2.6, pri:4, stress:10,
     title:'{client} cutover is Saturday and the rollback plan is one sentence',
     steps:[{say:'t9.cut.a'},{choice:'t9.cut.b'},{say:'t9.cut.c'}] },
-  'vault-succession': { tiers:[9,9], weight:3, sla:64, slaMult:2.5, pri:2, stress:8,
+  'vault-succession': { tiers:[9,9], weight:3, sla:64, slaMult:2.5, pri:3, stress:8,
     title:'Legal want a named successor for the password vault',
     steps:[{say:'t9.vault.a'},{choice:'t9.vault.b'}] },
-  'linda-review': { tiers:[9,9], weight:3, sla:58, slaMult:2.4, pri:3, stress:9,
+  'linda-review': { tiers:[9,9], weight:3, sla:58, slaMult:2.4, pri:2, stress:9,
     title:'Linda\'s performance review is due, and you are writing it',
     steps:[{say:'t9.linda.a'},{choice:'t9.linda.b'}] },
-  'derek-counteroffer': { tiers:[9,9], weight:3, sla:52, slaMult:2.3, pri:4, stress:7,
+  'derek-counteroffer': { tiers:[9,9], weight:3, sla:52, slaMult:2.3, pri:1, stress:7,
     title:'Derek would like fifteen minutes and has booked thirty',
     steps:[{say:'t9.derek.a'},{choice:'t9.derek.b'}] },
-  'intern-hire': { tiers:[9,9], weight:3, sla:60, slaMult:2.5, pri:4, stress:5,
+  'intern-hire': { tiers:[9,9], weight:3, sla:60, slaMult:2.5, pri:1, stress:5,
     title:'Six intern CVs. One of them is you, ten years ago.',
     steps:[{say:'t9.hire.a'},{choice:'t9.hire.b'}] },
 
@@ -2274,19 +2290,19 @@ const TICKETS = {
      T2 is the first rung where you are TRUSTED with something that can break,
      and the joke is that trust arrives before authority does. Every P1 here is
      a request to do something you can technically do and probably should not. */
-  'dl-blast-radius': { tiers:[2,4], weight:4, sla:26, slaMult:1.5, pri:1, stress:9,
+  'dl-blast-radius': { tiers:[2,4], weight:4, sla:26, slaMult:1.5, pri:3, stress:9,
     title:'"All Staff" list is going to all staff — please fix',
     steps:[{say:'t2.dl.a'},{game:'blast',diff:2},{choice:'t2.dl.b'},{say:'t2.dl.c'}] },
   'vendor-says-any-any': { tiers:[2,5], weight:3, sla:34, slaMult:1.7, pri:1, stress:8,
     title:'Firewall rule for the new app — vendor doc says "disable the firewall"',
     steps:[{say:'t2.fw.a'},{choice:'t2.fw.b'}] },
-  'wipe-then-found': { tiers:[2,5], weight:3, sla:22, slaMult:1.4, pri:1, stress:10,
+  'wipe-then-found': { tiers:[2,5], weight:3, sla:22, slaMult:1.4, pri:4, stress:10,
     title:'URGENT: remote wipe the stolen laptop (16:50)',
     steps:[{say:'t2.wipe.a'},{choice:'t2.wipe.b'},{say:'t2.wipe.c'}] },
-  'delegate-her-mailbox': { tiers:[2,6], weight:3, sla:30, slaMult:1.6, pri:1, stress:9,
+  'delegate-her-mailbox': { tiers:[2,6], weight:3, sla:30, slaMult:1.6, pri:3, stress:9,
     title:'Grant me full access to {user}\'s mailbox — approved by her manager',
     steps:[{say:'t2.mbx.a'},{game:'blast',diff:1},{choice:'t2.mbx.b'}] },
-  'payroll-print-window': { tiers:[2,4], weight:3, sla:24, slaMult:1.5, pri:1, stress:9,
+  'payroll-print-window': { tiers:[2,4], weight:3, sla:24, slaMult:1.5, pri:4, stress:9,
     title:'Payroll cannot print and the run closes at 3pm',
     steps:[{say:'t2.pay.a'},{goto:'PRINTER'},{game:'cable',diff:2},{say:'t2.pay.b'}] },
   'first-restore': { tiers:[2,5], weight:3, sla:44, slaMult:2.0, pri:2, stress:7,
@@ -2325,13 +2341,13 @@ const TICKETS = {
      TO, and that turns out to mean owning everyone's worst ticket. Wired to
      the EXISTING boards — Ticket Archaeology was cut by the adjudicated plan
      as the most expensive minigame proposed for the least reach. */
-  'rca-that-matches': { tiers:[3,7], weight:3, sla:56, slaMult:2.3, pri:1, stress:9,
+  'rca-that-matches': { tiers:[3,7], weight:3, sla:56, slaMult:2.3, pri:1, stress:7,
     title:'{client} wants a root cause for the 14th — due Friday',
     steps:[{say:'t3.rca.a'},{game:'jargon',diff:3},{choice:'t3.rca.b'}] },
-  'dereks-holiday': { tiers:[3,6], weight:3, sla:30, slaMult:1.5, pri:1, stress:10,
+  'dereks-holiday': { tiers:[3,6], weight:3, sla:30, slaMult:1.5, pri:4, stress:10,
     title:'Derek is in Croatia and the thing he built has stopped',
     steps:[{say:'t3.croatia.a'},{goto:'SERVERS'},{game:'cable',diff:3},{choice:'t3.croatia.b'}] },
-  'dev-in-portugal': { tiers:[3,8], weight:3, sla:48, slaMult:2.1, pri:1, stress:9,
+  'dev-in-portugal': { tiers:[3,8], weight:3, sla:48, slaMult:2.1, pri:2, stress:9,
     title:'Legacy app must keep running — the developer retired to Portugal',
     steps:[{say:'t3.port.a'},{choice:'t3.port.b'}] },
   'see-notes': { tiers:[3,6], weight:4, sla:40, slaMult:1.9, pri:2, stress:8,
@@ -2381,7 +2397,7 @@ const TICKETS = {
   'cfo-third-reset': { tiers:[1,3], weight:4, sla:26, slaMult:1.6, pri:1, stress:7,
     title:'Password reset — {User} (CFO) — third one today',
     steps:[{say:'t1.cfo.a'},{game:'pw',diff:2},{choice:'t1.cfo.b'}] },
-  'phones-down-allegedly': { tiers:[1,3], weight:3, sla:24, slaMult:1.5, pri:1, stress:9,
+  'phones-down-allegedly': { tiers:[1,3], weight:3, sla:24, slaMult:1.5, pri:1, stress:5,
     title:'"THE PHONES ARE DOWN" — {client}',
     steps:[{say:'t1.phones.a'},{goto:'n2'},{say:'t1.phones.b'},{choice:'t1.phones.c'}] },
   'onboarding-by-seating-chart': { tiers:[1,4], weight:3, sla:52, slaMult:2.1, pri:1, stress:8,
@@ -8067,6 +8083,41 @@ function selfTest(runSim){
       const spread = new Set(Object.keys(TICKETS).map(id => TICKETS[id].pri));
       ok('content: the queue actually spans the priority range', spread.size === 4,
          [...spread].sort().join('/'));
+    }
+    /* pri is stored INVERTED (display = 5 - pri), so writing the number you
+       want the player to SEE writes its opposite. That happened to eleven
+       tickets, five of them on the win-condition rung. Two lints, because a
+       comment did not stop it the first time.
+
+       One: nothing that can burn you out is allowed to be worth nothing.
+       Stress is the run-ender; stakes are the reward. A ticket claiming both
+       "this will cost you the run" and "this is worth one point" is not a hard
+       choice, it is a typo — and it is exactly what an inverted pri looks
+       like. Every real high-stress ticket sits at P2 or above; every real P4
+       is a low-stress errand. */
+    {
+      const HEAVY = 9;
+      const wrong = Object.keys(TICKETS).filter(id =>
+        TICKETS[id].stress >= HEAVY && stakesOf(id) === STAKES[1]);
+      ok('content: nothing that can burn you out is worth the least',
+         !wrong.length, wrong.join(',') + ' (stress>=' + HEAVY + ' at P4 — inverted pri?)');
+    }
+    /* Two: the climax. Landing the Big Migration is the win condition, so the
+       migration has to be the heaviest thing a Director can be dealt. It was
+       authored at P4, worth one point, which made the correct play at the top
+       of the career "let the migration burn and go make Derek a coffee". */
+    {
+      const dir = Object.keys(TICKETS).filter(id => {
+        const t = TICKETS[id];
+        return t.tiers && t.tiers[0] <= 9 && t.tiers[1] >= 9;
+      });
+      const top = Math.max.apply(null, dir.map(stakesOf));
+      const over = dir.filter(id => stakesOf(id) > stakesOf('cutover-weekend'));
+      ok('content: nothing on a Director\'s desk outranks the Big Migration',
+         dir.indexOf('cutover-weekend') >= 0 && !over.length &&
+         stakesOf('cutover-weekend') === top,
+         'migration ' + stakesOf('cutover-weekend') + ' vs top ' + top +
+         (over.length ? ' — outranked by ' + over.join(',') : ''));
     }
     /* THE central invariant: which ticket you let burn has to change the
        score, or triage is decoration. Same day, same work, same number of
