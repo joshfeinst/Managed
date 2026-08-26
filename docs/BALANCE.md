@@ -972,35 +972,73 @@ Re-swept, and every one of them wanted more:
 **Anything that changes what a day can hold invalidates every deal rate on the
 ladder.** That is the third time the same lesson has been paid for in this file.
 
+## Procurement was the last one, and its rate was the last stale number
+
+`tools/score.js` names which of the three terms carries each rung's gap, and
+Procurement's read `bad burns +-0.2`. Every healthy rung has the sloppy bot
+burning 3.5 to 8.8 stakes a day MORE than the careful one; at Procurement it
+burned very slightly less. The burn term — the largest of the three — was
+contributing nothing at all, and the rung's whole 7.3-point gap came from the
+other two.
+
+The burn ledger said why, at both ends at once:
+
+| rung | flawless P1s burned | sloppy P1s burned | ratio | gap |
+|---|---|---|---|---|
+| t2 | 0.48 | 1.12 | 2.33 | 21.0 |
+| relmgr | 1.01 | 2.11 | 2.09 | 18.7 |
+| t3 | 0.57 | 0.96 | 1.68 | 10.9 |
+| **procure** | **1.02** | **1.50** | **1.47** | **7.3** |
+
+Procurement's *flawless* player was losing a whole P1 a day — twice what T2's
+loses — while its sloppy player lost only half again as many. Both ends
+compressed, so there was nothing for the score to read.
+
+Its deal rate was the culprit and it was stale for the same reason all the
+others had been: swept at 14 seeds, which is not a measurement. Re-swept at 26,
+against two dials rather than one:
+
+| rate | meetings | good | bad | gap | breach |
+|---|---|---|---|---|---|
+| 1.5 | 68 | .575 | .480 | 9.6 | 54% |
+| **1.9** | **68** | **.513** | **.363** | **15.0** | **61%** |
+| 2.3 | 68 | .445 | .277 | 16.8 | 67% |
+| 1.9 | 50 | .537 | .388 | 14.9 | 59% |
+| 2.3 | 50 | .466 | .296 | 16.9 | 66% |
+
+The meeting load is not the lever — 68 minutes against 50 is 15.0 against 14.9,
+inside the noise — which is worth knowing, because the meetings are the joke and
+now they do not have to be paid for. Rate 1.9 doubles the gap and leaves the day
+playable; 2.3 buys two more points for six more points of breach and is the
+drowning trade again.
+
 ## Where the ladder stands, 2026-08-26
 
-30 seeds x 8 days per rung, plus 24 careers:
+30 seeds x 8 days per rung, plus 24 careers. **No rung is misplaced** — the first
+time that has been true.
 
 | rung | bar | flawless p50 | sloppy p50 | gap | good clears | bad clears |
 |---|---|---|---|---|---|---|
-| intern | 79% | 80% | 62% | 18 | 67% | 0% |
-| t1 | 77% | 78% | 61% | 16 | 57% | 3% |
-| t2 | 66% | 73% | 48% | 26 | 83% | 7% |
-| t3 | 74% | 72% | 59% | 14 | 37% | 3% |
-| project | 66% | 68% | 54% | 15 | 63% | 7% |
-| procure | 68% | 66% | 56% | 10 | 43% | 17% |
-| relmgr | 53% | 62% | 37% | 24 | 73% | 10% |
-| solarch | 61% | 66% | 48% | 18 | 63% | 7% |
-| vcio | 68% | 74% | 54% | 19 | 63% | 3% |
+| intern | 77% | 80% | 62% | 18 | 67% | 0% |
+| t1 | 76% | 78% | 61% | 16 | 63% | 3% |
+| t2 | 68% | 73% | 48% | 26 | 73% | 3% |
+| t3 | 68% | 73% | 59% | 15 | 70% | 10% |
+| project | 62% | 66% | 54% | 12 | 67% | 13% |
+| procure | 57% | 60% | 44% | 17 | 70% | 13% |
+| relmgr | 54% | 62% | 37% | 24 | 77% | 3% |
+| solarch | 58% | 67% | 48% | 19 | 83% | 13% |
+| vcio | 62% | 75% | 54% | 21 | 73% | 27% |
 
-Careers: **19 of 24 reach retirement at skill .85, averaging 9.7 careers; 9 of
-16 at skill .70, averaging 10.1.**
+Careers: **19 of 24 reach retirement at skill .85, averaging 10.1 careers; 10 of
+16 at skill .70, averaging 10.5.**
 
 Where the day began: gaps of 3-10 points at the mid rungs, sloppy triage
 clearing its gate in 33-97% of seeds, and a flawless triager burning three
-quarters of the queue. Gaps are 10-26 now and sloppy triage clears 0-17%
-everywhere. Relationship Manager — the rung that resisted deal rate, breach
-tolerance, ticket spread and the walk budget all session — finished at a 24-point
-gap, 73% good against 10% bad.
+quarters of the queue. Gaps are 12-26 now and sloppy triage clears 0-27%.
 
-Procurement is the narrowest at 10 points, which is where Relationship Manager
-was this morning. It is the one to look at next, and `tools/score.js` plus the
-burn ledger is how.
+T3 is the narrowest left at 11.2 points of mean gap, and its `bad burns +1.9` is
+the same signature Procurement had this morning. That is where the next look
+starts.
 
 ### And the bisection is a command now
 

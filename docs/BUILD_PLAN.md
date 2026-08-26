@@ -181,9 +181,15 @@ promotion bar — so the same sentence means the same thing at every desk.
 
 ### What is left
 
-- **Procurement** is now the narrowest rung at a 10-point gap, which is exactly
-  where Relationship Manager was this morning before its rate was re-swept.
-  Start with `tools/score.js` and the burn ledger, not with a dial.
+- ~~Procurement is the narrowest rung.~~ **Done** — its deal rate was stale
+  (swept at 14 seeds, which is not a measurement). Re-swept at 26: 1.5 -> 1.9
+  doubles its gap to 15. Meeting load turned out not to be a lever at all, 68
+  minutes against 50 landing inside the noise, so the meetings stay.
+- **T3 is the narrowest rung now** at 11.2 points, and its `bad burns +1.9` is
+  the same signature Procurement had. Same recipe: `tools/score.js`, then the
+  burn ledger, then re-sweep the rate at 26 seeds or more.
+- **14 seeds is not a measurement.** Three separate numbers set from 14-seed
+  sweeps this session had to be redone at 26. Sweep at 26 the first time.
 - **Craft vs triage** is open for Josh. `tools/dials.js` now measures triage at
   11.7 points and craft at 9.9 — much closer than the 3-vs-12 it was, because
   `URGENT_GRACE` means more tickets actually get finished and craft only scores
