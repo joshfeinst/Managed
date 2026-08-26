@@ -1698,3 +1698,51 @@ A ratio in prose, a stat read from the wrong field, a meeting figure written
 from memory, a pronoun for a name drawn at random, an instruction for a queue
 that is empty by construction. Each was true once, or never, and no test could
 tell because no test was reading the sentence against the number.
+
+## Two more, from playing further (2026-08-26, seventh pass)
+
+**The player was reading "{Client} has a new starter".** Events and interludes
+open with `openDlg(id, {}, null)` — no fills at all — so every `{client}` an
+author wrote into a scene reached the screen as the literal template text.
+Rendered, not inferred:
+
+    ON SCREEN: {Client} has a new starter. She is in reception with a
+               lanyard, a notebook, and no account.
+
+Five lines across four scenes. `e.hd1.starter` is what a T1 reads on the
+morning they are promoted; `e.hd3.problemboard` opens the problem review. The
+most ceremonial text in the game, showing its own braces. Scenes get fills now,
+resolved from the day and the scene's own name rather than from a stream — a
+scene must not be able to shift the day's tickets, and consuming no randomness
+means it cannot.
+
+**Pressing E at the lift did nothing unless you had walked in facing it.** An
+anchor is the tile you use a thing FROM; the thing is on the next tile. The
+arrow points at the anchor. Measured, the lift rode from exactly one of four
+facings. It matters most there because arriving at a normal destination
+completes that step by itself, while the lift has to be USED and every
+cross-floor ticket depends on that press. Same shape as the day-one terminal:
+the game points at a tile and the action silently fails depending on which way
+you came. Found because the driver sat on "THE FRONT DESK IS ON THE OTHER
+FLOOR — TAKE THE LIFT" for ninety-four steps.
+
+### Three tests that measured nothing, in one sitting
+
+Worth recording together, because the failure is more instructive than any of
+the fixes:
+
+1. The token test built its own fills and **passed with both real call sites
+   reverted** — it was testing `sceneFills`, which was never what was broken.
+   Fixed by driving `openEvent` and the `pendingScenes` path.
+2. The ambiguity test watched `G.state` — and the two things in reach were both
+   racks, which only put up a toast. It was measuring a side effect the case it
+   was named after does not have.
+3. Rewritten to watch for the call instead, it still could not fail: **neither
+   shipped map has a single walkable tile with two distinct acts beside it**,
+   so the branch is unreachable today. That test was deleted rather than kept
+   green. The defensive branch stays in the code and the comment says so.
+
+The rule this keeps arriving at: **a test earns its green only by having been
+made to go red on the exact code that shipped the bug.** Three drafts here
+passed on a build with the defect fully restored, and each one looked like
+evidence.
