@@ -192,6 +192,9 @@ promotion bar — so the same sentence means the same thing at every desk.
   from 75-80% retiring to 35%. The ladder has a total difficulty budget and by
   the fifth rung it was spent. Project Team keeps 1.5 and a 12-point gap, and
   that is the right price. Anything further here has to be CONTENT, not a rate.
+  Eight dated-commitment tickets were written for it and did NOT move the gap
+  (12.8 -> 11.4); they stay because they are good content, but the rung is
+  still the narrowest and still open.
 - **14 seeds is not a measurement.** Three separate numbers set from 14-seed
   sweeps this session had to be redone at 26. Sweep at 26 the first time.
 - **Craft vs triage** is open for Josh. `tools/dials.js` now measures triage at

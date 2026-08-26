@@ -1145,6 +1145,32 @@ than the sack. A change that let sloppy triage climb higher than careful triage
 would pass every other test in this file. Zeroing the intern's fired floor
 fails it; flattening `STAKES` so priority is worthless fails six tests.
 
+## Dates, not fires — eight tickets for Project Team, and an honest result
+
+Project Team is the one rung a deal rate cannot fix, so it got content instead:
+eight dated commitments with tight windows. A thing that is due, that is not on
+fire, and that stops being possible at a specific hour whether or not anyone is
+looking — the crane booked for Saturday with the cabinet still in Rotterdam,
+sign-off that has to be in before five or the install slot goes elsewhere, the
+engineer who flies in Tuesday for fibre nobody ordered. That is the rung's whole
+joke and it was underweight in its own pool.
+
+**It did not move the gap.** Project Team went from 12.8 to 11.4 points at 14
+seeds and 12 to 13 at 30, and its burn ratio did not shift at all. What the
+content *did* do is make rungs 4-8 harder across the board, which dropped
+careers from 17/24 to 14/24 until the bars were re-bisected.
+
+Two things worth keeping from that. The content is good on its own terms and
+every lint passes it, so it stays — the game is a satire pool first and the
+pool is deeper for it. And the re-bisection took one command where the same job
+took four hand rounds in the morning, which is the tool paying for itself the
+same day it was written.
+
+The duplicate-key lint also earned its keep on the way in: `p.lic.a` and
+`p.lic.b` already existed in Procurement's block, and without the lint the new
+pair would have silently won and quietly replaced a shipped Procurement ticket's
+dialogue with a Project Team one.
+
 ## The ratchets
 
 | name | value | meaning | direction |

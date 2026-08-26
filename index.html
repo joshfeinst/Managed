@@ -871,31 +871,31 @@ function bakePortrait(look){
    docs/BALANCE.md rather than tuned around. */
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
-    gates:{ nextAt:{perf:0.771, days:3}, firedBelow:0.347, cert:null },
+    gates:{ nextAt:{perf:0.772, days:3}, firedBelow:0.347, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:30, slaScale:1.0 }, deskAnchor:'DESK_PIT' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
     gates:{ nextAt:{perf:0.756, days:3}, firedBelow:0.34, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:34, slaScale:0.96 }, deskAnchor:'DESK_PIT2' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
-    gates:{ nextAt:{perf:0.633, days:3}, firedBelow:0.285, cert:null },
+    gates:{ nextAt:{perf:0.635, days:3}, firedBelow:0.286, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:40, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
-    gates:{ nextAt:{perf:0.616, days:3}, firedBelow:0.277, cert:null },
+    gates:{ nextAt:{perf:0.631, days:3}, firedBelow:0.284, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:48, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
-    gates:{ nextAt:{perf:0.623, days:3}, firedBelow:0.28, cert:null },
+    gates:{ nextAt:{perf:0.624, days:3}, firedBelow:0.281, cert:null },
     queue:{ ratePerHr:1.5, meetingMin:60, slaScale:0.96 }, deskAnchor:'DESK_PROJ' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
-    gates:{ nextAt:{perf:0.573, days:3}, firedBelow:0.258, cert:null },
+    gates:{ nextAt:{perf:0.513, days:3}, firedBelow:0.231, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:68, slaScale:0.96 }, deskAnchor:'DESK_PROC' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.54, days:3}, firedBelow:0.243, cert:null },
+    gates:{ nextAt:{perf:0.501, days:3}, firedBelow:0.225, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:78, slaScale:0.96 }, deskAnchor:'DESK_CLIENT' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
     gates:{ nextAt:{perf:0.611, days:3}, firedBelow:0.275, cert:null },
     queue:{ ratePerHr:1.7, meetingMin:84, slaScale:0.96 }, deskAnchor:'DESK_ARCH' },
   { id:'vcio',   title:'vCIO',          pay:135000,
-    gates:{ nextAt:{perf:0.637, days:3}, firedBelow:0.287, cert:null },
+    gates:{ nextAt:{perf:0.641, days:3}, firedBelow:0.288, cert:null },
     queue:{ ratePerHr:1.7, meetingMin:88, slaScale:0.96 }, deskAnchor:'DESK_EXEC' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
     gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.31, cert:null },
@@ -1940,6 +1940,63 @@ const DIALOGUE = {
            {t:'Go, declare it, and let somebody else score the tender', fx:{time:7, rep:2, bonus:1}},
            {t:'Go. It is only golf.', fx:{time:6, rep:-4, stress:5}} ] },
   /* ------------------------ PROJECT TEAM (rung 4) ------------------------- */
+  /* --- dates, not fires. The register at this rung is different from the
+         helpdesk's: nothing is broken, everyone is being reasonable, and it is
+         going to be your fault anyway. The choices are all versions of the
+         same one — tell somebody now, or find out on the day. --- */
+  'p.crane.a':{ who:'sys', t:['The crane is booked for Saturday. It is booked because you booked it, six weeks ago, and it cost four thousand pounds.',
+    'The cabinet it is meant to lift is in Rotterdam. The tracking has said "in transit" since the ninth.',
+    'The crane does not care where the cabinet is. The crane arrives Saturday.'] },
+  'p.crane.b':{ who:'sys', t:['There is a version of this where you find out on Saturday morning, in a car park, with a crane.'],
+    opts:[ {t:'Ring the freight forwarder and get a real date, not a status', fx:{time:16, rep:4, bonus:1, stress:4}},
+           {t:'Move the crane now and eat the rebooking fee', fx:{time:11, rep:2, bonus:1, stress:5}},
+           {t:'It says in transit. It will turn up.', fx:{time:2, rep:-5, stress:14}} ] },
+  'p.signoff.a':{ who:'client', t:['We just need the sign-off in before five. Then the install slot is ours.',
+    'The person who signs is in a workshop until half four. Their deputy is not on the mandate.',
+    'It is ten past two.'] },
+  'p.signoff.b':{ who:'sys', t:['At one minute past five the slot goes to whoever else wanted it, and somebody else did.'],
+    opts:[ {t:'Walk the document into the workshop and wait at the back', fx:{time:19, rep:4, bonus:1, stress:5}},
+           {t:'Get the deputy added to the mandate, properly, today', fx:{time:15, rep:3, bonus:1, stress:4}},
+           {t:'Email it and mark it high importance', fx:{time:3, rep:-3, stress:11}} ] },
+  'p.fibre.a':{ who:'sys', t:['The engineer flies in Tuesday. He is booked for two days and he is not cheap.',
+    'The fibre he is coming to terminate has not been ordered. The order sat in somebody\'s drafts.',
+    'Lead time on the fibre is three weeks. He lands in five days.'] },
+  'p.fibre.b':{ who:'sys', t:['Somebody is going to spend two expensive days in a comms room with nothing to terminate.'],
+    opts:[ {t:'Order it now, and move him to work that does exist', fx:{time:18, rep:4, bonus:1, stress:4}},
+           {t:'Order it and tell the client the date has moved', fx:{time:12, rep:3, bonus:1, stress:5}},
+           {t:'Let him come. He can do the patching.', fx:{time:5, rep:-3, stress:9}} ] },
+  'p.acad.a':{ who:'sys', t:['The academic pricing expires at midnight. After that the same licences renew at list.',
+    'List is four times academic. The difference is roughly what the project made.',
+    'The evidence they need is a letter the client has, somewhere, from 2019.'] },
+  'p.acad.b':{ who:'sys', t:['Midnight is not a target. It is a wall with a price written on the other side.'],
+    opts:[ {t:'Chase the letter now and lodge it before the deadline', fx:{time:17, rep:4, bonus:1, stress:5}},
+           {t:'Buy one seat at academic to hold the rate, then sort the rest', fx:{time:13, rep:3, bonus:1, stress:3}},
+           {t:'Raise it in tomorrow\'s stand-up', fx:{time:2, rep:-5, stress:13}} ] },
+  'p.date.a':{ who:'derek', t:['Sales have promised the 14th. It is on a slide. The client has seen the slide.',
+    'You were not in that meeting. Nobody who has done this work was in that meeting.',
+    'The 14th is possible if nothing goes wrong, and something always goes wrong.'] },
+  'p.date.b':{ who:'sys', t:['You can say so now, to one uncomfortable room, or on the 13th, to a much larger one.'],
+    opts:[ {t:'Put the real plan in writing with the risks named', fx:{time:20, rep:4, bonus:1, stress:4}},
+           {t:'Take the 14th and quietly cut the scope that would miss it', fx:{time:14, rep:2, bonus:1, stress:6}},
+           {t:'Agree to the 14th and work the weekends', fx:{time:6, rep:1, stress:13}} ] },
+  'p.derek.a':{ who:'sys', t:['Two projects need Derek on Thursday. Both were planned around him being there.',
+    'There is one Derek. Derek does not know about either of them yet.'] },
+  'p.derek.b':{ who:'derek', t:['Derek says he can do both if he leaves one at lunchtime. Derek says a lot of things on a Tuesday.'],
+    opts:[ {t:'Pick one, tell the other client today, and say why', fx:{time:16, rep:4, bonus:1, stress:4}},
+           {t:'Find out what only Derek can actually do, and hand off the rest', fx:{time:21, rep:4, bonus:1, stress:3}},
+           {t:'Let Derek try to do both', fx:{time:4, rep:-4, stress:12}} ] },
+  'p.cab.a':{ who:'sys', t:['CAB approved the change for tonight. Tonight only — the next window is in three weeks.',
+    'The approver went on annual leave at five. Their out-of-office suggests a colleague who was not at the CAB.'] },
+  'p.cab.b':{ who:'sys', t:['You can do an approved change tonight, or an unapproved one, or a change in three weeks.'],
+    opts:[ {t:'Get the deputy chair to confirm the approval stands, in writing', fx:{time:15, rep:4, bonus:1, stress:4}},
+           {t:'Do it tonight — it is approved, the approval does not expire with him', fx:{time:9, rep:2, stress:8}},
+           {t:'Push it three weeks and tell the client why', fx:{time:11, rep:2, bonus:1, stress:5}} ] },
+  'p.customs.a':{ who:'sys', t:['Nineteen switches are in customs. The paperwork has the wrong commodity code.',
+    'Go-live is a week on Monday. The client has already told their staff.'] },
+  'p.customs.b':{ who:'sys', t:['Customs is not a supplier and cannot be chased into caring.'],
+    opts:[ {t:'Get the code corrected and a broker on it today', fx:{time:18, rep:4, bonus:1, stress:5}},
+           {t:'Source nineteen switches locally at a worse price', fx:{time:14, rep:2, bonus:1, stress:6}},
+           {t:'Stage the go-live so the first floor lands on time', fx:{time:16, rep:4, bonus:1, stress:4}} ] },
   't.back.a': { who:'sys', t:['First day. Not your first day in this industry, which everyone keeps saying as though it were reassuring.',
     'Your accounts were set up by somebody who has never met you. Your display name is your email address. You are in one group and it is called "Temp".'] },
   't.back.b': { who:'sys', t:['You know exactly how to fix all of this. That is the part that stings.'],
@@ -3168,6 +3225,48 @@ const TICKETS = {
   /* The opener for a career that did NOT start at the bottom. Restricting the
      tutorial ticket to rung 0 left everybody else with no first day at all,
      and a returning senior hire has a better joke available anyway. */
+  /* ------------------- DATES, NOT FIRES (rungs 4-7) -----------------------
+     Project Team finished the 2026-08-26 ladder pass as the narrowest rung on
+     the board — 12 points between careful triage and careless, where every
+     other rung runs 15 to 24 — and it is the ONE rung a deal rate cannot fix.
+     Raising it widened the rung's own gap from 11 to 17.9 and collapsed the
+     career arc from 75% of players retiring to 35%, because every career has
+     to pass through here and by this point the ladder's difficulty budget is
+     spent. That experiment is in docs/BALANCE.md; the conclusion was that
+     anything further at this rung has to be content.
+
+     This is that content. What separates good triage from bad is the burn
+     ledger — how much MORE the careless player loses — and Project Team's
+     ratio was 1.75 against T2's 2.33. So these are dated commitments with
+     tight windows: a thing that is due, that is not on fire, and that stops
+     being possible at a specific hour whether or not anyone is looking. Miss
+     one and it is gone; there is no version of Thursday that arrives later.
+     That is the rung's whole joke and it was underweight in its own pool. */
+  'crane-is-booked': { tiers:[4,7], weight:4, sla:44, slaMult:1.5, pri:4, stress:12,
+    title:'The crane is booked for Saturday. The cabinet is still in Rotterdam.',
+    steps:[{say:'p.crane.a'},{choice:'p.crane.b'}] },
+  'signoff-before-five': { tiers:[4,7], weight:4, sla:38, slaMult:1.4, pri:4, stress:11,
+    title:'Sign-off has to be in before five or the slot goes to another client',
+    steps:[{say:'p.signoff.a'},{goto:'CONF'},{choice:'p.signoff.b'}] },
+  'engineer-lands-tuesday': { tiers:[4,7], weight:3, sla:46, slaMult:1.6, pri:4, stress:10,
+    title:'The engineer flies in Tuesday. Nobody has ordered the fibre.',
+    steps:[{say:'p.fibre.a'},{game:'subnet',diff:2},{choice:'p.fibre.b'}] },
+  'licence-window-closes': { tiers:[4,8], weight:3, sla:40, slaMult:1.5, pri:4, stress:9,
+    title:'The academic pricing expires at midnight and renews at list',
+    steps:[{say:'p.acad.a'},{choice:'p.acad.b'}] },
+  'the-date-was-promised': { tiers:[4,7], weight:4, sla:48, slaMult:1.7, pri:3, stress:10,
+    title:'Sales promised the 14th. You were not in that meeting.',
+    steps:[{say:'p.date.a'},{choice:'p.date.b'}] },
+  'two-projects-one-derek': { tiers:[4,7], weight:3, sla:52, slaMult:1.8, pri:3, stress:9,
+    title:'Two projects need Derek on Thursday. There is one Derek.',
+    steps:[{say:'p.derek.a'},{goto:'n2'},{choice:'p.derek.b'}] },
+  'change-window-tonight': { tiers:[4,8], weight:3, sla:42, slaMult:1.5, pri:4, stress:11,
+    title:'CAB approved tonight only. The approver is now on annual leave.',
+    steps:[{say:'p.cab.a'},{goto:'TERMINAL'},{choice:'p.cab.b'}] },
+  'hardware-in-customs': { tiers:[4,8], weight:3, sla:50, slaMult:1.7, pri:3, stress:8,
+    title:'Nineteen switches are in customs and go-live is a week Monday',
+    steps:[{say:'p.customs.a'},{choice:'p.customs.b'}] },
+
   'first-day-back': { tiers:[1,9], weight:1, sla:40, slaMult:2.0, pri:2, stress:5,
     title:'Your accounts were set up by somebody who has never met you',
     steps:[{say:'t.back.a'},{goto:'TERMINAL'},{choice:'t.back.b'}] },
