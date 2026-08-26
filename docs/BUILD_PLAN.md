@@ -171,13 +171,26 @@ gets many three-day windows; p25 let 24 of 24 players retire in 5.3 careers.
 Settled just above the p25/p50 midpoint: 18/24 at skill .85 in 8.1 careers,
 9/16 at skill .70 in 9.8.
 
+**T3's priorities did not mean urgency** and now do — five important-but-not-
+urgent P1s demoted, two real incidents given real clocks, `URGENCY_SLOPE`
+(-0.45) added as a ratchet with a band-ordering lint beside it.
+
+**Both verdict systems on the review screen were grading on a curve that no
+longer existed.** They read off `reviewAt` now — 0 is the fired floor, 1 is the
+promotion bar — so the same sentence means the same thing at every desk.
+
 ### What is left
 
-- **Relationship Manager** is the last weak rung: sloppy triage still clears its
-  gate in 40% of seeds where every other rung is 0-30%. Everything general has
-  been tried on it. It probably wants its own content pass rather than a dial.
-- **T3 is the one rung where priority does not imply urgency** — `corr(pri,
-  slaMult)` is -0.28 against -0.45 to -0.71 everywhere else, and its P1 band is
-  fractionally *more* patient than its P2 band. Worth an hour with the data.
-- **Craft vs triage** is still open for Josh: craft measures 3-8 points against
-  triage's 7-12. Should craft feed the day score harder?
+- **Project, Procurement and Relationship Manager.** Their sloppy p50 sits
+  within 7 points of their flawless p50, so no bar separates them cleanly.
+  Deal rate, breach tolerance, ticket-size spread, the walk budget and
+  `URGENCY_SLOPE` have all been tried; what is left is the content itself —
+  those pools need decisions with sharper consequences. Start with
+  `tools/score.js` and the burn ledger, not with a dial.
+- **Craft vs triage** is open for Josh. `tools/dials.js` now measures triage at
+  11.7 points and craft at 9.9 — much closer than the 3-vs-12 it was, because
+  `URGENT_GRACE` means more tickets actually get finished and craft only scores
+  on tickets you close. Probably no longer needs a change; worth an opinion.
+- **The bars are bisected by hand against `meta.js`.** That took four iterations
+  today. A `--careers` mode on `bars.js` that does the bisection itself would
+  pay for itself the next time the scoring moves.

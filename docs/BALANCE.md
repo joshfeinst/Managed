@@ -898,6 +898,82 @@ Settled just above the midpoint: a competent player (skill .85) retires in 18 of
 Sloppy triage clears its gate in 0-30% of seeds at eight of nine rungs, against
 50-97% before. Relationship Manager is still the weak one at 40%.
 
+## Priority has to mean urgency, and at T3 it did not
+
+The triage rule sorts by priority **first** and only breaks ties on the
+deadline, so a ticket that is valuable but in no hurry outranks one that is
+genuinely about to breach — and the player who "did the P1s first" loses the
+day doing it.
+
+T3 was full of them. TKT-4471, open 412 days. "Please close, I sorted it
+myself." A ticket whose subject is "hi", no body, no name. One blank page after
+every document, since 2019. All `pri:4`, all worth the most stakes on the board,
+not one of them urgent by its own title.
+
+| rung | P1 | P2 | P3 | P4 | corr(pri, slaMult) |
+|---|---|---|---|---|---|
+| t3, before | 1.94 | 1.86 | 1.96 | 2.28 | **-0.284** |
+| t3, after | 1.68 | 1.90 | 2.03 | 2.28 | -0.543 |
+
+Two fixes, both content and neither a dial: demote the five that are
+important-but-not-urgent, and tighten the window on the two that should have
+been urgent all along (a door badge PC 340 days up with 61 patches pending; a
+scheduled task called "temp" running at 02:00 since 2019 whose author has left).
+
+`URGENCY_SLOPE` (-0.45) is the new ratchet, alongside a band-ordering lint: P1
+tightest through P4 loosest at every rung.
+
+## The evening card was grading on a curve that no longer existed
+
+Two verdict systems on the review screen — the prose line and the PERFORMANCE
+headline — were both **absolute**: `.80` great, `.60` good, `.40` poor. That was
+fine while every rung scored in the same range and became a lie the moment the
+rungs were tuned individually.
+
+| | score | old verdict |
+|---|---|---|
+| a **flawless** Solutions Architect day | .575 | *Derek looked at your queue, then at you, then just... exhaled* / DEVELOPING (HR WORD FOR STRUGGLING) |
+| a **sloppy** Project Team day | .629 | *You closed the ones that mattered and let go of the ones that did not* / MEETS EXPECTATIONS |
+
+Banding off the promotion bar was the first attempt and wrong in the other
+direction — the bar is cleared by the best three-day window of a career, so an
+average flawless day sits below it, and nine rungs out of ten then told a
+player who had done everything right that the day got away from them.
+
+Everything reads off `reviewAt` now: **0 is the floor they fire you under, 1 is
+the bar they promote you over.** Measured across the ladder, a flawless day
+lands at 80-90% of that span and a sloppy one at 29-54%, so the bands are cut at
+100 / 70 / 40. It is the only way the same sentence can mean the same thing at
+ten desks with ten different score ranges.
+
+Found while photographing a real evening to check the previous fix, which is the
+argument for photographing it.
+
+## Where the ladder stands, 2026-08-26
+
+30 seeds x 8 days per rung, plus 24 careers:
+
+| rung | bar | flawless p50 | sloppy p50 | gap | good clears | bad clears |
+|---|---|---|---|---|---|---|
+| intern | 79% | 81% | 62% | 19 | 70% | 0% |
+| t1 | 81% | 83% | 61% | 21 | 60% | 3% |
+| t2 | 80% | 82% | 73% | 10 | 70% | 10% |
+| t3 | 80% | 78% | 59% | 19 | 43% | 3% |
+| project | 84% | 84% | 77% | 7 | 47% | 10% |
+| procure | 79% | 82% | 75% | 7 | 67% | 33% |
+| relmgr | 76% | 79% | 73% | 7 | 73% | 40% |
+| solarch | 65% | 66% | 48% | 18 | 57% | 7% |
+| vcio | 69% | 74% | 54% | 19 | 63% | 0% |
+
+Careers: **18 of 24 reach retirement at skill .85, averaging 7.4 careers; 11 of
+16 at skill .70, averaging 9.0.** Every rung's good-vs-bad gap was 3-10 points
+before this day's work and is 7-21 now.
+
+Project, Procurement and Relationship Manager are the three still worth work:
+their sloppy p50 sits within 7 points of their flawless p50, so the bar cannot
+be placed anywhere that separates them cleanly. That is a content problem — those
+pools need decisions with sharper consequences, not another dial.
+
 ## The ratchets
 
 | name | value | meaning | direction |
@@ -908,6 +984,7 @@ Sloppy triage clears its gate in 0-30% of seeds at eight of nine rungs, against
 | `TRIAGE_EDGE` | 4 | points separating good triage from bad at identical skill | may only rise |
 | `LADDER_DEBT` | {0,0} | rungs with a thin or duplicated pool | closed |
 | `WALK_BUDGET` | 62 | worst desk-to-anchor errand, in minutes | may only fall |
+| `URGENCY_SLOPE` | -0.45 | how strongly a rung's priority predicts its urgency | may only fall |
 
 Two were re-baselined on 2026-08-25 in the direction a ratchet is not supposed
 to move. Both because the old number was measured on the 4.4x bot, not because
