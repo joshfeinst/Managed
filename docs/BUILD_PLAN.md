@@ -240,9 +240,13 @@ desks are `n4`, `n5` and `n9`, which were the last free NPC anchors on the map.
 
 ### What is left
 
-- **The office is still one floor.** Every rung shares it, and the desk moving
-  across it is the only spatial progression. A second floor is the next real
-  feature, not a polish item.
+- ~~The office is still one floor.~~ **Done** — the ground floor exists, the
+  lift goes there and comes back, and every map invariant runs on every map.
+  What it is NOT yet is a place a ticket can send you: no anchor down there is
+  one a ticket uses, deliberately, because anchors resolve against the loaded
+  map. Making a ticket able to say "go to the post room" needs cross-floor
+  pricing in `walkCostFromDesk` — that is the next piece if the floor is to
+  become mechanical rather than social.
 - **`tools/ladder.js --measure` generates the balance table.** Paste it.
 - ~~The junior rungs share four boards.~~ **Done** — the pit has its own now,
   the new-starter checklist, and it is a sequence rather than a matching or a

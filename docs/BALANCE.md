@@ -1404,6 +1404,38 @@ the bottom. The draw test proves a board renders, not that it renders *inside*.
 | every board can actually be drawn | put `CX` back in the starter board |
 | the office sounds like the country it is in | put THE ELEVATOR back on the sign |
 
+## The lift goes somewhere (2026-08-26, third pass)
+
+It said IT GOES TO OTHER FLOORS since the first build and went nowhere. There is
+a ground floor now — reception, two glass meeting rooms, and the post room —
+with two people on it who do not work for you.
+
+**No anchor on that floor is one a ticket uses.** Anchors resolve against the
+LOADED map, so a `SHELF` in reception would silently steal a `goto` meant for the
+supply shelf upstairs. The lift is the single deliberate exception.
+
+`run.markerFloor` is the other half: two floors share a coordinate space, so an
+arrow set upstairs points at a cell in the post room that happens to share its
+numbers. The arrow points at the lift instead, and `gotoCheck` cannot fire on the
+wrong floor.
+
+**Every map invariant now runs on every map.** They all named `MAPS.office1` for
+the life of the project, so the second floor arrived walkable by luck rather than
+by proof.
+
+### What the harnesses could not see, and a screenshot could
+
+| | |
+|---|---|
+| a one-way lift | the worst bug the feature can have — the day runs to 17:00, every ticket is upstairs, and a player stuck in reception can only watch the clocks run out. Played now, not reasoned about. |
+| the camera did not move | you arrived with it stuck where you had been on the other floor; the floors are different heights, so the first ride down opened on two thirds of black |
+| the art was wrong twice | parcels drawn as server racks (the post room read as a second data centre); waiting-room plants drawn with the *reception desk* tile |
+
+That is the fourth time in two days a screenshot found something no harness
+could — after the board that threw on `draw()`, the clipped-looking dispatch
+line that was only mid-typewriter, and THE ELEVATOR on the sign. **Look at the
+game.** The suite proves the game is correct, not that it is right.
+
 ## The ratchets
 
 | name | value | meaning | direction |
@@ -1417,6 +1449,7 @@ the bottom. The draw test proves a board renders, not that it renders *inside*.
 | `URGENCY_SLOPE` | -0.45 | how strongly a rung's priority predicts its urgency | may only fall |
 | own tickets / own events | 22 / 5 | content whose home is that rung and nowhere lower | may only rise |
 | `MEETING_GAP` | 12 | minutes a day must leave between two meetings | may only rise |
+| `LIFT_MIN` | 4 | what a floor change costs, each way | may only rise |
 
 Two were re-baselined on 2026-08-25 in the direction a ratchet is not supposed
 to move. Both because the old number was measured on the 4.4x bot, not because
