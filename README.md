@@ -157,7 +157,8 @@ were invisible to the ones that came before them.
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 355 in-game self-tests |
+| `verify.js` | boots it and runs the 357 in-game self-tests |
+| `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
 | `visual.js` | screenshots every screen and board at four window sizes, asserting no text lands on the canvas |
 | `boards.js` | plays every minigame perfectly, carelessly and at random, and reports the spread |
 | `keys.js` | presses every key each board's how-to-play card promises, and pokes every click rect |
