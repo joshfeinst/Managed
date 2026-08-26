@@ -156,7 +156,7 @@ were invisible to the ones that came before them.
 | `visual.js` | screenshots every screen and board at four window sizes, asserting no text lands on the canvas |
 | `boards.js` | plays every minigame perfectly, carelessly and at random, and reports the spread |
 | `keys.js` | presses every key each board's how-to-play card promises, and pokes every click rect |
-| `bars.js` | where should each promotion bar sit? `--sweep` finds the deal rate that best separates good triage from bad |
+| `bars.js` | where should each promotion bar sit? `--sweep` finds the deal rate that best separates good triage from bad; `--careers --target=0.75` bisects every bar at once against the share of careers that reach retirement |
 | `gate.js` | `--ladder` measures every rung against the debt recorded in the game |
 | `score.js` | takes the day score apart into the three terms it is made of — stakes closed, realisation, burn — because `bars.js` reports the number those produce and cannot say which one moved |
 | `probe.js` | dumps what a triage rule actually closes, ticket by ticket, with what it was worth and what it cost |

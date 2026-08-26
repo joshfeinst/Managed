@@ -1002,6 +1002,31 @@ Procurement is the narrowest at 10 points, which is where Relationship Manager
 was this morning. It is the one to look at next, and `tools/score.js` plus the
 burn ledger is how.
 
+### And the bisection is a command now
+
+Hand-bisecting nine bars against `meta.js` cost four rounds today and happened
+twice. `bars.js --careers --target=0.75` does it: every bar is placed at the
+same fraction **f** of the way from its own flawless p25 to its own p50, and f
+alone is bisected until the share of careers reaching retirement hits the
+target. One dial, nine bars, each still measured against its own distribution.
+
+It converged on f=0.547 (75% retire, 10.7 careers) and its answer landed within
+a few points of the bars that were already in the file:
+
+| rung | hand-tuned | bisected |
+|---|---|---|
+| intern | 0.785 | 0.785 |
+| t1 | 0.765 | 0.760 |
+| t3 | 0.735 | 0.690 |
+| procure | 0.680 | 0.675 |
+| relmgr | 0.530 | 0.564 |
+| solarch | 0.605 | 0.601 |
+
+Two independent methods agreeing is the only evidence these numbers have ever
+had, so it is worth writing down. The shipped bars are the hand-tuned ones,
+because those are what the full battery and 24 careers were actually measured
+against; the tool is for the next time the scoring moves underneath them.
+
 ## The ratchets
 
 | name | value | meaning | direction |

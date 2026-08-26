@@ -188,6 +188,9 @@ promotion bar — so the same sentence means the same thing at every desk.
   11.7 points and craft at 9.9 — much closer than the 3-vs-12 it was, because
   `URGENT_GRACE` means more tickets actually get finished and craft only scores
   on tickets you close. Probably no longer needs a change; worth an opinion.
-- **The bars are bisected by hand against `meta.js`.** That took four iterations
-  today. A `--careers` mode on `bars.js` that does the bisection itself would
-  pay for itself the next time the scoring moves.
+- ~~The bars are bisected by hand against `meta.js`.~~ **Done** —
+  `bars.js --careers --target=0.75` places every bar at the same fraction of
+  its own [p25, p50] span and bisects that one fraction until the share of
+  careers reaching retirement hits the target. Six steps, one command. It
+  independently reproduced the hand-tuned bars to within a few points on its
+  first run, which is the cross-validation the numbers needed.

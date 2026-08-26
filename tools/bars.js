@@ -23,6 +23,8 @@ const SEEDS = +(process.argv[3] || 16);
 const DAYS  = +(process.argv[4] || 8);
 const SWEEP = process.argv.includes('--sweep');
 const WINDOW = process.argv.includes('--window');
+const CAREERS = process.argv.includes('--careers');
+const TARGET = +((process.argv.find(a => a.startsWith('--target=')) || '--target=0.75').split('=')[1]);
 async function launch(){ try { return await chromium.launch(); } catch(e){
   const base = process.env.PLAYWRIGHT_BROWSERS_PATH || '/opt/pw-browsers';
   for (const d of fs.readdirSync(base).filter(x => x.startsWith('chromium'))){
@@ -94,6 +96,103 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
       console.log(win ? '            -> ' + win.w + 'd, bar between ' + p(win.lp90).trim() +
         ' and ' + p(win.tp25).trim() + ' (now ' + r.now + 'd)\n'
         : '            -> no window separates good triage from bad (now ' + r.now + 'd)\n');
+    }
+    await browser.close(); process.exit(0);
+  }
+
+  if (CAREERS){
+    /* WHERE THE BAR BELONGS IS A QUESTION ABOUT CAREERS, NOT ABOUT DAYS.
+       This file places a bar at flawless p25, which is the right answer for one
+       eight-day stretch and too generous once a whole career is in view — a
+       career gets many three-day windows, not one. On 2026-08-26 that gap cost
+       four rounds of hand-bisection: p25 retired 24 players out of 24 in 5.3
+       careers, p50 retired 7, and the answer was somewhere in between.
+
+       So the bisection is the tool now. Each rung's bar is placed at the same
+       FRACTION f of the way from its own flawless p25 to its own p50, and f is
+       bisected until the share of players reaching retirement hits --target.
+       One dial, nine bars, each still measured against its own distribution. */
+    const target = Math.min(0.95, Math.max(0.2, TARGET));
+    console.log('BAR BISECTION — target ' + (target*100).toFixed(0) +
+                '% of careers reaching retirement\n');
+    const dist = await page.evaluate(({ SEEDS, DAYS }) => {
+      SAVE_SUSPEND = true; QUIET = true;
+      const play = (seed, skill, rung, order) => {
+        const o = []; QUIET = true; rngInit(seed); runInit(seed);
+        if (run) run.rung = rung;
+        for (let d = 0; d < DAYS && run && !run.pendingEnd; d++){
+          rollDay(); simDay(skill, { order }); if (!run) break;
+          o.push(run.perfHist[run.perfHist.length - 1]);
+          if (run.pendingEnd) break; startCommute();
+        }
+        run = null; return o;
+      };
+      const pct = (a,p) => { const b=a.slice().sort((x,y)=>x-y);
+        return b[Math.min(b.length-1, Math.floor(p/100*b.length))]; };
+      const seeds = Array.from({length:SEEDS},(_,i)=>'GATE-'+i);
+      const out = [];
+      for (let r = 0; r < ROLES.length; r++){
+        const gate = ROLES[r].gates.nextAt; if (!gate) continue;
+        const best = ds => { let b = 0;
+          for (let i = 0; i + gate.days <= ds.length; i++)
+            b = Math.max(b, ds.slice(i, i+gate.days).reduce((a,c)=>a+c,0)/gate.days);
+          return b; };
+        const t = seeds.map(s => best(play(s, 1.0, r, 'pridead')));
+        out.push({ ix:r, id:ROLES[r].id, p25:pct(t,25), p50:pct(t,50) });
+      }
+      return out;
+    }, { SEEDS, DAYS });
+    for (const d of dist)
+      console.log('  ' + d.id.padEnd(10) + ' p25 ' + (d.p25*100).toFixed(0) +
+                  '%  p50 ' + (d.p50*100).toFixed(0) + '%');
+    /* careers at a given fraction — the same loop meta.js runs, so the two
+       harnesses cannot drift apart on what "a career" means */
+    const at = async f => page.evaluate(({ dist, f, PLAYERS }) => {
+      SAVE_SUSPEND = true; QUIET = true; A.sfxVol = 0;
+      for (const d of dist){
+        const bar = d.p25 + (d.p50 - d.p25) * f;
+        ROLES[d.ix].gates.nextAt.perf = bar;
+        ROLES[d.ix].gates.firedBelow = bar * 0.45;
+      }
+      let won = 0; const lens = [];
+      for (let pl = 0; pl < PLAYERS; pl++){
+        meta = { certs:[], rep:0, conn:0, runsPlayed:0, best:{ days:0, rung:0 } };
+        let retired = false, n = 0;
+        for (let c = 0; c < 14 && !retired; c++){
+          runInit('META-'+pl+'-'+c); n++;
+          let g = 0, ending = 'timeout';
+          while (run && g++ < 80){
+            startCommute(); if (!run) break;
+            simDay(0.85, { order:'pridead', pick:'best' }); if (!run) break;
+            if (run.pendingEnd){ ending = run.pendingEnd; startCommute(); break; }
+          }
+          if (run) run = null;
+          if (ending === 'retired') retired = true;
+        }
+        if (retired){ won++; lens.push(n); }
+      }
+      QUIET = false; SAVE_SUSPEND = false;
+      return { rate: won/PLAYERS, avg: lens.length ? lens.reduce((a,c)=>a+c,0)/lens.length : 0 };
+    }, { dist, f, PLAYERS: 20 });
+    let lo = 0, hi = 1, best = null;
+    console.log('');
+    for (let i = 0; i < 6; i++){
+      const f = (lo + hi) / 2;
+      const r = await at(f);
+      console.log('  f=' + f.toFixed(3) + '  retired ' + (r.rate*100).toFixed(0) +
+                  '%  in ' + r.avg.toFixed(1) + ' careers');
+      if (!best || Math.abs(r.rate - target) < Math.abs(best.rate - target))
+        best = { f, rate:r.rate, avg:r.avg };
+      /* a HIGHER bar retires FEWER players, so the search runs backwards */
+      if (r.rate > target) lo = f; else hi = f;
+    }
+    console.log('\n  best f=' + best.f.toFixed(3) + ' -> ' + (best.rate*100).toFixed(0) +
+                '% retire in ' + best.avg.toFixed(1) + ' careers\n');
+    console.log('  put these in ROLES:');
+    for (const d of dist){
+      const bar = d.p25 + (d.p50 - d.p25) * best.f;
+      console.log('    ' + d.id.padEnd(10) + ' nextAt:{perf:' + bar.toFixed(3) +
+                  '}, firedBelow:' + (bar*0.45).toFixed(3));
     }
     await browser.close(); process.exit(0);
   }
