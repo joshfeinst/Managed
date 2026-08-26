@@ -4730,12 +4730,74 @@ function lastDayAtTop(){
   const g = ROLES[run.rung].gates;
   return !g.nextAt && !!g.retireAfterDays && run.daysAtTop === g.retireAfterDays - 1;
 }
-function commuteLine(){
-  const lines = ['The parking lot is full of cars nicer than yours. They belong to sales.',
+/* THE MOST-READ SCREEN IN THE GAME HAD FOUR LINES IN IT. Every morning of
+   every career opened on lines[(day + rung) % 4], so a fourteen-day career read
+   each of them three or four times and every rung read the same four. It is the
+   first thing you see each day and it was the thinnest content in the file.
+
+   Same shape as CHAT: a conditional list first, then the general pool. Indexed
+   by the day rather than rolled, because the commute is not a gameplay roll and
+   must not touch a seeded stream. */
+const COMMUTE = {
+  when: [
+    { if:r => r.day === 1 && r.rung === 0,
+      t:'First day. You have arrived forty minutes early and are sitting in the car so as not to seem keen.' },
+    { if:r => r.day === 1,
+      t:'First day at a new place, which at this point you have done enough times to have a routine for.' },
+    { if:r => r.burnout > 75,
+      t:'You sat in the car for eleven minutes after the engine stopped. You are not sure what happened in them.' },
+    { if:r => r.burnout > 50,
+      t:'You have started taking the long way in. You have told yourself it is about the traffic.' },
+    { if:r => r.promoted,
+      t:'Same drive, same exit, same barrier that only reads your badge on the second try. Different job.' },
+    { if:r => r.stress > 70,
+      t:'You have been composing an email in your head since the roundabout. You will not send it.' },
+    { if:r => r.rep >= 8,
+      t:'Somebody from another team held a door for you and said your name. You have no idea who they are.' },
+    { if:r => r.rep <= -3,
+      t:'You take the stairs today. The lift is a small room with people who have opinions about last week.' },
+    /* fmtDate reads days[(d-1) % 5], so day 1 is Monday and day 5 is Friday —
+       Monday is d % 5 === 1, not 0. Written as `5 % 5` first time out, which
+       is zero, which is Friday, which then shadowed the Friday line below it. */
+    { if:r => (r.day % 5) === 1 && r.day > 1,
+      t:'Monday. The queue has been quietly filling itself since Friday afternoon like a bath nobody turned off.' },
+    { if:r => (r.day % 5) === 0,
+      t:'Friday. Nothing bad has ever happened on a Friday afternoon, and everyone here has learned to say that quietly.' },
+    { if:r => r.rung >= 8,
+      t:'There is a space with your name on it now. Somebody parks in it once a week and you have decided to be fine about that.' },
+    { if:r => r.rung >= 6,
+      t:'You are on a call before you have parked. You will be on it while you walk in. It is about a thing that was decided last month.' },
+    { if:r => r.rung >= 4,
+      t:'Your calendar loaded before your email did, which tells you what sort of day is waiting.' },
+    { if:r => r.rung <= 1,
+      t:'The parking lot is full of cars nicer than yours. They belong to sales.' }
+  ],
+  any: [
     'Radio traffic report mentions your exit by name. It is not a compliment.',
     'You rehearse saying "per my last email" in the rearview mirror.',
-    'Today feels different. It is not, but it feels different.'];
-  return lines[(run.day + run.rung) % lines.length];
+    'Today feels different. It is not, but it feels different.',
+    'The barrier reads your badge on the second try, as it has since your first week.',
+    'There is a van in the loading bay that has been there long enough to have a nickname.',
+    'Somebody has left a note on the microwave. From the car park you can tell it is in capitals.',
+    'You know from the number of cars in at ten to nine exactly how the day is going to go.',
+    'The lift has a sign on it. You do not read the sign. You know what the sign says.',
+    'You pass the meeting room with the glass wall and three people are already in it, which is never good.',
+    'The coffee you bought on the way is better than the coffee inside, and you will drink both.',
+    'You have a thought about a fix for something from Tuesday and it is gone before the door.',
+    'Reception has a new plant. Reception has the same plant. You could not swear to either.',
+    'The person who arrives before everyone is already at their desk and does not look up.',
+    'Somebody in the stairwell is having a conversation they should be having somewhere else.',
+    'The building smells like toast. It always smells like toast. Nobody has ever found the toast.',
+    'You open your email in the lift, which you have promised yourself you will stop doing.',
+    'There is a printed sign about the kitchen. It has been laminated, which means somebody meant it.',
+    'The whiteboard by the door still has last quarter\'s numbers on it and a drawing of a cat.'
+  ]
+};
+function commuteLine(){
+  const hit = COMMUTE.when.find(w => { try { return w.if(run); } catch(_){ return false; } });
+  if (hit) return hit.t;
+  const pool = COMMUTE.any;
+  return pool[(run.day * 7 + run.rung * 3) % pool.length];
 }
 function fmtDate(d){
   const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
@@ -9610,6 +9672,37 @@ function selfTest(runSim){
       ok('and the office talks to a Director differently than to the intern',
          deaf.length <= 1, 'unchanged for: ' + deaf.join(' '));
       run = savedRunC;
+    }
+    /* THE MORNING CARD. Four lines used to serve an entire career, so this is
+       mostly a breadth check — but it also pins the one thing in it that can
+       be silently wrong: a line that names a weekday has to fire on that
+       weekday. fmtDate reads days[(d-1) % 5], and the Monday line was first
+       written as `day % 5 === 5 % 5`, which is zero, which is Friday. */
+    {
+      const savedRunL = run;
+      rngInit('CMT'); runInit('CMT');
+      const seen = new Set();
+      for (let rung = 0; rung < ROLES.length; rung++)
+        for (let d = 1; d <= 15; d++){
+          run.rung = rung; run.day = d; run.burnout = 10; run.stress = 20;
+          run.rep = 0; run.promoted = false;
+          seen.add(commuteLine());
+        }
+      ok('the morning card has more than a handful of lines in it',
+         seen.size >= 20, seen.size + ' distinct mornings across 10 rungs x 15 days');
+      /* and a named weekday lands on that weekday */
+      const dayOf = d => ['Monday','Tuesday','Wednesday','Thursday','Friday'][(d-1) % 5];
+      const wrong = [];
+      for (let d = 1; d <= 15; d++){
+        run.rung = 2; run.day = d; run.burnout = 10; run.stress = 20;
+        run.rep = 0; run.promoted = false;
+        const line = commuteLine();
+        for (const name of ['Monday','Tuesday','Wednesday','Thursday','Friday'])
+          if (line.indexOf(name + '.') === 0 && name !== dayOf(d)) wrong.push(name + '@day' + d);
+      }
+      ok('a morning that names a weekday happens on that weekday',
+         !wrong.length, wrong.join(' '));
+      run = savedRunL;
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could
