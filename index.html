@@ -161,9 +161,32 @@ body.queueopen .toastwrap, body.gameopen .toastwrap{top:auto; bottom:2%}
 body.screenopen .toastwrap{display:none}
 
 /* ---------------- full screens ---------------- */
-.screen{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+/* A SCREEN TALLER THAN THE WINDOW USED TO PUT ITS BUTTONS OFF THE BOTTOM AND
+   OFFER NO WAY DOWN. overflow was visible, so nothing scrolled — not the
+   screen, not the document — and a centred column simply spilled past both
+   edges. Measured on the longest review in the game (a promotion, with three
+   named casualties), NEXT DAY and SAVE & QUIT sat 15 to 32px below the fold at
+   1280x900, 1280x800, 1366x768 and 1280x720. Enter still worked, but the
+   button could not be reached with Tab and could not be clicked at all — and
+   the handbook's first promise is that the mouse plays the whole game.
+   `safe center` keeps the centring while refusing to overflow the start edge,
+   so tall content scrolls from the top instead of losing its head; the plain
+   `center` before it is the fallback for anything that does not know `safe`. */
+.screen{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; justify-content:safe center; overflow-y:auto; overscroll-behavior:contain;
   gap:clamp(10px,2.2vh,20px); padding:clamp(14px,3vh,36px); line-height:1.5; text-align:center;
   background:linear-gradient(180deg, rgba(13,15,19,.94), rgba(13,15,19,.98));}
+.screen > *{flex-shrink:0}
+/* The buttons are the only way off a screen for a mouse-only player, so they
+   never scroll out of sight: pinned to the bottom of the scrollport the moment
+   the content is taller than the window, in normal flow when it isn't. */
+.screen > .row{position:sticky; bottom:0; z-index:3; width:100%;
+  padding-block:clamp(8px,1.6vh,14px); background:rgba(13,15,19,.99);}
+/* the row itself is opaque so nothing shows through half a line of text behind
+   a button; the fade above it is what says "there is more up there" */
+.screen > .row::before{content:""; position:absolute; left:0; right:0; bottom:100%;
+  height:clamp(16px,3.2vh,30px); pointer-events:none;
+  background:linear-gradient(180deg, rgba(13,15,19,0), rgba(13,15,19,.99));}
 .screen[hidden]{display:none}
 .eyebrow{font-family:var(--pix); font-size:clamp(7px,1.15vh,10px); letter-spacing:.18em; color:var(--corp); text-transform:uppercase}
 h1.logo{font-family:var(--pix); margin:0; line-height:1.3; font-size:clamp(22px,5vh,46px); color:var(--paper);
@@ -11034,6 +11057,39 @@ function selfTest(runSim){
                (leg.scrollWidth - leg.clientWidth) : 'no leg hint');
       document.getElementById('tix').style.display = 'none';
       G.state = savedState; G.modal = savedModal; run = savedRun;
+    }
+    /* THE BUTTONS ARE THE ONLY WAY OFF A SCREEN FOR A MOUSE.
+       A promotion review with three named casualties ran 782px tall in a 768px
+       window: NEXT DAY sat below the fold, nothing scrolled, and the button
+       could not even be reached with Tab — so the only exit was Enter, which
+       the screen never mentions. Measured 15-32px past the fold at 1366x768,
+       1280x900, 1280x800 and 1280x720, i.e. at the four commonest laptops.
+       Force the overflow and prove the row is still on screen and still the
+       thing a click lands on; a wrong z-index would put the panel on top and
+       the button would be visible and dead. */
+    for (const sid of ['s-review', 's-over', 's-pause']){
+      const sc = document.getElementById(sid);
+      const row = sc && sc.querySelector(':scope > .row');
+      if (!row){ ok('ui: ' + sid + ' keeps its buttons on screen', false, 'no action row'); continue; }
+      const wasHidden = sc.hidden, keptTop = sc.scrollTop, keptHTML = row.innerHTML;
+      sc.hidden = false;
+      if (!row.querySelector('button')) row.innerHTML = '<button class="btn">NEXT DAY</button>';
+      const pad = document.createElement('div');
+      pad.style.height = (sc.clientHeight * 2 + 400) + 'px';
+      sc.insertBefore(pad, row);
+      sc.scrollTop = 0;
+      const b = row.querySelector('button'), r = b.getBoundingClientRect(),
+            box = sc.getBoundingClientRect();
+      const hit = document.elementFromPoint(Math.round(r.left + r.width / 2),
+                                            Math.round(r.top + r.height / 2));
+      const onScreen = r.bottom <= box.bottom + 1 && r.top >= box.top - 1;
+      const live = !!hit && (hit === b || b.contains(hit));
+      ok('ui: ' + sid + ' keeps its buttons on screen when it outgrows the window',
+         onScreen && live,
+         (onScreen ? '' : Math.round(r.bottom - box.bottom) + 'px past the fold; ') +
+         (live ? '' : 'click hits ' + (hit ? hit.id || hit.tagName : 'nothing')));
+      sc.removeChild(pad); row.innerHTML = keptHTML;
+      sc.scrollTop = keptTop; sc.hidden = wasHidden;
     }
     /* THE ARROW AND THE LINE BESIDE IT HAVE TO AGREE, AND THE ARROW HAS TO GO
        OUT WHEN YOU GET THERE. A player walked to the day-one arrow and it
