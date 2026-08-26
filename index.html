@@ -10750,6 +10750,52 @@ function selfTest(runSim){
       }
       run = savedRunR;
     }
+    /* THE ONE CERTIFICATE NO BOT CAN SEE. Every number in docs/BALANCE.md is
+       measured on the bare game because the bots hold no certificates, and
+       measuring them afterwards showed six of the seven meta items doing what
+       they claim — ITIL +2.2 points a day, PRINCE2 +2.3, the two reputation
+       perks correctly zero because they pay into the NEXT career.
+
+       A+ measured +0.00, and it is the only one that could be a real bug:
+       simDay never opens a board, it synthesises the score from the skill
+       dial, so a certificate that makes boards easier is invisible to every
+       harness in the repo. It could be worth ten points or nothing at all and
+       nothing would know.
+
+       It is wired — openGame reads metaFx('gameDiff') — so what this pins is
+       the wiring, board by board, since that is the part a bot cannot reach:
+       holding the certificate has to hand you a different board, and on the
+       easiest boards, where there is no difficulty left to remove, it has to
+       pay out as the forgiven slip instead of silently doing nothing. */
+    {
+      const savedMetaG = JSON.stringify(meta), savedMG = MG, savedState = G.state;
+      const shape = () => { const o = {};
+        for (const k in MG){ const v = MG[k];
+          if (typeof v === 'function' || k === 'onDone' || k === 'brief') continue;
+          o[k] = JSON.stringify(v); }
+        return JSON.stringify(o); };
+      const openWith = (id, certs) => {
+        meta = JSON.parse(savedMetaG); meta.certs = certs; meta.seenGames = meta.seenGames || {};
+        rngInit('CERT-' + id);
+        openGame(id, 3, () => {});
+        const r = { s: shape(), forgive: MG.forgive };
+        closeModalToWork();
+        return r;
+      };
+      const same = [], nopay = [];
+      for (const id in GAMES){
+        const bare = openWith(id, []), cert = openWith(id, ['aplus']);
+        if (bare.forgive !== 0 || cert.forgive !== 1) nopay.push(id + ':forgive');
+        /* either the board itself is easier, or the forgiven slip is the
+           payout — one of the two has to be true on every board */
+        if (bare.s === cert.s && cert.forgive !== 1) same.push(id);
+      }
+      meta = JSON.parse(savedMetaG); MG = savedMG; G.state = savedState;
+      ok('the practice exam changes every board it is meant to',
+         !same.length, same.join(' '));
+      ok('and pays out as a forgiven slip where it cannot',
+         !nopay.length, nopay.join(' '));
+    }
     /* A CAREER HAS TO END IN THE RIGHT PLACE FOR THE RIGHT REASON, and nothing
        in this suite had ever played one to its end. Every gate, bar, rate and
        ratchet is measured a rung at a time; the shape of a whole career — how

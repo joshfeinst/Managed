@@ -1209,6 +1209,41 @@ important thing first and working in arrival order scored the same. They are now
 Corrected in the README rather than left to rot, which is what happened to the
 last central claim.
 
+## What the meta layer is actually worth
+
+Every number in this file is measured on the bare game, because the bots hold
+no certificates. That is the honest way round — certificates make it easier from
+a known floor — but it also means nothing had ever checked that any of them
+does anything. Measured at last, 8 seeds x 4 days at every rung, skill .75:
+
+| meta item | day score | vs bare |
+|---|---|---|
+| (nothing) | 49.51% | — |
+| ITIL FOUNDATION — one more casualty forgiven | 51.66% | **+2.15** |
+| PRINCE2 — meetings take a fifth less of the day | 51.77% | **+2.26** |
+| CISSP — evenings cost you less | 49.79% | +0.29 |
+| YOU HAVE SEEN THIS ONE BEFORE — slower burnout | 49.67% | +0.16 |
+| A GUY WHO KNOWS A GUY — start higher | 49.51% | 0.00 |
+| THEY REMEMBER YOU HERE — start higher | 49.51% | 0.00 |
+| **everything at once** | **54.18%** | **+4.67** |
+
+Six of the seven are correct. The two reputation perks pay into the *next*
+career and should read zero on a day score. CISSP and the burnout perk are
+stress and burnout effects that compound across a career and cannot show up in
+four days.
+
+**A+ measured +0.00 and is the only one that could have been a real bug.**
+`simDay` never opens a board — it synthesises the score from the skill dial —
+so a certificate that makes boards easier is invisible to every harness in the
+repo. It could have been worth ten points or nothing and nothing would have
+known.
+
+It turns out to be wired correctly: `openGame` reads `metaFx('gameDiff')`,
+lowers the difficulty, and on the easiest boards, where there is no difficulty
+left to remove, pays out as a forgiven slip instead. So what the new invariant
+pins is the **wiring**, board by board, since that is precisely the part a bot
+cannot reach. Unwiring either half fails it across all eleven boards.
+
 ## The ratchets
 
 | name | value | meaning | direction |
