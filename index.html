@@ -5939,7 +5939,8 @@ function abandonScore(g){
     /* nothing is committed until submit, so an abandoned quote is worth what
        the board currently reads — not what it might have become */
     if (g.total() > g.budget) return .15;
-    return clamp(g.rows.reduce((a, r) => a + quoteLineValue(r), 0) / g.rows.length, 0, 1);
+    return clamp(g.rows.reduce((a, r) => a + quoteLineValue(r), 0) /
+                 Math.max(.001, g.best), 0, 1);
   }
   if (g.kind === 'keep'){
     /* the meters as they stand: unplayed moves are not credit for anything */
@@ -6862,7 +6863,27 @@ const GAMES = {
        quote always exists and a perfect one never does. */
     const floor = rows.reduce((a, r) => a + r.cost[r.must ? 1 : 2], 0);
     const slack = 3 + Ri('game', 5);
-    return { kind:'quote', rows, cur:0, budget: floor + slack, submitted:false,
+    const budget = floor + slack;
+    /* SCORED AGAINST THE BEST QUOTE THAT FITS, not against a perfect one that
+       does not. Marked absolutely, this board topped out near 68% — the budget
+       only ever affords two upgrades — so playing procurement flawlessly was
+       recorded as mediocre craft while every other board in the game reaches
+       100%. Measured by tools/boards.js, which is what the harness is for.
+       At most six lines, so 3^6 = 729 combinations: brute force is free and
+       exact, and "how close to the best available quote" is the right question
+       to be marked on anyway. */
+    let best = 0;
+    (function search(i, spend, val){
+      if (spend > budget) return;
+      if (i === rows.length){ best = Math.max(best, val); return; }
+      for (let t = 0; t < 3; t++){
+        rows[i].pick = t;
+        search(i + 1, spend + rows[i].cost[t], val + quoteLineValue(rows[i]));
+      }
+      rows[i].pick = 1;
+    })(0, 0, 0);
+    rows.forEach(r => r.pick = 1);
+    return { kind:'quote', rows, cur:0, budget, best, submitted:false,
       flash:0, flashTxt:'', flashOk:false, click:null,
       obj:'FINANCE HAVE GIVEN YOU A NUMBER. IT IS NOT ENOUGH.',
       hint:'UP/DOWN A LINE · 1 2 3 SETS ITS TIER · E SUBMITS',
@@ -6891,7 +6912,7 @@ const GAMES = {
             const worst = this.rows.filter(r => r.must && r.pick === 2)[0];
             if (worst){ this.forgive--; sum += .7; }
           }
-          this.score = clamp(sum / this.rows.length, 0, 1);
+          this.score = clamp(sum / Math.max(.001, this.best), 0, 1);
           this.finished = true; return;
         }
         if (press.up)   this.cur = (this.cur + this.rows.length - 1) % this.rows.length;
@@ -6971,7 +6992,17 @@ const GAMES = {
       return out.length > 0;
     };
     do {
-      const pool = RM_MOVES.slice();
+      /* COPY THE MOVES, do not borrow them. RM_MOVES.slice() is shallow, so
+         every hand held references to the same objects and `mv.done = true`
+         from one board survived into every board after it — the second game a
+         player opened was already spent, the meters never moved, and it scored
+         the same 0.667 for perfect play as for random. Two invariants passed
+         straight through it: the solvability check reads fx and never touches
+         done, and "pleasing the client is never how you do it" was green
+         because the client-first bot could not play anything at all. Found by
+         tools/boards.js, which is the only thing here that plays a board
+         twice in one process. */
+      const pool = RM_MOVES.map(m => ({ t:m.t, fx:m.fx }));
       hand = [];
       while (hand.length < dealt && pool.length)
         hand.push(pool.splice(Ri('game', pool.length), 1)[0]);

@@ -345,6 +345,53 @@ rates and bars. Adding tickets to a rung changes what a day there is worth, so
 `bars.js` and `meta.js` both get run after any content lands, not just after
 tuning.
 
+## The boards had no difficulty data at all
+
+The career bots never play a board — `simDay` synthesises a craft score from
+the skill dial — so six boards shipped with every invariant proving that
+*perfect* play scores 1.0 and nothing at all saying whether a person could get
+near it. `tools/boards.js` drives each board through three policies:
+
+```
+node tools/boards.js index.html [rounds=40]
+```
+
+| board | perfect | careless | random | gap |
+|---|---|---|---|---|
+| subnet | 100% | 17% | 14% | 83 |
+| quote | 100% | 32% | 46% | 68 |
+| keep | 100% | 70% | 74% | 30 |
+| diagram | 100% | 0% | 11% | 100 |
+| paper | 100% | 0% | 7% | 100 |
+| weekend | 100% | 0% | 38% | 100 |
+
+Perfect play must reach ~100% or the board is unwinnable; careless must not
+come within 20 points of it or there is no game in it; random is where a player
+who has not read the card starts.
+
+It found two things on its first run, neither of which any invariant could see:
+
+**KEEPING EVERYBODY was completely broken.** `RM_MOVES.slice()` is a *shallow*
+copy, so every hand held references to the same move objects and `mv.done` from
+one board survived into every board after it. The second game a player opened
+was already spent: the meters never moved and it scored the same 0.667 for
+perfect play as for random. Two invariants passed straight through it — the
+solvability check reads `fx` and never touches `done`, and "pleasing the client
+is never how you do it" was green because the client-first bot **could not play
+anything at all**. Nothing in the self-test opens a board twice in one process,
+which is exactly what this harness does.
+
+**THE SHORTFALL topped out at 68%.** Scored absolutely, the budget only ever
+affords about two upgrades, so playing procurement flawlessly was recorded as
+mediocre craft while every other board reaches 100%. It is scored against the
+best quote that *fits* now — brute-forced at generation, 3^6 = 729
+combinations, free and exact — which is the right question to be marked on
+anyway.
+
+*(The five original boards — cable, pw, jargon, script, blast — have no drivers
+here yet. They have been through several human playtest waves, which is why
+they were not the priority, but they are the obvious next thing to add.)*
+
 ## The ratchets
 
 | name | value | meaning | direction |
