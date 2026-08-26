@@ -1770,3 +1770,61 @@ numbers left in the static markup are "page 1 of 214", which is a joke, and
 That last sweep is the one worth keeping. After the handbook and the "9:15
 standup", the question "what else states a number it does not derive?" has a
 mechanical answer, and today the answer is nothing.
+
+## The buttons, the promotion, and a meeting that lied about its own length (2026-08-26, ninth pass)
+
+Four more, all found by driving the real screens rather than reading state.
+
+**A review you could not click your way out of.** The longest review in the
+game — a promotion with three named casualties — ran 782px tall in a 768px
+window. NEXT DAY sat below the fold, the screen did not scroll, and the button
+could not be reached with Tab either, so the only exit was Enter, which the
+screen never mentions. Measured 15–32px past the fold at 1366×768, 1280×900,
+1280×800 and 1280×720 — the four commonest laptops. The handbook's first
+promise is that the mouse plays the whole game. Screens scroll now and the
+action row is pinned to the bottom of the scrollport, so the buttons are on
+screen *at rest*, not only after a scroll a player has no reason to attempt.
+Guarded for the review, the exit interview and the pause screen: force each
+one taller than the window, then require the button to be inside the scrollport
+**and** to be what `elementFromPoint` returns — a wrong z-index leaves it
+visible and dead.
+
+**PROMOTED, and under it a 0% you never scored.** Promoting sets `rungSince`
+to `perfHist.length`, which is right — the new job's bar is judged on the new
+job — but it leaves the gate window empty for exactly one evening, and the
+line reported that emptiness as a measurement: *"Promotion needs 67% averaged
+over 3 days — your last 0 average 0%"*, directly beneath PROMOTED and the new
+title. Guarded from both sides, so deleting the clause cannot pass either.
+
+**E did nothing on the new-starter checklist.** The board tested `press.act`.
+The input layer has never had a flag by that name. UP and DOWN moved a
+highlight nothing could act on while the card said *"E or CLICK — do the step
+you are on"*. `tools/keys.js` exists to catch exactly this and did not, because
+its list of which keys each card promises was **hand-kept and did not include
+the one board with the bug**. It reads `GAME_BRIEF` now. Three self-tests, one
+per way this goes wrong: a board testing a flag the input layer does not have,
+a key the card promises and the board ignores, a key the board takes and the
+card never names.
+
+**A ninety-minute briefing that took twenty-six.** Fifteen event scenes
+announce how long a meeting is; ten of them announced one number and charged
+another — the vendor briefing said ninety minutes and took 26, the knowledge
+amnesty said two hours and took 18, the requirements workshop booked three
+hours and took 36. The clock is the only instrument a player has and it said
+the prose was wrong. Every scene states its length with `{cost}` now, filled
+by `openEvent` from the same `fx.time` it charged three lines earlier.
+
+### The thread through all four
+
+Same as every pass before it: *the game states a fact about itself and nothing
+re-derives it.* The new wrinkle is the harness version of the same disease —
+`tools/keys.js` claimed coverage of twelve boards and had eleven in its table,
+and the missing one was the broken one. A hand-kept list inside a test is a
+statement about the game that nothing re-derives either.
+
+### One reported bug that was not one
+
+The fired ending appeared to throw the player to the title screen after 2.4
+seconds. It does not: `bootDone()` ends with `toTitle()`, and the harness had
+driven the game before boot finished. Checked rather than filed. Harnesses now
+wait for `G.state === 'title'` before touching anything.
