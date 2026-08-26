@@ -41,9 +41,15 @@ const target = process.argv[2] || path.join(__dirname, '..', 'index.html');
     /* the objective line and the key hint are the two things a player is
        actually being instructed by; everything else is scenery */
     const obj = txt.find(t => /ARROW|PRESS|TAKE THE LIFT|QUEUE|WAITING|TERMINAL/i.test(t)) || '';
-    seen.push({ tag, obj, text: txt.slice(0, 14) });
+    /* The WHOLE screen is what the checks below run against; the slice is only
+       what gets printed. Recording the first fourteen lines meant two new
+       buttons in the HUD and the queue header pushed the ticket row off the
+       end of the record, and this harness reported that the queue was empty
+       while a screenshot of the same frame showed the ticket in it. */
+    seen.push({ tag, obj, text: txt });
     console.log('\n== ' + tag + ' ==');
-    for (const t of txt.slice(0, 14)) console.log('   | ' + t);
+    for (const t of txt.slice(0, 16)) console.log('   | ' + t);
+    if (txt.length > 16) console.log('   | ...and ' + (txt.length - 16) + ' more lines');
   };
 
   await beat('title');

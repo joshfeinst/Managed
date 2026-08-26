@@ -27,13 +27,26 @@ body{margin:0; background:var(--void); color:var(--paper); font-family:var(--bod
 canvas#view{image-rendering:pixelated; image-rendering:crisp-edges; display:block; background:#000;}
 
 /* ---------------- DOM overlays: HUD, dialogue, ticket panel ---------------- */
+/* IT WRAPS RATHER THAN CLIPS. At 400x300 the row ran past the frame and took
+   the coffee counter with it — a resource the game charges you for, warns you
+   about, and then hid on any window narrow enough to need the warning. The
+   objective banner is positioned under it, so its offset follows the HUD's
+   real height rather than a guess at one line. */
 #hud{position:absolute; left:0; right:0; top:0; display:none; justify-content:space-between;
-  align-items:center; gap:10px; padding:6px 10px; pointer-events:none;
+  align-items:center; flex-wrap:wrap; gap:2px 10px; padding:6px 10px; pointer-events:none;
   font-size:clamp(10px,1.9vh,15px);
   background:linear-gradient(180deg, rgba(8,10,13,.94) 0%, rgba(8,10,13,.86) 62%, rgba(8,10,13,0) 100%);
   text-shadow:0 1px 2px #000;}
+/* The HUD does not take clicks — except this. SAVE & QUIT lives behind the
+   pause menu and the pause menu lived behind Escape, so the one thing a
+   mouse-only player could not do mid-day was stop playing. */
+#hud #h-pause{pointer-events:auto; font-family:var(--pix); font-size:.72em; letter-spacing:.12em;
+  background:#161b21; color:var(--paper); border:1px solid var(--line); padding:5px 8px;
+  cursor:pointer; line-height:1}
+#hud #h-pause:hover{background:#1d2632; border-color:var(--corp); color:#fff}
+#hud #h-pause:focus-visible{outline:2px solid var(--corp); outline-offset:2px}
 #obj{position:absolute; left:0; right:0; top:0; display:none; justify-content:center;
-  pointer-events:none; margin-top:calc(clamp(10px,1.9vh,15px) + 14px);}
+  pointer-events:none; margin-top:calc(var(--hudh, 26px) + 4px);}
 /* An objective you cannot act on, printed over the thing you are reading. The
    banner is anchored to the top of the viewport while the panels are drawn on
    the canvas at y26..y240 of 270, so on a short window the two meet: at 400x300
@@ -50,7 +63,18 @@ body.panelopen #obj, body.screenopen #obj{display:none !important}
   pointer-events:none; padding:0 0 5px;}
 #keyhint span{font-family:var(--pix); font-size:clamp(5px,1vh,8px); letter-spacing:.05em;
   color:#9aa3b0; background:rgba(8,10,13,.8); padding:3px 8px;}
-#hud .grp{display:flex; gap:10px; align-items:center; white-space:nowrap}
+#hud .grp{display:flex; gap:4px 10px; align-items:center; white-space:nowrap; flex-wrap:wrap}
+/* Narrow enough and the words go before the numbers do: a coloured bar next to
+   a ☕ still reads, a clipped one does not, and a HUD that wraps onto a second
+   row prints itself across the panels the game draws between y26 and y240 —
+   which is the other way to lose it. It shrinks to stay on one line. */
+@media (max-width:760px){
+  #hud{font-size:clamp(8px,1.6vh,12px); gap:2px 6px; padding:4px 6px}
+  #hud .grp{gap:7px}
+  #hud .grp:last-child .lab{display:none}
+  #hud .meter{width:34px; height:7px}
+  #hud #h-pause{padding:3px 5px; letter-spacing:.02em}
+}
 #hud .lab{color:var(--dim); font-size:.78em; letter-spacing:.08em; text-transform:uppercase}
 #hud b{font-weight:700}
 #hud .meter{display:inline-block; width:58px; height:8px; background:#252b33; border:1px solid #3a424d; vertical-align:middle}
@@ -93,10 +117,24 @@ body.panelopen #obj, body.screenopen #obj{display:none !important}
   max-height:88%; overflow:auto; display:none; background:rgba(14,17,21,.97); line-height:1.45;
   border:1px solid var(--line); border-top:3px solid var(--amber);
   font-size:clamp(11px,2vh,15px); box-shadow:0 18px 50px -12px #000;}
-#tix header{display:flex; justify-content:space-between; align-items:center; padding:8px 12px;
+/* Two rows, not one: the title and the rule line were fighting over 720px and
+   both wrapped mid-phrase, which is how "SERVICE QUEUE — PROACTIVE IT" ended
+   up with "PARTNERS" on a line of its own. */
+#tix header{display:flex; flex-wrap:wrap; align-items:baseline; gap:3px 12px;
+  padding:8px 42px 8px 12px; position:relative;
   background:#191e24; border-bottom:1px solid var(--line);}
-#tix header .t{font-family:var(--pix); font-size:.7em; letter-spacing:.1em; color:var(--amber)}
-#tix header .hint{color:var(--dim); font-size:.8em}
+#tix header .t{flex:1 1 100%; font-family:var(--pix); font-size:.7em; letter-spacing:.1em;
+  color:var(--amber); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+#tix header .hint{flex:1 1 100%; color:var(--dim); font-size:.8em}
+/* The queue had no way out but Escape, and the day-one objective sends every
+   new player straight into it. The clock is frozen behind the panel, so a
+   mouse-only player was not merely stuck, they were stuck at 9:03 forever. */
+#tix header .x{position:absolute; right:8px; top:8px;
+  font-family:var(--pix); font-size:.8em; line-height:1;
+  background:#161b21; color:var(--paper); border:1px solid var(--line); padding:6px 8px;
+  cursor:pointer}
+#tix header .x:hover{background:#1d2632; border-color:var(--corp); color:#fff}
+#tix header .x:focus-visible{outline:2px solid var(--corp); outline-offset:2px}
 #tix .row{display:grid; grid-template-columns:auto auto 1fr auto; gap:10px; align-items:center;
   padding:8px 12px; border-bottom:1px dotted #2a313a; cursor:pointer}
 #tix .row:hover,#tix .row.sel{background:#1c242e}
@@ -241,11 +279,12 @@ input[type=range]{accent-color:var(--corp); width:150px}
         <span><span class="lab">stress</span> <span class="meter" id="h-stressm"><i style="width:0%"></i></span></span>
         <span><span class="lab">burnout</span> <span class="meter burn" id="h-burnm"><i style="width:0%"></i></span></span>
         <span><span class="lab">coffee</span> <b id="h-coffee">☕0</b></span>
+        <button id="h-pause" data-act="pause" aria-label="Pause, or save and quit" title="Pause · save and quit">PAUSE</button>
       </div>
     </div>
 
     <div id="obj"><span id="obj-t"></span></div>
-    <div id="keyhint"><span>WASD MOVE · SHIFT RUN · E USE &amp; TALK · TAB QUEUE · ESC PAUSE</span></div>
+    <div id="keyhint"><span>CLICK TO WALK, USE AND TALK · WASD MOVE · SHIFT RUN · E USE · TAB QUEUE · ESC PAUSE</span></div>
 
     <div id="dlg">
       <div class="who"><span id="d-name"></span> <span class="role" id="d-role"></span></div>
@@ -255,7 +294,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
     </div>
 
     <div id="tix">
-      <header><span class="t">SERVICE QUEUE — PROACTIVE IT PARTNERS</span><span class="hint" id="tix-rule"></span></header>
+      <header><span class="t">SERVICE QUEUE — PROACTIVE IT PARTNERS</span><span class="hint" id="tix-rule"></span><button class="x" data-act="closequeue" aria-label="Close the service queue">✕</button></header>
       <div id="tix-list"></div>
     </div>
 
@@ -352,10 +391,10 @@ input[type=range]{accent-color:var(--corp); width:150px}
         <div class="ctl"><span>Run (you will be running)</span><span>Hold Shift</span></div>
         <div class="ctl"><span>Talk / use / advance</span><span>E · Space · Enter · <b>or click it</b></span></div>
         <div class="ctl"><span>Dialogue choices</span><span>1 – 3 · or click the line</span></div>
-        <div class="ctl"><span>Service queue</span><span>Tab · your terminal · or click a row</span></div>
+        <div class="ctl"><span>Service queue</span><span>Tab · <b>or click your terminal</b> · ✕ or Esc to close</span></div>
         <div class="ctl"><span>Minigames</span><span>keys shown on the card · or click the answer</span></div>
         <div class="ctl"><span>How to play this minigame</span><span>H (while it is open)</span></div>
-        <div class="ctl"><span>Pause</span><span>Esc</span></div>
+        <div class="ctl"><span>Pause · save and quit</span><span>Esc · <b>or PAUSE, top right</b></span></div>
         <div class="ctl"><span>Mute music</span><span>M</span></div>
         <div class="ctl"><span>Session log (for feedback)</span><span>F1</span></div>
         <div class="ctl"><span>Run self test</span><span>F4</span></div>
@@ -5384,11 +5423,17 @@ function objectiveText(){
        reward is "Queue zero", for the fifteen minutes before 9:20. Name the
        control, say there is nothing in it, and point at the thing there
        actually is to do, which is the floor. */
-    return atTerminal() ? 'THIS IS YOUR DESK — TAB IS THE QUEUE. NOTHING IN IT YET.'
+    /* And name a control the MOUSE has. The handbook opens "the mouse plays
+       the whole game", and this line — the first instruction a new player is
+       given — offered them a key and nothing else. Clicking the green screen
+       opens the queue from the tile you are standing on, which is where this
+       line is only ever read. */
+    return atTerminal() ? 'THIS IS YOUR DESK — CLICK THE GREEN SCREEN, OR PRESS TAB. NOTHING IN IT YET.'
                         : 'FIND YOUR DESK — FOLLOW THE AMBER ARROW';
   }
   if (run.queue.length)
-    return run.queue.length + (run.queue.length === 1 ? ' TICKET WAITING' : ' TICKETS WAITING') + ' — PRESS TAB TO OPEN THE QUEUE';
+    return run.queue.length + (run.queue.length === 1 ? ' TICKET WAITING' : ' TICKETS WAITING') +
+           ' — TAB, OR CLICK YOUR TERMINAL';
   return 'QUEUE CLEAR — TALK TO PEOPLE, GET A COFFEE, BREATHE';
 }
 const DIRV = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
@@ -10165,6 +10210,9 @@ function hudUpdate(){
   bm.firstElementChild.style.width = Math.round(run.burnout) + '%';
   bm.className = 'meter burn' + (run.burnout > 75 ? ' bad' : run.burnout > 50 ? ' warn' : '');
   document.getElementById('h-coffee').textContent = '☕' + run.coffee;
+  /* the banner is placed from this, so it has to be measured, not assumed */
+  const hudEl = document.getElementById('hud');
+  if (hudEl.offsetHeight) document.getElementById('frame').style.setProperty('--hudh', hudEl.offsetHeight + 'px');
   const ot = objectiveText();
   const obj = document.getElementById('obj');
   document.getElementById('obj-t').textContent = ot;
@@ -10328,6 +10376,9 @@ function actSetup(){
 }
 function act(a){
   switch(a){
+    case 'closequeue': if (G.modal && G.modal.kind === 'tix') closeModalToWork(); break;
+    /* the HUD's only clickable thing: Escape by mouse, and with it SAVE & QUIT */
+    case 'pause': if (G.state === 'work' || G.modal) pauseGame(); break;
     case 'newrun': actSetup(); break;
     case 'reroll':
       document.getElementById('seedbox').value = 'JOB-' + (1000 + (Math.random()*9000|0));
@@ -11148,6 +11199,79 @@ function selfTest(runSim){
       /* ...and the hint sits on its own line under it, so it is never the part
          that gets cut. */
       const leg = cell && cell.querySelector('.leg');
+      /* AND THERE IS A WAY OUT OF IT THAT IS NOT A KEY. The handbook's first
+         line is "The mouse plays the whole game... Nothing needs the keyboard
+         except typing a job posting ID", and the service queue closed on
+         Escape and nothing else — no close control, no click-outside. The
+         day-one objective sends every new player straight into this panel and
+         the shift clock is frozen behind it, so a mouse-only player was not
+         merely stuck, they were stuck at 9:03 with a queue that would never
+         fill. Both exits are checked, and so is the one that must NOT close
+         it: a click on the panel you are using. */
+      {
+        const tix = document.getElementById('tix');
+        const btn = tix.querySelector('header [data-act="closequeue"]');
+        ok('ui: the service queue has a close control you can see',
+           !!btn && btn.getBoundingClientRect().width > 6,
+           btn ? Math.round(btn.getBoundingClientRect().width) + 'px' : 'no button');
+        const fake = target => ({ target, clientX:0, clientY:0 });
+        openQueue();
+        clickAdvance(fake(document.getElementById('hud') || document.body));
+        const outsideClosed = !G.modal;
+        openQueue();
+        clickAdvance(fake(tix.querySelector('header .t') || tix));
+        const insideKept = !!G.modal && G.modal.kind === 'tix';
+        if (btn) act(btn.dataset.act);
+        const buttonClosed = !G.modal;
+        ok('ui: the service queue closes without touching the keyboard',
+           outsideClosed && buttonClosed && insideKept,
+           'outside ' + outsideClosed + ' · button ' + buttonClosed +
+           ' · stays open when you click it ' + insideKept);
+        /* SAVE & QUIT lives behind the pause menu and the pause menu lived
+           behind Escape, so the one thing a mouse could not do mid-day was
+           stop playing. The HUD is pointer-events:none, so a button in it is
+           dead unless it says otherwise — check the style, not just the tag. */
+        const pb = document.getElementById('h-pause');
+        const live = pb && getComputedStyle(pb).pointerEvents !== 'none';
+        const wasHud = document.getElementById('hud').style.display;
+        hudShow(true);
+        const seen = pb && pb.getBoundingClientRect().width > 6;
+        document.getElementById('hud').style.display = wasHud;
+        const wasState = G.state, wasModal = G.modal;
+        closeModalToWork(); G.state = 'work';
+        act('pause');
+        const paused = G.state === 'pause';
+        G.state = wasState; G.modal = wasModal; hudShow(false);
+        /* AND NOTHING IN THE HUD IS LOST ON A NARROW WINDOW. The row ran past
+           the frame at 400px and took the coffee counter with it — a resource
+           the game charges you for, warns you about, and then hid on exactly
+           the windows narrow enough to need the warning. Squeeze the frame and
+           measure, because at the size this suite happens to run at it fits.
+           This is the backstop: squeezing the FRAME leaves the window wide, so
+           the narrow-window rules do not apply and what is under test is that
+           the row degrades instead of clipping. tools/visual.js resizes the
+           window for real and catches the other half — a HUD that answers a
+           narrow window by wrapping onto the panels drawn beneath it. */
+        {
+          const fr = document.getElementById('frame'), hudBox = document.getElementById('hud');
+          const keptW = fr.style.width, keptDisp = hudBox.style.display;
+          fr.style.width = '400px'; hudShow(true); hudUpdate();
+          const box = hudBox.getBoundingClientRect(), lost = [];
+          for (const el of hudBox.querySelectorAll('.grp > *')){
+            const q = el.getBoundingClientRect();
+            if (!q.width || q.right > box.right + .5 || q.left < box.left - .5)
+              lost.push((el.id || (el.textContent || '').trim()).slice(0, 12) +
+                        (q.width ? ' +' + Math.round(q.right - box.right) + 'px' : ' (0 wide)'));
+          }
+          fr.style.width = keptW; hudBox.style.display = keptDisp; hudUpdate();
+          ok('ui: nothing in the HUD is cut off on a narrow window',
+             !lost.length, lost.join(', '));
+        }
+        ok('ui: the pause menu, and SAVE & QUIT with it, can be reached by mouse',
+           !!pb && live && seen && paused,
+           'button ' + !!pb + ' · clickable ' + live + ' · drawn ' + seen + ' · pauses ' + paused);
+        openQueue();
+      }
       ok('ui: the queue row shows where a ticket sends you',
          !!leg && leg.getBoundingClientRect().height > 4 && leg.clientWidth > 40 &&
          leg.scrollWidth <= leg.clientWidth,
@@ -15835,7 +15959,8 @@ function stakesRule(){
 function writeHandbook(){
   const q = document.getElementById('tix-rule');
   if (q) q.textContent = 'P1=' + STAKES[4] + ' P2=' + STAKES[3] + ' P3=' + STAKES[2] +
-    ' P4=' + STAKES[1] + ' — you are scored on points protected · ↑↓ pick · Enter work · Esc close';
+    ' P4=' + STAKES[1] + ' — you are scored on points protected · click a row, or ↑↓ and Enter' +
+    ' · Esc or ✕ closes';
   /* WRITTEN FROM THE DATA, NOT FROM MEMORY. This paragraph used to be prose,
      and prose does not get re-measured: it said a vCIO spends "a third of the
      week" in meetings against a real meetingMin of 88 against a 480-minute
@@ -15992,7 +16117,10 @@ function clickAdvance(ev){
        click and then only listening for keys is worse than not offering it. */
     if (k === 'game'){ if (MG) MG.click = canvasPoint(ev); press.use = true; return; }
     if (k === 'dlg'){ press.use = true; return; }
-    return;                                   // the queue panel has its own rows
+    /* Rows are the panel's own business, but a click that lands OUTSIDE it is
+       a player asking to leave, and Escape used to be the only answer. */
+    if (k === 'tix' && !(t && t.closest && t.closest('#tix'))) closeModalToWork();
+    return;
   }
   if (G.state === 'work'){
     const pt = canvasPoint(ev);
