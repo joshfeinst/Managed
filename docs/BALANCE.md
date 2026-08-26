@@ -1643,3 +1643,58 @@ canvas. It counts the marker's own pixels now: 0 on the fixed build, 20 with
 the bug restored. **A driver that can only read text cannot check anything
 drawn**, and a check that cannot see the defect it is named after is worse
 than no check, because its green is mistaken for evidence.
+
+## Five more, from playing it (2026-08-26, sixth pass)
+
+All found by playing or by sweeping for a shape, none by running the suite,
+which was green throughout.
+
+**The review disagreed with itself about your own score.** "27 of 28 priority
+points banked — that ratio IS your performance", directly above "Performance
+95%". `earned`, `closed` and `burned` were each rounded for the screen while
+`dayPerf` divided the unrounded values; over 72 bot days, 48 printed a
+fraction that does not equal the percentage beside it. "23 of 23 banked"
+showed as 98% — a flawless day reported as an imperfect one. Rounding happens
+once now, before the score is taken, so the fraction on the screen IS the
+number the gate uses.
+
+There was a test for this and it passed the whole time. It checked one
+hand-made scenario whose numbers were integers and therefore always agreed,
+and it allowed a 1.5-point gap on top — **a tolerance that permitted exactly
+the contradiction the test was named after.** It drives four real bot days now
+and requires equality.
+
+Ladder re-measured: 17/24 retire in 11.6 careers against 19/24 in 11.5.
+Rounding is unbiased and the average is unchanged, so that is sample noise on
+a correctness fix.
+
+**The exit interview printed the same stat twice.** "Days survived: 8" above
+"Days on the queue: 8" — one reads `run.day`, the other `perfHist.length`, and
+across twelve real careers they were identical every single time. It counts
+days at a helpdesk rung now, which is what the game's own promotion line means
+by it ("Project Team. You are off the queue — properly off it").
+
+**The handbook was describing a different game.** "A vCIO spends a third of the
+week in them" against a `meetingMin` of 88 in a 480-minute day, which is a
+fifth. "The quiet suite upstairs" when `DESK_EXEC` is on `office1`, the same
+floor as the pit — wrong when written, and misleading once the building had a
+real second floor. The paragraph is generated from ROLES now.
+
+**The game was guessing people's gender.** `{user}` is drawn from a pool
+holding Janet, Dale, Sharon, Gary in shipping, Priya and the owner's brother,
+and four tickets wrote "he" or "she" about whoever it dealt: "Remove Sharon's
+access. All of it. He left in April." Fourteen lines, every one wrong about
+half the time, in the most-read text in the game. All neutral now, and a ticket
+that resolves `{user}` may no longer use a gendered pronoun anywhere.
+
+**Do not send a new player to an empty queue.** The HUD reads QUEUE 0 and the
+objective line said PRESS TAB TO OPEN THE QUEUE, for the fifteen minutes before
+the first ticket lands. `taughtQueue` is set the moment that ticket arrives, so
+the line could never have been true.
+
+The pattern across all five is the same one this file keeps rediscovering, in
+a new place: **the game states a fact about itself, and nothing re-derives it.**
+A ratio in prose, a stat read from the wrong field, a meeting figure written
+from memory, a pronoun for a name drawn at random, an instruction for a queue
+that is empty by construction. Each was true once, or never, and no test could
+tell because no test was reading the sentence against the number.
