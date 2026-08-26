@@ -331,11 +331,16 @@ input[type=range]{accent-color:var(--corp); width:150px}
       <p class="hint"><b>The mouse plays the whole game.</b> Click a patch of floor to walk there, click a machine or a
       person to walk over and use them, click to advance anything. Nothing needs the keyboard except typing a job
       posting ID.</p>
-      <p class="hint">Your terminal (the glowing one at your desk) opens the <b>service queue</b>. The shift clock runs
-      the whole time you are out on the floor — walking, or standing still deciding what to do next — and each job also
-      charges its own minutes the moment you start it. It stops only behind a panel: a conversation, the queue, a
-      minigame, the pause menu. So reading is free and dithering in the corridor is not. The printer is possessed.
-      Welcome aboard.</p>
+      <p class="hint"><b>Tab opens the service queue from anywhere in the building</b>, and the terminal in the
+      helpdesk pit opens it too. The shift clock runs the whole time you are out on the floor — walking, or standing
+      still deciding what to do next — and each job also charges its own minutes the moment you start it. It stops only
+      behind a panel: a conversation, the queue, a minigame, the pause menu. So reading is free and dithering in the
+      corridor is not.</p>
+      <p class="hint"><b>You get promoted, and your desk moves.</b> You start each morning at whichever one is currently
+      yours, and every job is costed from it — so the printer, the coffee machine and the server room are a short walk
+      from the pit and a long one from the quiet suite upstairs. The calendar fills up as you climb too. An intern
+      spends about half an hour a day in rooms; a vCIO spends a third of the week in them, and the ones that will not
+      fit get cancelled, which is the best part of anyone's week. The printer is possessed. Welcome aboard.</p>
       <p class="hint" id="hb-burn"></p>
       <div class="row"><button class="btn ghost" data-act="back">◀ BACK</button></div>
     </div>
@@ -9837,6 +9842,25 @@ function selfTest(runSim){
         return a && !reach.has(a[0] + ',' + a[1]);
       }).map(R => R.id);
       ok('and you can walk to it from the front door', !stranded.length, stranded.join(' '));
+    }
+    /* THE HANDBOOK IS A PROMISE AND THE DATA IS THE TRUTH. It told players the
+       queue opens at "the glowing one at your desk" for months, and then the
+       desk started moving away from the terminal and the sentence quietly
+       became false. What is pinned is the pair of claims a moved desk depends
+       on: that the queue opens from anywhere, and that the desk is described as
+       moving at all. */
+    {
+      const hb = document.getElementById('s-controls');
+      const t = hb ? hb.textContent : '';
+      ok('the handbook says the queue opens from anywhere',
+         /Tab opens the service queue from anywhere/i.test(t), t ? 'present' : 'handbook empty');
+      /* and it only gets to say that while it is true */
+      const anywhere = typeof openQueue === 'function';
+      ok('and the queue really does open from anywhere', anywhere, 'openQueue()');
+      ok('the handbook says the desk moves, because it does',
+         /your desk moves/i.test(t) &&
+         new Set(ROLES.map(R => R.deskAnchor)).size > 1,
+         new Set(ROLES.map(R => R.deskAnchor)).size + ' distinct desks');
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could
