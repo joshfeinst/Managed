@@ -3043,13 +3043,13 @@ const DIALOGUE = {
     'Nobody asks a technical question. Every question is about whether a number will still be that number in April.'] },
   'e.d.allhands':{ who:'sys', t:['You are giving the all-hands this month. Forty-one people, some of whom you hired and two of whom you let go.',
     'Somebody will ask about pay. Somebody always asks about pay, and you will not be allowed to answer properly.'] },
-  'e.d.exit':   { who:'sys', t:['An exit interview. She has been here five years and is going somewhere with a lake in the logo.',
-    'She is being polite. Six minutes in, she stops being polite, and that is when it becomes useful.'] },
+  'e.d.exit':   { who:'sys', t:['An exit interview, {cost} of it. She has been here five years and is going somewhere with a lake in the logo.',
+    'She is being polite for the first six minutes. Then she stops being polite, and that is when it becomes useful.'] },
   'e.d.goodchair':{ who:'sys', t:['Somebody has swapped your chair for the good one from the boardroom. Nobody will say who.',
     'It is the kind of thing people do when they have decided you are staying, or when they have decided you are not.'] },
   'e.d.newintern':{ who:'sys', t:['The new intern started this morning. They are sitting where you sat, at the desk with the wobble.',
     'They have been given the same laminated sheet you were given, and it is still wrong on the same line.'] },
-  'e.v.board':  { who:'sys', t:['Board meeting. You have eight minutes on an agenda of nineteen items and you are item fourteen.',
+  'e.v.board':  { who:'sys', t:['Board meeting. {Cost} in the room, of which eight are yours, on an agenda of nineteen items. You are item fourteen.',
     'Item thirteen overruns. It always overruns. It is always the same item.'] },
   'e.v.riskreg':{ who:'linda', t:['Risk register review. Forty-one risks, of which thirty-nine are amber and have been amber since we started colouring them.'],
     opts:[ {t:'Close the eleven that are not real and fight for the two that are', fx:{time:14, rep:5}},
@@ -3057,9 +3057,9 @@ const DIALOGUE = {
            {t:'Escalate the two reds and leave the amber alone', fx:{time:10, rep:3, stress:2}} ] },
   'e.v.vendorexec':{ who:'sys', t:['Vendor executive briefing. They have flown someone in. There is a jug of water per person.',
     'Somebody says "strategic partnership" and everyone writes it down as though it were information.'] },
-  'e.v.offsite':{ who:'sys', t:['Leadership offsite. A hotel with a lake. Two days on values, forty minutes on the plan.',
+  'e.v.offsite':{ who:'sys', t:['Leadership offsite. A hotel with a lake. Two days on values, {cost} on the plan.',
     'On the second afternoon somebody suggests everyone shares a failure. Nobody shares a real one.'] },
-  'e.v.oneonone':{ who:'linda', t:['One to one. She asks how you are, and she means it, and she has thirty-five minutes.',
+  'e.v.oneonone':{ who:'linda', t:['One to one. She asks how you are, and she means it, and she has {cost}.',
     'Somewhere in the last ten she will ask about succession, and she will not be asking about hers.'] },
   'e.a.review': { who:'sys', t:['Design review. Six people, one drawing, and the two who understand it are not the two who must approve it.',
     'Someone asks whether it is scalable. Nobody asks to what.'] },
@@ -3067,7 +3067,7 @@ const DIALOGUE = {
     opts:[ {t:'Hold the two back for a proper risk assessment', fx:{time:14, rep:4}},
            {t:'Wave all eleven through — the window is tonight', fx:{time:4, rep:-3, stress:10}},
            {t:'Approve nine, defer two, and say so out loud', fx:{time:10, rep:3, stress:2}} ] },
-  'e.a.workshop':{ who:'client', t:['Requirements workshop. Three hours booked. The first ninety minutes are about a printer.',
+  'e.a.workshop':{ who:'client', t:['Requirements workshop. The invite blocks out the afternoon. You are in it for {cost} and every one of them is about a printer.',
     'The printer is not in scope. The printer has never been in scope.'] },
   'e.a.postinc':{ who:'sys', t:['Post-incident review. The timeline is agreed, the cause is agreed, and the room is now deciding what to call it.',
     'There is a real finding on slide four and everybody is being extremely careful about slide four.'] },
@@ -3085,7 +3085,7 @@ const DIALOGUE = {
     'Column F is called "issues" and every cell in it says "see Ben". Ben has left.'] },
   'e.r.awards': { who:'derek', t:['Partner awards evening. We are shortlisted for something with the word "excellence" in it.',
     'There are eleven categories and fourteen partners. Everybody is shortlisted for something.'] },
-  'e.q.vendor':{ who:'sys', t:['Vendor roadmap briefing. Ninety minutes. Four of them are roadmap and the rest is a man called Gavin.',
+  'e.q.vendor':{ who:'sys', t:['Vendor roadmap briefing. {Cost}. Four of them are roadmap and the rest is a man called Gavin.',
     'Everything is "shipping in the second half". It has been shipping in the second half for two years.'] },
   'e.q.margin':{ who:'linda', t:['Margin review. Every line you have quoted this month, on a screen, with the thin ones highlighted.'],
     opts:[ {t:'Defend the thin ones — they bought the account', fx:{time:10, rep:3}},
@@ -3109,8 +3109,8 @@ const DIALOGUE = {
     'A change is approved that nobody in the room understands, on the grounds that the person who wrote it is very confident. A change is rejected because its form had the wrong date format.'] },
   'e.h.escal': { who:'linda', t:['Escalation review. Six tickets that went past T2, and why.',
     'Four of them went past T2 because T2 was in this meeting.'] },
-  'e.h.kb':    { who:'brenda', t:['Knowledge base amnesty. Two hours, no tickets, write down what you know.',
-    'It is the best two hours of the month and it will be cancelled next month for capacity reasons, and the month after that somebody will ask why nothing is documented.'] },
+  'e.h.kb':    { who:'brenda', t:['Knowledge base amnesty. {Cost}, no tickets, write down what you know.',
+    'It is the best {cost} of the month and it will be cancelled next month for capacity reasons, and the month after that somebody will ask why nothing is documented.'] },
   'e.p.standup':{ who:'mackenzie', t:['Project standup. Nine people. Four of them are here to hear one sentence that does not concern them.',
     'Somebody says "no blockers" while visibly blocked.'] },
   'e.p.slip':  { who:'sys', t:['The date has moved. Nobody moved it — it moved on its own, over three weeks, four days at a time.',
@@ -3119,7 +3119,7 @@ const DIALOGUE = {
     opts:[ {t:'Price them as changes, one by one, in front of him', fx:{time:12, rep:3}},
            {t:'Wave them through and eat the days', fx:{time:2, rep:-2, stress:9}},
            {t:'Accept three, price eight', fx:{time:8, rep:1, stress:3}} ] },
-  'e.p.steerco':{ who:'linda', t:['Steering committee. Thirty-four minutes, of which six are about the project and twenty-eight are about who says what to the client.',
+  'e.p.steerco':{ who:'linda', t:['Steering committee. {Cost}, of which six are about the project and the rest are about who says what to the client.',
     'You are asked for a number. Any number. They want it to be a Tuesday.'] },
   'e.p.lessons':{ who:'sys', t:['Lessons learned. The same four lessons as last time, learned again, written down again, in a document filed next to the last one.',
     'Lesson one is always "engage stakeholders earlier". Nobody has ever done this.'] },
@@ -3150,7 +3150,7 @@ const DIALOGUE = {
     'The rest is covered in the second induction. It is not mentioned again.'] },
   'e.pit.drill': { who:'sys', t:['The alarm goes at eleven and does not stop. It is a drill. It runs to the end whether or not you are on a call, and you are on a call.',
     'Assembly point C is the far end of the car park, past the skip. Brenda has a clipboard and reads out every name on it, including two people who left in March.',
-    'Nine minutes in light rain. Inside, on the other side of a door you are not allowed to open, {client} rings back for the third time.'] },
+    '{Cost} in light rain. Inside, on the other side of a door you are not allowed to open, {client} rings back for the third time.'] },
   'e.pit.process': { who:'sys', t:['Kayla walks you through the process. The process is a spreadsheet.',
     'A tab per client. One column is coloured and one is not, and the colours mean something. Kayla knows what they mean. The man who chose them left before the lease was renewed.',
     'Kayla asks if that is all clear. Raj says it is.'],
@@ -3159,7 +3159,7 @@ const DIALOGUE = {
            {t:'Ask Kayla afterwards, then put the key at the top of the tab', fx:{time:12, rep:1, bonus:1, stress:3}} ] },
   'e.pit.leaving': { who:'sys', t:['The kitchen at two. There is a card going round and a supermarket cake with somebody\'s name on it in icing gel.',
     'It is Priya, from Finance, after eleven years. You have not met Priya. She is the one who checks the licence counts against what the clients are billed, and she has always done it from memory.',
-    'The speeches run twenty minutes. Two people say she is the reason anything works. Nobody says who does it from Monday.'],
+    'The speeches run {cost}. Two people say she is the reason anything works. Nobody says who does it from Monday.'],
     opts:[ {t:'Ask Priya to show you the licence check before she goes, and write it down', fx:{time:14, rep:3, bonus:1, stress:4}},
            {t:'Put it to Linda afterwards that nobody has been named', fx:{time:9, rep:2, bonus:1, stress:7}},
            {t:'Sign the card in the four inches left, take a slice, go back to the queue', fx:{time:4, rep:-1, stress:3}} ] },
@@ -3169,14 +3169,14 @@ const DIALOGUE = {
 
   'e.hd1.starter': { who:'sys', t:['{Client} has a new starter. She is in reception with a lanyard, a notebook, and no account.',
     'The request came in on Friday, to the address at the bottom of Mackenzie\'s email signature. That address is a distribution list with one member, and he left in March.',
-    'The account takes ten minutes to build. She has been sitting there since nine, and she is being very good about it.'] },
-  'e.hd1.calibration': { who:'sys', t:['Quality calibration. Six of you in the small room, scoring the same recorded call so that everyone scores it the same way.',
+    'The account takes {cost} to build. She has been sitting there since nine, and she is being very good about it.'] },
+  'e.hd1.calibration': { who:'sys', t:['Quality calibration. {Cost} in the small room, six of you scoring the same recorded call so that everyone scores it the same way.',
     'The call runs four minutes. The fault is fixed by minute two. The agent did not use the caller\'s name three times, did not signpost the hold, and did not offer the branded close.',
     'It scores sixty-one. The room is asked whether it agrees.'],
     opts:[ {t:'Agree the score and write the three phrases on a card for the top of your monitor', fx:{time:12, rep:-1, stress:6}},
            {t:'Say the fault was fixed at minute two, and ask which of the other thirty-nine points the caller noticed', fx:{time:23, rep:3, bonus:1, stress:8}},
            {t:'Agree the score in the room, then offer to draft a fourth scored line for whether the fault was fixed', fx:{time:26, rep:2, bonus:1, stress:4}} ] },
-  'e.hd1.shortcuts': { who:'kayla', t:['Fifteen minutes, and you can stop escalating password resets.',
+  'e.hd1.shortcuts': { who:'kayla', t:['{Cost}, and you can stop escalating password resets.',
     'Three things. You can reset from the console without raising a ticket. Ctrl-Shift-N skips the four screens nobody reads. You can close a call from the keypad without going back to the desktop.',
     'It is ninety seconds a call. I have worked out what that comes to over a week. I have not told anyone upstairs and I am not going to.'] },
 
@@ -3193,13 +3193,13 @@ const DIALOGUE = {
     'I have made you a view. It drops anything where the last update was ours. It is saved under your name, so it is there tomorrow.',
     'That is twelve gone. They are still open. They are just not yours this afternoon.'] },
 
-  'e.hd3.blameless': { who:'sys', t:['Post-incident review for Tuesday. Nine people, an hour of the day, and the timeline up on the screen.',
+  'e.hd3.blameless': { who:'sys', t:['Post-incident review for Tuesday. Nine people, {cost} in the calendar, and the timeline up on the screen.',
     'At 14:06 the service was restarted by hand. The timeline does not say by whom. Linda gets to the end of the slide and leaves it there.',
     'It was you. It was the correct thing to do at 14:06, and it is a different sort of question at half ten on a Thursday.'],
     opts:[ {t:'Say it was you, and take the room through what 14:06 looked like at the time', fx:{time:14, rep:3, bonus:1, stress:7}},
            {t:'Ask to rebuild the timeline from the logs before anyone answers', fx:{time:24, rep:3, bonus:1, stress:3}},
            {t:'Let the pause run until Linda moves to the next slide', fx:{time:4, rep:-2, stress:9}} ] },
-  'e.hd3.amnesty': { who:'sys', t:['Knowledge amnesty. Two hours in which nothing undocumented is anyone\'s fault. Derek has brought a mug and a notebook with a rubber band round it.',
+  'e.hd3.amnesty': { who:'sys', t:['Knowledge amnesty. {Cost} in which nothing undocumented is anyone\'s fault. Derek has brought a mug and a notebook with a rubber band round it.',
     'He starts with the scheduler. The service account was his and is now nobody\'s, and the password is in an envelope in the safe in his handwriting. It is correct. He gets through eight more things without opening a laptop.',
     'Nothing is fixed. There is a page now with the scheduler on it, and Derek has stopped being the only copy.'] },
   'e.hd3.problemboard': { who:'linda', t:['Problem review. One item on the agenda. {Client} again, same fault, same time of day, since March.',
@@ -6442,6 +6442,31 @@ function makeArrival(id, at, role){
    around a token must never supply one — "before the the client call" is what
    happens when it does, and a content lint below now refuses it. */
 function fillKey(t){ return t.charAt(0).toLowerCase() + t.slice(1); }
+/* MINUTES, IN WORDS, FROM THE NUMBER THE GAME ACTUALLY CHARGES. Meetings
+   announced their own length in the prose and took a different amount of the
+   day: the vendor briefing said ninety minutes and cost twenty-six, the
+   knowledge-base amnesty said two hours and cost eighteen, the requirements
+   workshop booked three hours and cost thirty-six. A player watching the clock
+   move 9:30 to 9:56 through a "ninety minute" briefing is being lied to by the
+   only screen that can tell them anything. Events say {cost} now, filled from
+   their own fx.time, so the sentence and the clock cannot drift apart.
+   Words rather than digits because every other duration in this file is prose
+   and a numeral mid-sentence reads like a spreadsheet. */
+const NUM_WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten',
+  'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+const NUM_TENS = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+function numWord(n){
+  n = Math.round(n);
+  if (n < 0 || n >= 100) return String(n);
+  if (n < 20) return NUM_WORDS[n];
+  return NUM_TENS[Math.floor(n/10)] + (n % 10 ? '-' + NUM_WORDS[n % 10] : '');
+}
+function minsText(m){
+  m = Math.round(m);
+  if (m === 90) return 'an hour and a half';
+  if (m >= 60 && m % 60 === 0) return numWord(m / 60) + (m === 60 ? ' hour' : ' hours');
+  return numWord(m) + (m === 1 ? ' minute' : ' minutes');
+}
 function fill(s, fills){
   return s.replace(/\{(\w+)\}/g, (_,t) => {
     const v = fills[fillKey(t)];
@@ -6727,7 +6752,10 @@ function openEvent(id){
   slog('event: ' + id + (E.fx.time ? ' (-' + E.fx.time + ' min)' : ''));
   run.clock += E.fx.time || 0;                       // meetings eat the day, atomically
   if (E.fx.stress) run.stress = clamp(run.stress + E.fx.stress, 0, 100);
-  openDlg(E.scene, sceneFills(E.scene), null);
+  /* the scene states the meeting's length with {cost}, filled from the number
+     charged three lines above, so the prose cannot outlive the balance */
+  const f = sceneFills(E.scene); f.cost = minsText(E.fx.time || 0);
+  openDlg(E.scene, f, null);
 }
 function slaTick(){
   for (let i=run.queue.length-1; i>=0; i--){
@@ -10983,13 +11011,69 @@ function selfTest(runSim){
                          .map(([id]) => id);
       ok('content: no article is glued in front of a fill token',
          !bad.length, [...new Set(bad)].join(','));
-      /* and every token still has to resolve, in either case form */
+      /* and every token still has to resolve, in either case form. `cost` is
+         the exception and pays for it below: openEvent supplies it from the
+         event's own fx.time, so it has no pool and is only ever filled in an
+         event's scene. Anywhere else it reaches the player as "{cost}". */
       const unres = strings.filter(([, t]) =>
         (t.match(/\{(\w+)\}/g) || []).some(m => {
           const k = fillKey(m.slice(1,-1));
+          if (k === 'cost') return false;
           return !FILLS[k] && !Object.keys(TICKETS).some(i => TICKETS[i].fills && TICKETS[i].fills[k]);
         })).map(([id]) => id);
       ok('content: every fill token has a pool', !unres.length, [...new Set(unres)].join(','));
+      const scenes = {};
+      for (const e in EVENTS) if (EVENTS[e].scene) scenes[EVENTS[e].scene] = EVENTS[e];
+      const stray = strings.filter(([id, t]) => /\{[Cc]ost\}/.test(t) &&
+        !(scenes[id] && (scenes[id].fx || {}).time)).map(([id]) => id);
+      ok('content: {cost} is only written where an event can fill it',
+         !stray.length, [...new Set(stray)].join(','));
+    }
+    /* WHAT A MEETING SAYS IT TAKES IS WHAT IT TAKES. Five scenes announced
+       their own length and charged something else: the vendor briefing said
+       ninety minutes and cost twenty-six, the knowledge-base amnesty said two
+       hours and cost eighteen, the requirements workshop booked three hours and
+       cost thirty-six. The clock is the only instrument a player has, and it
+       said the prose was wrong. Two rules, and both matter: the FIRST duration
+       in a scene is its headline and must be the cost, and no duration anywhere
+       in it may exceed the cost — a shorter one is a part of the meeting (the
+       four-minute call inside a sixteen-minute calibration), a longer one is a
+       claim the day never honours. */
+    {
+      const W = { half:.5, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8,
+        nine:9, ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16,
+        seventeen:17, eighteen:18, nineteen:19, twenty:20, thirty:30, forty:40, fifty:50,
+        sixty:60, seventy:70, eighty:80, ninety:90, hundred:100 };
+      const NUM = new RegExp('\\b(' + Object.keys(W).join('|') +
+        ')(?:[- ](one|two|three|four|five|six|seven|eight|nine))?' +
+        '\\s+(minute|minutes|hour|hours)\\b', 'ig');
+      const val = m => ((W[m[1].toLowerCase()] || 0) + (m[2] ? (W[m[2].toLowerCase()] || 0) : 0)) *
+                       (/hour/i.test(m[3]) ? 60 : 1);
+      const off = [];
+      for (const id in EVENTS){
+        const e = EVENTS[id], node = DIALOGUE[e.scene];
+        if (!node) continue;
+        const cost = (e.fx || {}).time || 0;
+        const f = sceneFills(e.scene); f.cost = minsText(cost);
+        const found = [];
+        for (const l of (node.t || [])){
+          const text = fill(String(l), f);
+          NUM.lastIndex = 0;
+          let m; while ((m = NUM.exec(text))) found.push({ said:m[0], mins:val(m) });
+        }
+        /* A scene that WROTE {cost} must produce a duration this test can read.
+           Without this, minsText returning "26 minutes" in digits would match
+           nothing, `found` would be empty, and every case below would pass by
+           measuring nothing at all. */
+        const wrote = (node.t || []).some(l => /\{[Cc]ost\}/.test(String(l)));
+        if (wrote && !found.length){ off.push(id + ' writes {cost} and states no readable duration'); continue; }
+        if (!found.length) continue;
+        if (found[0].mins !== cost)
+          off.push(id + ' opens "' + found[0].said + '" but costs ' + cost);
+        else for (const d of found) if (d.mins > cost)
+          off.push(id + ' says "' + d.said + '" but costs ' + cost);
+      }
+      ok('content: a meeting takes as long as it says it does', !off.length, off.slice(0,3).join(' · '));
     }
     /* A pool entry like "the front desk" reads wrong at the start of a
        sentence, so a leading token must use the capitalising {Token} form. */
