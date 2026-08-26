@@ -29,7 +29,7 @@ from the first unchecked box.
 - [x] 3. Relationship Manager — you stop owning the work and own how they feel about it
 - [x] 4. Solutions Architect — you own the drawing, and the drawing outlives you
 - [x] 5. vCIO — you own a decision you made four years ago that is now everyone's ceiling
-- [ ] 6. Director of IT — finish the rung: it has 5 own tickets and needs its own meetings
+- [x] 6. Director of IT — finish the rung: it has 5 own tickets and needs its own meetings
 - [ ] 7. **Promotion scenes.** There are currently ZERO in the entire game. Nine
       gates fire and none of them says anything. `run.pendingScenes` is the hook.
 - [ ] 8. **The Big Migration.** The win condition still arrives as an unheralded
