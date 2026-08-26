@@ -1746,3 +1746,27 @@ The rule this keeps arriving at: **a test earns its green only by having been
 made to go red on the exact code that shipped the bug.** Three drafts here
 passed on a build with the defect fully restored, and each one looked like
 evidence.
+
+## Two Garys (2026-08-26, eighth pass)
+
+GARY is an NPC — "Client, was just in the area" — who walks the office on a
+schedule and carries a nameplate. `FILLS.user` dealt "Gary in shipping". So a
+ticket names Gary, the player looks up, sees GARY across the room, and goes to
+talk to him about a ticket he has never heard of.
+
+The second time. A compliance lead called Priya was renamed Noor by hand for
+exactly this, against exactly this pool. **Twice by hand is the point where a
+thing stops being something somebody remembers and becomes a lint** — matched
+on the whole value and on its first word, so "Gary in shipping" is caught by
+GARY, and it is mutation-verified by putting the old name back.
+
+Swept at the same time and clean: every event has a calendar name, a scene and
+an fx; no `ANCHOR_NAMES` entry describes an anchor no map has; no two NPCs
+share a name; every user-facing string containing a number is built from a
+constant rather than typed (zero literals with a bare number); and the only two
+numbers left in the static markup are "page 1 of 214", which is a joke, and
+"1 – 3" for dialogue choices, which is the measured maximum.
+
+That last sweep is the one worth keeping. After the handbook and the "9:15
+standup", the question "what else states a number it does not derive?" has a
+mechanical answer, and today the answer is nothing.
