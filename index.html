@@ -1815,6 +1815,12 @@ const DIALOGUE = {
            {t:'Go, declare it, and let somebody else score the tender', fx:{time:7, rep:2, bonus:1}},
            {t:'Go. It is only golf.', fx:{time:6, rep:-4, stress:5}} ] },
   /* ------------------------ PROJECT TEAM (rung 4) ------------------------- */
+  't.back.a': { who:'sys', t:['First day. Not your first day in this industry, which everyone keeps saying as though it were reassuring.',
+    'Your accounts were set up by somebody who has never met you. Your display name is your email address. You are in one group and it is called "Temp".'] },
+  't.back.b': { who:'sys', t:['You know exactly how to fix all of this. That is the part that stings.'],
+    opts:[ {t:'Fix it properly, and write down what was missing', fx:{time:15, rep:3, bonus:1, stress:3}},
+           {t:'Fix your own access and get on with the day', fx:{time:7, bonus:1, stress:2}},
+           {t:'Raise a ticket with yourself about it', fx:{time:4, rep:1, bonus:1, stress:1}} ] },
   'p.addr.a': { who:'client', t:['The new site opens Monday and needs to be on the network.',
     'You have one /24. You have had one /24 since 2014, and every time someone has needed more they have taken it out of the middle.'] },
   'p.addr.b': { who:'sys', t:['The plan is yours now. So is the next person who needs a range.'],
@@ -2710,6 +2716,12 @@ const TICKETS = {
      done the work, and the queue you came from is still running underneath
      you eating the hours you costed. Priorities here are dates, not fires.
      pri is INVERTED in this table: pri:4 renders P1 and is worth 7. */
+  /* The opener for a career that did NOT start at the bottom. Restricting the
+     tutorial ticket to rung 0 left everybody else with no first day at all,
+     and a returning senior hire has a better joke available anyway. */
+  'first-day-back': { tiers:[1,9], weight:1, sla:40, slaMult:2.0, pri:2, stress:5,
+    title:'Your accounts were set up by somebody who has never met you',
+    steps:[{say:'t.back.a'},{goto:'TERMINAL'},{choice:'t.back.b'}] },
   'the-address-plan': { tiers:[4,8], weight:4, sla:44, slaMult:2.0, pri:3, stress:7,
     title:'{client} wants the new site on the network by Monday',
     steps:[{say:'p.addr.a'},{game:'subnet',diff:2},{choice:'p.addr.b'}] },
@@ -3985,10 +3997,20 @@ const LADDER_DEBT = { thin: 0, twins: 0 };
 const SKILL_DEBT = 1;
 /* How many points of day-score separate GOOD TRIAGE from BAD at identical
    skill. This is the axis the whole game is built on, and it was asserted as a
-   bare > .10 calibrated against a single-seed reading of 24 points that no
-   multi-seed measurement has ever reproduced. Measured across 8 seeds it is 9.
-   May only RISE: the day triage stops separating, the game is a queue. */
-const TRIAGE_EDGE = 9;
+   bare > .10 calibrated against a SINGLE-SEED reading of 24 points that no
+   multi-seed measurement has ever reproduced.
+
+   It was then set to 9 from an eight-seed reading, which was the same mistake
+   in smaller print and tripped on the very next content change. Measured
+   properly the quantity moves: 8.2 at eight seeds, 5.2 at sixteen, 6.1 at
+   thirty-two, and 8.8 / 9.3 / 10.6 on three other seed families at sixteen. A
+   ratchet pinned to one reading of a number with three points of spread is a
+   ratchet that gets edited away the first time it fires, which is worse than
+   a lower one that means something.
+
+   So: 4, under the floor of everything observed, against a sixteen-seed mean.
+   May only RISE — the day triage stops separating, the game is a queue. */
+const TRIAGE_EDGE = 4;
 /* GATE HEALTH FOR THE WHOLE LADDER, AS DEBT.
 
    The project's own standard is written in the comment below: "at 76% a
@@ -4331,7 +4353,14 @@ function rollDay(){
   const perDay = {}, titlesToday = new Set();
   /* day one force-feeds the tutorial ticket after the roll, so reserve its slot
      up front — otherwise it can be dealt twice and then handed to you a third */
-  if (run.day === 1 && TICKETS['coffee-derek']) perDay['coffee-derek'] = 1;
+  /* ...AND ONLY IF YOU ARE ACTUALLY NEW. The tutorial ticket is tiers:[0,0],
+     which the eligibility filter respects and this force-feed bypassed — so a
+     career resumed at T2, or at vCIO, opened on "coffee for DEREK before the
+     standup". Careers start as high as vCIO from carried reputation, and it
+     was the most-dealt ticket at every rung in the game because of this line. */
+  const rookie = run.rung === 0;
+  const opener1 = rookie ? 'coffee-derek' : 'first-day-back';
+  if (run.day === 1 && TICKETS[opener1]) perDay[opener1] = 1;
   /* A template with no fill tokens reads the same every single time, so it gets
      one slot a day; one that names a different client each time can carry two. */
   const capOf = id => /\{\w+\}/.test(TICKETS[id].title) ? 2 : 1;
@@ -4361,9 +4390,9 @@ function rollDay(){
     /* nothing lands before the standup is over and they have found the desk */
     for (const a of arrivals) if (a.at < 34) a.at = 34 + (a.at % 9);
     arrivals.sort((a,b)=>a.at-b.at);
-    if (TICKETS['coffee-derek']){
-      seen['coffee-derek'] = (seen['coffee-derek'] || 0) + 1;
-      arrivals.unshift(makeArrival('coffee-derek', 20, role));
+    if (TICKETS[opener1]){
+      seen[opener1] = (seen[opener1] || 0) + 1;
+      arrivals.unshift(makeArrival(opener1, 20, role));
     }
   }
   /* THE LAST DAY DEALS THE BIG MIGRATION. It was a weighted draw like any
@@ -9472,6 +9501,37 @@ function selfTest(runSim){
       }
       MG = savedMG7;
     }
+    /* NOTHING IS EVER DEALT OUTSIDE ITS OWN TIERS. rollDay filters the bag by
+       tiers and then force-feeds the day-one tutorial ticket straight past the
+       filter, so a career resumed at T2 — or at vCIO, which carried reputation
+       allows — opened on "coffee for DEREK before the standup". It was the
+       most-dealt ticket at EVERY rung in the game. The general form is what is
+       guarded here, because the specific one was written on purpose. */
+    {
+      const savedRunT = run;
+      const strays = [];
+      for (let rung = 0; rung < ROLES.length; rung++){
+        for (let i = 0; i < 6; i++){
+          rngInit('TIER-' + i); runInit('TIER-' + i);
+          run.rung = rung;
+          for (let d = 0; d < 3; d++){
+            rollDay();
+            for (const a of run.plan.arrivals){
+              const t = TICKETS[a.id];
+              if (!t) { strays.push(a.id + '@?'); continue; }
+              if (rung < t.tiers[0] || rung > t.tiers[1])
+                strays.push(a.id + '@' + ROLES[rung].id);
+            }
+            startCommute();
+          }
+          run = null;
+        }
+      }
+      const uniq = [...new Set(strays)];
+      ok('no ticket is ever dealt outside its own tiers',
+         !uniq.length, uniq.slice(0, 6).join(' ') + (uniq.length > 6 ? ' +' + (uniq.length-6) : ''));
+      run = savedRunT;
+    }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could
        and did fire on the rung where it makes no sense. */
@@ -10847,8 +10907,15 @@ function selfTest(runSim){
         return b;
       };
       const bestWindow = bestWindowOf;
+      /* SIXTEEN, not eight. At eight the triage edge reads 8.2; at sixteen it
+         reads 5.2, at thirty-two 6.1, and on three other seed families at
+         sixteen it reads 8.8, 9.3 and 10.6. The quantity has a real spread of
+         about three points either side of six, so eight seeds was still a
+         sample small enough to pick a number out of the air with. */
       const SEEDS_G = ['GATE-T','GATE-T2','GATE-T3','GATE-T4',
-                       'GATE-T5','GATE-T6','GATE-T7','GATE-T8'];
+                       'GATE-T5','GATE-T6','GATE-T7','GATE-T8',
+                       'GATE-T9','GATE-T10','GATE-T11','GATE-T12',
+                       'GATE-T13','GATE-T14','GATE-T15','GATE-T16'];
       const GATE_DAYS = 8;
       /* MEAN, NOT MEDIAN. Five seeds were sampled and the median taken, and on
          two of those five the worst-triage bot outscored the best-triage one —

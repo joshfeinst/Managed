@@ -458,6 +458,49 @@ node2 node3`. Position is `visual.js`'s job.
 cable and script hit-test partly inline rather than from a declared rect, and
 the sweep says so rather than counting them as covered.
 
+## The most-dealt ticket at every rung was the intern tutorial
+
+Measured over 12 seeds x 6 days at each rung: `coffee-derek` — `tiers:[0,0]`,
+"Coffee for DEREK before the standup" — was **the single most-dealt ticket at
+all ten rungs**, 7–10% of every arrival. `rollDay` filters the bag by tiers and
+then force-feeds the day-one tutorial ticket straight past that filter, and
+careers start as high as vCIO from carried reputation. A resumed vCIO career
+opened on fetching Derek a coffee.
+
+Fixed, and the *general* form is guarded rather than the specific one, because
+the specific one was written on purpose:
+
+    no ticket is ever dealt outside its own tiers
+
+Careers that do not start at the bottom get their own opener now —
+`first-day-back`, whose accounts were set up by somebody who has never met
+them, whose display name is their email address, and who is in one group called
+"Temp".
+
+## TRIAGE_EDGE was set from a lucky sample, three hours after I wrote that down
+
+The ratchet went in at **9**, read off eight seeds. The next content change
+took it to 8.2 and tripped it. Measured properly, the quantity moves:
+
+| sample | edge |
+|---|---|
+| GATE-T x8 | 8.2 |
+| GATE-T x16 | 5.2 |
+| GATE-T x32 | 6.1 |
+| ALT x16 | 8.8 |
+| ZZ x16 | 9.3 |
+| QQ x16 | 10.6 |
+
+Roughly six, with three points of spread either side. A ratchet pinned to one
+reading of a number that moves that much is a ratchet that gets edited away the
+first time it fires — which is worse than a lower one that means something. The
+self-test samples **16 seeds** now, and `TRIAGE_EDGE` is **4**: under the floor
+of everything observed. Mutating `dayPerf` so that what you let burn stops
+counting fails five invariants including this one.
+
+The lesson is the one this file already contains, in the section about a
+single-seed reading of 24 points. It was written three hours before the 9 was.
+
 ## The ratchets
 
 | name | value | meaning | direction |
@@ -465,7 +508,7 @@ the sweep says so rather than counting them as covered.
 | `GATE_DEBT_BUDGET` | 48 | sum of the table above | may only fall |
 | `GATE_REACH` | 19 | points between flawless play and the bar it is scored against | may only fall |
 | `SKILL_DEBT` | 1 | craft separation, flawless vs mediocre | may only rise |
-| `TRIAGE_EDGE` | 9 | points separating good triage from bad at identical skill | may only rise |
+| `TRIAGE_EDGE` | 4 | points separating good triage from bad at identical skill | may only rise |
 | `LADDER_DEBT` | {0,0} | rungs with a thin or duplicated pool | closed |
 
 Two were re-baselined on 2026-08-25 in the direction a ratchet is not supposed
