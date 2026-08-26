@@ -255,9 +255,9 @@ input[type=range]{accent-color:var(--corp); width:150px}
       <h2 class="ttl">JOB POSTING</h2>
       <div class="panel" style="width:min(520px,92vw)">
         <dl class="dl">
-          <dt>Position</dt><dd>IT Intern (unpaid, "great exposure")</dd>
+          <dt>Position</dt><dd id="job-pos">IT Intern (unpaid, "great exposure")</dd>
           <dt>Company</dt><dd>Proactive IT Partners — Managed IT Services</dd>
-          <dt>Benefits</dt><dd>Coffee is free. That is the benefit.</dd>
+          <dt>Benefits</dt><dd id="job-perk">Coffee is free. That is the benefit.</dd>
         </dl>
         <p class="hint" style="margin:12px 0 6px">Job posting ID — the same ID always produces the same career. Share it.</p>
         <input type="text" id="seedbox" maxlength="18" spellcheck="false">
@@ -8125,11 +8125,46 @@ function disarmAbandon(){
   const w = document.getElementById('abandon-warn');
   if (w) w.style.display = 'none';
 }
+/* THE POSTING IS FOR THE JOB YOU ARE ACTUALLY BEING OFFERED. It was static
+   HTML — "IT Intern (unpaid, 'great exposure')" — so a player coming back at
+   Solutions Architect on the strength of a whole previous career was offered an
+   internship, on the one screen whose entire subject is what the industry
+   currently thinks you are worth. meta.carry is the number; this is the number
+   with a straight face on it. */
+const JOB_POSTING = [
+  { pos:'IT Intern (unpaid, "great exposure")',
+    perk:'Coffee is free. That is the benefit.' },
+  { pos:'1st Line Support (£38,000, "reviewed annually")',
+    perk:'Coffee is free. There is a fruit bowl on Wednesdays.' },
+  { pos:'2nd Line Support (£46,000, "or DOE")',
+    perk:'Coffee, fruit, and a healthcare plan with a £100 excess.' },
+  { pos:'3rd Line Engineer (£58,000, "we can move for the right person")',
+    perk:'The above, plus a training budget that has to be approved.' },
+  { pos:'Project Engineer (£72,000, "no two days the same")',
+    perk:'The above, plus a phone allowance you will spend on the phone.' },
+  { pos:'Procurement Specialist (£70,000, "strategic")',
+    perk:'The above. The salary is lower than the last one. Nobody mentions it.' },
+  { pos:'Client Relationship Manager (£84,000 + OTE, "commercially minded")',
+    perk:'The above, plus a bonus scheme with a gate you have not been shown.' },
+  { pos:'Solutions Architect (£110,000, "hands-off, mostly")',
+    perk:'The above, plus a car allowance and a laptop you did not choose.' },
+  { pos:'vCIO (£135,000, "trusted advisor")',
+    perk:'The above, plus the phrase "share options" in a paragraph about culture.' },
+  { pos:'Director of IT (£160,000, "own the function")',
+    perk:'The above. Nobody has mentioned hours, which is how you know.' }
+];
 function actSetup(){
   G.state = 'setup';
   disarmAbandon();
   const box = document.getElementById('seedbox');
   if (!box.value) box.value = 'JOB-' + (1000 + (Math.random()*9000|0));
+  /* the offer is for the rung the industry currently rates you at */
+  const at = clamp(startingRung(), 0, JOB_POSTING.length - 1);
+  const posEl = document.getElementById('job-pos');
+  const perkEl = document.getElementById('job-perk');
+  if (posEl)  posEl.textContent  = JOB_POSTING[at].pos;
+  if (perkEl) perkEl.textContent = JOB_POSTING[at].perk +
+    (at > 0 ? ' You have done this before, which they know, and which is why the number is what it is.' : '');
   /* one-time cert shop row */
   const old = document.getElementById('certrow');
   if (old) old.remove();
@@ -9954,6 +9989,32 @@ function selfTest(runSim){
          bottom !== top && /YET/.test(bottom) && !/YET/.test(top),
          bottom.slice(-28) + ' -> ' + top.slice(-28));
       run = savedRunP;
+    }
+    /* THE OFFER HAS TO BE FOR THE JOB. The posting screen was static markup, so
+       a player returning at Solutions Architect on the strength of a whole
+       previous career was offered an unpaid internship — on the one screen
+       whose entire subject is what the industry currently thinks you are
+       worth. */
+    {
+      const savedCarry = meta.carry;
+      const posEl = document.getElementById('job-pos');
+      const seenPos = new Set();
+      let mismatch = null;
+      for (let c = 0; c < ROLES.length; c++){
+        meta.carry = c;
+        actSetup();
+        const txt = posEl ? posEl.textContent : '';
+        seenPos.add(txt);
+        /* the posting must name the rung it is actually hiring you into */
+        const want = ROLES[clamp(startingRung(), 0, ROLES.length-1)];
+        if (c === 0 && !/Intern/i.test(txt)) mismatch = 'rung0:' + txt;
+        void want;
+      }
+      meta.carry = savedCarry; actSetup();
+      ok('the job posting is for the job you are being offered',
+         seenPos.size >= ROLES.length - 1 && !mismatch,
+         (mismatch || seenPos.size + ' distinct postings across ' + ROLES.length + ' carries'));
+      show(null); G.state = 'title';
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could
