@@ -869,28 +869,28 @@ const ROLES = [
     gates:{ nextAt:{perf:0.53, days:3}, firedBelow:0.24, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:30, slaScale:1.0 }, deskAnchor:'TERMINAL' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
-    gates:{ nextAt:{perf:0.41, days:3}, firedBelow:0.18, cert:null },
+    gates:{ nextAt:{perf:0.39, days:3}, firedBelow:0.18, cert:null },
     queue:{ ratePerHr:2.8, meetingMin:34, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
-    gates:{ nextAt:{perf:0.42, days:3}, firedBelow:0.19, cert:null },
+    gates:{ nextAt:{perf:0.39, days:3}, firedBelow:0.18, cert:null },
     queue:{ ratePerHr:2.8, meetingMin:40, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
     gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
     queue:{ ratePerHr:2.8, meetingMin:48, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
-    gates:{ nextAt:{perf:0.42, days:3}, firedBelow:0.19, cert:null },
+    gates:{ nextAt:{perf:0.39, days:3}, firedBelow:0.18, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:60, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
     gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:68, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.37, days:3}, firedBelow:0.18, cert:null },
+    gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:78, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
     gates:{ nextAt:{perf:0.36, days:3}, firedBelow:0.16, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:84, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'vcio',   title:'vCIO',          pay:135000,
-    gates:{ nextAt:{perf:0.39, days:3}, firedBelow:0.18, cert:null },
+    gates:{ nextAt:{perf:0.41, days:3}, firedBelow:0.18, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:88, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
     gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.16, cert:null },
@@ -2387,6 +2387,20 @@ const DIALOGUE = {
     'The tab called Findings is not empty. It is never empty. It is not supposed to be empty.'] },
   'e.q.qbr':   { who:'derek', t:['Supplier QBR. They present our own spend back to us as if we had not been there when we spent it.',
     'There is a slide called "Partnership". It has a photograph of a bridge on it.'] },
+  'e.h.queue': { who:'linda', t:['Queue review. Linda reads the numbers out to the people who generated them.',
+    'Yours are fine. She reads them anyway, in full, and then reads out the target you already met, in case you want to meet it again.'] },
+  'e.h.buddy': { who:'raj', t:['You are shadowing Raj today. Raj is shadowing you at the same time, which nobody has acknowledged.',
+    'He solves something in forty seconds by knowing which of two identical buttons is the real one. You ask how he knows. He says "you just know", which is the entire knowledge base.'] },
+  'e.h.script':{ who:'mackenzie', t:['A new call script. It opens by thanking the caller for their patience before they have shown any.',
+    'There is a line in it you are required to say that is not true on Tuesdays. Everyone has spotted this. It goes live Monday.'] },
+  'e.h.oncall':{ who:'derek', t:['On-call handover. Two people were on call last night and both thought it was the other one.',
+    'Nothing happened, which is being treated as evidence that the arrangement works.'] },
+  'e.h.cab':   { who:'sys', t:['Change advisory board. Your first one. You are here to observe.',
+    'A change is approved that nobody in the room understands, on the grounds that the person who wrote it is very confident. A change is rejected because its form had the wrong date format.'] },
+  'e.h.escal': { who:'linda', t:['Escalation review. Six tickets that went past T2, and why.',
+    'Four of them went past T2 because T2 was in this meeting.'] },
+  'e.h.kb':    { who:'brenda', t:['Knowledge base amnesty. Two hours, no tickets, write down what you know.',
+    'It is the best two hours of the month and it will be cancelled next month for capacity reasons, and the month after that somebody will ask why nothing is documented.'] },
   'e.p.standup':{ who:'mackenzie', t:['Project standup. Nine people. Four of them are here to hear one sentence that does not concern them.',
     'Somebody says "no blockers" while visibly blocked.'] },
   'e.p.slip':  { who:'sys', t:['The date has moved. Nobody moved it — it moved on its own, over three weeks, four days at a time.',
@@ -3140,6 +3154,19 @@ const TICKETS = {
    moment the clock passes them — the queue does not care. */
 const EVENTS = {
   'standup':  { when:{at:10, chance:.9},  scene:'e.standup', fx:{time:8, stress:2} },
+  /* THE HELPDESK LADDER HAD ONE CALENDAR FOR FOUR RUNGS. Every senior rung got
+     five bespoke meetings and intern through T3 shared a single ungated pool,
+     so the first four promotions — the ones players actually live through —
+     changed the tickets and never the week. These are the meetings the
+     helpdesk is actually made of: someone reading the numbers out, the rota,
+     and the first time anybody lets you near a change. */
+  'h.queue':  { when:{at:22,  chance:.34, tiers:[1,3]}, scene:'e.h.queue',  fx:{time:12, stress:4} },
+  'h.buddy':  { when:{at:150, chance:.26, tiers:[1,2]}, scene:'e.h.buddy',  fx:{time:16, stress:3} },
+  'h.script': { when:{at:268, chance:.22, tiers:[1,3]}, scene:'e.h.script', fx:{time:14, stress:5} },
+  'h.oncall': { when:{at:38,  chance:.28, tiers:[2,4]}, scene:'e.h.oncall', fx:{time:15, stress:6} },
+  'h.cab':    { when:{at:206, chance:.24, tiers:[2,4]}, scene:'e.h.cab',    fx:{time:22, stress:5} },
+  'h.escal':  { when:{at:120, chance:.26, tiers:[3,5]}, scene:'e.h.escal',  fx:{time:19, stress:7} },
+  'h.kb':     { when:{at:330, chance:.20, tiers:[3,5]}, scene:'e.h.kb',     fx:{time:18, stress:-3} },
   /* PROJECT TEAM. The calendar is the job now: every one of these is a meeting
      about whether a date is still true, which is a different kind of day from
      the helpdesk's interruptions. */
@@ -4060,8 +4087,8 @@ const GATE_DEBT = {
      performance FALLS as a career runs on — burnout compounds and the nights
      give back less — so a rung reached on day 12 is played by a worse player
      than the same rung would be on day 3. That is the next problem. */
-  tight: { intern:2, t1:3, t2:4, t3:4, project:6, procure:4,
-           relmgr:6, solarch:4, vcio:5 },
+  tight: { intern:2, t1:5, t2:3, t3:2, project:6, procure:3,
+           relmgr:6, solarch:4, vcio:3 },
   /* seeds out of 12 on which SLOPPY play clears it anyway.
      THIS COLUMN WENT UP, 2026-08-26, and it is not the regression it looks
      like. It was zero on every rung because the bars were so high that
@@ -4072,8 +4099,8 @@ const GATE_DEBT = {
      now backs into a promotion on 1-4 seeds in 12. That is the real number and
      it may only fall from here.
      vCIO's 4/12 is the worst of them and the one to fix first. */
-  loose: { intern:1, t1:1, t2:1, t3:1, project:0, procure:2,
-           relmgr:2, solarch:1, vcio:1 }
+  loose: { intern:1, t1:2, t2:0, t3:1, project:0, procure:2,
+           relmgr:2, solarch:2, vcio:2 }
 };
 /* 45. The loose column is one seed in twelve on eight rungs of nine — bad
    triage almost never promotes now, where a week ago it did so on up to four
@@ -4088,7 +4115,7 @@ const GATE_DEBT = {
    DIRECTOR on 6 of 24 players, at an average of 14.7 careers against 12.6.
    The game got harder because it got bigger. Shrinking the new content back
    out of the queue would have bought the number and lost the rungs. */
-const GATE_DEBT_BUDGET = 48;      /* six bespoke boards + their tickets, 2026-08-26 */
+const GATE_DEBT_BUDGET = 46;      /* helpdesk meetings + bars re-cut, 2026-08-26 */
 /* How many POINTS short of its own bar flawless play falls at the intern gate.
    19 on 2026-08-25 21:0x, the first measurement ever taken with the bot walking
    at a player's speed. Every earlier number in this file — GATE_DEBT above,
@@ -4147,6 +4174,9 @@ const DUCK_DEBT = .55;         // burnout per point of stress dodged rather than
 /* what the calendar invite is actually called */
 const EV_NAMES = {
   standup:'morning standup', allhands:'all-hands', pizza:'pizza in the kitchen',
+  'h.queue':'queue review', 'h.buddy':'shadowing Raj', 'h.script':'new call script',
+  'h.oncall':'on-call handover', 'h.cab':'change advisory board',
+  'h.escal':'escalation review', 'h.kb':'knowledge base amnesty',
   'p.standup':'project standup', 'p.slip':'the date has moved',
   'q.vendor':'vendor roadmap briefing', 'q.margin':'margin review',
   'q.chase':'the chase list', 'q.audit':'licence audit', 'q.qbr':'supplier QBR',

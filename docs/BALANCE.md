@@ -501,6 +501,36 @@ counting fails five invariants including this one.
 The lesson is the one this file already contains, in the section about a
 single-seed reading of 24 points. It was written three hours before the 9 was.
 
+## Four rungs shared one calendar
+
+Every senior rung got five bespoke meetings when it was built. Intern through
+T3 shared a single ungated pool of twelve — so the first four promotions, the
+ones players actually live through, changed the tickets and never the week.
+
+Seven helpdesk meetings now: the queue review where Linda reads your numbers
+back to you, shadowing Raj (who is shadowing you at the same time, which nobody
+has acknowledged), the new call script with a line in it that is not true on
+Tuesdays, the on-call handover where two people were on call and both thought
+it was the other one, your first change advisory board, the escalation review
+where four of the six went past T2 because T2 was in this meeting, and the
+knowledge base amnesty that will be cancelled next month for capacity reasons.
+
+**The meeting budget absorbed them, which is what it is for.** Adding seven
+events to rungs 1–5 moved the actual load only as far as each rung's cap
+allows — T2 from 23 to 33 minutes against a 40-minute budget — so the *variety*
+rose and the *cost* did not run away. More meetings to draw from, the same
+week.
+
+Bars were re-derived per the matched-pair rule. `GATE_DEBT` **48 → 46**, and
+`meta.js` improved: **7 of 24 players reach retirement at 12.4 careers**,
+against 6 of 24 at 14.7.
+
+Relationship Manager remains the marginal rung. Its good-versus-bad gap reads
+between 7 and 12 points across runs at 24 seeds, which straddles the healthy
+line, so its bar reads "misplaced" on some sweeps and not others. That is
+measurement noise around a genuinely narrow gap, not a bar that needs moving
+again — it is the rung to look at next if anything here gets looked at.
+
 ## The ratchets
 
 | name | value | meaning | direction |
