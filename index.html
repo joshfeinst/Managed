@@ -3681,7 +3681,7 @@ const TICKETS = {
     title:'"THE PHONES ARE DOWN" — {client}',
     steps:[{say:'t1.phones.a'},{goto:'n2'},{say:'t1.phones.b'},{choice:'t1.phones.c'}] },
   'onboarding-by-seating-chart': { tiers:[1,4], weight:3, sla:52, slaMult:2.1, pri:1, stress:8,
-    title:'New starter needs everything — starts in 40 minutes',
+    title:'New starter needs everything and is already in reception',
     steps:[{say:'t1.onb.a'},{choice:'t1.onb.b'},{goto:'SHELF'},{say:'t1.onb.c'}] },
   'make-email-bigger': { tiers:[1,3], weight:3, sla:32, slaMult:1.8, pri:2, stress:4,
     title:'Make the email bigger. Only the email.',
@@ -4260,8 +4260,14 @@ const TICKETS = {
   'quick-question': { tiers:[0,9], weight:3, sla:33, slaMult:1.9, pri:2, stress:5,
     title:'{User} has a "quick question"',
     steps:[{choice:'t.quick.a'}] },
+  /* Was "demo in 5". The queue row prints the ticket's real window two columns
+     to the right of its title, and that window is 185 minutes — so the row
+     said five and eighty-five at the same time. Mackenzie can still say FIVE
+     MINUTES in t.tv.a, because that is a man panicking and the game is not
+     vouching for him; the title is the game's own voice and does not get a
+     number the row will contradict. */
   'conference-tv': { tiers:[0,9], weight:2, sla:24, slaMult:1.4, pri:4, stress:9, from:'mackenzie',
-    title:'Conference TV won\'t mirror — demo in 5',
+    title:'Conference TV won\'t mirror and they are already in the room',
     steps:[{say:'t.tv.a'},{goto:'CONF'},{game:'cable',diff:2},{say:'t.tv.b'}] },
   'spam-filter': { tiers:[0,8], weight:2, sla:52, slaMult:1.9, pri:2, stress:5,
     title:'{client}: spam filter has chosen chaos',
@@ -14776,6 +14782,34 @@ function selfTest(runSim){
       dlg = keepDlg; G.state = keepState; G.modal = keepModal;
       ok('no scene shows the player a {token} it failed to fill', !raw.length,
          raw.length + ': ' + raw.slice(0, 4).join(' · '));
+    }
+    /* A TITLE DOES NOT GET A COUNTDOWN. The queue row prints the ticket's real
+       window two columns to the right of its title. "Conference TV won't
+       mirror — demo in 5" was dealt with a 185-minute window, so one row said
+       five and a hundred and eighty-five at once; "New starter needs
+       everything — starts in 40 minutes" was dealt with 119.
+
+       Only shift-clock countdowns. "fourteen weeks", "in nine days", "in two
+       years" and "eleven minutes fast" are all fine — they are facts about the
+       world, not claims about the number beside them. A CHARACTER may still
+       panic in dialogue: Mackenzie says FIVE MINUTES in t.tv.a and the game is
+       not vouching for him. This is the game's own voice. */
+    {
+      const WORDS = 'one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty';
+      /* One or two digits only. \\d+ flagged "decommissioned in 2022" and
+         "organiser left in 2022" — a lint that reports five non-problems to
+         find two real ones is the kind this file has already had to delete
+         once. A year is not a countdown. */
+      const N = '(?:\\d{1,2}|' + WORDS + ')';
+      const CLOCKY = new RegExp(
+        '\\bin\\s+' + N + '\\s*(?:minutes?|mins?)\\b' +   // "in 40 minutes"
+        '|\\bin\\s+' + N + '\\s*$' +                        // "demo in 5"
+        '|\\bin\\s+' + N + '\\s*[—–-]', 'i');               // "in 5 — ..."
+      const shouting = [];
+      for (const id in TICKETS)
+        if (CLOCKY.test(TICKETS[id].title)) shouting.push(id + ': "' + TICKETS[id].title + '"');
+      ok('no ticket title states a countdown the row will contradict',
+         !shouting.length, shouting.length + ': ' + shouting.slice(0, 3).join(' · '));
     }
     /* NOBODY IN THE BUILDING IS ALSO A NAME IN A POOL. This has been fixed by
        hand twice — a compliance lead called Priya against the {user} pool's
