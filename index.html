@@ -4853,7 +4853,7 @@ const LEGEND = {
      art, no anchor, no act. The store room was built with S first and came
      out full of server racks: the reception-floor-as-data-centre mistake,
      made a second time, three comment lines below the note about it. */
-  'h':{o:30}, 'v':{o:14},
+  'h':{o:30, act:'stores'}, 'v':{o:14, act:'vending'},
   't':{o:19}, 'k':{o:21}, 'A':{o:22, act:'arcade', anchor:'ARCADE'},
   'C':{o:23, act:'cooler', anchor:'COOLER'}, 'F':{o:24},
   'U':{o:25, act:'couch'}, 'N':{o:26}, 'H':{o:30, act:'shelf', anchor:'SHELF'},
@@ -6830,6 +6830,17 @@ const PROP_LINES = {
     'THE HEALTHY SHELF IS FULL. IT HAS BEEN FULL SINCE INSTALLATION.',
     'PRICES WENT UP IN MARCH. THE STICKER SAYING SO WENT UP IN JULY.'
   ],
+  /* The stationery store. A ground floor full of rooms you cannot poke at is
+     scenery, and this game's whole first pillar is that walking somewhere is
+     supposed to be worth something when you get there. */
+  stores: [
+    'FOUR HUNDRED BLUE BIROS. NO BLACK ONES. THERE HAVE NEVER BEEN BLACK ONES.',
+    'A SHELF OF VGA CABLES. NOTHING IN THIS BUILDING HAS HAD A VGA PORT SINCE 2019.',
+    'THE LABEL MAKER IS HERE. THE LABEL MAKER TAPE IS NOT.',
+    'SIX IDENTICAL BOXES MARKED "MISC". ONE OF THEM IS SOMEBODY\'S LUNCH.',
+    'THE SPARE KEYBOARD HAS A KEY MISSING. IT HAS BEEN THE SPARE FOR NINE YEARS.',
+    'THE CABINET IS LOCKED AND THE KEY IS ON TOP OF THE CABINET.'
+  ],
   parcels: [
     'NINETEEN BOXES. FOUR PURCHASE ORDERS. THE MATHS HAS NEVER ONCE WORKED.',
     'ONE IS ADDRESSED TO A COMPANY THAT LEFT THIS BUILDING IN 2021. IT KEEPS COMING.',
@@ -6953,6 +6964,7 @@ function interact(act){
       break;
     case 'vending': toast(propLine('vending'), 'corp', 2200); break;
     case 'parcels': toast(propLine('parcels'), 'corp', 2800); break;
+    case 'stores':  toast(propLine('stores'), 'corp', 2600); break;
     case 'window': toast(propLine('window'), 'corp', 2800); break;
     case 'cooler': toast(propLine('cooler'), 'corp', 2000); break;
     case 'printer': toast(propLine('printer'), 'corp', 2600); break;
