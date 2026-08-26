@@ -313,11 +313,43 @@ Three, all in the F4 gate block, all the same disease — **one sample**:
 Both re-baselines below move a ratchet the wrong way. Neither is a loosening:
 the old numbers were measured with a statistic that could not reproduce itself.
 
+## After the six bespoke boards (2026-08-26)
+
+Rungs 4–9 each got a board of their own. That is eleven new tickets in the
+senior pools, and a bigger pool is a bigger denominator, so the same play
+protects a smaller share of it. Bars were re-derived and all nine rungs read
+healthy on `tools/bars.js` (24 seeds × 12 days). Through `gate.js`'s harsher
+12-seed, 8-day window the debt is **48, up from 45**.
+
+| rung | bar | floor | flawless misses | sloppy clears |
+|---|---|---|---|---|
+| intern | 53% | .24 | 2/12 | 1/12 |
+| t1 | 41% | .18 | 3/12 | 1/12 |
+| t2 | 42% | .19 | 4/12 | 1/12 |
+| t3 | 38% | .17 | 4/12 | 1/12 |
+| project | 42% | .19 | 6/12 | 0/12 |
+| procure | 38% | .17 | 4/12 | 2/12 |
+| relmgr | 37% | .18 | 6/12 | 2/12 |
+| solarch | 36% | .16 | 4/12 | 1/12 |
+| vcio | 39% | .18 | 5/12 | 1/12 |
+
+`tools/meta.js`, 24 players: **6 of 24 reach retirement**, best rung DIRECTOR,
+average 14.7 careers to a win — against 8 of 24 at 12.6 before the boards.
+
+The game got harder because it got bigger. The alternative was to drop the new
+tickets' weights so they rarely deal, which buys the number back and loses the
+rungs — a signature board nobody is shown is not content.
+
+**The rule this establishes:** content and bars are the same matched pair as
+rates and bars. Adding tickets to a rung changes what a day there is worth, so
+`bars.js` and `meta.js` both get run after any content lands, not just after
+tuning.
+
 ## The ratchets
 
 | name | value | meaning | direction |
 |---|---|---|---|
-| `GATE_DEBT_BUDGET` | 52 | sum of the table above | may only fall |
+| `GATE_DEBT_BUDGET` | 48 | sum of the table above | may only fall |
 | `GATE_REACH` | 19 | points between flawless play and the bar it is scored against | may only fall |
 | `SKILL_DEBT` | 1 | craft separation, flawless vs mediocre | may only rise |
 | `TRIAGE_EDGE` | 9 | points separating good triage from bad at identical skill | may only rise |

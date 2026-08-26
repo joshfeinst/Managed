@@ -878,19 +878,19 @@ const ROLES = [
     gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
     queue:{ ratePerHr:2.8, meetingMin:48, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
-    gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
+    gates:{ nextAt:{perf:0.42, days:3}, firedBelow:0.19, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:60, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
-    gates:{ nextAt:{perf:0.4, days:3}, firedBelow:0.18, cert:null },
+    gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:68, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.41, days:3}, firedBelow:0.18, cert:null },
+    gates:{ nextAt:{perf:0.37, days:3}, firedBelow:0.18, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:78, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
-    gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
+    gates:{ nextAt:{perf:0.36, days:3}, firedBelow:0.16, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:84, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'vcio',   title:'vCIO',          pay:135000,
-    gates:{ nextAt:{perf:0.42, days:3}, firedBelow:0.19, cert:null },
+    gates:{ nextAt:{perf:0.39, days:3}, firedBelow:0.18, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:88, slaScale:0.96 }, deskAnchor:'TERMINAL' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
     gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.16, cert:null },
@@ -1271,6 +1271,12 @@ const DIALOGUE = {
     opts:[ {t:'Own it and do it properly', fx:{time:11, rep:2, bonus:1, stress:4}},
            {t:'Own it and give it to Raj', fx:{time:4, rep:-1, bonus:1, stress:2}},
            {t:'Refuse, and say which team it belongs to', fx:{time:6, rep:1, bonus:1, stress:5}} ] },
+  'd.week.a': { who:'sys', t:['Somebody has to be here on Saturday.',
+    'Raj has his sister\'s thing. Brenda has done the last three. Kayla has not been asked yet, which is its own kind of answer, and you know exactly why nobody asked her.'] },
+  'd.week.b': { who:'sys', t:['Whoever you put on that rota finds out from the rota.'],
+    opts:[ {t:'Ring each of them yourself, first, before it goes out', fx:{time:19, rep:4, bonus:1, stress:5}},
+           {t:'Send the rota with the reasoning in it', fx:{time:9, rep:1, bonus:1, stress:3}},
+           {t:'Send the rota', fx:{time:3, rep:-3, stress:6}} ] },
   't9.cut.a':   { who:'client', t:['{client}\'s cutover is Saturday. The rollback plan is one sentence long.',
     'The sentence is "restore from backup". You wrote that sentence, once, nine rungs ago, and someone approved it then too.'] },
   't9.cut.b':   { who:'sys', t:['You are not a pair of hands in somebody else\'s window any more. You are the signature.'],
@@ -2447,7 +2453,7 @@ const TICKETS = {
      2.6 was saying the opposite in the only units the queue reads. */
   'cutover-weekend': { tiers:[9,9], weight:4, sla:70, slaMult:1.5, pri:4, stress:10,
     title:'{client} cutover is Saturday and the rollback plan is one sentence',
-    steps:[{say:'t9.cut.a'},{choice:'t9.cut.b'},{say:'t9.cut.c'}] },
+    steps:[{say:'t9.cut.a'},{game:'weekend',diff:2},{choice:'t9.cut.b'},{say:'t9.cut.c'}] },
   'vault-succession': { tiers:[9,9], weight:3, sla:64, slaMult:2.5, pri:3, stress:8,
     title:'Legal want a named successor for the password vault',
     steps:[{say:'t9.vault.a'},{choice:'t9.vault.b'}] },
@@ -2946,6 +2952,9 @@ const TICKETS = {
      nothing can be escalated. Every ticket here is a thing only you can sign,
      and the cost of signing it lands on people whose names you know. Five
      tickets already existed; these nine complete the rung. */
+  'whose-weekend-is-it': { tiers:[9,9], weight:3, sla:44, slaMult:1.9, pri:3, stress:9,
+    title:'Somebody has to be here on Saturday and everybody has plans',
+    steps:[{say:'d.week.a'},{game:'weekend',diff:1},{choice:'d.week.b'}] },
   'the-owner-wants-a-word': { tiers:[9,9], weight:4, sla:32, slaMult:1.6, pri:4, stress:11,
     title:'The owner would like a word. He has made the coffee himself.',
     steps:[{say:'d.owner.a'},{goto:'CONF'},{choice:'d.owner.b'}] },
@@ -4029,8 +4038,8 @@ const GATE_DEBT = {
      performance FALLS as a career runs on — burnout compounds and the nights
      give back less — so a rung reached on day 12 is played by a worse player
      than the same rung would be on day 3. That is the next problem. */
-  tight: { intern:2, t1:3, t2:4, t3:4, project:4, procure:6,
-           relmgr:5, solarch:4, vcio:3 },
+  tight: { intern:2, t1:3, t2:4, t3:4, project:6, procure:4,
+           relmgr:6, solarch:4, vcio:5 },
   /* seeds out of 12 on which SLOPPY play clears it anyway.
      THIS COLUMN WENT UP, 2026-08-26, and it is not the regression it looks
      like. It was zero on every rung because the bars were so high that
@@ -4041,14 +4050,23 @@ const GATE_DEBT = {
      now backs into a promotion on 1-4 seeds in 12. That is the real number and
      it may only fall from here.
      vCIO's 4/12 is the worst of them and the one to fix first. */
-  loose: { intern:1, t1:1, t2:1, t3:1, project:1, procure:1,
-           relmgr:1, solarch:1, vcio:2 }
+  loose: { intern:1, t1:1, t2:1, t3:1, project:0, procure:2,
+           relmgr:2, solarch:1, vcio:1 }
 };
 /* 45. The loose column is one seed in twelve on eight rungs of nine — bad
    triage almost never promotes now, where a week ago it did so on up to four
    seeds in twelve. It cost two seeds of flawless reach at project and relmgr,
    which is the right way round for a promotion gate to be wrong. */
-const GATE_DEBT_BUDGET = 45;      /* top-rung ticket cost + senior bars, 2026-08-26 */
+/* 48, UP FROM 45, and a ratchet moving the wrong way needs its reason in
+   writing. Six bespoke boards landed at rungs 4-9 and brought eleven tickets
+   with them; a bigger pool is a bigger denominator, so the same play protects
+   a smaller share of it. Bars were re-derived from tools/bars.js and all nine
+   rungs read healthy there (24 seeds x 12 days); this is the same build seen
+   through gate.js's harsher 12-seed, 8-day window. tools/meta.js still reaches
+   DIRECTOR on 6 of 24 players, at an average of 14.7 careers against 12.6.
+   The game got harder because it got bigger. Shrinking the new content back
+   out of the queue would have bought the number and lost the rungs. */
+const GATE_DEBT_BUDGET = 48;      /* six bespoke boards + their tickets, 2026-08-26 */
 /* How many POINTS short of its own bar flawless play falls at the intern gate.
    19 on 2026-08-25 21:0x, the first measurement ever taken with the bot walking
    at a player's speed. Every earlier number in this file — GATE_DEBT above,
@@ -5941,6 +5959,19 @@ function abandonScore(g){
     const left = g.qs.length - g.at;
     return clamp((g.credit + left) / g.qs.length - g.bluffed * .12, 0, 1);
   }
+  if (g.kind === 'weekend'){
+    /* nothing is committed until the rota goes out, so an abandoned board is
+       worth what is on it — with the unassigned rows worth nothing */
+    let good = 0;
+    const over = [];
+    for (let p = 0; p <= g.staff.length; p++)
+      if (g.loadOf(p) > g.capOf(p)) over.push(p);
+    for (const t of g.tasks){
+      if (t.to < 0 || !g.canDo(t.to, t) || over.includes(t.to)) continue;
+      good += t.to >= g.staff.length ? .6 : 1;
+    }
+    return clamp(good / Math.max(1, g.tasks.length), 0, 1);
+  }
   if (g.kind === 'script'){
     /* the best it could still finish at: every remaining box banked honestly
        and the call resolved, each of which costs one more turn */
@@ -6109,6 +6140,26 @@ const BOARD_QS = [
   { q:'How many licences are we not using?',                  ev:'A reclaim in April returned 90 seats' },
   { q:'What does good look like in twelve months?',           ev:'The three-year plan puts consolidation in year two' }
 ];
+/* The Director's board. Three people with names, a weekend, and more work
+   than the weekend holds. Skills decide who CAN do a thing; capacity decides
+   how much you can ask before they are done. You are always an option, and
+   that is the trap rather than the escape hatch. */
+const WK_SKILLS = ['NETWORK', 'SERVERS', 'THE CLIENT'];
+const WK_STAFF = [
+  { name:'RAJ',    skills:['NETWORK', 'SERVERS'] },
+  { name:'BRENDA', skills:['SERVERS', 'THE CLIENT'] },
+  { name:'KAYLA',  skills:['NETWORK', 'THE CLIENT'] }
+];
+const WK_TASKS = [
+  { t:'The cutover itself',              s:'SERVERS',    w:2 },
+  { t:'Sit with the client all Saturday',s:'THE CLIENT', w:2 },
+  { t:'Re-address the branch',           s:'NETWORK',    w:2 },
+  { t:'Be on the bridge call',           s:'THE CLIENT', w:1 },
+  { t:'Rack the replacement switch',     s:'NETWORK',    w:1 },
+  { t:'Restore the test copy first',     s:'SERVERS',    w:1 },
+  { t:'Write the rollback and mean it',  s:'SERVERS',    w:1 },
+  { t:'Answer the phone on Sunday',      s:'THE CLIENT', w:1 }
+];
 /* --------------------------- how to play each one -------------------------
    A minigame that opens straight into a live board with a six-pixel hint bar
    is a game assuming you have already played it. Every one of these now opens
@@ -6242,6 +6293,21 @@ const GAME_BRIEF = {
     watch: 'Every wrong card is TRUE — about something else. Citing one is worse ' +
            'than conceding, and conceding a question you could have answered is ' +
            'only a small loss.'
+  },
+  weekend: {
+    what: 'More weekend work than the weekend holds. Give every job to somebody ' +
+          'who can actually do it, without asking more of them than the bar ' +
+          'above their name allows.',
+    keys: [
+      ['UP / DOWN', 'move down the jobs'],
+      ['1 2 3', 'give it to that person'],
+      ['4', 'take it yourself'],
+      ['E', 'submit the rota'],
+      ['', 'the letters under a name are what they can do']
+    ],
+    watch: 'A rota that works without you always exists. Taking one yourself is ' +
+           'allowed and never full marks; asking somebody past their bar is worth ' +
+           'nothing at all.'
   },
   blast: {
     what: 'You can make this change. That was never the question. The question ' +
@@ -7240,6 +7306,138 @@ const GAMES = {
           wrapTxt(this.flashTxt, 240, 236, 340, this.flashOk ? '#4ade80' : '#d64541', 6);
       } };
   }},
+  /* -------------------------- WHOSE SATURDAY (DIRECTOR) -------------------
+     Nothing here can be escalated, because there is nobody above you. The
+     board is an assignment with names on it: who CAN do a thing is skills, how
+     much you may ask of them before they are done is capacity, and you are
+     always an option. Doing it yourself is never invalid and never full marks
+     — it is the Director's failure mode with a friendly face on it, and it is
+     rationed to two, because you have a life, allegedly. */
+  weekend: { init(diff){
+    const k = 4 + Math.min(diff, 2);
+    let tasks = null, staff = null, guard = 0;
+    const solvable = (ts, st) => {
+      /* can the named people alone cover it? YOU is the fallback, not the plan */
+      const load = st.map(() => 0);
+      const walk = i => {
+        if (i >= ts.length) return true;
+        for (let p = 0; p < st.length; p++){
+          if (!st[p].skills.includes(ts[i].s)) continue;
+          if (load[p] + ts[i].w > st[p].cap) continue;
+          load[p] += ts[i].w;
+          if (walk(i + 1)) return true;
+          load[p] -= ts[i].w;
+        }
+        return false;
+      };
+      return walk(0);
+    };
+    do {
+      /* Caps were 3-4 against four jobs, which every random deal satisfied by
+         accident — the solvability guard was insurance nothing ever claimed
+         on, and deleting it changed no measurement. Six jobs against 2-3 units
+         a head is tight enough that a random weekend often cannot be staffed
+         at all, so the guard is load-bearing and a test can see it. */
+      staff = WK_STAFF.map(p => ({ name:p.name, skills:p.skills.slice(),
+                                   cap: 2 + Ri('game', 2) }));
+      const pool = WK_TASKS.slice();
+      tasks = [];
+      while (tasks.length < k && pool.length){
+        const t = pool.splice(Ri('game', pool.length), 1)[0];
+        tasks.push({ t:t.t, s:t.s, w:t.w, to:-1 });
+      }
+    } while (!solvable(tasks, staff) && guard++ < 80);
+    /* YOU are index staff.length — every skill, and two units of weekend */
+    return { kind:'weekend', tasks, staff, you:{ name:'YOU', cap:2 },
+      cur:0, submitted:false, flash:0, flashTxt:'', flashOk:false, click:null,
+      obj:'FIVE THINGS. ONE WEEKEND. EVERYBODY HAS A NAME.',
+      hint:'UP/DOWN A JOB · 1-3 GIVES IT TO SOMEONE · 4 TAKES IT YOURSELF · E SUBMITS',
+      rowRect(i){ return [70, 108 + i*17, 340, 15]; },
+      loadOf(p){ return this.tasks.reduce((a, t) => a + (t.to === p ? t.w : 0), 0); },
+      capOf(p){ return p < this.staff.length ? this.staff[p].cap : this.you.cap; },
+      nameOf(p){ return p < 0 ? '—' : p < this.staff.length ? this.staff[p].name : this.you.name; },
+      canDo(p, t){ return p >= this.staff.length || this.staff[p].skills.includes(t.s); },
+      btns: [ { x:340, y:214, w:130, h:16, k:'send', cap:'E  SUBMIT THE ROTA' } ],
+      act(k){ if (k === 'send') this.send(); },
+      give(p){
+        const t = this.tasks[this.cur]; if (!t) return;
+        t.to = t.to === p ? -1 : p; sfx('ui');
+      },
+      send(){
+        if (this.tasks.some(t => t.to < 0)){
+          this.flash = .9; this.flashOk = false;
+          this.flashTxt = 'SOMETHING ON THAT LIST HAS NOBODY AGAINST IT.'; sfx('err'); return;
+        }
+        this.submitted = true; this.flash = .6; this.flashOk = true;
+        this.flashTxt = 'THE ROTA GOES OUT.'; sfx('ui');
+      },
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.submitted){
+          if (this.flash > 0) return;
+          let good = 0;
+          const over = [];
+          for (let p = 0; p <= this.staff.length; p++)
+            if (this.loadOf(p) > this.capOf(p)) over.push(p);
+          for (const t of this.tasks){
+            if (t.to < 0) continue;
+            if (!this.canDo(t.to, t)) continue;              // they cannot do it
+            if (over.includes(t.to)) continue;               // you asked too much
+            good += t.to >= this.staff.length ? .6 : 1;      // yours is not free
+          }
+          if (this.forgive && good < this.tasks.length){ this.forgive--; good += .4; }
+          this.score = clamp(good / this.tasks.length, 0, 1);
+          this.finished = true; return;
+        }
+        if (press.up)   this.cur = (this.cur + this.tasks.length - 1) % this.tasks.length;
+        if (press.down) this.cur = (this.cur + 1) % this.tasks.length;
+        if (press.one)   this.give(0);
+        if (press.two)   this.give(1);
+        if (press.three) this.give(2);
+        if (press.four)  this.give(this.staff.length);
+        let go = press.use;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (let i = 0; i < this.tasks.length; i++)
+            if (inRect(pt, ...this.rowRect(i))) this.cur = i;
+          for (const b of this.btns)
+            if (inRect(pt, b.x - b.w/2, b.y, b.w, b.h)) go = true;
+        }
+        if (go) this.send();
+      },
+      draw(){
+        mgPanel('WHOSE SATURDAY', this.hint);
+        txt(this.obj, 240, 56, '#8d8778', 6, 'center');
+        /* the people, and how much of them is left */
+        const all = this.staff.concat([this.you]);
+        all.forEach((p, i) => {
+          const x = 72 + i*86, y = 70;
+          const load = this.loadOf(i), cap = this.capOf(i), busted = load > cap;
+          txt(p.name, x, y, busted ? '#d64541' : '#c9c4b8', 6);
+          ctx.fillStyle = '#161b21'; ctx.fillRect(x, y + 5, 74, 7);
+          ctx.fillStyle = busted ? '#d64541' : load === cap ? '#ffb02e' : '#4ade80';
+          ctx.fillRect(x, y + 5, Math.min(74, 74 * load / cap), 7);
+          ctx.strokeStyle = '#343b44'; ctx.strokeRect(x + .5, y + 5.5, 73, 6);
+          txt(load + '/' + cap, x + 74, y + 20, busted ? '#d64541' : '#8d8778', 5, 'right');
+          txt(i < this.staff.length ? p.skills.map(sk => sk[0]).join('') : 'ALL',
+              x, y + 20, '#6b6559', 5);
+        });
+        this.tasks.forEach((t, i) => {
+          const [rx, ry, rw, rh] = this.rowRect(i);
+          if (i === this.cur){ ctx.fillStyle = '#1d2530'; ctx.fillRect(rx, ry, rw, rh); }
+          ctx.strokeStyle = i === this.cur ? '#2f7fbe' : '#252c34';
+          ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
+          txt(t.t, rx + 6, ry + 10, '#c9c4b8', 6);
+          txt(t.s + ' ×' + t.w, rx + 214, ry + 10, '#6b6559', 5);
+          const ok = t.to < 0 ? null : this.canDo(t.to, t);
+          txt(this.nameOf(t.to), rx + rw - 6, ry + 10,
+              t.to < 0 ? '#4a4740' : ok === false ? '#d64541'
+              : t.to >= this.staff.length ? '#ffb02e' : '#4ade80', 6, 'right');
+        });
+        if (this.flash > 0)
+          wrapTxt(this.flashTxt, 240, 236, 340, this.flashOk ? '#4ade80' : '#d64541', 6);
+      } };
+  }},
   blast: { init(diff){
     /* the group you are changing is not also one of its own members: it comes
        out of the pool before anything is built from it */
@@ -7430,7 +7628,8 @@ const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
                     quote:'THE SHORTFALL',
                     keep:'KEEPING EVERYBODY',
                     diagram:'THE DIAGRAM',
-                    paper:'THE BOARD PAPER' };
+                    paper:'THE BOARD PAPER',
+                    weekend:'WHOSE SATURDAY' };
 function mgPanel(title, hint){
   ctx.fillStyle = 'rgba(8,10,13,.88)'; ctx.fillRect(0,0,VW,VH);
   ctx.fillStyle = '#12161b'; ctx.fillRect(60, 26, 360, 214);
@@ -9179,6 +9378,68 @@ function selfTest(runSim){
            ' vs bluff it ' + (oneBluff/Math.max(1,m)).toFixed(3) + ' over ' + m + ' papers');
       }
       MG = savedMG6;
+    }
+    /* WHOSE SATURDAY promises a rota that works WITHOUT you always exists —
+       otherwise "take it yourself" is not the Director's failure mode, it is
+       the solution, and the board is a button. It also has to be possible to
+       get it wrong: somebody on the list must be unable to do some of it. */
+    {
+      const savedMG7 = MG;
+      let solvable = 0, hasWrongHands = 0, allMine = 0, n = 0;
+      for (let i = 0; i < 24; i++){
+        rngInit('WK-' + i);
+        const g = GAMES.weekend.init(2);
+        /* brute force a rota using the named people only */
+        const load = g.staff.map(() => 0);
+        const walk = at => {
+          if (at >= g.tasks.length) return true;
+          for (let p = 0; p < g.staff.length; p++){
+            if (!g.staff[p].skills.includes(g.tasks[at].s)) continue;
+            if (load[p] + g.tasks[at].w > g.staff[p].cap) continue;
+            load[p] += g.tasks[at].w;
+            if (walk(at + 1)) return true;
+            load[p] -= g.tasks[at].w;
+          }
+          return false;
+        };
+        if (walk(0)) solvable++;
+        if (g.tasks.some(t => g.staff.some(p => !p.skills.includes(t.s)))) hasWrongHands++;
+        /* and taking the whole weekend yourself must not be a strategy */
+        g.tasks.forEach(t => t.to = g.staff.length);
+        g.submitted = true; g.flash = 0; g.step(0);
+        allMine += g.finished ? g.score : 1;
+        n++;
+      }
+      ok('a rota that works without you always exists',
+         solvable === n, solvable + '/' + n + ' weekends could be staffed');
+      ok('and somebody on the list cannot do some of it',
+         hasWrongHands === n, hasWrongHands + '/' + n + ' had a job with wrong hands for it');
+      ok('doing the whole weekend yourself is not a strategy',
+         allMine / n < .35, 'taking every job scores ' + (allMine/n).toFixed(3));
+      /* And the skill rule itself, which nothing above touches: the tests
+         checked that the DATA had wrong hands in it, not that giving a job to
+         the wrong hands cost anything. Deleting canDo entirely left them green. */
+      {
+        let wrongHands = 0, m = 0;
+        for (let i = 0; i < 24; i++){
+          rngInit('WK-' + i);
+          const g = GAMES.weekend.init(2);
+          /* give every job to somebody who cannot do it, where one exists */
+          let placed = 0;
+          for (const t of g.tasks){
+            const p = g.staff.findIndex(st => !st.skills.includes(t.s));
+            if (p >= 0){ t.to = p; placed++; } else t.to = g.staff.length;
+          }
+          if (!placed) continue;
+          g.submitted = true; g.flash = 0; g.step(0);
+          wrongHands += g.finished ? g.score : 1; m++;
+        }
+        ok('giving a job to somebody who cannot do it is worth nothing',
+           m > 0 && wrongHands / m < .2,
+           'wrong-hands rota scores ' + (wrongHands/Math.max(1,m)).toFixed(3) +
+           ' over ' + m + ' weekends');
+      }
+      MG = savedMG7;
     }
     /* The exit interview names a person. At Director that person reports to
        you, and firedBelow is live all the way up the ladder, so the line could

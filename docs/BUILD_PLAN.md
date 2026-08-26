@@ -73,4 +73,12 @@ budget landed is stale; everything set from it needs redoing.
 - [x] `docs/BALANCE.md` rewritten — three causes, all measured
 - [x] **vCIO fixed** — its work got cheaper, not its bar lower. Separation 6 →
       10 points; all nine rungs now healthy on tools/bars.js.
-- [ ] Put the minigame question to Josh with a real rung in front of him.
+- [x] **Six bespoke boards, rungs 4-9** — THE ADDRESS PLAN (project),
+      THE SHORTFALL (procure), KEEPING EVERYBODY (relmgr), THE DIAGRAM
+      (solarch), THE BOARD PAPER (vcio), WHOSE SATURDAY (director). Each with
+      its own tickets and mutation-tested invariants. The vertical slice Josh
+      chose is complete.
+- [ ] Put the minigame question to Josh: craft now measures 3-8 points against
+      triage 7-12, not the 2-vs-24 the old single-seed reading claimed, so the
+      boards matter more than the objection assumed. Worth his call on whether
+      craft should feed the day score harder.
