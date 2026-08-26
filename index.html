@@ -1037,6 +1037,7 @@ const ANCHOR_NAMES = {
   SOUTH:'THE SOUTH WING', PITMID:'THE HELPDESK PIT',
   RECEPTION:'THE FRONT DESK', POST:'THE POST ROOM', MEET_A:'MEETING ROOM ONE',
   MEET_B:'MEETING ROOM TWO', FRONT:'THE FRONT DOORS',
+  STORES:'THE STORE ROOM', CANTEEN:'THE CANTEEN', ACCOUNTS:'THE ACCOUNTS OFFICE',
   n1:"DEREK'S DESK", n2:"RAJ'S DESK", n3:"KAYLA'S DESK", n4:'THE FOURTH DESK',
   n6:"BRENDA'S DESK", n7:"MACKENZIE'S DESK", n8:"LINDA'S OFFICE", n9:'THE HALLWAY'
 };
@@ -1123,8 +1124,14 @@ ground: {
     '########DD##################################',
     '############################################',
   ],
+  /* THREE ROOMS NOBODY COULD BE SENT TO. The store room, the canteen and the
+     accounts office were built, furnished and unreachable: with one lift at
+     the west end, everything past the post room was outside the cross-floor
+     budget for any rung above T1, so no ticket could name them and none did.
+     The second shaft fixed the arithmetic; these are the names that make the
+     rooms part of the job. */
   anchors:{ RECEPTION:[5,6], POST:[17,10], MEET_A:[12,2], MEET_B:[23,3],
-            FRONT:[8,15] }
+            FRONT:[8,15], STORES:[27,15], CANTEEN:[37,12], ACCOUNTS:[35,4] }
 }};
 
 /* meta-progression (slice: one cert + one perk visible, more later) */
@@ -3461,6 +3468,45 @@ const DIALOGUE = {
            {t:'Go down now with what you have', fx:{time:9, rep:1, bonus:1, stress:5}},
            {t:'Send somebody to sit with them while you read it', fx:{time:6, rep:-1, stress:3}} ] },
 
+  'g.spare.a': { who:'kayla', t:['Somebody needs a machine by eleven and the answer is always "there is a spare in the store room".',
+    'There is. There are four. Two are asset-tagged to people who left in 2022, one has no charger, and one has a label on it that says DO NOT USE and nothing else at all.'] },
+  'g.spare.b': { who:'sys', t:['The store room is on the ground floor, past the post room, behind a fire door propped open with a fire extinguisher.'],
+    opts:[ {t:'Take the clean one, build it, and correct the asset register', fx:{time:16, rep:4, bonus:1, stress:3}},
+           {t:'Take the one with the label and find out what it means later', fx:{time:8, rep:1, bonus:1, stress:6}},
+           {t:'Tell them there are no spares, which is nearly true', fx:{time:3, rep:-2, stress:4}} ] },
+
+  'g.wifi.a':  { who:'sys', t:['The ground floor loses wifi every day between twelve and two. It has been logged three times and closed three times as no fault found.',
+    'Nobody who closed it has ever been down there at twelve. Reception have stopped reporting it, which the reports now show as an improvement.'] },
+  'g.wifi.b':  { who:'sys', t:['The access point is bolted to the canteen wall above the vending machine. The canteen has two microwaves and at this hour both of them are on.'],
+    opts:[ {t:'Move it to the far wall and prove it with a survey afterwards', fx:{time:21, rep:5, bonus:1, stress:4}},
+           {t:'Change the channel and see whether anyone reports it again', fx:{time:9, rep:1, bonus:1, stress:3}},
+           {t:'Close it as no fault found, like the other three', fx:{time:3, rep:-3, stress:5}} ] },
+
+  'g.door.a':  { who:'marcus', t:['The reader on the front door has stopped reading. I have propped the door open with a bin. It is a fire door. I am aware it is a fire door.',
+    'It has never been my system. Everybody who walks past tells me it is my system.'] },
+  'g.door.b':  { who:'sys', t:['The controller is in the cupboard behind reception, sharing a UPS with the cameras, and the UPS has been beeping since a date nobody can establish.'],
+    opts:[ {t:'Power it back up and stand there until it reads a badge', fx:{time:14, rep:4, bonus:1, stress:4}},
+           {t:'Put the door on fob override and raise the UPS with the landlord', fx:{time:8, rep:2, bonus:1, stress:3}},
+           {t:'Leave the bin where it is. It is a Friday.', fx:{time:2, rep:-3, stress:7}} ] },
+
+  /* NOT "under my desk". Yvonne's desk is n4, upstairs in the pit, and this
+     errand walks you to the accounts office on the ground floor — so the line
+     would have named a room the arrow does not go to. She raises it; the
+     machine lives where the errand goes. */
+  'g.pay.a':   { who:'yvonne', t:['Payroll runs on Friday. It runs on the tower in the accounts office downstairs, which is nine years old and has started making a noise it did not use to make.',
+    'I have raised it every year for four years. Every year somebody tells me it is on the roadmap.'] },
+  'g.pay.b':   { who:'sys', t:['One disk, nine years old, and the most recent backup anybody can find is a folder on that same disk called BACKUP.'],
+    opts:[ {t:'Image it today, onto something that is not that disk', fx:{time:22, rep:5, bonus:1, stress:5}},
+           {t:'Order the replacement and give her a date in writing', fx:{time:11, rep:3, bonus:1, stress:4}},
+           {t:'Tell her it is on the roadmap', fx:{time:3, rep:-4, stress:6}} ] },
+
+  'g.wrong.a': { who:'pauline', t:['{Client} arrived at half past. I put them in meeting room two with coffee and nobody has come down.',
+    'They are being very nice about it, which in my experience is the bad kind of nice.'] },
+  'g.wrong.b': { who:'sys', t:['The invite says floor two. Reception heard meeting room two. Both of those are real places in this building and only one of them has anybody in it.'],
+    opts:[ {t:'Go down, apologise properly, and walk them up yourself', fx:{time:15, rep:5, bonus:1, stress:4}},
+           {t:'Go down and run it in the room they are already sitting in', fx:{time:10, rep:2, bonus:1, stress:5}},
+           {t:'Send the invite again with the floor in capitals', fx:{time:3, rep:-3, stress:8}} ] },
+
   'g.qbr.a':   { who:'sys', t:['The quarterly review is in meeting room one and you are already late leaving for it.',
     'The numbers arrived four minutes ago. Two of them disagree with the numbers you presented last quarter.'] },
   'g.qbr.b':   { who:'sys', t:['You can present this quarter, last quarter, or the difference between them.'],
@@ -4541,7 +4587,28 @@ const TICKETS = {
     steps:[{say:'g.early.a'},{goto:'MEET_A'},{choice:'g.early.b'}] },
   'qbr-numbers-arrived-late': { tiers:[8,9], weight:3, sla:45, slaMult:1.4, pri:4, stress:9,
     title:'The QBR is in meeting room one and the numbers arrived four minutes ago',
-    steps:[{say:'g.qbr.a'},{goto:'MEET_A'},{choice:'g.qbr.b'}] }
+    steps:[{say:'g.qbr.a'},{goto:'MEET_A'},{choice:'g.qbr.b'}] },
+
+  /* THE OTHER THREE ROOMS DOWN THERE. Built, furnished, and unreachable until
+     the building got a second lift: the store room, the canteen and the
+     accounts office were all outside the cross-floor budget for every rung
+     above T1, so nothing could be written for them. Spread across the ladder
+     so no rung's downstairs work is only ever the same two errands. */
+  'spare-in-the-store-room': { tiers:[0,3], weight:3, sla:65, slaMult:2.4, pri:2, stress:5,
+    title:'Somebody needs a machine by eleven and there is definitely a spare in the store room',
+    steps:[{say:'g.spare.a'},{goto:'STORES'},{choice:'g.spare.b'}] },
+  'ap-behind-the-vending-machine': { tiers:[2,6], weight:3, sla:80, slaMult:2.6, pri:1, stress:5,
+    title:'The ground floor loses wifi every day between twelve and two',
+    steps:[{say:'g.wifi.a'},{goto:'CANTEEN'},{choice:'g.wifi.b'}] },
+  'badge-reader-on-the-front-door': { tiers:[0,4], weight:3, sla:55, slaMult:2.0, pri:3, stress:6,
+    title:'The front door reader has stopped reading and the door is propped with a bin',
+    steps:[{say:'g.door.a'},{goto:'FRONT'},{choice:'g.door.b'}] },
+  'payroll-runs-on-that-machine': { tiers:[4,8], weight:3, sla:60, slaMult:1.8, pri:3, stress:7,
+    title:'Payroll runs Friday on a nine-year-old tower in the accounts office, and it has started making a noise',
+    steps:[{say:'g.pay.a'},{goto:'ACCOUNTS'},{choice:'g.pay.b'}] },
+  'meeting-room-two-is-not-floor-two': { tiers:[5,9], weight:3, sla:40, slaMult:1.3, pri:4, stress:8,
+    title:'{Client} have been in meeting room two for twenty minutes and the meeting is on floor two',
+    steps:[{say:'g.wrong.a'},{goto:'MEET_B'},{choice:'g.wrong.b'}] }
 
 };
 
@@ -11806,6 +11873,62 @@ function selfTest(runSim){
       ok('level: a cross-floor errand is priced by the cheaper shaft',
          !wrongWay.length, wrongWay.slice(0,4).join(' '));
 
+      /* AND EVERY ROOM DOWN THERE IS SOMEWHERE THE JOB SENDS YOU. The store
+         room, the canteen and the accounts office were built and furnished
+         and then left off every ticket in the game, because with one lift
+         they were outside the budget and nothing COULD name them. A room a
+         player can only ever wander into by accident is scenery; this is what
+         stops the next one being built and forgotten. Lifts are excused —
+         they are how you get somewhere, not somewhere to get. */
+      {
+        const sent = new Set();
+        for (const id in TICKETS)
+          for (const st of TICKETS[id].steps || []) if (st.goto) sent.add(st.goto);
+        const idle = Object.keys(FLOOR_POS.ground || {})
+          .filter(a => LIFTS.indexOf(a) < 0 && !sent.has(a));
+        ok('level: every room on the ground floor is somewhere a ticket sends you',
+           !idle.length, idle.join(' '));
+        /* and every rung has something to go down there FOR */
+        const noWork = [];
+        for (let ri = 0; ri < ROLES.length; ri++){
+          const any = Object.keys(TICKETS).some(id => {
+            const T = TICKETS[id];
+            return T.tiers && ri >= T.tiers[0] && ri <= T.tiers[1] &&
+                   (T.steps || []).some(st => st.goto && floorOf(st.goto) === 'ground');
+          });
+          if (!any) noWork.push(ROLES[ri].id);
+        }
+        ok('level: every rung has work that takes it downstairs', !noWork.length, noWork.join(' '));
+
+      /* AND WHEN SOMEBODY SAYS "MY DESK", THE ARROW GOES TO THEIR DESK. The
+         payroll errand walks you to the accounts office on the ground floor
+         and opened with Yvonne saying the machine was "the tower under my
+         desk" — her desk is n4, upstairs in the pit. The line named one room
+         and the arrow pointed at another, in the same ticket, four seconds
+         apart. Mechanical: a named speaker who says "my desk" or "my office"
+         is describing somewhere, and it has to be somewhere the errand goes. */
+      {
+        const wrongRoom = [];
+        for (const id in TICKETS){
+          const T = TICKETS[id];
+          const goes = new Set((T.steps || []).filter(st => st.goto).map(st => st.goto));
+          for (const st of T.steps || [])
+            for (const k of [st.say, st.choice]){
+              const n = DIALOGUE[k];
+              if (!n || !n.who || !NPCS[n.who]) continue;
+              const home = (NPCS[n.who].sched || [])[0];
+              const at = home && home[1];
+              for (const l of (n.t || []))
+                if (/\bmy (desk|office)\b/i.test(String(l)) && at && !goes.has(at))
+                  wrongRoom.push(id + '/' + k + ': ' + n.who + ' sits at ' + at +
+                                 ', the errand goes to ' + ([...goes].join('+') || 'nowhere'));
+            }
+        }
+        ok('content: a ticket that says "my desk" sends you to that desk',
+           !wrongRoom.length, wrongRoom.slice(0,3).join(' · '));
+      }
+      }
+
       /* THE ARROW. Set a real cross-floor marker from the desk that most
          wants the east shaft, and require the arrow to point at it. */
       run.rung = ROLES.length - 3;
@@ -14854,6 +14977,11 @@ function selfTest(runSim){
          them could ever have noticed. This one plays two real days. */
       {
         QUIET = true; rngInit('LEDGER'); runInit('LEDGER');
+        /* TWO FULL DAYS, not day one and day two. Day one is a deliberate half
+           load, so whether it burns anything at all depends on which tickets
+           the pool happens to deal — five new ones and this test stopped
+           measuring, with day one's ledger simply empty. */
+        run.day = 3;
         rollDay(); simDay(0.4, { order:'pridead' });
         const d1 = (run && run.lastScore && run.lastScore.worst || []).map(w => w.t);
         let d2 = [];
