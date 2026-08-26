@@ -8522,7 +8522,7 @@ const GAME_BRIEF = {
           'than they have grievances.',
     keys: [
       ['UP / DOWN', 'move through the list'],
-      ['E', 'play the one you are on'],
+      ['E or 1', 'play the one you are on'],
       ['CLICK', 'or click a move to play it'],
       ['', 'the three numbers are what it does to each meter'],
       ['', 'a move played cannot be unplayed']
@@ -8891,7 +8891,11 @@ const GAMES = {
         if (press.up){ this.at = (this.at - 1 + this.steps.length) % this.steps.length; }
         if (press.down){ this.at = (this.at + 1) % this.steps.length; }
         let pick = -1;
-        if (press.act) pick = this.at;
+        /* press.act does not exist and never did — the input layer sets `use`.
+           So on this board E, SPACE and ENTER were all dead: UP/DOWN moved a
+           highlight nothing could act on, and the how-to card said "E or
+           CLICK — do the step you are on" while only CLICK worked. */
+        if (press.use) pick = this.at;
         if (this.click){
           const pt = this.click; this.click = null;
           for (let i = 0; i < this.steps.length; i++)
@@ -13739,6 +13743,47 @@ function selfTest(runSim){
         if (!MG_TITLES[g]) over.push(g + ':title');
       }
       ok('minigame: no how-to-play card overflows its panel', over.length === 0, over.join(' '));
+
+      /* AND THE KEYS ON THE CARD ARE THE KEYS THE BOARD READS. The new-starter
+         checklist tested `press.act`, which the input layer has never had, so
+         E, SPACE and ENTER were all dead on it: UP/DOWN moved a highlight
+         nothing could act on, while the card said "E or CLICK — do the step
+         you are on" and only CLICK worked. Three ways it can go wrong and all
+         three are checked: a flag that does not exist, a key the card promises
+         and the board ignores, and a key the board takes and the card never
+         mentions. */
+      const NAMED = { up:/\bUP\b/, down:/\bDOWN\b/, use:/(^|[^A-Z])E([^A-Z]|$)|SPACE|ENTER/,
+                      one:/\b1\b/, two:/\b2\b/, three:/\b3\b/, four:/\b4\b/ };
+      const ghosts = [], dead = [], secret = [];
+      const savedMG = MG, savedModal = G.modal, savedState = G.state;
+      for (const g in GAMES){
+        const board = GAMES[g].init(3);
+        /* comments stripped first, or the note EXPLAINING the press.act bug
+           sitting on the line above the fix would be read as the bug */
+        const src = (String(board.step) + String(board.draw || ''))
+          .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+        const reads = new Set();
+        for (const m of src.match(/press\.\w+/g) || []){
+          const f = m.slice(6);
+          if (!(f in press)) ghosts.push(g + '.' + f);   // a flag nothing ever sets
+          else reads.add(f);
+        }
+        const claims = new Set();
+        for (const [k] of (GAME_BRIEF[g] || {}).keys || []){
+          const K = String(k).toUpperCase();
+          for (const f in NAMED) if (NAMED[f].test(K)) claims.add(f);
+        }
+        for (const c of claims) if (!reads.has(c)) dead.push(g + ':' + c);
+        /* `back` walks out of the board and is a global, not a board control */
+        for (const r of reads) if (r !== 'back' && !claims.has(r)) secret.push(g + ':' + r);
+      }
+      MG = savedMG; G.modal = savedModal; G.state = savedState;
+      ok('minigame: no board tests an input flag that does not exist',
+         ghosts.length === 0, ghosts.join(' '));
+      ok('minigame: every key a card promises is a key the board reads',
+         dead.length === 0, dead.join(' '));
+      ok('minigame: every key a board reads is a key its card names',
+         secret.length === 0, secret.join(' '));
     }
 
     /* Panels hold the clock, and ticket work is priced instead. The old

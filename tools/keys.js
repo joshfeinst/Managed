@@ -25,20 +25,21 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   }
   throw e; } }
 
-/* what each board's card claims, as real key codes */
-const CLAIMS = {
-  cable:   ['ArrowUp', 'ArrowDown', 'KeyE'],
-  pw:      ['Digit1', 'Digit2'],
-  jargon:  ['Digit1', 'Digit2', 'Digit3'],
-  script:  ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'ArrowUp', 'ArrowDown', 'KeyE'],
-  blast:   ['ArrowUp', 'ArrowDown', 'KeyE', 'Digit1', 'Digit2'],
-  subnet:  ['ArrowUp', 'ArrowDown', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'KeyE'],
-  quote:   ['ArrowUp', 'ArrowDown', 'Digit1', 'Digit2', 'Digit3', 'KeyE'],
-  keep:    ['ArrowUp', 'ArrowDown', 'KeyE'],
-  diagram: ['ArrowUp', 'ArrowDown', 'Digit1', 'Digit2', 'KeyE'],
-  paper:   ['ArrowUp', 'ArrowDown', 'KeyE', 'Digit1', 'Digit2'],
-  weekend: ['ArrowUp', 'ArrowDown', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'KeyE']
-};
+/* WHAT EACH BOARD'S CARD CLAIMS, READ OFF THE CARD.
+   This was a hand-kept table, and it did not list `starter` — the one board
+   that shipped with a dead key. It tested `press.act`, a flag the input layer
+   has never had, so E, SPACE and ENTER did nothing on the new-starter
+   checklist while its card said "E or CLICK — do the step you are on"; a
+   keyboard player moved a highlight nothing could act on. A sweep with a
+   hand-kept subset reports "all live" for the boards somebody remembered.
+   Derived from GAME_BRIEF now, so a new board cannot be missing from it. */
+const NAMED = [['ArrowUp',   String.raw`\bUP\b`],
+               ['ArrowDown', String.raw`\bDOWN\b`],
+               ['KeyE',      String.raw`(^|[^A-Z])E([^A-Z]|$)|SPACE|ENTER`],
+               ['Digit1',    String.raw`\b1\b`],
+               ['Digit2',    String.raw`\b2\b`],
+               ['Digit3',    String.raw`\b3\b`],
+               ['Digit4',    String.raw`\b4\b`]];
 
 (async () => {
   const browser = await launch();
@@ -47,6 +48,22 @@ const CLAIMS = {
   page.on('pageerror', e => errs.push(e.message));
   await page.goto('file://' + target);
   await page.waitForFunction(() => typeof GAMES !== 'undefined');
+
+  const CLAIMS = await page.evaluate((named) => {
+    const out = {};
+    for (const g in GAMES){
+      const seen = [];
+      for (const [k] of (GAME_BRIEF[g] || {}).keys || []){
+        const K = String(k).toUpperCase();
+        for (const [code, re] of named)
+          if (new RegExp(re).test(K) && seen.indexOf(code) < 0) seen.push(code);
+      }
+      out[g] = seen;
+    }
+    return out;
+  }, NAMED);
+  const uncovered = await page.evaluate(() => Object.keys(GAMES).filter(g => !GAME_BRIEF[g]));
+  if (uncovered.length) console.log('boards with no card at all: ' + uncovered.join(' ') + '\n');
 
   /* a stable hash of what the board IS, minus what merely animates */
   const snap = () => page.evaluate(() => {
@@ -102,9 +119,11 @@ const CLAIMS = {
          about quote and diagram. Both were fine. */
       const rects = g => {
         const list = [];
+        /* `steps` was missing, so the new-starter checklist declared rowRect
+           and reported "no declared rects" — covered by name, tested by none */
         const n = (g.rows && g.rows.length) || (g.tasks && g.tasks.length) ||
                   (g.hand && g.hand.length) || (g.sites && g.sites.length) ||
-                  (g.qs && g.qs.length) || 0;
+                  (g.qs && g.qs.length) || (g.steps && g.steps.length) || 0;
         if (g.rowRect) for (let i = 0; i < Math.min(n, 4); i++)
           list.push(['row' + i, ...g.rowRect(i)]);
         if (g.optRect) for (let i = 0; i < 3; i++) list.push(['opt' + i, ...g.optRect(i)]);

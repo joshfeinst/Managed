@@ -157,13 +157,13 @@ were invisible to the ones that came before them.
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 364 in-game self-tests |
+| `verify.js` | boots it and runs the 373 in-game self-tests |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
 | `playday.js` | plays past the first ticket — follows markers, answers dialogue, leaves boards it cannot solve |
 | `liftride.js` | takes a downstairs ticket and rides the lift with real clicks and keys |
 | `visual.js` | screenshots every screen and board at four window sizes, asserting no text lands on the canvas |
 | `boards.js` | plays every minigame perfectly, carelessly and at random, and reports the spread |
-| `keys.js` | presses every key each board's how-to-play card promises, and pokes every click rect |
+| `keys.js` | presses every key each board's how-to-play card promises, and pokes every click rect — the card list is read off `GAME_BRIEF`, because the hand-kept one omitted the board that had a dead key |
 | `bars.js` | where should each promotion bar sit? `--sweep` finds the deal rate that best separates good triage from bad; `--careers --target=0.75` bisects every bar at once against the share of careers that reach retirement |
 | `gate.js` | `--ladder` measures every rung against the debt recorded in the game |
 | `score.js` | takes the day score apart into the three terms it is made of — stakes closed, realisation, burn — because `bars.js` reports the number those produce and cannot say which one moved |
