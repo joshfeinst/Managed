@@ -2598,8 +2598,6 @@ const DIALOGUE = {
     'I brought the laptop. The one with the... you know. The problem.'] },
 
   /* generic ticket beats */
-  'g.accept': { who:'sys', t:['Ticket assigned. The SLA clock was already running when you found out about it.'] },
-  'g.resolve':{ who:'sys', t:['Resolved. CSAT survey sent — it will be ignored until it is a 1-star.'] },
 
   /* per-ticket scenes */
   't.cof.a':  { who:'derek', t:['Intern. Coffee. Black. {Mtg} starts in nine minutes. Go.'] },
@@ -10771,6 +10769,47 @@ function selfTest(runSim){
            !wrong.length, wrong.join(' '));
       }
       run = savedRunR;
+    }
+    /* A SCENE NOTHING OPENS IS A SCENE NOBODY READS. Third instance of the
+       same class in a day, after the sound nobody plays and the prop nobody
+       can reach: content that exists, looks finished in the source, and cannot
+       be got to by anyone holding a keyboard. There is no way to notice it by
+       playing — the missing scene is the one you have never seen.
+
+       It found `g.accept` and `g.resolve`, two lines written for a CSAT survey
+       mechanic this game does not have and never shipped. 574 of 576 nodes
+       were live, which is why it is worth a lint rather than a cleanup: the
+       ratio only stays that good if something is watching it.
+
+       Reachability is "the id appears in the source somewhere other than its
+       own definition". That is exact for every reference the game makes — a
+       step, an event scene, an NPC's small talk, a queued scene — with one
+       documented exception below. */
+    {
+      const src = Array.from(document.querySelectorAll('script:not([src])'))
+                       .map(n => n.textContent).join('\n');
+      /* the promotion scenes are the only ids the engine BUILDS rather than
+         writes: `'promo.' + ROLES[run.rung].id`. Their literal never appears
+         at a call site, so occurrence-counting cannot see them; they are
+         covered instead by the promotion test above, which plays a real gate
+         and asserts the scene queues. */
+      const DYNAMIC = /^promo\./;
+      const dead = [];
+      for (const id in DIALOGUE){
+        if (DYNAMIC.test(id)) continue;
+        const lit = "'" + id + "'";
+        let n = 0, at = 0;
+        while ((at = src.indexOf(lit, at)) !== -1){ n++; at += lit.length; }
+        if (n <= 1) dead.push(id);
+      }
+      ok('every scene in the game is a scene something opens',
+         !dead.length, dead.slice(0, 8).join(' ') +
+         (dead.length > 8 ? ' +' + (dead.length - 8) : ''));
+      /* and the exemption is not a hiding place: every rung's promotion scene
+         must exist, because that is the one path this lint cannot check */
+      const missing = ROLES.map(R => 'promo.' + R.id).filter(k => !DIALOGUE[k]);
+      ok('and every rung has the promotion scene the engine will ask for',
+         missing.length <= 1, missing.join(' '));
     }
     /* A PROP NOBODY CAN REACH IS FURNITURE. Walking the office is a stated
        pillar, and the office empties out as you climb: the arcade, the cooler,
