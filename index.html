@@ -60,8 +60,14 @@ body.panelopen #obj, body.screenopen #obj{display:none !important}
 #hud .meter.burn.bad i{background:var(--alert)}
 #hud #h-queue{color:var(--amber)} #hud #h-queue.breach{color:var(--alert)}
 
+/* The box is bottom-anchored and grows UPWARDS, and nothing stopped it at the
+   top of the frame. In a 400x300 window 72 nodes grew straight off the screen
+   — i.day1, the intern's first scene, by 165px, so a new player's opening
+   conversation had its speaker and first lines above the top edge. visual.js
+   drives 400x300 and passed, because it never opened a dialogue there. */
 #dlg{position:absolute; left:50%; bottom:4%; transform:translateX(-50%); width:min(560px,92%);
-  display:none; background:rgba(16,19,23,.96); border:1px solid var(--line); border-top:2px solid var(--corp);
+  display:none; max-height:92%; overflow-y:auto; overscroll-behavior:contain;
+  background:rgba(16,19,23,.96); border:1px solid var(--line); border-top:2px solid var(--corp);
   padding:10px 14px 12px; line-height:1.45; font-size:clamp(12px,2.2vh,17px);
   box-shadow:0 14px 40px -12px #000;}
 #dlg .who{font-family:var(--pix); font-size:.62em; color:var(--amber); letter-spacing:.1em; margin-bottom:6px; text-transform:uppercase}
@@ -7615,6 +7621,10 @@ function dlgPaint(){
       b.onclick = () => pickOpt(i);
       box.appendChild(b);
     });
+    /* If the box had to scroll to fit the frame, the choices are the half the
+       player needs to see; the lines above have already been typed out. */
+    const panel = document.getElementById('dlg');
+    if (panel.scrollHeight > panel.clientHeight) panel.scrollTop = panel.scrollHeight;
   }
 }
 function pickOpt(i){
@@ -10581,6 +10591,56 @@ function selfTest(runSim){
                (leg.scrollWidth - leg.clientWidth) : 'no leg hint');
       document.getElementById('tix').style.display = 'none';
       G.state = savedState; G.modal = savedModal; run = savedRun;
+    }
+    /* The dialogue box is bottom-anchored and grows upwards, and it used to
+       grow straight off the top of the frame: 72 nodes did it in a 400x300
+       window, i.day1 — the first scene of a new career — by 165px. Nothing
+       caught it, because the box is DOM and the suite never rendered one, and
+       visual.js drives 400x300 without ever opening a dialogue. Render every
+       node at the worst {fill} the pools can produce and check it stays in
+       the frame, and that the options, which are the half the player has to
+       reach, stay inside the box. */
+    {
+      const dlgEl = document.getElementById('dlg'), frame = document.getElementById('frame');
+      const savedDlg = dlg, savedState = G.state, savedModal = G.modal;
+      const wasDisp = dlgEl.style.display, wasPanel = document.body.classList.contains('panelopen');
+      /* Measure at the smallest window the game supports, not at whatever the
+         tester's happens to be. verify.js runs at 1280x720, where a box with
+         no max-height still fits and this test passed while proving nothing —
+         the same hole that let the bug ship. The box is sized in % of #frame,
+         which is #view's box, so shrinking the canvas shrinks the frame. */
+      const keepW = view.style.width, keepH = view.style.height;
+      view.style.width = '400px'; view.style.height = '225px';
+      const worst = {};
+      for (const k in FILLS) worst[k] = FILLS[k].slice()
+        .sort((x, y) => String(y).length - String(x).length)[0];
+      const escaped = [], unreachable = [];
+      rngInit('DLGFIT');
+      for (const id in DIALOGUE){
+        /* Drive openDlg/dlgPaint, not a copy of them. A hand-rolled replica
+           measures the CSS and nothing else: mutating the renderer's own
+           scroll-into-view left a replica-based version of this test green. */
+        openDlg(id, worst, function(){});
+        if (!dlg) continue;
+        dlg.li = dlg.lines.length - 1;
+        dlg.reveal = dlg.lines[dlg.li].length;
+        dlgPaint();
+        const dr = dlgEl.getBoundingClientRect(), fr = frame.getBoundingClientRect();
+        if (dr.top < fr.top - .5 || dr.bottom > fr.bottom + .5) escaped.push(id);
+        for (const bt of dlgEl.querySelectorAll('#d-opts .opt')){
+          const r = bt.getBoundingClientRect();
+          if (r.top < dr.top - .5 || r.bottom > dr.bottom + .5){ unreachable.push(id); break; }
+        }
+      }
+      dlg = savedDlg; G.state = savedState; G.modal = savedModal;
+      dlgEl.style.display = wasDisp; dlgEl.scrollTop = 0;
+      document.getElementById('d-opts').innerHTML = '';
+      document.body.classList.toggle('panelopen', wasPanel);
+      view.style.width = keepW; view.style.height = keepH; fit();
+      ok('ui: no dialogue box grows outside the frame', !escaped.length,
+         escaped.length + ': ' + escaped.slice(0, 3).join(', '));
+      ok('ui: every dialogue option stays reachable inside its box', !unreachable.length,
+         unreachable.length + ': ' + unreachable.slice(0, 3).join(', '));
     }
     /* A held ticket must not be immortal: parking a P1 in the active slot and
        walking away used to hold it past its deadline all afternoon for free. */
