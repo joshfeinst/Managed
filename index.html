@@ -6855,9 +6855,31 @@ function workInput(){
   const tn = talkTarget();
   if (tn){ smalltalk(tn); return; }
   const [fx,fy] = faceCell();
-  if (!inMap(fx,fy)) return;
-  const act = W2.act[cellIx(fx,fy)];
-  if (act) interact(act);
+  if (inMap(fx,fy)){
+    const act = W2.act[cellIx(fx,fy)];
+    if (act){ interact(act); return; }
+  }
+  /* STANDING ON IT AND FACING THE WRONG WAY. An anchor is the walkable tile you
+     use a thing FROM, and the thing itself is on the next tile over — so a
+     player who follows the amber arrow in from the south arrives on the anchor
+     facing north and presses E at empty air, with nothing on screen saying why.
+     It costs the lift most: arriving at a ticket destination completes that
+     step on its own, but the lift has to be USED, and it is what every
+     cross-floor ticket depends on.
+     Only when there is nothing to be ambiguous about: if two DIFFERENT things
+     are in reach this does nothing and the player still has to say which.
+     That branch is defensive and, today, unreachable — measured, neither
+     shipped map has a single walkable tile with two distinct acts beside it,
+     so there is no self-test for it, because a test that cannot fail is worse
+     than none. It is here for the map that eventually has one. */
+  const near = [];
+  for (const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]){
+    const nx = player.tx + dx, ny = player.ty + dy;
+    if (!inMap(nx,ny)) continue;
+    const a = W2.act[cellIx(nx,ny)];
+    if (a && near.indexOf(a) < 0) near.push(a);
+  }
+  if (near.length === 1) interact(near[0]);
 }
 function smalltalk(e){
   const N = NPCS[e.id];
@@ -14694,6 +14716,26 @@ function selfTest(runSim){
       ok('the exit interview does not print the same stat twice',
          !!sv && !!oq && +sv[1] === 10 && +oq[1] === 4,
          (sv ? sv[1] : '?') + ' survived / ' + (oq ? oq[1] : '?') + ' on the queue');
+    }
+    /* THE LIFT, FROM WHICHEVER WAY YOU CAME. The amber arrow points at an
+       anchor and the thing itself is on the next tile, so arriving from the
+       south left the player standing on the lift facing north, pressing E at
+       nothing. Every cross-floor ticket depends on that press. Now E from an
+       anchor uses the one thing beside it — and still refuses when two
+       DIFFERENT things are in reach, because then it does not know. */
+    {
+      const keepRun = run, keepState = G.state;
+      const worked = [];
+      for (const dir of ['up', 'down', 'left', 'right']){
+        rngInit('FACE'); runInit('FACE'); rollDay();
+        loadMap('office1'); spawnPeople(0, anchorPos('ELEV')); G.state = 'work';
+        const E = anchorPos('ELEV');
+        player.tx = E[0]; player.ty = E[1]; player.dir = dir;
+        press.use = true; workInput(); press.use = false;
+        if (W2.id === 'ground') worked.push(dir);
+      }
+      ok('the lift works whichever way you walked into it', worked.length === 4,
+         'rode it facing: ' + (worked.join(',') || 'no direction at all'));
     }
     /* NO SCENE PUTS A TEMPLATE ON SCREEN. Events and interludes open with
        openDlg(id, ..., null) and used to pass no fills at all, so an authored
