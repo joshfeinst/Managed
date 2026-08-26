@@ -1050,7 +1050,7 @@ Procurement and Relationship Manager are all already at 1.9. Each of those was
 a good trade measured alone. The fifth one was not, because the ladder has a
 total difficulty budget and by that point it was spent.
 
-Reverted. Project Team keeps rate 1.5 and a 12-point gap, which is the
+Reverted. Project Team keeps rate 1.5 and a 13-point gap, which is the
 narrowest on the ladder and is the right price for a career arc that works.
 
 **This is the fourth time this session a rung-level harness and `meta.js` have

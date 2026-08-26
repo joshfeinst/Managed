@@ -190,17 +190,21 @@ promotion bar — so the same sentence means the same thing at every desk.
 - ~~Project Team is the narrowest left.~~ **Tried and reverted** — raising its
   rate to 1.9 widens its own gap from 11.0 to 17.9 and collapses the career arc
   from 75-80% retiring to 35%. The ladder has a total difficulty budget and by
-  the fifth rung it was spent. Project Team keeps 1.5 and a 12-point gap, and
+  the fifth rung it was spent. Project Team keeps 1.5 and a 13-point gap, and
   that is the right price. Anything further here has to be CONTENT, not a rate.
   Eight dated-commitment tickets were written for it and did NOT move the gap
   (12.8 -> 11.4); they stay because they are good content, but the rung is
-  still the narrowest and still open.
+  still the narrowest and still open. It is the ONLY thing left on this list.
 - **14 seeds is not a measurement.** Three separate numbers set from 14-seed
   sweeps this session had to be redone at 26. Sweep at 26 the first time.
-- **Craft vs triage** is open for Josh. `tools/dials.js` now measures triage at
-  11.7 points and craft at 9.9 — much closer than the 3-vs-12 it was, because
-  `URGENT_GRACE` means more tickets actually get finished and craft only scores
-  on tickets you close. Probably no longer needs a change; worth an opinion.
+- ~~Craft vs triage is open for Josh.~~ **Answered: no change needed.** At 24
+  seeds `tools/dials.js` measures triage at 11.7 points and craft at 9.9 —
+  judgement leads, hands are a close second, which is the balance the design
+  wants. Two things fell out of the same table: priority-first has caught up
+  with shortest-first (0.3 points apart, from 1.8), so the game no longer pays
+  more for skimming small tickets than for protecting important ones; and the
+  README's claim that arrival-order and worst-priority-first score the same is
+  no longer true (62.3% against 59.6%), so it was corrected.
 - ~~The bars are bisected by hand against `meta.js`.~~ **Done** —
   `bars.js --careers --target=0.75` places every bar at the same fraction of
   its own [p25, p50] span and bisects that one fraction until the share of
