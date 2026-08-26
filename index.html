@@ -345,11 +345,7 @@ input[type=range]{accent-color:var(--corp); width:150px}
       still deciding what to do next — and each job also charges its own minutes the moment you start it. It stops only
       behind a panel: a conversation, the queue, a minigame, the pause menu. So reading is free and dithering in the
       corridor is not.</p>
-      <p class="hint"><b>You get promoted, and your desk moves.</b> You start each morning at whichever one is currently
-      yours, and every job is costed from it — so the printer, the coffee machine and the server room are a short walk
-      from the pit and a long one from the quiet suite upstairs. The calendar fills up as you climb too. An intern
-      spends about half an hour a day in rooms; a vCIO spends a third of the week in them, and the ones that will not
-      fit get cancelled, which is the best part of anyone's week. The printer is possessed. Welcome aboard.</p>
+      <p class="hint" id="hb-desk"></p>
       <p class="hint" id="hb-burn"></p>
       <div class="row"><button class="btn ghost" data-act="back">◀ BACK</button></div>
     </div>
@@ -14760,6 +14756,19 @@ function selfTest(runSim){
       ok('docs: the stated rule is generated from STAKES',
          stakesRule().indexOf(String(STAKES[4])) >= 0 &&
          stakesRule().indexOf(String(STAKES[1])) >= 0);
+      /* THE HANDBOOK DOES NOT GET TO REMEMBER. As prose it claimed a vCIO
+         spends "a third of the week" in meetings — meetingMin is 88 against a
+         480-minute day, which is a fifth — and put the executive suite
+         "upstairs" when DESK_EXEC is on office1, the same floor as the pit,
+         a claim that only got more wrong once the building had a real second
+         floor to be confused with. It is written from ROLES now, so it says
+         both numbers because it read them. */
+      const hd = (document.getElementById('hb-desk') || {}).textContent || '';
+      ok('docs: the desk paragraph is written from ROLES, not from memory',
+         hd.length > 80 &&
+         hd.indexOf(String(ROLES[0].queue.meetingMin)) >= 0 &&
+         !/upstairs/i.test(hd),
+         hd ? (/upstairs/i.test(hd) ? 'still says upstairs' : hd.slice(0, 70)) : 'empty');
     }
 
     /* the pace dial changes real time only — a tile costs the same shift
@@ -15365,6 +15374,27 @@ function writeHandbook(){
   const q = document.getElementById('tix-rule');
   if (q) q.textContent = 'P1=' + STAKES[4] + ' P2=' + STAKES[3] + ' P3=' + STAKES[2] +
     ' P4=' + STAKES[1] + ' — you are scored on points protected · ↑↓ pick · Enter work · Esc close';
+  /* WRITTEN FROM THE DATA, NOT FROM MEMORY. This paragraph used to be prose,
+     and prose does not get re-measured: it said a vCIO spends "a third of the
+     week" in meetings against a real meetingMin of 88 against a 480-minute
+     day, which is a fifth, and it called the executive suite "upstairs" when
+     DESK_EXEC is on office1, the same floor as the pit — a claim that only
+     got more wrong once the building acquired a real second floor to be
+     confused with. Same failure as "the 9:15 standup": a fact about the
+     simulation, hardcoded in a sentence nobody re-derives. */
+  const d = document.getElementById('hb-desk');
+  if (d){
+    const mins = m => m >= 60 ? (Math.round(m / 6) / 10) + ' hours' : m + ' minutes';
+    d.innerHTML =
+      '<b>You get promoted, and your desk moves.</b> You start each morning at whichever one ' +
+      'is currently yours, and every job is costed from it — so the printer, the coffee ' +
+      'machine and the server room are a short walk from the pit, a long one from the quiet ' +
+      'suite at the far end of the same floor, and a lift ride from anything on the ground ' +
+      'floor. The calendar fills up as you climb too. An intern spends about ' +
+      mins(ROLES[0].queue.meetingMin) + ' a day in rooms; a ' + ROLES[8].title + ' spends ' +
+      mins(ROLES[8].queue.meetingMin) + ', and the ones that will not fit get cancelled, ' +
+      'which is the best part of anyone\'s week. The printer is possessed. Welcome aboard.';
+  }
   const el = document.getElementById('hb-burn');
   if (!el) return;
   el.innerHTML =
