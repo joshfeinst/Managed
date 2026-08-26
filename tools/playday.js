@@ -121,7 +121,18 @@ const BUDGET = +(process.argv[3] || 240) * 1000;
       await clear();
       continue;
     }
-    if (await tixOpen()){ await S.key('Enter', 400); await clear(); continue; }
+    /* An EMPTY queue takes Escape, not Enter. The panel's own legend says
+       "Enter work · Esc close" and with no rows there is nothing to work — so
+       hammering Enter held the panel open, and the shift clock stops behind a
+       panel, which is exactly what the handbook promises. One run sat at 9:03
+       for ten real minutes doing that. */
+    if (await tixOpen()){
+      const rows = await S.page.evaluate(() =>
+        document.querySelectorAll('#tix-list .row').length);
+      await S.key(rows ? 'Enter' : 'Escape', 400);
+      await clear();
+      continue;
+    }
 
     /* an arrow: click it, which is what following it looks like */
     const m = await markerView();
