@@ -441,6 +441,23 @@ Getting there took three corrections, all of them to the harness:
    because the next line starts there too. The sweep now perturbs with the
    board's own sibling keys until the key under test has somewhere to go.
 
+The same tool sweeps the **click rects** — every `rowRect`, `optNRect`,
+`tierRect`, `nodeRect`, `cardRect` and button each board declares. All live.
+Two more harness corrections were needed: buttons must be tested **last**
+(clicking SUBMIT first ends the board, and every rect after it then reports
+dead — which is what the first run said about quote and diagram, both fine),
+and the cursor must be parked **away** from the rect under test.
+
+**What the click sweep cannot see, checked rather than assumed:** a rect in the
+wrong *place*. The probe point is computed from the same function the handler
+tests against, so moving quote's tier rects 900px off the panel moves the probe
+with them and everything still reports live. It catches a rect that is declared
+and never *wired* — deleting diagram's node hit-test reports exactly `node1
+node2 node3`. Position is `visual.js`'s job.
+
+cable and script hit-test partly inline rather than from a declared rect, and
+the sweep says so rather than counting them as covered.
+
 ## The ratchets
 
 | name | value | meaning | direction |

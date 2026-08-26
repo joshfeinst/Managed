@@ -72,6 +72,97 @@ const CLAIMS = {
     return JSON.stringify(walk(MG));
   });
 
+  /* ---- CLICK RECTS -----------------------------------------------------
+     Every board declares its own hit rectangles — rowRect, optRect, tierRect,
+     nodeRect, cardRect, btns — and this pokes MG.click at the centre of each
+     one and asserts the board notices.
+
+     WHAT IT CATCHES: a rect that is declared and never wired into the click
+     handler. The board goes dead under the mouse with no tell at all, which
+     has happened here before — see the note above cable's port handling.
+     Deleting diagram's node hit-test is reported as exactly node1 node2 node3.
+
+     WHAT IT CANNOT CATCH, and this was checked rather than assumed: a rect in
+     the WRONG PLACE. The click point is computed from the same function the
+     handler tests against, so moving quote's tier rects 900px off the panel
+     moves the probe with them and everything still reports live. Position is
+     visual.js's job — it draws from those same numbers, which is why a
+     misplaced rect is at least visible.
+
+     It sets MG.click directly rather than dispatching a real mouse event: the
+     page-to-canvas transform is shared by every board and already exercised by
+     ordinary play, while the rectangle is per board and can rot per board. */
+  const clickResults = [];
+  for (const id of Object.keys(CLAIMS)){
+    const r = await page.evaluate(async id => {
+      const out = { id, dead: [], tested: 0 };
+      /* BUTTONS LAST. Clicking SUBMIT first ends the board, and every rect
+         tested afterwards then reports dead because step() returns early on a
+         submitted board — which is exactly what the first run of this said
+         about quote and diagram. Both were fine. */
+      const rects = g => {
+        const list = [];
+        const n = (g.rows && g.rows.length) || (g.tasks && g.tasks.length) ||
+                  (g.hand && g.hand.length) || (g.sites && g.sites.length) ||
+                  (g.qs && g.qs.length) || 0;
+        if (g.rowRect) for (let i = 0; i < Math.min(n, 4); i++)
+          list.push(['row' + i, ...g.rowRect(i)]);
+        if (g.optRect) for (let i = 0; i < 3; i++) list.push(['opt' + i, ...g.optRect(i)]);
+        if (g.tierRect) for (let t = 0; t < 3; t++) list.push(['tier' + t, ...g.tierRect(0, t)]);
+        if (g.nodeRect && g.nodes) for (let i = 1; i < Math.min(g.nodes.length, 4); i++)
+          list.push(['node' + i, ...g.nodeRect(i)]);
+        if (g.cardRect) for (let i = 0; i < 4; i++) list.push(['opt' + i, ...g.cardRect(i)]);
+        if (g.btns) g.btns.forEach((b, i) =>
+          list.push(['btn:' + (b.k || i), b.x - b.w/2, b.y, b.w, b.h]));
+        return list;
+      };
+      const hash = () => {
+        const skip = new Set(['flash','flashOk','buzz','t','click','hint','brief',
+                              'gid','onDone','dark','darkOf','_plan']);
+        const seen = new WeakSet();
+        const walk = v => {
+          if (v instanceof Set) return [...v].sort().join(',');
+          if (Array.isArray(v)) return v.map(walk);
+          if (v && typeof v === 'object'){
+            if (seen.has(v)) return '<c>'; seen.add(v);
+            const o = {};
+            for (const k of Object.keys(v)) if (!skip.has(k) && typeof v[k] !== 'function') o[k] = walk(v[k]);
+            return o;
+          }
+          return v;
+        };
+        return JSON.stringify(walk(MG));
+      };
+      SAVE_SUSPEND = true; QUIET = true;
+      rngInit('CLK-' + id); runInit('CLK-' + id); rollDay();
+      openGame(id, 2, () => {});
+      if (!MG) return { id, dead:['could not open'], tested:0 };
+      if (MG.brief) MG.brief = null;
+      const rs = rects(MG);
+      for (const [label, x, y, w, h] of rs){
+        if (!MG || MG.finished || MG.submitted || MG.applied) break;
+        clearInput(); MG.step(1/30);
+        /* A click that lands on what is already selected changes nothing and
+           is perfectly alive, so park the cursor somewhere else first. */
+        const idx = /^(?:row|node|opt)(\d+)$/.exec(label);
+        if (idx && typeof MG.cur === 'number'){
+          /* park AWAY from the rect under test — parking on it is how row1
+             reported dead while being perfectly alive */
+          const want = +idx[1];
+          MG.cur = want === 0 ? Math.max(1, want + 1) : 0;
+        }
+        const before = hash();
+        MG.click = { x: x + w/2, y: y + h/2 };
+        MG.step(1/30);
+        out.tested++;
+        if (hash() === before) out.dead.push(label);
+        clearInput();
+      }
+      return out;
+    }, id);
+    clickResults.push(r);
+  }
+
   const results = [];
   for (const id of Object.keys(CLAIMS)){
     const dead = [];
@@ -133,8 +224,20 @@ const CLAIMS = {
       ? 'DEAD: ' + r.dead.join(' ')
       : CLAIMS[r.id].length + ' keys, all live'));
   }
+  console.log('\nCLICK-RECT SWEEP — every rectangle each board declares\n');
+  let cbad = 0;
+  for (const r of clickResults){
+    if (r.dead.length) cbad++;
+    console.log('  ' + r.id.padEnd(10) + (r.dead.length
+      ? 'DEAD: ' + r.dead.join(' ')
+      : r.tested
+      ? r.tested + ' rects, all live'
+      : 'no declared rects — hit-tests inline, NOT COVERED HERE'));
+  }
   if (errs.length) console.log('\npage errors: ' + errs.length + '\n  ' + errs.slice(0,4).join('\n  '));
   console.log(bad ? '\n' + bad + ' BOARD(S) WITH A DEAD KEY' : '\nNO DEAD KEYS');
+  console.log(cbad ? cbad + ' BOARD(S) WITH A DEAD CLICK RECT' : 'NO DEAD CLICK RECTS');
+  bad += cbad;
   await browser.close();
   process.exit(bad || errs.length ? 1 : 0);
 })();
