@@ -7640,9 +7640,19 @@ function reviewScreen(dayPerf, eod, promo, ending){
         '">(' + (dPrev >= 0 ? '+' : '') + dPrev + ' on yesterday)</span>') + '</dd>' +
     (gate ? (() => { const gw = gateWindow(); run.gateWin = gw.win; run.gateAvg = gw.avg;
                      run.gateBar = gw.bar; return ''; })() : '') +
+    /* A PROMOTION EVENING HAS NO WINDOW TO REPORT. rungSince is set to
+       perfHist.length the moment the rung goes up, which is the point — the
+       new job's bar is judged on the new job — but it leaves the window empty
+       for exactly one evening, and this line printed it as fact: "Promotion
+       needs 67% averaged over 3 days — your last 0 average 0%", directly under
+       PROMOTED. A player reads a 0% as a verdict on the day they just won.
+       There is no average yet; say that instead of inventing one. */
     (gate ? '<dt>Promotion needs</dt><dd>' + Math.round((run.gateBar != null ? run.gateBar : gate.perf)*100) +
-      '% averaged over ' + gate.days + ' days — your last ' +
-      Math.min(run.gateWin || 0, gate.days) + ' average ' + Math.round((run.gateAvg || 0)*100) + '%' +
+      '% averaged over ' + gate.days + ' days — ' +
+      (run.gateWin
+        ? 'your last ' + Math.min(run.gateWin, gate.days) +
+          ' average ' + Math.round((run.gateAvg || 0)*100) + '%'
+        : 'and the counting starts tomorrow, at the new desk') +
       (run.rep ? ' <span style="color:var(--ok)">(' + Math.round(gate.perf*100) + '% before goodwill)</span>' : '') +
       '</dd>' : '') +
     '<dt>Goodwill</dt><dd>' + (run.rep || 0) + ' — ' +
@@ -11422,6 +11432,44 @@ function selfTest(runSim){
          run && run.rung === 2 && run.pendingEnd === 'burnout',
          run ? 'rung ' + run.rung + ', ending ' + run.pendingEnd : 'run gone');
       if (run) run.pendingEnd = null;
+    }
+    /* AND THE PROMOTION EVENING DOES NOT REPORT A ZERO IT INVENTED. Promoting
+       sets rungSince to perfHist.length, so for exactly one evening the gate
+       window is empty — and the screen printed "Promotion needs 67% averaged
+       over 3 days — your last 0 average 0%" directly under PROMOTED. Both
+       halves are checked: no fabricated zero on the promotion evening, and a
+       normal evening still prints the real window, so deleting the clause
+       outright cannot pass this. */
+    {
+      const stats = () => document.getElementById('r-stats').innerHTML;
+      const evening = promote => {
+        rngInit('GATE-LINE'); runInit('GATE-LINE'); rollDay();
+        const need = ROLES[1].gates.nextAt;
+        const hit = need.perf + .08, miss = ROLES[1].gates.firedBelow + .05;
+        run.rung = 1; run.rungSince = 0; run.rep = 0;
+        run.perfHist = new Array(need.days - 1).fill(promote ? hit : miss);
+        run.day = 12; run.clock = DAY_MIN + 1; run.queue = []; run.crashes = [];
+        run.stress = 40; run.coffee = 0; run.burnout = 0; run.firedStreak = 0;
+        run.resolved = 6; run.stakesDone = 12;
+        run.earned = 12 * (promote ? hit : miss);
+        run.scores = new Array(6).fill(promote ? hit : miss);
+        run.breaches = 0; run.burned = [];
+        endDay();
+        const h = stats();
+        if (run) run.pendingEnd = null;
+        return { html:h, promoted: !!(run && run.promoted), win: gateWindow().win };
+      };
+      const up = evening(true), on = evening(false);
+      ok('the promotion evening does not report a window it just reset',
+         up.promoted && up.win === 0 && !/your last 0\b/.test(up.html) &&
+         /Promotion needs/.test(up.html),
+         up.promoted ? (up.win + '-day window, line: ' +
+           (up.html.match(/Promotion needs<\/dt><dd>[^<]*/) || ['?'])[0]) : 'never promoted');
+      ok('an ordinary evening still prints the window it has',
+         !on.promoted && on.win > 0 && /your last \d+ average \d+%/.test(on.html),
+         on.promoted ? 'promoted by accident' : on.win + '-day window, line: ' +
+           (on.html.match(/Promotion needs<\/dt><dd>[^<]*/) || ['?'])[0]);
+      run = null;
     }
 
     /* and at the very top, where the review used to read one rung past the end
