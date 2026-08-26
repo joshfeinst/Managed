@@ -694,6 +694,11 @@ function bakeAtlas(){
   T(16, g=>{ Rt(g,2,0,12,15,'#191d24'); Rt(g,2,0,12,1,'#2a3038');
     for (let y=2;y<14;y+=3){ Rt(g,3,y,10,2,'#0d1015'); Rt(g,11,y,1,1,Math.random()<.5?'#39d7ff':'#4ade80'); }
     Rt(g,3,14,10,1,'#0a0c10'); });
+  /* 32 the post room pile — everything anybody has ever ordered, in a heap */
+  T(32, g=>{ Rt(g,1,7,7,8,'#8a6a45'); Rt(g,1,7,7,1,'#a07f55'); Rt(g,4,7,1,8,'#6d5236');
+    Rt(g,8,9,7,6,'#7d6040'); Rt(g,8,9,7,1,'#96754e'); Rt(g,11,9,1,6,'#63492f');
+    Rt(g,3,2,8,5,'#96754e'); Rt(g,3,2,8,1,'#a8845a'); Rt(g,6,2,1,5,'#70563a');
+    Rt(g,4,3,3,1,'#d9cbb0'); });
   /* 17 potted fern (morale, allegedly) */
   T(17, g=>{ Rt(g,5,10,6,4,'#8a5a34'); Rt(g,5,10,6,1,'#a06c40');
     Rt(g,7,4,2,6,'#2e6b34'); Rt(g,4,5,3,2,'#38813f'); Rt(g,9,5,3,2,'#38813f');
@@ -1004,6 +1009,43 @@ const MAPS = { office1: {
             DESK_PROJ:[24,15], DESK_PROC:[24,18],
             DESK_CLIENT:[34,15], DESK_ARCH:[38,17],
             DESK_EXEC:[38,3], DESK_CORNER:[38,2] }
+},
+/* ------------------------- THE GROUND FLOOR -----------------------------
+   The lift has said IT GOES TO OTHER FLOORS since the first build, and for
+   the whole life of the project it went nowhere: the joke had no floor under
+   it. This is the one the clients see, which is the joke that replaces it —
+   carpet instead of lino, two glass meeting rooms nobody who works here is
+   allowed to book, plants that are watered, and a post room where every piece
+   of hardware anyone has ever ordered turns up in a pile.
+
+   NO ANCHOR ON THIS FLOOR IS ONE A TICKET USES. Anchors resolve against the
+   LOADED map, so a SHELF down here would silently steal a goto meant for the
+   supply shelf upstairs. The lift is the single deliberate exception, because
+   either lift is a lift. */
+ground: {
+  name:'PROACTIVE IT PARTNERS — GROUND FLOOR',
+  map:[
+    '###wwwwww##wwwwwww####wwwwwww###wwwwwwww####',
+    '#,,,,,,,,,,,,,,,,,,,#.........#..........x##',
+    '#EP,,,,,,,,,,,,,,,,,#.........#...........##',
+    '#E,,,,,,,,,,,,,,,,,,#..tttt...#...ttttt...##',
+    '#,,,,,,NNNNN,,,,,,,,#..tttt...#...ttttt...##',
+    '#,,,,,,,,,,,,,,,,,,,#.........#...........##',
+    '#,,,,,,,,,,,,,,,,,,,#.........#...........##',
+    '#,,,U,f,,,,,,,,,,,,,GGGGDGGGGGGGGGGDGGGGGG##',
+    '#,,,U,f,,,,,,,,,,,,,####D##########D########',
+    '#,,,,,,,,,,,,,,,,,,,......................##',
+    '#,,,,,,,,,,,,,,,,,,,................ddq...##',
+    '#,,f,,,,,,,,,,,,,,,,...BBBBB..BBBBB.......##',
+    '#,,,,,,,,,,,,,,,,,,,......................##',
+    '#,,f,,,,,,,,,,,,,,,,...BBBBB..............##',
+    '#,,,,,,,,,,,,,,,,,,,......................##',
+    '#,,,,,,,,,,,,,,,,,,,......................##',
+    '########DD##################################',
+    '############################################',
+  ],
+  anchors:{ RECEPTION:[9,5], POST:[36,12], MEET_A:[25,5], MEET_B:[36,5],
+            FRONT:[8,15] }
 }};
 
 /* meta-progression (slice: one cert + one perk visible, more later) */
@@ -1111,7 +1153,20 @@ const NPCS = {
   callum:  { name:'CALLUM', role:'Apprentice, second year · does the jobs nobody has put a ticket on',
     look:{skin:0,hair:5,shirt:'#3b4b8a',tie:'#d9c17a'},
     sched:[[0,'n9'],[150,'COFFEE'],[180,'n9'],[345,'VEND'],[375,'n9']],
-    talk:'sm.callum' }
+    talk:'sm.callum' },
+
+  /* GROUND FLOOR. Neither of them works for you, which is the point: one is
+     the first person every client meets and is not in IT, and the other is
+     employed by the landlord and has no reason on earth to care what your
+     Thursday looks like. */
+  pauline: { name:'PAULINE', role:'Reception · has worked here through three company names',
+    look:{skin:1,hair:4,shirt:'#7a4550',hairLong:true},
+    sched:[[0,'RECEPTION'],[120,'FRONT'],[150,'RECEPTION'],[300,'MEET_B'],[330,'RECEPTION']],
+    talk:'sm.pauline' },
+  marcus:  { name:'MARCUS', role:'Building facilities · does not work for you',
+    look:{skin:2,hair:0,shirt:'#5a6b3f',smile:false},
+    sched:[[0,'POST'],[90,'MEET_A'],[130,'POST'],[240,'FRONT'],[280,'POST']],
+    talk:'sm.marcus' }
 
 };
 
@@ -1340,6 +1395,45 @@ const CHAT = {
       'Derek says I ask too many questions. Derek is the entire reason I have to.',
       'The store cupboard key is in the store cupboard. I have raised this. I will raise it again.',
       'When it is quiet I read old tickets. You can tell which ones were closed at ten to six.'
+    ]
+  },
+
+  pauline: {
+    when: [
+      { if:r => r.rung >= 7, t:'You come down here more than you used to. I have noticed. I notice everything, it is most of the job.' },
+      { if:r => r.rung <= 1, t:'You are the new one. I will know your name by Friday and I will not forget it after that.' },
+      { if:r => r.clock > 400, t:'Still here. I lock the front at six and I do not come back up for anybody.' },
+      { if:r => r.stress > 70, t:'Sit down for four minutes. The chairs out here are better than yours and everybody knows it.' }
+    ],
+    any: [
+      'Third parcel this week for a company that moved out in 2021. I have stopped writing "not known" on them.',
+      'I have seen four IT companies through this building. Yours is the only one that says hello.',
+      'Your client is in Meeting Room One. He has been since twenty past. Nobody told me either.',
+      'People ask me to fix the wifi. I say I am reception. They say yes but you are near the router.',
+      'I sign for everything and I am responsible for nothing. It took me a while to enjoy that.',
+      'If you are going up, take the post with you. I am not a courier. I have been clear about that for eleven years.',
+      'The good biscuits are for clients. There is a tin under here that is not for clients.',
+      'Somebody has booked Meeting Room Two every Tuesday since March and has never once turned up.',
+      'I know which of your clients are angry before you do. They practise it at me first.'
+    ]
+  },
+  marcus: {
+    when: [
+      { if:r => r.rung >= 8, t:'You will be the one who signs the lease review. I will not be, and I have opinions about it.' },
+      { if:r => r.queue.length >= 5, t:'Busy. Good. When you are busy nobody asks me about the thermostat.' },
+      { if:r => r.burnout > 50, t:'You lot burn out and get replaced and I stay. That is not a boast. It is just the arrangement.' },
+      { if:r => r.day % 5 === 0, t:'Friday. The bins go at four whether or not your servers care.' }
+    ],
+    any: [
+      'I do the building. Not the computers in it. Everybody finds that distinction upsetting.',
+      'The lift is fine. It is slow, which is different from broken, which is what gets reported.',
+      'Your air conditioning is on the landlord\'s system. So is your access control. So, somehow, is your kettle.',
+      'I can let you into the riser. I cannot let you touch anything in it. Two separate conversations.',
+      'Three tenants, one power feed, and a UPS that belongs to whoever bought it in 2014.',
+      'You want a hole drilled through that wall. Everybody wants a hole drilled through that wall.',
+      'I have keys to rooms your directors have never seen. Nobody has ever asked me what is in them.',
+      'The fire panel goes off at four on the first Tuesday. It is a test. It is always a test.',
+      'Whatever you are about to ask, the answer starts with a form and ends with the managing agent.'
     ]
   }
 
@@ -2682,6 +2776,14 @@ const DIALOGUE = {
     'If Derek offers to "show you something real quick", block out your afternoon.'] },
   'sm.mack':  { who:'mackenzie', t:['Great news! I told Cortland Dental we support their fish tank thermometer. We do now!',
     'Between us? The demo tomorrow is for software we have not technically... built.'] },
+  'sm.pauline':{ who:'sys', t:['Third parcel this week for a company that moved out in 2021. I have stopped writing "not known" on them.',
+    'Your client is in Meeting Room One. He has been in Meeting Room One since twenty past. Nobody told me either.',
+    'I have seen four IT companies in this building. Yours is the one that says hello.',
+    'If you are going up, take the post. I am not a courier. I have been very clear about that for eleven years.'] },
+  'sm.marcus':{ who:'sys', t:['I do the building. Not the computers in it. Everyone finds that distinction upsetting.',
+    'The lift is fine. It has always been fine. It is slow, which is different from broken, which is what everyone reports.',
+    'Your air conditioning is on the landlord\'s system. So is your access control. So is, for reasons nobody living can explain, your kettle.',
+    'I can let you into the riser. I cannot let you touch anything in the riser. Those are two separate conversations.'] },
   'sm.brenda':{ who:'brenda', t:['The thermostat is set where it is set for reasons that predate you.',
     'If the supply closet is a mess again I am labeling YOU next.'] },
   'sm.linda': { who:'linda', t:['Numbers look... adequate. Keep the queue moving and we\'ll talk at review time.',
@@ -4645,12 +4747,15 @@ const LEGEND = {
      that take longest to reach. Same glass as the pit, so it reads as the
      same building. */
   'Y':{o:7, act:'window', anchor:'WINDOW'},
+  /* the post room pile. It was rack art at first and the room read as a
+     second data centre, which is the one thing a reception floor is not. */
+  'B':{o:32, act:'parcels'},
   't':{o:19}, 'k':{o:21}, 'A':{o:22, act:'arcade', anchor:'ARCADE'},
   'C':{o:23, act:'cooler', anchor:'COOLER'}, 'F':{o:24},
   'U':{o:25, act:'couch'}, 'N':{o:26}, 'H':{o:30, act:'shelf', anchor:'SHELF'},
   'D':{f:8}, 'P':{f:-1, spawn:true}
 };
-const W2 = { W:0, H:0, base:null, obj:null, solid:null, act:null, anchors:{}, name:'' };
+const W2 = { W:0, H:0, base:null, obj:null, solid:null, act:null, anchors:{}, name:'', id:'' };
 const cellIx = (x,y) => y*W2.W + x;
 const inMap = (x,y) => x>=0 && y>=0 && x<W2.W && y<W2.H;
 const solidAt = (x,y) => !inMap(x,y) || W2.solid[cellIx(x,y)] === 1;
@@ -4658,7 +4763,7 @@ const solidAt = (x,y) => !inMap(x,y) || W2.solid[cellIx(x,y)] === 1;
 function loadMap(id){
   const M = MAPS[id];
   const rows = M.map;
-  W2.H = rows.length; W2.W = rows[0].length; W2.name = M.name;
+  W2.H = rows.length; W2.W = rows[0].length; W2.name = M.name; W2.id = id;
   W2.base = new Uint8Array(W2.W*W2.H);
   W2.obj  = new Uint8Array(W2.W*W2.H).fill(255);
   W2.solid= new Uint8Array(W2.W*W2.H);
@@ -5072,18 +5177,33 @@ function markerLift(mx, my){
    arrow, the off-screen compass and the HUD objective line. */
 function objectiveTarget(){
   if (typeof run === 'undefined' || !run || !W2.W) return null;
-  if (run.marker) return { pos: run.marker, label: run.markerLabel || 'GO HERE' };
+  /* a marker set upstairs is a set of coordinates that mean something else
+     entirely down here, so point at the lift instead of at a cell in the post
+     room that happens to share its numbers */
+  if (run.marker){
+    if (run.markerFloor && run.markerFloor !== W2.id)
+      return W2.anchors.ELEV ? { pos: W2.anchors.ELEV, label: 'THE LIFT' } : null;
+    return { pos: run.marker, label: run.markerLabel || 'GO HERE' };
+  }
   if ((run.queue.length || (run.day === 1 && !run.taughtQueue)) && W2.anchors.TERMINAL)
     return { pos: W2.anchors.TERMINAL, label: 'YOUR DESK' };
   return null;
 }
 function objectiveText(){
   if (!run) return '';
-  if (run.marker) return 'GO TO ' + (run.markerLabel || 'THE MARKER') + ' — FOLLOW THE ARROW';
+  if (run.marker){
+    if (run.markerFloor && run.markerFloor !== W2.id)
+      return (run.markerLabel || 'THE MARKER') + ' IS ON THE OTHER FLOOR — TAKE THE LIFT';
+    return 'GO TO ' + (run.markerLabel || 'THE MARKER') + ' — FOLLOW THE ARROW';
+  }
   if (run.queue.length)
     return run.queue.length + (run.queue.length === 1 ? ' TICKET WAITING' : ' TICKETS WAITING') + ' — PRESS TAB TO OPEN THE QUEUE';
   if (run.day === 1 && !run.taughtQueue)
-    return 'FIND YOUR DESK — FOLLOW THE AMBER ARROW';
+    /* your desk is upstairs; there is no arrow to it from reception, and
+       promising one is how a player ends up looking for a marker that the
+       objective system has correctly declined to draw */
+    return objectiveTarget() ? 'FIND YOUR DESK — FOLLOW THE AMBER ARROW'
+                             : 'YOUR DESK IS UPSTAIRS — TAKE THE LIFT';
   return 'QUEUE CLEAR — TALK TO PEOPLE, GET A COFFEE, BREATHE';
 }
 const DIRV = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
@@ -5160,6 +5280,11 @@ const QUEUE_MEMORY = 2, QUEUE_FADE = 1.8;
    as a scheduling bug rather than a punchline, and from inside the day the
    player cannot tell the difference. */
 const MEETING_GAP = 12;
+/* What the lift costs you, each way. It is a working day and the lift is slow:
+   this is the whole reason going downstairs is a decision rather than a free
+   look at some scenery. */
+const LIFT_MIN = 4;
+const OTHER_FLOOR = { office1:'ground', ground:'office1' };
 /* What one step of the starter checklist done out of order costs. Set from
    tools/boards.js: at a flat 1/steps the careless run — straight down the
    printed sheet — landed within 17 points of a perfect one, and a board whose
@@ -6430,6 +6555,14 @@ const PROP_LINES = {
     'THE HEALTHY SHELF IS FULL. IT HAS BEEN FULL SINCE INSTALLATION.',
     'PRICES WENT UP IN MARCH. THE STICKER SAYING SO WENT UP IN JULY.'
   ],
+  parcels: [
+    'NINETEEN BOXES. FOUR PURCHASE ORDERS. THE MATHS HAS NEVER ONCE WORKED.',
+    'ONE IS ADDRESSED TO A COMPANY THAT LEFT THIS BUILDING IN 2021. IT KEEPS COMING.',
+    'SOMEBODY HAS OPENED A BOX, TAKEN ONE THING OUT OF IT, AND CLOSED IT AGAIN.',
+    'THE HEAVY ONE IS A MONITOR. THE HEAVY ONE IS ALWAYS A MONITOR.',
+    'A DELIVERY NOTE SAYS "LEFT WITH RECEPTION". YOU ARE RECEPTION, APPARENTLY.',
+    'THERE IS A LAPTOP IN HERE FOR SOMEBODY WHO STARTED THREE WEEKS AGO.'
+  ],
   window: [
     'THE CAR PARK. YOUR CAR. THE SPACE WITH YOUR NAME ON IT, WHICH YOU ASKED THEM NOT TO DO.',
     'FROM UP HERE THE PIT IS A ROOM WITH FOUR DESKS IN IT. IT DID NOT LOOK LIKE THAT FROM INSIDE.',
@@ -6471,6 +6604,35 @@ const PROP_LINES = {
 /* The elevator is the one that answers back. It has been telling you your
    career does not go to other floors since your first day; when it finally
    does, it says so. */
+/* THE LIFT HAS PROMISED OTHER FLOORS SINCE THE FIRST BUILD. It said "IT GOES
+   TO OTHER FLOORS. YOUR CAREER DOES NOT. YET." to every player for the whole
+   life of the project, and the joke had no floor under it — there was one map.
+   It goes now.
+
+   You always start and end a day upstairs (startCommute and endDay both load
+   office1), so the floor never has to survive a save; it is a thing you do
+   inside a working day and come back from. */
+function takeLift(){
+  const to = OTHER_FLOOR[W2.id];
+  if (!to || !MAPS[to] || !run || G.state !== 'work'){
+    toast(elevatorLine(), 'corp', 2400); return;
+  }
+  run.clock += LIFT_MIN;
+  loadMap(to);
+  spawnPeople(run.clock, anchorPos('ELEV'));
+  /* SNAP THE CAMERA, or you arrive looking at wherever you were standing on
+     the other floor. The floors are different heights, so the old scroll
+     position is not merely wrong, it is off the end of the shorter one: the
+     first ride down opened on a third of a screen of reception and two thirds
+     of black. */
+  cam.x = clamp(player.tx*TILE - VW/2, 0, Math.max(0, W2.W*TILE - VW));
+  cam.y = clamp(player.ty*TILE - VH/2, 0, Math.max(0, W2.H*TILE - VH));
+  clearInput();
+  slog('lift to ' + to + ' (-' + LIFT_MIN + ' min)');
+  sfx('door');
+  toast(W2.name.replace(/^.*—\s*/, '') + ' · ' + LIFT_MIN + ' MINUTES OF YOUR DAY' +
+        (to === 'ground' ? '' : ' · BACK WHERE THE WORK IS'), 'corp', 2600);
+}
 function elevatorLine(){
   const r = run.rung;
   if (run.active && /^onsite/.test(run.active.id))
@@ -6515,12 +6677,13 @@ function interact(act){
       toast(propLine('arcade'), 'corp', 2800);
       break;
     case 'vending': toast(propLine('vending'), 'corp', 2200); break;
+    case 'parcels': toast(propLine('parcels'), 'corp', 2800); break;
     case 'window': toast(propLine('window'), 'corp', 2800); break;
     case 'cooler': toast(propLine('cooler'), 'corp', 2000); break;
     case 'printer': toast(propLine('printer'), 'corp', 2600); break;
     case 'rack': toast(propLine('rack'), 'corp', 2600); break;
     case 'shelf': toast(propLine('shelf'), 'corp', 2600); break;
-    case 'elevator': toast(elevatorLine(), 'corp', 2400); break;
+    case 'elevator': takeLift(); break;
     case 'door': break;
   }
 }
@@ -6544,6 +6707,9 @@ function gateWindow(){
 }
 function gotoCheck(){
   if (!run.marker || !run.active) return;
+  /* two floors share a coordinate space, so standing on the post room's [35,17]
+     is not standing in the server room */
+  if (run.markerFloor && run.markerFloor !== W2.id) return;
   /* the marker must belong to the active ticket's CURRENT step — anything
      else is a stale arrow and gets cleaned up, never acted on */
   const st = TICKETS[run.active.id].steps[run.active.si];
@@ -6699,6 +6865,7 @@ function advanceStep(){
     const a = anchorPos(st.goto);
     if (!a){ t.si++; advanceStep(); return; }
     run.marker = a; run.markerLabel = ANCHOR_NAMES[st.goto] || st.goto;
+    run.markerFloor = W2.id;
     if (G.modal) closeModalToWork();
     toast('GO TO: ' + (ANCHOR_NAMES[st.goto] || st.goto) + ' — FOLLOW THE AMBER ARROW', 'corp', 2600);
     return;
@@ -10035,15 +10202,45 @@ function selfTest(runSim){
 
   /* --- static content lints (always run) --- */
   {
-    const M = MAPS.office1, rows = M.map, Wm = rows[0].length;
-    ok('map is rectangular', rows.every(r => r.length === Wm));
+    /* EVERY FLOOR, not just the one the game happens to open on. These
+       checks named MAPS.office1 for the whole life of the project because
+       there was only one map; the second one arrived walkable by luck rather
+       than by proof, and its post room was unreachable to the prop lint
+       until this loop existed. */
     const known = new Set(Object.keys(LEGEND).concat('123456789'.split('')));
-    let unk = null;
-    for (const r of rows) for (const ch of r) if (!known.has(ch)) unk = ch;
-    ok('map has no unknown tiles', !unk, unk ? JSON.stringify(unk) : '');
-    /* BFS reachability over the parsed world */
+    const ragged = [], unknownIn = [], sealedIn = [];
+    for (const mid in MAPS){
+      const rowsM = MAPS[mid].map, Wm2 = rowsM[0].length;
+      if (!rowsM.every(r => r.length === Wm2)) ragged.push(mid);
+      for (const r of rowsM) for (const ch of r)
+        if (!known.has(ch)) unknownIn.push(mid + ':' + JSON.stringify(ch));
+      /* and every walkable tile on it has to be reachable from its own spawn,
+         or part of the floor is scenery */
+      loadMap(mid);
+      const seenM = new Uint8Array(W2.W*W2.H);
+      const qM = [W2.spawn.slice()]; seenM[cellIx(W2.spawn[0], W2.spawn[1])] = 1;
+      while (qM.length){
+        const [x,y] = qM.pop();
+        for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+          const nx=x+dx, ny=y+dy;
+          if (!inMap(nx,ny) || seenM[cellIx(nx,ny)] || W2.solid[cellIx(nx,ny)]) continue;
+          seenM[cellIx(nx,ny)] = 1; qM.push([nx,ny]);
+        }
+      }
+      let walk = 0, got = 0;
+      for (let c = 0; c < W2.W*W2.H; c++){ if (W2.solid[c]) continue; walk++; if (seenM[c]) got++; }
+      if (got < walk) sealedIn.push(mid + ':' + (walk - got) + ' tiles');
+    }
+    ok('every floor is rectangular', !ragged.length, ragged.join(' '));
+    ok('every floor is made of tiles the legend knows',
+       !unknownIn.length, [...new Set(unknownIn)].join(' '));
+    ok('and no floor has a room you cannot walk into',
+       !sealedIn.length, sealedIn.join(' '));
+    const M = MAPS.office1, rows = M.map, Wm = rows[0].length;
+    /* the anchor checks below are about the WORKING floor: tickets are priced
+       from a desk upstairs and every goto they name lives up there */
     const hadMap = W2.W > 0;
-    if (!hadMap) loadMap('office1');
+    loadMap('office1');
     const seen = new Uint8Array(W2.W*W2.H);
     const q = [W2.spawn.slice()]; seen[cellIx(W2.spawn[0], W2.spawn[1])] = 1;
     while (q.length){
@@ -10055,7 +10252,12 @@ function selfTest(runSim){
       }
     }
     const wantAnchors = new Set(['TERMINAL','COFFEE','PRINTER','VEND','ARCADE','COOLER','SHELF','ELEV']);
-    for (const id in NPCS) for (const [,a] of NPCS[id].sched) wantAnchors.add(a);
+    /* an NPC whose whole day is downstairs has no anchor up here, and that is
+       not a missing anchor — it is a receptionist */
+    const anywhere = new Set();
+    for (const mid in MAPS) for (const a in (MAPS[mid].anchors || {})) anywhere.add(a);
+    for (const id in NPCS) for (const [,a] of NPCS[id].sched)
+      if (!anywhere.has(a) || (MAPS.office1.anchors || {})[a] !== undefined) wantAnchors.add(a);
     for (const id in TICKETS) for (const st of TICKETS[id].steps) if (st.goto) wantAnchors.add(st.goto);
     let missing = [], sealed = [];
     for (const a of wantAnchors){
@@ -11418,6 +11620,52 @@ function selfTest(runSim){
       }
       run = savedRunR;
     }
+    /* THE LIFT MUST COME BACK. A one-way lift is the worst bug this feature
+       can have: the day does not end until 17:00, the tickets are all upstairs,
+       and a player stuck in reception can do nothing at all but watch the SLA
+       clocks run out. So the round trip is played, not reasoned about — down,
+       back, and the arrival cell walkable and un-shared both ways. */
+    {
+      const savedRunL = run, savedState = G.state;
+      rngInit('LIFT'); runInit('LIFT');
+      const bad = [];
+      if (run){
+        run.rung = 0; run.clock = 60;
+        loadMap('office1'); spawnPeople(run.clock); G.state = 'work';
+        const before = run.clock, startFloor = W2.id;
+        takeLift();
+        if (W2.id === startFloor) bad.push('did not leave ' + startFloor);
+        if (run.clock !== before + LIFT_MIN) bad.push('cost ' + (run.clock - before) + ' not ' + LIFT_MIN);
+        if (!W2.anchors.ELEV) bad.push('no lift on ' + W2.id);
+        else if (solidAt(W2.anchors.ELEV[0], W2.anchors.ELEV[1]))
+          bad.push('arrive inside a wall on ' + W2.id);
+        if (player && solidAt(player.tx, player.ty)) bad.push('player in a wall on ' + W2.id);
+        const away = W2.id;
+        takeLift();
+        if (W2.id !== startFloor) bad.push('could not get back from ' + away);
+        if (player && solidAt(player.tx, player.ty)) bad.push('player in a wall on return');
+      }
+      /* and every floor the lift can reach has a lift on it to come back with */
+      for (const mid in OTHER_FLOOR){
+        if (!MAPS[mid]) { bad.push('no map ' + mid); continue; }
+        loadMap(mid);
+        if (!W2.anchors.ELEV) bad.push(mid + ' has no lift');
+      }
+      loadMap('office1');
+      run = savedRunL; G.state = savedState;
+      ok('the lift goes somewhere, and comes back', !bad.length, bad.join(' '));
+      /* and every floor must be at least a screen tall, or the camera has
+         nowhere legal to sit and the bottom of the view is void */
+      const shortFloor = [];
+      for (const mid in MAPS){
+        loadMap(mid);
+        if (W2.H*TILE < VH) shortFloor.push(mid + ':' + W2.H + ' rows');
+        if (W2.W*TILE < VW) shortFloor.push(mid + ':' + W2.W + ' cols');
+      }
+      loadMap('office1');
+      ok('and every floor fills the screen it is drawn on',
+         !shortFloor.length, shortFloor.join(' '));
+    }
     /* NOTHING HAD EVER DRAWN A BOARD. tools/boards.js drives every board's
        step() forty times and proves it discriminates; the self-test proves
        every board is reachable, dealt, and has a how-to card whose keys all do
@@ -11641,35 +11889,40 @@ function selfTest(runSim){
        to have a branch that answers it, and — if it speaks through propLine —
        has to have lines to say. Any of the three missing makes it scenery. */
     {
-      loadMap('office1');
       const acts = new Set();
       for (const ch in LEGEND) if (LEGEND[ch].act) acts.add(LEGEND[ch].act);
       acts.delete('door');
       const src = Array.from(document.querySelectorAll('script:not([src])'))
                        .map(n => n.textContent).join('\n');
-      /* reachability: you stand NEXT to a prop, never on it — every one must
-         have a walkable neighbour the front door can get to */
-      const reach = new Set(); const q = [W2.spawn.slice()];
-      reach.add(W2.spawn[0] + ',' + W2.spawn[1]);
-      while (q.length){
-        const [x,y] = q.shift();
-        for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-          const nx=x+dx, ny=y+dy, k=nx+','+ny;
-          if (!inMap(nx,ny) || reach.has(k) || solidAt(nx,ny)) continue;
-          reach.add(k); q.push([nx,ny]);
+      /* reachability: you stand NEXT to a prop, never on it — and it counts if
+         it is standable on ANY floor, because the post room is downstairs */
+      const standableOn = new Set(), onSomeMap = new Set();
+      for (const mid in MAPS){
+        loadMap(mid);
+        const reach = new Set(); const q = [W2.spawn.slice()];
+        reach.add(W2.spawn[0] + ',' + W2.spawn[1]);
+        while (q.length){
+          const [x,y] = q.shift();
+          for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+            const nx=x+dx, ny=y+dy, k=nx+','+ny;
+            if (!inMap(nx,ny) || reach.has(k) || solidAt(nx,ny)) continue;
+            reach.add(k); q.push([nx,ny]);
+          }
+        }
+        for (let i = 0; i < W2.act.length; i++){
+          const a = W2.act[i];
+          if (!a || a === 'door') continue;
+          onSomeMap.add(a);
+          const x = i % W2.W, y = (i / W2.W)|0;
+          for (const [dx,dy] of [[0,1],[0,-1],[-1,0],[1,0]])
+            if (reach.has((x+dx) + ',' + (y+dy))) standableOn.add(a);
         }
       }
+      loadMap('office1');
       const mute = [], stranded = [], silent = [];
       for (const a of acts){
         if (!new RegExp("case '" + a + "':").test(src)) mute.push(a);
-        let standable = false;
-        for (let i = 0; i < W2.act.length; i++){
-          if (W2.act[i] !== a) continue;
-          const x = i % W2.W, y = (i / W2.W)|0;
-          for (const [dx,dy] of [[0,1],[0,-1],[-1,0],[1,0]])
-            if (reach.has((x+dx) + ',' + (y+dy))) standable = true;
-        }
-        if (!standable) stranded.push(a);
+        if (!standableOn.has(a)) stranded.push(a);
         /* only the ones that speak through the shared pool need a pool */
         if (new RegExp("case '" + a + "':[^]{0,160}?propLine\\('" + a + "'\\)").test(src)
             && !(PROP_LINES[a] && PROP_LINES[a].length >= 3)) silent.push(a);
@@ -11678,11 +11931,9 @@ function selfTest(runSim){
       ok('and every one of them can be stood next to', !stranded.length, stranded.join(' '));
       ok('and the ones that talk have more than one thing to say',
          !silent.length, silent.join(' '));
-      /* the other direction: a pool written for a prop that is not on the map */
-      const onMap = new Set();
-      for (let i = 0; i < W2.act.length; i++) if (W2.act[i]) onMap.add(W2.act[i]);
+      /* the other direction: a pool written for a prop on no floor at all */
       const orphan = Object.keys(PROP_LINES).filter(k =>
-        new RegExp("propLine\\('" + k + "'\\)").test(src) && !onMap.has(k));
+        new RegExp("propLine\\('" + k + "'\\)").test(src) && !onSomeMap.has(k));
       ok('and no prop lines were written for something that is not there',
          !orphan.length, orphan.join(' '));
     }
@@ -11703,7 +11954,7 @@ function selfTest(runSim){
        That is exactly what happened here: `fired` was wired a second time and
        would have played twice, overlapping itself, on the ending screen. */
     {
-      const DELIBERATE = new Set(['step', 'door']);
+      const DELIBERATE = new Set(['step']);
       const src = (document.querySelector('script:not([src])') ||
                    { textContent:'' });
       const all = Array.from(document.querySelectorAll('script:not([src])'))
