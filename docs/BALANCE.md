@@ -1889,3 +1889,81 @@ easier, ITIL adds a forgiven casualty (and the `max(2, …)` floor only swallows
 it below eight arrivals a day, where no real day lands), PRINCE2 cuts the
 meeting budget to 0.84× of a claimed 0.80 because meetings are whole numbers,
 CISSP slows burnout by exactly a fifth. Checked rather than assumed.
+
+## The building gets a second lift (2026-08-26, eleventh pass)
+
+Level work this time, and the numbers are what drove it.
+
+**One shaft, at the west end of a forty-four-tile floor.** The Solutions
+Architect's desk was fifty-seven tiles from the only way downstairs — sixty
+game-minutes before the doors opened. Against a cross-floor budget of
+seventy-eight that left thirteen tiles of ground floor, and the ground floor is
+fifty-five tiles deep. Measured per rung, as the share of that floor a ticket
+could legally send you to:
+
+| rung | intern | T1 | T2/T3 | project | procure | relmgr | solarch | vCIO | director |
+|---|---|---|---|---|---|---|---|---|---|
+| before | 81% | 70% | 58% | 55% | 51% | 39% | **20%** | 34% | 32% |
+| after | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
+
+Two thirds of that floor could not be reached by anybody above T1 at any price,
+which is why three of its rooms had no name and no ticket: the store room, the
+canteen and the accounts office were built, furnished and unreachable. A second
+shaft at the east end of the long corridor on both floors, plus a door out of
+the exec block so the senior desks can get to it, takes the architect from 57
+tiles to 19.
+
+The routing is the part worth keeping: the near half and the far half of a
+cross-floor trip are **not independent** — you leave by a lift and arrive at the
+one directly above or below it — so the cheapest route is the smallest sum, not
+the nearest lift here plus the nearest lift there. One function decides it and
+everything that prices a walk goes through it. The **arrow** follows the same
+choice; pointing at the main lift while the SLA was priced on the east one
+would send a player the long way round to a job they were charged the short way
+for.
+
+**Then the rooms got tickets.** Dead floor (more than six tiles from anything
+with a name) fell 62% → 45%; downstairs errands 0.30 a day → 0.67; every rung
+now has somewhere to go down there.
+
+**And four colleagues got work.** Yvonne, Noor, Callum and Mackenzie had desks,
+schedules, faces and small talk, and no ticket had ever walked you to any of
+them; two had never spoken inside a ticket at all. Writing the fourth found
+that `n5` had no entry in ANCHOR_NAMES — nothing had ever sent anybody there —
+so the first ticket that did would have printed "GO TO n5 — FOLLOW THE ARROW"
+and a queue row reading "· n5, ~31 min walk".
+
+### Ratchets added
+
+- both floors have both lifts, and each opens on its own counterpart
+- a cross-floor errand is priced by the cheaper shaft, and the arrow points at it
+- every room on the ground floor is inside the day for every rung
+- every room on the ground floor is somewhere a ticket sends you
+- every rung has work that takes it downstairs
+- every place a ticket sends you has a name a player can read
+- every desk in the building is somewhere a ticket sends you
+- everybody in the building speaks inside a ticket
+- a ticket that says "my desk" sends you to that desk
+
+### Two harnesses that were passing for the wrong reason
+
+`tools/firstday.js` clicked a fixed offset thirteen tiles east of the player, on
+the theory that that was where the arrow was. It was — at the first step only.
+The walk reached the desk because the pit's east wall stopped it there. Open a
+door at the end of that corridor and the same driver walks east forever,
+thirteen tiles at a time, reporting that the day-one arrow cannot be followed.
+It reads the arrow's real position now, every step, which is what somebody
+looking at it does.
+
+The burn-ledger test compared day one against day two, and day one is a
+deliberate half load: five new tickets in the pool and it dealt a day that
+burned nothing, so it passed by having nothing to compare. Two full days now.
+
+### One I made and caught before it shipped
+
+The payroll errand walks you to the accounts office on the ground floor and
+opened with Yvonne saying the machine was "the tower under my desk" — her desk
+is n4, upstairs in the pit. The line named one room and the arrow pointed at
+another, four seconds apart, in the same ticket. The guard is mechanical: a
+named speaker who says "my desk" is describing somewhere, and it has to be
+somewhere the errand goes.
