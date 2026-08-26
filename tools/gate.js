@@ -36,12 +36,12 @@ const LADDER = process.argv.includes('--ladder');
    makes the rung decoration, and a sloppy one that can makes it a formality. */
 async function ladder(page){
   const out = await page.evaluate(() => {
-    const play = (seed, skill, days, rung) => {
+    const play = (seed, skill, days, rung, order) => {
       const o = [];
       QUIET = true; rngInit(seed); runInit(seed);
       if (run) run.rung = rung;
       for (let d = 0; d < days && run && !run.pendingEnd; d++){
-        rollDay(); simDay(skill, { order:'pridead' });
+        rollDay(); simDay(skill, { order: order || 'pridead' });
         if (!run) break;
         o.push(run.perfHist[run.perfHist.length - 1]);
         if (run.pendingEnd) break;
@@ -58,8 +58,12 @@ async function ladder(page){
           b = Math.max(b, ds.slice(i, i + bar.days).reduce((a,c)=>a+c,0) / bar.days);
         return b; };
       rows.push({ id:ROLES[r].id, bar:bar.perf,
-        tight: seeds.map(s => best(play(s, 1.0,  8, r))).filter(w => w <  bar.perf).length,
-        loose: seeds.map(s => best(play(s, 0.35, 8, r))).filter(w => w >= bar.perf).length });
+        /* sloppy = bad TRIAGE. Measured at skill .35 with correct priority
+           order it scores 52% and clears everything, which says nothing about
+           the gate and everything about craft not mattering: the same bot
+           playing worst-first scores 28%. Triage is the axis this game has. */
+        tight: seeds.map(s => best(play(s, 1.0,  8, r, 'pridead' ))).filter(w => w <  bar.perf).length,
+        loose: seeds.map(s => best(play(s, 0.35, 8, r, 'worstpri'))).filter(w => w >= bar.perf).length });
     }
     return { rows, debt:GATE_DEBT, budget:GATE_DEBT_BUDGET };
   });
