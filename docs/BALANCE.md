@@ -1594,3 +1594,52 @@ Two were re-baselined on 2026-08-25 in the direction a ratchet is not supposed
 to move. Both because the old number was measured on the 4.4x bot, not because
 anything got worse. A ratchet whose numbers can be edited is a comment, so the
 reason is written beside each one in the source.
+
+## Nothing here had ever played a day (2026-08-26, fifth pass)
+
+A player opened the build, and inside ninety seconds hit three things that
+355 self-tests, `visual.js`, `human.js` and `audit.js` all passed over. They
+are worth writing down together because they have one cause.
+
+**The arrow that would not go out.** `objectiveTarget()` was armed by
+`run.queue.length`, so from the moment the first ticket landed it pointed at
+the terminal for the whole of every day you had anything queued. Arriving did
+not clear it, because arriving was never what cleared it. The line beside it
+said PRESS TAB — which works from anywhere — while the arrow said walk over
+here, and the player did, and it stayed lit.
+
+It also called the terminal YOUR DESK. Desks became per-rung when the office
+started rearranging itself as you climb; this line did not follow. The
+intern's desk is `DESK_PIT [15,7]`, `clockIn` spawns them sitting at it, and
+the arrow pointed at `TERMINAL [28,9]` and told them to go and find the thing
+they were sat on.
+
+**PRESS E did nothing.** Use is facing-based — `workInput` reads
+`faceCell()` — so standing ON the terminal tile with your back to it, the key
+the game had just named does nothing and says nothing about why. An
+instruction is only allowed to name a control that cannot silently fail from
+where the player is standing, so the line names TAB.
+
+**A meeting that did not exist.** "The 9:15 standup starts in nine minutes",
+read at 9:23. Three lies in one sentence: the `{mtg}` pool hardcoded a clock
+time, `rollDay` puts the morning meeting at 96 on day one and on most seeds
+none at all, and the countdown was authored as a constant. On JOB-1 the day's
+first event is 12:45PM and `{mtg}` had rolled "the QBR" — for an intern, on
+day one.
+
+The common cause is not any of these. It is that **every harness in this repo
+read state, and none of them played.** `human.js` proves the title screen
+boots. `visual.js` drives four window sizes and never opens a dialogue in any
+of them. The self-tests call the functions directly and therefore agree with
+whatever the functions believe. None of them had ever pressed a key at 9:00
+and looked at the screen at 9:23.
+
+`tools/firstday.js` does that, and found the E-does-nothing case unprompted.
+
+Its first draft is the lesson inside the lesson. It "checked" the arrow by
+reading the objective line, and passed with the shipped bug put back — the
+line was right; the arrow was the thing that was wrong, and the arrow is
+canvas. It counts the marker's own pixels now: 0 on the fixed build, 20 with
+the bug restored. **A driver that can only read text cannot check anything
+drawn**, and a check that cannot see the defect it is named after is worse
+than no check, because its green is mistaken for evidence.
