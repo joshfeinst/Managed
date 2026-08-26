@@ -165,6 +165,7 @@ were invisible to the ones that came before them.
 | `gate.js` | `--ladder` measures every rung against the debt recorded in the game |
 | `score.js` | takes the day score apart into the three terms it is made of — stakes closed, realisation, burn — because `bars.js` reports the number those produce and cannot say which one moved |
 | `probe.js` | dumps what a triage rule actually closes, ticket by ticket, with what it was worth and what it cost |
+| `ladder.js` | prints the shipped ladder as a markdown table, so docs/BALANCE.md is generated rather than hand-copied — it drifted once and cost a session |
 | `meta.js` | plays whole careers across many players — the only one that can see whether the top of the ladder is reachable |
 | `save.js` | mid-day save, reload, and the afternoon has to survive it |
 | `human.js`, `marathon.js`, `burn.js`, `templates.js`, `dials.js`, `trace.js`, `timing.js` | input driving, long soaks, burnout curves, per-template fairness |

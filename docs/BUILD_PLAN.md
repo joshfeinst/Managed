@@ -207,3 +207,14 @@ promotion bar — so the same sentence means the same thing at every desk.
   careers reaching retirement hits the target. Six steps, one command. It
   independently reproduced the hand-tuned bars to within a few points on its
   first run, which is the cross-validation the numbers needed.
+
+### The balance document drifted, and now it is generated
+
+`docs/BALANCE.md` carried a ladder table hand-copied forward from its own
+previous version, and it was wrong: Procurement and Relationship Manager kept
+bars that had been re-bisected away, and Solutions Architect was listed at a
+deal rate it had not had for hours — an error that reached a commit message too.
+
+`node tools/ladder.js index.html --measure` prints that table from the shipped
+file. Paste it; never retype it. **Re-read the file rather than trusting any
+table older than its last edit.**

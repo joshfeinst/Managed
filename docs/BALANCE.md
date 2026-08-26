@@ -1058,32 +1058,51 @@ disagreed, and the fourth time `meta.js` was right.** The rule stands: run
 `meta.js` against anything that touches gate shape, and believe it over the
 rung.
 
-## Where the ladder stands, 2026-08-26
+## Where the ladder stands, 2026-08-26 (final)
 
-30 seeds x 8 days per rung, plus 24 careers. **No rung is misplaced.**
+Read straight off the shipped file and re-measured at 30 seeds x 8 days per
+rung, plus 24 careers. **No rung is misplaced** — `bars.js` reports ALL BARS
+WELL PLACED, which has not been true before.
 
-| rung | rate | bar | flawless p50 | sloppy p50 | gap | good clears | bad clears |
-|---|---|---|---|---|---|---|---|
-| intern | 1.9 | 77% | 80% | 62% | 18 | 67% | 0% |
-| t1 | 1.9 | 76% | 78% | 61% | 16 | 63% | 3% |
-| t2 | 1.9 | 63% | 69% | 48% | 21 | 73% | 10% |
-| t3 | 1.9 | 62% | 66% | 46% | 21 | 73% | 7% |
-| project | 1.5 | 62% | 66% | 54% | 12 | 67% | 13% |
-| procure | 1.9 | 57% | 61% | 44% | 17 | 70% | 13% |
-| relmgr | 1.9 | 54% | 62% | 37% | 24 | 73% | 3% |
-| solarch | 2.2 | 61% | 67% | 48% | 19 | 70% | 7% |
-| vcio | 1.7 | 64% | 75% | 54% | 21 | 70% | 17% |
+| rung | rate | meetings | bar | floor | flawless p50 | sloppy p50 | gap | good clears | bad clears |
+|---|---|---|---|---|---|---|---|---|---|
+| intern | 1.9 | 30 | 0.772 | 0.347 | 80% | 62% | 18 | 67% | 0% |
+| t1 | 1.9 | 34 | 0.756 | 0.340 | 78% | 61% | 16 | 63% | 3% |
+| t2 | 1.9 | 40 | 0.635 | 0.286 | 69% | 48% | 21 | 73% | 10% |
+| t3 | 1.9 | 48 | 0.631 | 0.284 | 64% | 46% | 19 | 67% | 3% |
+| project | 1.5 | 60 | 0.624 | 0.281 | 67% | 54% | 13 | 67% | 17% |
+| procure | 1.9 | 68 | 0.513 | 0.231 | 57% | 43% | 14 | 73% | 10% |
+| relmgr | 1.9 | 78 | 0.501 | 0.225 | 59% | 42% | 17 | 83% | 27% |
+| solarch | 1.7 | 84 | 0.611 | 0.275 | 65% | 49% | 16 | 60% | 17% |
+| vcio | 1.7 | 88 | 0.641 | 0.288 | 70% | 53% | 17 | 67% | 17% |
+| director | 1.6 | 80 | — | 0.310 | — | — | — | — | — |
 
-Careers: **17 of 24 reach retirement at skill .85, averaging 10.1 careers; 10 of
-16 at skill .70, averaging 10.3.**
+Careers: **18 of 24 reach retirement at skill .85, averaging 11.4 careers; 12 of
+16 at skill .70, averaging 11.9.**
 
 Where the day began: gaps of 3-10 points at the mid rungs, sloppy triage
 clearing its gate in 33-97% of seeds, and a flawless triager burning three
-quarters of the queue. Gaps are 12-24 now, every rung clears good triage 63-73%
-of the time and bad triage 0-17%.
+quarters of the queue. Gaps are 13-21 now and sloppy triage clears 0-27%.
 
-Project Team is the narrowest left at 12, and it is the last rung still holding
-a rate that was set at 14 seeds. The recipe is written down twice above.
+Project Team is the narrowest at 13 and is the one rung a rate cannot fix —
+raising it widens the rung and collapses the career arc, and eight new tickets
+written for it did not move it either. Anything further there is content with
+sharper consequences, not a dial.
+
+### A note on where these numbers come from
+
+This table was wrong for several hours before it was checked against the file.
+It carried Procurement at .57 and Relationship Manager at .54 (both re-bisected
+since) and Solutions Architect at rate 2.2 when the shipped value has been 1.7
+since its own sweep — an error that also reached a commit message.
+
+Every number here is now read out of `index.html` rather than copied forward
+from the previous version of the table, because a balance document that
+misstates the shipped build is worse than no document: the next session tunes
+against a ladder that does not exist. **Re-read the file; do not trust the
+table above its own last edit.** The table above is generated —
+`node tools/ladder.js index.html --measure` prints it. Paste it; never retype
+it.
 
 ### And the bisection is a command now
 
