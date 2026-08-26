@@ -1828,3 +1828,64 @@ The fired ending appeared to throw the player to the title screen after 2.4
 seconds. It does not: `bootDone()` ends with `toTitle()`, and the harness had
 driven the game before boot finished. Checked rather than filed. Harnesses now
 wait for `G.state === 'title'` before touching anything.
+
+## The mouse could not close the queue (2026-08-26, tenth pass)
+
+Five more. The first came from taking the handbook's opening paragraph
+literally: *"The mouse plays the whole game. … Nothing needs the keyboard
+except typing a job posting ID."* Every harness in this repo presses keys, so
+nothing had ever checked it.
+
+**The service queue closed on Escape and nothing else.** No close control, no
+click-outside — and the day-one objective sends every new player straight into
+that panel, where the shift clock is frozen. A mouse-only player was not merely
+stuck, they were stuck at 9:03 with a queue that would never fill. It has a ✕
+now, and a click outside closes it while a click inside does not.
+`tools/mouseonly.js` plays from the title screen to a worked ticket without a
+single keypress, and covers all twelve how-to-play cards and the pause menu.
+
+**The pause menu was the other keyboard-only door**, and SAVE & QUIT lives
+behind it, so mid-day the one thing a mouse could not do was stop playing. The
+HUD has a PAUSE button; it is the only thing in the HUD that takes a pointer.
+
+**The HUD lost the coffee counter at 400×300** — a resource the game charges
+you for, warns you about, and then hid on exactly the windows narrow enough to
+need the warning. It shrinks to stay on one line, and wraps rather than clips
+if that is not enough. Two harnesses split the job: the self-test squeezes the
+frame and proves the row degrades instead of clipping; `tools/visual.js` resizes
+the window for real and catches the other failure, a HUD that answers a narrow
+window by wrapping across the panels drawn beneath it.
+
+**"One P1 outweighs 7 P4s"** — generated from STAKES so it could not drift from
+the maths, and false anyway. A P1 is seven points and seven P4s are seven
+points: the trade the handbook told you to make comes out level. The evening
+said the same thing the other wrong way, with a hard-coded "three" in a
+sentence whose other four numbers all come from STAKES. Both derive from
+`p4sBeaten()` now, and the guard checks the claim against the sum it is a claim
+about rather than against its own formula.
+
+**SPEED printed 0% on a day that closed nothing**, which is not a slow day, it
+is no data, and it reads as the worst score on the screen — on exactly the
+evening a player is least able to argue with it. CRAFT two lines below already
+said "nothing hands-on today".
+
+**"Days on the queue: 0 — you got off it"** on every career hired above the
+helpdesk, which is every career after the first one that reaches Project Team.
+
+### What this pass says about the harnesses
+
+`tools/firstday.js` recorded only the first fourteen lines of the screen. Two
+new buttons pushed the ticket row past the cut and it reported an empty queue
+over a frame that had the ticket in it — a false alarm that cost most of an
+hour to chase. A harness that samples has to say so; this one now records the
+whole screen and prints sixteen lines. Same disease as the hand-kept key table
+in the pass before it: the test made a claim about the game that nothing
+re-derived.
+
+### One reported bug that was not one
+
+Every certificate does what its description says: A+ deals a board one step
+easier, ITIL adds a forgiven casualty (and the `max(2, …)` floor only swallows
+it below eight arrivals a day, where no real day lands), PRINCE2 cuts the
+meeting budget to 0.84× of a claimed 0.80 because meetings are whole numbers,
+CISSP slows burnout by exactly a fifth. Checked rather than assumed.
