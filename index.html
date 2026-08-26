@@ -965,8 +965,12 @@ const ANCHOR_NAMES = {
   VEND:'THE VENDING MACHINE', ARCADE:'THE ARCADE CABINET', COOLER:'THE WATER COOLER',
   SHELF:'THE SUPPLY SHELF', ELEV:'THE LIFT', SERVERS:'THE SERVER ROOM',
   CONF:'THE CONFERENCE ROOM', KITCHEN:'THE KITCHEN', KITCHEN2:'THE KITCHEN',
-  LOBBY:'RECEPTION', HALL:'THE HALLWAY', HALLE:'THE EAST HALLWAY', SOUTH:'THE SOUTH WING',
-  PITMID:'THE HELPDESK PIT',
+  /* Two floors, two receptions, and the queue row only ever shows a name —
+     so the one upstairs says which floor it is on. */
+  LOBBY:'THE SECOND-FLOOR LOBBY', HALL:'THE HALLWAY', HALLE:'THE EAST HALLWAY',
+  SOUTH:'THE SOUTH WING', PITMID:'THE HELPDESK PIT',
+  RECEPTION:'THE FRONT DESK', POST:'THE POST ROOM', MEET_A:'MEETING ROOM ONE',
+  MEET_B:'MEETING ROOM TWO', FRONT:'THE FRONT DOORS',
   n1:"DEREK'S DESK", n2:"RAJ'S DESK", n3:"KAYLA'S DESK", n4:'THE FOURTH DESK',
   n6:"BRENDA'S DESK", n7:"MACKENZIE'S DESK", n8:"LINDA'S OFFICE", n9:'THE HALLWAY'
 };
@@ -1036,8 +1040,8 @@ ground: {
   map:[
     '###wwwwww####wwwwwww###wwwwwww####wwwwww####',
     '#,,,,,,,,,,#.........#.........#...........#',
-    '#EP,,,,,,,,#..cccc...#..cccc...#...dq......#',
-    '#E,,,,,,,,,D..tttt...#..tttt...#...dq......#',
+    '#EP,,,,,,,,D..cccc...#..cccc...#...dq......#',
+    '#E,,,,,,,,,#..tttt...#..tttt...#...dq......#',
     '#,,,,,,,,,,#..cccc...#..cccc...#.....f.....#',
     '#,,NNNNN,,,#.........#.........#...........#',
     '#,,,,,,,,,,GGGGGGGGGGGGGGDGGGGGGGGGGDGGGGGG#',
@@ -1053,7 +1057,7 @@ ground: {
     '########DD##################################',
     '############################################',
   ],
-  anchors:{ RECEPTION:[5,6], POST:[17,10], MEET_A:[13,3], MEET_B:[23,3],
+  anchors:{ RECEPTION:[5,6], POST:[17,10], MEET_A:[12,2], MEET_B:[23,3],
             FRONT:[8,15] }
 }};
 
@@ -3348,6 +3352,52 @@ const DIALOGUE = {
     'Fourteen months, and nobody has told me what half of those servers do. I have made a list.',
     'College is on Thursdays. This term it is subnetting, which I already knew. The lecturer is enjoying himself, so I have not said.',
     'Raj told me not to touch the label printer. I would like to know why. I have decided not to find out.'] }
+,
+
+  /* ------------------------ downstairs, at last -------------------------
+     Six scenes on the ground floor. The building has always had one; until
+     the walk to it could be priced, nothing could be written that used it. */
+  'g.cour.a':  { who:'client', t:['There is a courier at the front desk. He needs a signature from IT, specifically, and will not say what for.',
+    'He has been there eleven minutes. Reception have offered him a chair twice and he has refused twice.'] },
+  'g.cour.b':  { who:'sys', t:['The box is unmarked, unexpected, and addressed to a department this company does not have.'],
+    opts:[ {t:'Sign for it and open it where somebody can see you', fx:{time:9, rep:2, bonus:1, stress:2}},
+           {t:'Sign for it and put it in the store room', fx:{time:4, bonus:1, stress:1}},
+           {t:'Refuse it and let him drive it back', fx:{time:3, rep:-2, stress:4}} ] },
+
+  'g.vend.a':  { who:'client', t:['A man from a vendor you have never bought anything from is at the front desk.',
+    'He says he was just passing. His office is a two-hour drive away and he is holding a lanyard with your name already printed on it.'] },
+  'g.vend.b':  { who:'sys', t:['Fifteen minutes, he says, and he has brought a bag of branded stress balls.'],
+    opts:[ {t:'Ten minutes, standing up, in the meeting room', fx:{time:12, rep:2, bonus:1, stress:2}},
+           {t:'Take the leaflet and send him on his way', fx:{time:5, bonus:1, stress:1}},
+           {t:'Have the front desk say you are in a meeting', fx:{time:2, rep:-1, stress:3}} ] },
+
+  'g.kit.a':   { who:'client', t:["The new starter's laptop was delivered in March. The new starter also began in March.",
+    'It has been in the post room ever since, behind a pallet of paper, under somebody\'s coat.'] },
+  'g.kit.b':   { who:'sys', t:['They have been working off a spare for four months and stopped mentioning it in June.'],
+    opts:[ {t:'Build it properly and swap them over at their desk', fx:{time:18, rep:4, bonus:1, stress:3}},
+           {t:'Build it and leave it on their chair', fx:{time:11, rep:1, bonus:1, stress:2}},
+           {t:'Put it in the store room with the others', fx:{time:4, rep:-2, stress:3}} ] },
+
+  'g.note.a':  { who:'sys', t:['Nineteen switches are in the post room. The delivery note says twelve.',
+    'The purchase order says eight. Three of the boxes are already open and one of them is a kettle.'] },
+  'g.note.b':  { who:'sys', t:['Somebody is going to have to count them, and it is going to be whoever is standing there.'],
+    opts:[ {t:'Count them, photograph the note, and query it today', fx:{time:16, rep:4, bonus:1, stress:4}},
+           {t:'Count them and email the supplier', fx:{time:9, rep:1, bonus:1, stress:2}},
+           {t:'Sign it as twelve and let Finance find out in October', fx:{time:3, rep:-3, stress:6}} ] },
+
+  'g.early.a': { who:'client', t:['{Client} are in meeting room one. They are twenty minutes early and there are four of them.',
+    'You were told there would be two of them, and that it was a catch-up.'] },
+  'g.early.b': { who:'sys', t:['One of them has brought a printed agenda. It is not your agenda.'],
+    opts:[ {t:'Go down now and ask what changed before they open it', fx:{time:14, rep:4, bonus:1, stress:4}},
+           {t:'Go down now with what you have', fx:{time:9, rep:1, bonus:1, stress:5}},
+           {t:'Send somebody to sit with them while you read it', fx:{time:6, rep:-1, stress:3}} ] },
+
+  'g.qbr.a':   { who:'sys', t:['The quarterly review starts in meeting room one in eleven minutes.',
+    'The numbers arrived four minutes ago. Two of them disagree with the numbers you presented last quarter.'] },
+  'g.qbr.b':   { who:'sys', t:['You can present this quarter, last quarter, or the difference between them.'],
+    opts:[ {t:'Lead with the discrepancy and what changed', fx:{time:15, rep:5, bonus:1, stress:5}},
+           {t:'Present this quarter and answer the questions honestly', fx:{time:9, rep:2, bonus:1, stress:4}},
+           {t:'Reuse last quarter\'s deck. Nobody reads the appendix.', fx:{time:4, rep:-4, stress:7}} ] }
 
 };
 
@@ -4385,7 +4435,34 @@ const TICKETS = {
     steps:[{say:'dx.dir9reg.a'},{say:'dx.dir9reg.b'},{choice:'dx.dir9reg.c'}] },
   'dir9-warranty-question-nine': { tiers:[9,9], weight:4, sla:46, slaMult:1.9, pri:3, stress:9,
     title:'Every answer on the insurance renewal is a warranty',
-    steps:[{say:'dx.dir9war.a'},{goto:'PRINTER'},{game:'paper',diff:2},{choice:'dx.dir9war.b'}] }
+    steps:[{say:'dx.dir9war.a'},{goto:'PRINTER'},{game:'paper',diff:2},{choice:'dx.dir9war.b'}] },
+
+  /* ------------------------- downstairs, at last -------------------------
+     The first tickets in the game that leave the floor. Each is tiered by
+     what its destination costs from that rung's desk, not by fiction alone:
+     the post room is 25 tiles from the ground lift, which relationship
+     manager and up cannot afford on top of their own walk to the lift, so
+     the parcels belong to the rungs that actually go and get them. The
+     front desk is 9 tiles and meeting room one is 12, and everybody can
+     reach both. */
+  'courier-at-the-desk': { tiers:[0,2], weight:3, sla:55, slaMult:2.4, pri:2, stress:5,
+    title:'A courier at the front desk needs a signature from IT, specifically',
+    steps:[{say:'g.cour.a'},{goto:'RECEPTION'},{choice:'g.cour.b'}] },
+  'vendor-just-passing': { tiers:[2,5], weight:3, sla:60, slaMult:2.8, pri:1, stress:4,
+    title:'A vendor rep is at the front desk and says he was just passing',
+    steps:[{say:'g.vend.a'},{goto:'RECEPTION'},{choice:'g.vend.b'}] },
+  'starter-kit-in-the-post-room': { tiers:[1,3], weight:3, sla:75, slaMult:2.4, pri:2, stress:6,
+    title:"The new starter's laptop has been in the post room since March",
+    steps:[{say:'g.kit.a'},{goto:'POST'},{choice:'g.kit.b'}] },
+  'delivery-note-says-twelve': { tiers:[3,5], weight:3, sla:70, slaMult:2.0, pri:3, stress:7,
+    title:'Nineteen switches have arrived. The delivery note says twelve.',
+    steps:[{say:'g.note.a'},{goto:'POST'},{choice:'g.note.b'}] },
+  'client-early-in-one': { tiers:[6,9], weight:3, sla:50, slaMult:1.5, pri:4, stress:8,
+    title:'{Client} are in meeting room one, twenty minutes early, and there are four of them',
+    steps:[{say:'g.early.a'},{goto:'MEET_A'},{choice:'g.early.b'}] },
+  'qbr-numbers-arrived-late': { tiers:[8,9], weight:3, sla:45, slaMult:1.4, pri:4, stress:9,
+    title:'The QBR is in meeting room one and the numbers arrived four minutes ago',
+    steps:[{say:'g.qbr.a'},{goto:'MEET_A'},{choice:'g.qbr.b'}] }
 
 };
 
@@ -5997,6 +6074,7 @@ const WALK_FALLBACK = 14;          // no map parsed yet (headless planning)
    rule — anchors resolve against the loaded map — is the right one for it. */
 const ANCHOR_FLOOR = {};       // anchor -> the map it lives on, if only one does
 const FLOOR_DIST = {};         // map -> anchor -> anchor -> tiles
+const FLOOR_POS = {};          // map -> anchor -> [x,y] on THAT map
 
 function floodFrom(x, y){
   const N = W2.W * W2.H, d = new Int32Array(N).fill(-1);
@@ -6023,7 +6101,8 @@ function indexFloors(){
   for (const id in MAPS){
     loadMap(id);
     const names = Object.keys(W2.anchors), tab = FLOOR_DIST[id] = {};
-    for (const n of names) (seen[n] = seen[n] || []).push(id);
+    const pos = FLOOR_POS[id] = {};
+    for (const n of names){ (seen[n] = seen[n] || []).push(id); pos[n] = W2.anchors[n].slice(); }
     for (const a of names){
       const p = W2.anchors[a], d = floodFrom(p[0], p[1]), row = tab[a] = {};
       for (const b of names){
@@ -6046,6 +6125,18 @@ function indexFloors(){
   loadMap(keep || 'office1');
 }
 function floorOf(anchor){ return ANCHOR_FLOOR[anchor] || null; }
+/* Where an anchor is AND which floor that is. anchorPos() can only answer for
+   the loaded map, and answering "nowhere" for the other floor is how a leg to
+   the post room got skipped instead of walked. */
+function anchorHome(name){
+  const h = floorOf(name);
+  if (h && h !== W2.id){
+    const p = FLOOR_POS[h] && FLOOR_POS[h][name];
+    return p ? { floor:h, pos:p.slice() } : null;
+  }
+  const p = anchorPos(name);
+  return p ? { floor:W2.id, pos:p } : null;
+}
 function isOffFloor(anchor){
   const h = floorOf(anchor);
   return !!h && !!W2.id && h !== W2.id;
@@ -6184,14 +6275,12 @@ function ticketOffers(id){
   return (OFFERS[id] = { game, bonus });
 }
 function ticketWork(T){
-  let m = 6, at = null;
+  /* leg N starts where leg N-1 ended, not back at the desk — and on whichever
+     floor leg N-1 ended on, which is walkLegs's job. This kept its own copy of
+     the walk and its own copy of the bug. */
+  let m = 6 + walkLegs(T.steps, 0, null).mins;
   for (const st of T.steps){
-    /* leg N starts where leg N-1 ended, not back at the desk */
-    if (st.goto){
-      m += at ? walkCost(st.goto, at) : walkCostFromDesk(st.goto);
-      at = anchorPos(st.goto) || at;
-    }
-    else if (st.game) m += 14;
+    if (st.game) m += 14;
     else if (st.choice) m += 7;
     else if (st.say) m += 4 * ((DIALOGUE[st.say] && DIALOGUE[st.say].t.length) || 1);
   }
@@ -6955,7 +7044,7 @@ function legHint(t){
      far end is not free, and a player who cannot see that in the row is being
      asked to triage an errand whose cost is hidden. */
   const via = L.crossed.length
-    ? (floorOf(L.crossed[0]) === 'ground' ? ' downstairs' : ' upstairs') : '';
+    ? (floorOf(L.crossed[0]) === 'ground' ? ', downstairs' : ', upstairs') : '';
   const far = L.mins >= 25;
   return '<span class="leg" style="color:' + (far ? 'var(--alert)' : 'var(--corp)') + '">· ' +
          L.names.join(' then ').toLowerCase() + via + ', ~' + L.mins + ' min walk</span>';
@@ -7051,12 +7140,20 @@ function advanceStep(){
   if (t.si >= TICKETS[t.id].steps.length){ resolveTicket(t); return; }
   const st = TICKETS[t.id].steps[t.si];
   if (st.goto){
-    const a = anchorPos(st.goto);
+    /* anchorPos() answers for the LOADED map, so an anchor downstairs came
+       back null and this dropped the step on the floor: t.si++ and carry on,
+       as though the walk had happened. Every cross-floor ticket was priced
+       for a trip nobody ever took — measured, that alone took careers
+       reaching retirement from 18 of 24 to 24 of 24. Resolve it against the
+       floor it actually lives on and let markerFloor do its job. */
+    const a = anchorHome(st.goto);
     if (!a){ t.si++; advanceStep(); return; }
-    run.marker = a; run.markerLabel = ANCHOR_NAMES[st.goto] || st.goto;
-    run.markerFloor = W2.id;
+    run.marker = a.pos; run.markerLabel = ANCHOR_NAMES[st.goto] || st.goto;
+    run.markerFloor = a.floor;
     if (G.modal) closeModalToWork();
-    toast('GO TO: ' + (ANCHOR_NAMES[st.goto] || st.goto) + ' — FOLLOW THE AMBER ARROW', 'corp', 2600);
+    const away = a.floor !== W2.id;
+    toast('GO TO: ' + (ANCHOR_NAMES[st.goto] || st.goto) +
+          (away ? ' — TAKE THE LIFT' : ' — FOLLOW THE AMBER ARROW'), 'corp', 2600);
     return;
   }
   /* Charged ONCE per step, at the same price the balance model pays.
@@ -10291,7 +10388,7 @@ function simDay(skill, policy){
   policy = policy || {};
   QUIET = true;
   if (!W2.W) loadMap('office1');
-  let pos = W2.spawn.slice();
+  let pos = W2.spawn.slice(), botFloor = W2.id, botAt = null;
   const walkTo = (a) => {
     /* An anchor that does not resolve is a map problem, not a reason to take
        the whole day down with a null dereference two thousand lines from the
@@ -10301,6 +10398,27 @@ function simDay(skill, policy){
     const path = astar(pos[0], pos[1], a[0], a[1]);
     run.clock += (path ? path.length : 24) / BOT_TILES_PER_MIN;
     pos = a.slice();
+  };
+  /* By NAME, so it can notice the anchor is on the other floor. Given a
+     position the bot could only ever be handed null for anything downstairs,
+     and walkTo(null) returns having charged nothing — the bot skipped the
+     leg exactly the way the player did, so no measurement could see it. */
+  const walkToAnchor = (name) => {
+    const home = floorOf(name) || botFloor;
+    if (home === botFloor){
+      if (botFloor === W2.id){ walkTo(anchorPos(name)); return; }
+      const n = floorDist(botFloor, botAt || 'ELEV', name);
+      run.clock += (n === null ? 24 : n) / BOT_TILES_PER_MIN;
+      botAt = name; return;
+    }
+    /* out to the lift, down, and along at the far end */
+    const out = botFloor === W2.id
+      ? (astar(pos[0], pos[1], (anchorPos('ELEV')||pos)[0], (anchorPos('ELEV')||pos)[1]) || {length:24}).length
+      : (floorDist(botFloor, botAt || 'ELEV', 'ELEV') || 0);
+    const inn = tilesFromLift(name);
+    run.clock += (out + (inn === null ? 24 : inn)) / BOT_TILES_PER_MIN + LIFT_MIN;
+    botFloor = home; botAt = name;
+    if (botFloor === W2.id) pos = (anchorPos(name) || pos).slice();
   };
   G.state = 'work';
   let guard = 0, lastC = run.clock;
@@ -10325,7 +10443,7 @@ function simDay(skill, policy){
       }
     }
     if (policy.coffee !== false && run.stress > (policy.coffeeAt ?? 62) && run.coffee < COFFEE_MAX){
-      walkTo(anchorPos('COFFEE'));
+      walkToAnchor('COFFEE');
       run.coffee++; run.stress = Math.max(0, run.stress - BURN.cup);
       run.crashes.push(run.clock + 90); run.crashes.sort((a,b)=>a-b);
     }
@@ -10362,7 +10480,7 @@ function simDay(skill, policy){
          1.2 minutes while a human pays 8-20 of real clock, which made every
          bot-validated SLA target unreachable in real play. Reading a line is
          ~3s, a choice ~2s of dithering, a minigame ~12s. */
-      if (st.goto){ walkTo(anchorPos(st.goto)); }
+      if (st.goto){ walkToAnchor(st.goto); }
       else if (st.say){ run.clock += stepCost(st); }
       else if (st.choice){
         run.clock += stepCost(st);
@@ -10455,7 +10573,17 @@ function selfTest(runSim){
     let missing = [], sealed = [];
     for (const a of wantAnchors){
       const p = anchorPos(a);
-      if (!p){ missing.push(a); continue; }
+      if (!p){
+        /* An anchor that does not resolve here is not necessarily missing —
+           it may simply be downstairs. ANCHOR_FLOOR knows which; its
+           reachability on its own floor is what tilesFromLift proves, since
+           that number comes from a flood fill out of that floor's lift. */
+        if (floorOf(a)){
+          if (tilesFromLift(a) === null) sealed.push(a + ' (on ' + floorOf(a) + ')');
+          continue;
+        }
+        missing.push(a); continue;
+      }
       if (!seen[cellIx(p[0], p[1])]) sealed.push(a);
     }
     ok('every anchor exists', !missing.length, missing.join(' '));
@@ -12463,6 +12591,90 @@ function selfTest(runSim){
         run = savedRun; if (run) run.rung = savedRung;
         ok('the queue row promises the walk it charges', !bad.length,
            bad.length + ': ' + bad.slice(0, 3).join(' · '));
+      }
+      /* A LEG IS WALKED, NOT SKIPPED. advanceStep resolved a goto with
+         anchorPos(), which answers for the loaded map only, and treated the
+         null it got for anything downstairs as "no such step": si++ and carry
+         on. The ticket was priced for the trip and never made anyone take it.
+         Nothing caught it — the bot's walkTo(null) returned having charged
+         nothing too, so the simulation agreed with the game about a walk
+         neither of them did. Measured, it took careers reaching retirement
+         from 18 of 24 to 24 of 24. Drive the real advanceStep and require a
+         marker, on the floor the anchor is actually on. */
+      {
+        const keepRun = run, keepState = G.state, keepModal = G.modal, keepDlg = dlg;
+        rngInit('XLEG'); runInit('XLEG'); rollDay(); loadMap('office1');
+        const bad = [];
+        for (const id in TICKETS){
+          const steps = TICKETS[id].steps;
+          const gi = steps.findIndex(st => st.goto);
+          if (gi < 0) continue;
+          run.rung = TICKETS[id].tiers[0];
+          run.active = { id:id, si:gi, uid:-1, gameScores:[], bonus:0, title:id };
+          run.marker = null; run.markerFloor = null;
+          advanceStep();
+          const want = floorOf(steps[gi].goto) || 'office1';
+          if (!run.marker) bad.push(id + ': leg to ' + steps[gi].goto + ' skipped');
+          else if (run.markerFloor !== want)
+            bad.push(id + ': marker says ' + run.markerFloor + ', anchor is on ' + want);
+          run.active = null; run.marker = null; dlg = null;
+        }
+        run = keepRun; G.state = keepState; G.modal = keepModal; dlg = keepDlg;
+        ok('every errand a ticket names is one you have to walk', !bad.length,
+           bad.length + ': ' + bad.slice(0, 3).join(' · '));
+      }
+      /* ...and that the whole trip works end to end, which is the only way to
+         know the pieces were ever wired to each other: marker downstairs,
+         objective pointing at the lift, the lift, objective pointing at the
+         anchor, and the step completing on arrival. */
+      {
+        const keepRun = run, keepState = G.state, keepModal = G.modal, keepDlg = dlg;
+        let pick = null, dest = null;
+        for (const id in TICKETS){
+          const st = TICKETS[id].steps.find(x => x.goto && floorOf(x.goto) &&
+                                                 floorOf(x.goto) !== 'office1');
+          if (st){ pick = id; dest = st.goto; break; }
+        }
+        let why = 'no ticket leaves the floor';
+        if (pick){
+          const rung = TICKETS[pick].tiers[0];
+          rngInit('XTRIP'); runInit('XTRIP'); rollDay();
+          run.rung = rung; run.clock = 60;
+          loadMap('office1'); spawnPeople(60, anchorPos(ROLES[rung].deskAnchor));
+          G.state = 'work';
+          const arr = makeArrival(pick, 60, ROLES[rung]);
+          const t = { uid:arr.uid, id:arr.id, title:arr.title, fills:arr.fills, at:60,
+                      deadline:60 + arr.sla, sla:arr.sla, stress:arr.stress, si:0,
+                      bonus:0, gameScores:[], from:null };
+          run.queue.push(t);
+          startTicket(t);
+          let guard = 0;
+          while (G.state === 'modal' && dlg && guard++ < 40) dlgFinish();
+          const away = !!run.marker && run.markerFloor === floorOf(dest);
+          const toLift = ((objectiveTarget() || {}).label === 'THE LIFT');
+          const lift = anchorPos('ELEV');
+          if (lift){ player.tx = lift[0]; player.ty = lift[1]; }
+          G.state = 'work';
+          takeLift();
+          const rode = W2.id === floorOf(dest);
+          const toDest = ((objectiveTarget() || {}).label === (ANCHOR_NAMES[dest] || dest));
+          let stepped = false;
+          if (run.marker && run.active){
+            player.tx = run.marker[0]; player.ty = run.marker[1];
+            const si0 = run.active.si;
+            gotoCheck();
+            stepped = !!run.active && run.active.si === si0 + 1;
+          }
+          why = [away ? '' : 'no marker on ' + floorOf(dest),
+                 toLift ? '' : 'objective missed the lift',
+                 rode ? '' : 'the lift went nowhere',
+                 toDest ? '' : 'objective missed ' + dest,
+                 stepped ? '' : 'arriving did not advance the step'].filter(Boolean).join(', ');
+        }
+        run = keepRun; G.state = keepState; G.modal = keepModal; dlg = keepDlg;
+        loadMap('office1'); spawnPeople();
+        ok('a ticket can send you to the other floor and back into the work',
+           !!pick && !why, why);
       }
       /* EVERY FLOOR IS PRICED, not just the one that is loaded. anchorPos()
          answers against the loaded map, so before FLOOR_DIST existed a goto to
