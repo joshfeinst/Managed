@@ -889,7 +889,7 @@ const ROLES = [
     gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:68, slaScale:0.96 }, deskAnchor:'DESK_PROC' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
+    gates:{ nextAt:{perf:0.36, days:3}, firedBelow:0.16, cert:null },
     queue:{ ratePerHr:2.2, meetingMin:78, slaScale:0.96 }, deskAnchor:'DESK_CLIENT' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
     gates:{ nextAt:{perf:0.38, days:3}, firedBelow:0.17, cert:null },
@@ -1704,6 +1704,42 @@ const DIALOGUE = {
     opts:[ {t:'Say the number was wrong and say what it is now', fx:{time:17, rep:3, bonus:1, stress:9}},
            {t:'Show the working and let them draw the conclusion', fx:{time:14, rep:2, bonus:1, stress:6}},
            {t:'Stand behind the slide', fx:{time:5, rep:-3, stress:8}} ] },
+  'k.visio.a': { who:'mackenzie', t:['Sales would like the editable version of the architecture diagram, for a deck.',
+    'They will edit it. They will edit it to remove the box that says the thing they have been telling the client is not a limitation.'] },
+  'k.visio.b': { who:'sys', t:['Whatever leaves your hands is what that client believes for two years.'],
+    opts:[ {t:'Send a flattened one and offer to make the slide yourself', fx:{time:14, rep:3, bonus:1, stress:2}},
+           {t:'Send the flattened one', fx:{time:5, bonus:1, stress:2}},
+           {t:'Send the editable file', fx:{time:2, rep:-3, stress:5}} ] },
+  'k.name.a':  { who:'sys', t:['The naming convention thread is on its fourteenth reply.',
+    'Two people have proposed the same convention in different words and are arguing. A third has suggested starting again. Nothing has been named in the meantime.'] },
+  'k.name.b':  { who:'sys', t:['Any answer ends it. No answer ends it in about a month, badly.'],
+    opts:[ {t:'Decide it, publish it, and stop replying', fx:{time:15, rep:4, bonus:1, stress:3}},
+           {t:'Reply with the one that is already mostly in use', fx:{time:7, rep:2, bonus:1, stress:2}},
+           {t:'Leave it. It will resolve itself.', fx:{time:2, rep:-2, stress:4}} ] },
+  'k.sanity.a':{ who:'client', t:['"Could you just sanity check this?" — forty pages attached, no page numbers.',
+    'The word "just" is doing what it always does. Somebody has spent three weeks on this and would like four minutes of your time to make it correct.'] },
+  'k.sanity.b':{ who:'sys', t:['Reading it properly takes an hour. Not reading it properly takes four minutes and your name.'],
+    opts:[ {t:'Read it properly, once, and mark it up', fx:{time:29, rep:4, bonus:1, stress:5}},
+           {t:'Read the parts that can be wrong', fx:{time:16, rep:2, bonus:1, stress:3}},
+           {t:'Skim it and say it looks fine', fx:{time:4, rep:-4, stress:6}} ] },
+  'k.ref.a':   { who:'sys', t:['A vendor would like to name you as a reference customer.',
+    'There is a case study. It quotes you saying something you have never said, about an outcome that has not been measured.'] },
+  'k.ref.b':   { who:'sys', t:['They have been good to you, twice, at short notice.'],
+    opts:[ {t:'Agree, but only to words you would actually say', fx:{time:13, rep:3, bonus:1, stress:3}},
+           {t:'Decline politely and keep the relationship', fx:{time:6, rep:1, bonus:1, stress:2}},
+           {t:'Approve the quote as written', fx:{time:2, rep:-3, stress:4}} ] },
+  'k.wiki.a':  { who:'sys', t:['The architecture wiki has not been opened by anybody since March.',
+    'It is accurate. That is the sad part — somebody kept it accurate for years and the analytics say four page views, three of which were yours.'] },
+  'k.wiki.b':  { who:'sys', t:['Nobody reads documentation. Everybody complains there is none.'],
+    opts:[ {t:'Find out what people DO read and put it there', fx:{time:21, rep:4, bonus:1, stress:3}},
+           {t:'Keep it up to date anyway', fx:{time:12, rep:1, bonus:1, stress:2}},
+           {t:'Stop updating it', fx:{time:2, rep:-2, stress:3}} ] },
+  'k.dead.a':  { who:'sys', t:['Somebody needs a diagram of a system decommissioned in 2022.',
+    'It is for an audit that is checking whether it was decommissioned. Drawing it proves it existed; not drawing it proves nothing at all.'] },
+  'k.dead.b':  { who:'sys', t:['You have the old one. It was wrong when it was current.'],
+    opts:[ {t:'Draw what was actually there, from the change records', fx:{time:23, rep:4, bonus:1, stress:4}},
+           {t:'Send the old one, marked as-was and unverified', fx:{time:8, rep:1, bonus:1, stress:2}},
+           {t:'Send the old one', fx:{time:3, rep:-2, stress:3}} ] },
   'a.built.a': { who:'client', t:['They would like the as-built diagram before the audit.',
     'There is a diagram. It is from 2019, it is a screenshot inside a Word document, and two of the boxes on it were decommissioned by somebody who has since been promoted twice.'] },
   'a.built.b': { who:'sys', t:['Whatever you send them becomes the truth for the next four years.'],
@@ -2778,6 +2814,27 @@ const TICKETS = {
   'the-number-you-gave-in-may': { tiers:[8,9], weight:3, sla:46, slaMult:2.0, pri:3, stress:10,
     title:'Somebody has brought a printout of what you said in May',
     steps:[{say:'v.may.a'},{game:'paper',diff:3},{choice:'v.may.b'}] },
+  /* Solutions Architect and vCIO were the last two rungs under 20% droppable,
+     which is the number this file has now learned to read first. Six things an
+     architect is allowed to let burn. */
+  'the-visio-file': { tiers:[7,9], weight:4, sla:62, slaMult:2.4, pri:1, stress:3,
+    title:'Sales want the editable version of the diagram',
+    steps:[{say:'k.visio.a'},{choice:'k.visio.b'}] },
+  'naming-convention-thread': { tiers:[7,9], weight:4, sla:66, slaMult:2.5, pri:1, stress:4,
+    title:'An email thread about naming conventions is on its fourteenth reply',
+    steps:[{say:'k.name.a'},{choice:'k.name.b'}] },
+  'just-sanity-check-this': { tiers:[7,9], weight:4, sla:58, slaMult:2.3, pri:1, stress:4,
+    title:'"Could you just sanity check this?" — 40 pages attached',
+    steps:[{say:'k.sanity.a'},{choice:'k.sanity.b'}] },
+  'reference-customer': { tiers:[7,9], weight:3, sla:70, slaMult:2.6, pri:1, stress:3,
+    title:'A vendor would like to name you as a reference customer',
+    steps:[{say:'k.ref.a'},{choice:'k.ref.b'}] },
+  'the-wiki-page': { tiers:[7,9], weight:3, sla:72, slaMult:2.7, pri:1, stress:2,
+    title:'The architecture wiki has not been opened by anyone since March',
+    steps:[{say:'k.wiki.a'},{choice:'k.wiki.b'}] },
+  'diagram-of-a-dead-system': { tiers:[7,9], weight:3, sla:64, slaMult:2.5, pri:1, stress:3,
+    title:'Somebody needs a diagram of a system decommissioned in 2022',
+    steps:[{say:'k.dead.a'},{choice:'k.dead.b'}] },
   'as-built-is-a-rumour': { tiers:[7,9], weight:4, sla:50, slaMult:2.0, pri:3, stress:9,
     title:'{client} want the as-built diagram. There is a diagram.',
     steps:[{say:'a.built.a'},{game:'diagram',diff:2},{choice:'a.built.b'}] },
@@ -4464,7 +4521,7 @@ const GATE_DEBT = {
      give back less — so a rung reached on day 12 is played by a worse player
      than the same rung would be on day 3. That is the next problem. */
   tight: { intern:3, t1:3, t2:4, t3:4, project:5, procure:2,
-           relmgr:5, solarch:4, vcio:2 },
+           relmgr:4, solarch:3, vcio:3 },
   /* seeds out of 12 on which SLOPPY play clears it anyway.
      THIS COLUMN WENT UP, 2026-08-26, and it is not the regression it looks
      like. It was zero on every rung because the bars were so high that
@@ -4476,7 +4533,7 @@ const GATE_DEBT = {
      it may only fall from here.
      vCIO's 4/12 is the worst of them and the one to fix first. */
   loose: { intern:1, t1:1, t2:1, t3:1, project:2, procure:3,
-           relmgr:2, solarch:4, vcio:2 }
+           relmgr:2, solarch:2, vcio:2 }
 };
 /* 45. The loose column is one seed in twelve on eight rungs of nine — bad
    triage almost never promotes now, where a week ago it did so on up to four
@@ -4507,7 +4564,7 @@ const GATE_DEBT = {
    Which is the third time this exact fix has worked, after the senior rungs and
    after vCIO: a rung that will not separate wants cheap work in it, not a
    different bar. */
-const GATE_DEBT_BUDGET = 49;      /* mid-ladder chaff, 2026-08-26 */
+const GATE_DEBT_BUDGET = 46;      /* chaff at the top too, 2026-08-26 */
 /* How many POINTS short of its own bar flawless play falls at the intern gate.
    19 on 2026-08-25 21:0x, the first measurement ever taken with the bot walking
    at a player's speed. Every earlier number in this file — GATE_DEBT above,

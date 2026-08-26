@@ -650,8 +650,23 @@ burn, and every narrow rung's good-versus-bad gap widened with them:
 | procure | 8 | 11 |
 | relmgr | 9 | 11 |
 
-`GATE_DEBT` 50 → **49**, all nine bars well placed, `meta.js` 12 of 24 players
-reaching retirement at 12.7 careers.
+Then six more for Solutions Architect and vCIO, the last two rungs still under
+20% droppable — the editable Visio file Sales want so they can remove the box
+that says the thing they have been telling the client is not a limitation; the
+naming-convention thread on its fourteenth reply; the forty-page document
+attached to the words "could you just sanity check this".
+
+**Final position, all three axes at once:**
+
+| | |
+|---|---|
+| `GATE_DEBT` | **46**, from 50 |
+| `bars.js` | **all nine rungs well placed** |
+| `meta.js` | **15 of 24 players reach retirement**, at 12.4 careers |
+
+For comparison, before this whole pass: the top five rungs were shut, a flawless
+vCIO scored 14% against a 46% bar and was fired on arrival, and `meta.js` had
+never reached DIRECTOR at all.
 
 **The rule, now that it has held three times:** a rung that will not separate
 good triage from bad wants *cheap work in it*, not a different bar. It was true
