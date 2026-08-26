@@ -310,6 +310,15 @@ canvas, because the arrow is drawn, not written.
 
 ## What is left
 
+- **Small talk is the third unfilled path, and it is clean by luck.** `smalltalk`
+  hands its line to `openDlg` as `custom.text`, and `openDlg` fills `node.t` but
+  passes `custom.text` through untouched. Swept: zero CHAT lines and zero NPC
+  fallback lines contain a `{token}` today, so nothing is broken — but the
+  ticket path was fine and the event path was not, and this one is structurally
+  the same. Either fill `custom.text` too, or accept that a `{client}` written
+  into a CHAT pool will reach the screen as braces.
+
+
 - **The ground floor has no events of its own.** Six tickets go down there and
   two NPCs live there, but nothing in `EVENTS` happens on that floor. A fire
   drill, a client arriving early, the landlord's contractor — the floor can
