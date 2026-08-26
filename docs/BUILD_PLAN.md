@@ -222,3 +222,29 @@ deal rate it had not had for hours — an error that reached a commit message to
 `node tools/ladder.js index.html --measure` prints that table from the shipped
 file. Paste it; never retype it. **Re-read the file rather than trusting any
 table older than its last edit.**
+
+---
+
+## 2026-08-26 (second pass) — the levels, built out
+
+Every rung is now complete on every structural measure: 22-35 tickets and 5-6
+meetings written for it and nowhere lower, and rungs 4-9 each deal their own
+bespoke board off their own tickets. All six relationships are ratcheted.
+
+Totals: 65 events, 266 tickets, 637 dialogue nodes, 10 people, 341 self-tests.
+
+Three new colleagues for the senior floor — Yvonne (Finance, has read the
+contract to the end), Noor (Compliance, right since 2021 and still waiting) and
+Callum (second-year apprentice, does the jobs nobody puts a ticket on). Their
+desks are `n4`, `n5` and `n9`, which were the last free NPC anchors on the map.
+
+### What is left
+
+- **The office is still one floor.** Every rung shares it, and the desk moving
+  across it is the only spatial progression. A second floor is the next real
+  feature, not a polish item.
+- **`tools/ladder.js --measure` generates the balance table.** Paste it.
+- **The junior rungs share four boards** (cable, jargon, pw, script) where the
+  seniors have nine. That is by design — the bespoke boards were specified for
+  rungs 4-9 — but intern and T1 are the thinnest part of the game by board
+  variety if that ever needs attention.
