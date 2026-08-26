@@ -295,6 +295,19 @@ as "no such step" — so every cross-floor ticket was priced for a trip nobody
 took. The bot skipped it too, for the same reason, which is why no per-day
 number moved. 19/24 at 11.5 careers once the leg is actually walked.
 
+## 2026-08-26 (fourth pass) — a player played it
+
+Three bugs in the first ninety seconds of a real game, none of which any
+harness could see, because none of them had ever played: an objective arrow
+armed by queue length that never went out and pointed at the wrong tile under
+the wrong name, a PRESS E instruction that silently fails when you are facing
+the wrong way, and a tutorial line asserting a clock time and a countdown for
+a meeting that does not happen.
+
+All fixed and guarded. `tools/firstday.js` now plays the first day through
+real key events and clicks and reads only what is on screen — including the
+canvas, because the arrow is drawn, not written.
+
 ## What is left
 
 - **The ground floor has no events of its own.** Six tickets go down there and
