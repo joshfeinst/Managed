@@ -102,6 +102,31 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
         random:   g => { const guess = Ri('game', 2) === 0;
           if (guess === g.items[g.at].ok) g.right++; g.at++; }
       },
+      starter: {
+        /* a SEQUENCE board, so the drivers are orderings rather than picks.
+           perfect walks the dependency graph; careless works straight down the
+           printed checklist, which is the mistake the board is about; random
+           picks any step still undone. */
+        perfect: g => {
+          const next = g.steps.find(st => !g.done[st.id] && g.canDo(st));
+          if (next) g.done[next.id] = 1;
+          else { const any = g.steps.find(st => !g.done[st.id]);
+                 if (any){ g.wrong++; g.done[any.id] = 1; } }
+        },
+        careless: g => {
+          const st = g.steps.find(x => !g.done[x.id]);
+          if (!st) return;
+          if (!g.canDo(st)) g.wrong++;
+          g.done[st.id] = 1;
+        },
+        random: g => {
+          const left = g.steps.filter(x => !g.done[x.id]);
+          if (!left.length) return;
+          const st = left[Ri('game', left.length)];
+          if (!g.canDo(st)) g.wrong++;
+          g.done[st.id] = 1;
+        }
+      },
       jargon: {
         perfect:  g => { g.right++; g.at++; },
         careless: g => { if (g.rounds[g.at].opts[0].ok) g.right++; g.at++; },   // always the first
