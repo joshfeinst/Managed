@@ -1032,6 +1032,32 @@ satire, not balance, and it never has to be traded away.**
 **Fourteen seeds is not a measurement.** Three separate numbers set from 14-seed
 sweeps in one session had to be redone at 26. Sweep at 26 the first time.
 
+## Project Team: the same fix, and this time meta.js said no
+
+Third rung, same recipe, and the rung-level numbers looked as good as the other
+two: at 26 seeds, raising the deal rate from 1.5 to 1.9 takes Project Team's gap
+from **11.0 to 17.9** and its P1 burn ratio from 1.75 to 2.12. On every reading
+`bars.js` and `score.js` can produce, it is the same win T3 and Procurement got.
+
+`meta.js` refused it. The share of players reaching retirement fell from
+**75-80% to 35%**, and — the tell — the bar bisection went *non-monotonic*:
+f=0.250 gave 35%, and every lower bar gave 25-30%. When lowering the bar stops
+helping, the bar is not what is stopping people.
+
+The reason is that a rung's gap is **local** and a career is a **series
+product**. Every career has to pass through Project Team, and by then T2, T3,
+Procurement and Relationship Manager are all already at 1.9. Each of those was
+a good trade measured alone. The fifth one was not, because the ladder has a
+total difficulty budget and by that point it was spent.
+
+Reverted. Project Team keeps rate 1.5 and a 12-point gap, which is the
+narrowest on the ladder and is the right price for a career arc that works.
+
+**This is the fourth time this session a rung-level harness and `meta.js` have
+disagreed, and the fourth time `meta.js` was right.** The rule stands: run
+`meta.js` against anything that touches gate shape, and believe it over the
+rung.
+
 ## Where the ladder stands, 2026-08-26
 
 30 seeds x 8 days per rung, plus 24 careers. **No rung is misplaced.**
