@@ -744,6 +744,160 @@ Procurement is now the narrowest rung on the ladder at 8 points, and the one
 `bars.js` still calls misplaced. It has already had its chaff; the gap is
 structural. It is the named next job.
 
+## The server room was a cul-de-sac, and it was holding the balance up (2026-08-26)
+
+`SERVERS` is the destination fourteen tickets send you to — more than any other
+anchor in the game. It cost **70 to 90 minutes** to reach from every desk on the
+ladder except the two that are inside it.
+
+The map is why. The east room's only door faced south, into the back corridor,
+so the path from the helpdesk pit ran the length of the floor, west through the
+kitchen, and back east again. A player physically walking it spends about
+seventy seconds holding a direction key, each way, inside an eight-minute day.
+
+One door in the north wall:
+
+| rung | SERVERS, before | after |
+|---|---|---|
+| intern | 71 | 40 |
+| t3 | 75 | 30 |
+| procure | 74 | 32 |
+| relmgr | 75 | 9 (printer 75 -> 22) |
+| solarch | 75 | 3 (printer 75 -> 30) |
+| vcio | 89 | 45 |
+
+The existing flood-fill had proved every anchor **reachable**, which is not the
+same as reachable in time, and it passed this happily for months. The new lint
+charges `WALK_MIN_PER_TILE` across the real path from every rung's desk to every
+anchor a ticket can demand, and fails anything over `WALK_BUDGET` (62 — the
+architect-to-lift leg, which is the length of the floor and ought to hurt).
+Re-sealing the wall fails it with 26 legs over budget.
+
+### And the walking tax was secretly supplying the game's variance
+
+Fixing the door made the gates **worse**, which is how the rest of this got
+found. `sla` is `work x slaMult`, so cheaper walks meant smaller tickets and
+smaller tickets meant less absolute slack. The rungs whose good-vs-bad gap
+collapsed were exactly the rungs whose ticket-size spread collapsed:
+
+| rung | CV of ticket work, before -> after | gap before -> after |
+|---|---|---|
+| relmgr | .741 -> .445 | 8 -> 8 |
+| solarch | .757 -> .533 | 9 -> 7 |
+| t3 | .595 -> .376 | 16 -> 12 |
+| procure | .579 -> .425 | 8 -> 4 |
+
+**Triage only matters when the tickets are different sizes**, and for months the
+thing supplying that difference was a bug. The spread is authored now — six fat
+multi-stop jobs, three of them P1 and three P3/P4, because "big" has to be
+independent of "important" or the queue sorts itself and there is no decision
+left.
+
+## The day was drowning, and the score was mostly measuring the water
+
+Three fixes were tried against the collapsed gaps and each made them smaller.
+`tools/score.js` is new and says why: it takes `dayPerf` apart into the three
+terms it is made of — stakes closed, realisation, and burn — because `bars.js`
+reports the number those produce and cannot say which one moved.
+
+| rung | flawless breach | burn as share of the denominator |
+|---|---|---|
+| t2 | 74% | 68% |
+| t3 | 78% | 72% |
+| procure | 76% | 73% |
+| relmgr | 74% | 72% |
+
+A flawless triager burned three quarters of the queue every day, and a sloppy
+one burned 39.0 stakes against 41.0 — near enough the same. Burn was most of the
+denominator and burn barely moved with skill, so the score was mostly measuring
+how much of an impossible day evaporated. That is not pressure, it is weather.
+
+Deal rates came down, swept per rung rather than shared out of a copy-paste:
+
+| rung | flawless breach | flawless day score |
+|---|---|---|
+| intern | 59% -> 39% | .455 -> .624 |
+| t1 | 69% -> 40% | .350 -> .633 |
+| t2 | 74% -> 42% | .295 -> .594 |
+| t3 | 78% -> 58% | .264 -> .456 |
+| vcio | 69% -> 62% | .366 -> .433 |
+| director | 59% -> 51% | .500 -> .585 |
+
+## Urgent work needs a clock that outlasts the ticket you are holding
+
+The one rung none of that reached was Relationship Manager, at a 4-point gap.
+The burn ledger (`run.burnLog`, dumped by priority) found it: flawless triage
+lost **1.38 P1s a day** and deliberately-worst triage lost **1.55**. Doing the
+important thing first bought you almost nothing.
+
+Because triage only happens **between** tickets. You cannot abandon work
+half-done, so a P1 landing thirty minutes into something else has to survive
+that wait or it dies whatever you decide. Its window was `work x 1.8` and the
+work either side of it was 30-40 minutes, so it usually did not. Triage skill
+was being asked to save tickets that were already unsaveable.
+
+`URGENT_GRACE` widens the top two bands (P1 x2.0, P2 x1.5):
+
+| rung | gap x1 | x1.6 | x2.0 |
+|---|---|---|---|
+| t2 | 5.8 | 11.9 | 11.6 |
+| t3 | 7.8 | 12.3 | 13.0 |
+| project | 6.4 | 10.7 | 12.5 |
+| procure | 5.8 | 10.1 | 9.1 |
+| relmgr | 3.1 | 8.6 | 13.0 |
+| solarch | 5.3 | 9.7 | 13.5 |
+| vcio | 10.3 | 12.8 | 13.6 |
+| director | 12.0 | 16.6 | 19.7 |
+
+It reads right, too. A P1 gets a bridge call and an agreed target; a P4 gets
+whatever the portal said when it was raised.
+
+## Measured and rejected, so nobody spends the afternoon on them again
+
+**Widening the bottom two bands.** The mirror of the fix above, and run first.
+Longer P3/P4 windows shrink every gap on the ladder, because a P4 that lives
+longer is one the bad triager finishes before reaching the P1 anyway.
+
+**Breach tolerance as a skill multiplier.** Forgiveness goes to the *cheapest*
+casualties first, so raising it looked like it should reward exactly the player
+who sacrifices cheap tickets on purpose. Swept `.20` to `.65` across all ten
+rungs: it lifts good and bad by the same 10-14 points and moves the gap by 1-3,
+which is noise. It is a difficulty dial, not a skill dial.
+
+**Priority and urgency being uncorrelated.** If P1s were also the most patient
+tickets, deferring them would cost nothing and the priority number would be
+decorative. Measured across all 240 templates: `corr(pri, slaMult)` is -0.45 to
+-0.71 at every rung but T3, where it is -0.28 and the P1 band is fractionally
+*more* patient than the P2 band. T3 is the only rung where that is worth fixing.
+
+**Restoring the offered work with deal rates.** After the door, work offered per
+day fell 8-19%. Putting it back with rates restored the volume and not the
+score, because the door took away *slack*, not *work* — the day got less patient
+without getting shorter.
+
+**Procurement's narrow gap, five earlier hypotheses.** Ceiling, droppable share,
+priority mix, P1 work cost, daily slot share — all identical to T3's. A sixth,
+share of arrivals by priority band, is also eliminated: 20.8% P1 at procure
+against 21.9% at T3. The real answer was `URGENT_GRACE`, and it was never a
+procurement problem at all.
+
+## Where the bar actually belongs
+
+`bars.js` places a bar at flawless p25, which is right for one eight-day stretch
+and too generous once a whole career is in view — a career gets many three-day
+windows, not one. Bisected against `meta.js` instead, which is the harness that
+answers "is a career winnable":
+
+| bar at | p25 | midpoint | +2pts | p50 |
+|---|---|---|---|---|
+| reached retirement | 24/24 | 21/24 | 12/24 | 7/24 |
+| careers to win | 5.3 | 6.8 | 7.6 | 9.9 |
+
+Settled just above the midpoint: a competent player (skill .85) retires in 18 of
+24 careers averaging 8.1; a weaker one (skill .70) in 9 of 16 averaging 9.8.
+Sloppy triage clears its gate in 0-30% of seeds at eight of nine rungs, against
+50-97% before. Relationship Manager is still the weak one at 40%.
+
 ## The ratchets
 
 | name | value | meaning | direction |
@@ -753,6 +907,7 @@ structural. It is the named next job.
 | `SKILL_DEBT` | 1 | craft separation, flawless vs mediocre | may only rise |
 | `TRIAGE_EDGE` | 4 | points separating good triage from bad at identical skill | may only rise |
 | `LADDER_DEBT` | {0,0} | rungs with a thin or duplicated pool | closed |
+| `WALK_BUDGET` | 62 | worst desk-to-anchor errand, in minutes | may only fall |
 
 Two were re-baselined on 2026-08-25 in the direction a ratchet is not supposed
 to move. Both because the old number was measured on the 4.4x bot, not because

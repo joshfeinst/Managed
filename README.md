@@ -152,12 +152,14 @@ were invisible to the ones that came before them.
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the ~290 in-game self-tests |
+| `verify.js` | boots it and runs the 317 in-game self-tests |
 | `visual.js` | screenshots every screen and board at four window sizes, asserting no text lands on the canvas |
 | `boards.js` | plays every minigame perfectly, carelessly and at random, and reports the spread |
 | `keys.js` | presses every key each board's how-to-play card promises, and pokes every click rect |
 | `bars.js` | where should each promotion bar sit? `--sweep` finds the deal rate that best separates good triage from bad |
 | `gate.js` | `--ladder` measures every rung against the debt recorded in the game |
+| `score.js` | takes the day score apart into the three terms it is made of — stakes closed, realisation, burn — because `bars.js` reports the number those produce and cannot say which one moved |
+| `probe.js` | dumps what a triage rule actually closes, ticket by ticket, with what it was worth and what it cost |
 | `meta.js` | plays whole careers across many players — the only one that can see whether the top of the ladder is reachable |
 | `save.js` | mid-day save, reload, and the afternoon has to survive it |
 | `human.js`, `marathon.js`, `burn.js`, `templates.js`, `dials.js`, `trace.js`, `timing.js` | input driving, long soaks, burnout curves, per-template fairness |

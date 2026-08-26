@@ -137,3 +137,47 @@ Procurement, on pools whose composition measures the same. The good bot cannot
 find work as dear at procure as it can at T3, and none of the five inputs above
 explains why. That is where the next look should start — probably by dumping
 what `pridead` actually closes, ticket by ticket, on one seed at each rung.
+
+---
+
+## 2026-08-26 — the door, the drowning, and the clock
+
+Everything below started from one map bug and ended up re-tuning the ladder.
+The full working is in `docs/BALANCE.md`; this is the recovery point.
+
+**The server room's only door faced south**, away from the whole building, so
+`SERVERS` — the destination fourteen tickets send you to, more than any other —
+cost 70-90 minutes from every desk outside it. One door in the north wall fixed
+it. `WALK_BUDGET` (62 min) is the new ratchet, and re-sealing the wall fails it
+with 26 legs over.
+
+**That made the gates worse**, because `sla` is `work x slaMult` and the walking
+tax had been secretly supplying the ticket-size variance that makes triage
+matter. Six fat multi-stop jobs now author that variance on purpose, half of
+them low-priority so "big" stays independent of "important".
+
+**`tools/score.js` is new** and is the thing that explains the ladder. It takes
+`dayPerf` apart into stakes closed, realisation and burn. It found that flawless
+triage burned three quarters of the queue at every mid rung, that burn was ~72%
+of the denominator, and that burn barely moved with skill — so the score was
+mostly measuring how much of an impossible day evaporated.
+
+**`URGENT_GRACE` is the fix that reached every rung.** Triage only happens
+between tickets, so a P1 needs a window that outlasts the ticket you are already
+holding. P1 x2.0 and P2 x1.5. Every rung's good-vs-bad gap roughly doubled.
+
+**Bars are bisected against `meta.js`, not placed at `bars.js`'s p25.** A career
+gets many three-day windows; p25 let 24 of 24 players retire in 5.3 careers.
+Settled just above the p25/p50 midpoint: 18/24 at skill .85 in 8.1 careers,
+9/16 at skill .70 in 9.8.
+
+### What is left
+
+- **Relationship Manager** is the last weak rung: sloppy triage still clears its
+  gate in 40% of seeds where every other rung is 0-30%. Everything general has
+  been tried on it. It probably wants its own content pass rather than a dial.
+- **T3 is the one rung where priority does not imply urgency** — `corr(pri,
+  slaMult)` is -0.28 against -0.45 to -0.71 everywhere else, and its P1 band is
+  fractionally *more* patient than its P2 band. Worth an hour with the data.
+- **Craft vs triage** is still open for Josh: craft measures 3-8 points against
+  triage's 7-12. Should craft feed the day score harder?
