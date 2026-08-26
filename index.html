@@ -6321,12 +6321,19 @@ function endDay(){
 /* A 39% day and a 0% day both read "SEE ME — LINDA", so four evenings of a
    dying career were indistinguishable from each other. The bottom band is
    split so the slide is visible while it is happening. */
-function perfName(p){
-  return p >= .8 ? 'EXCEEDS EXPECTATIONS (SUSPICIOUS)' :
-         p >= .62 ? 'MEETS EXPECTATIONS' :
-         p >= .4 ? 'DEVELOPING (HR WORD FOR STRUGGLING)' :
-         p >= .28 ? 'BELOW EXPECTATIONS' :
-         p >= .12 ? 'SEE ME — LINDA' :
+/* Absolute, like the evening card's bands were, and wrong for the same reason:
+   once each rung was tuned to its own range a flawless day at Solutions
+   Architect (.575) was told it was DEVELOPING, which HR-speak for struggling,
+   while a sloppy day on the Project Team (.629) MET EXPECTATIONS. Read off the
+   floor-to-bar span instead and the headline agrees with the paragraph
+   underneath it again. */
+function perfName(p, rung){
+  const at = reviewAt(p, rung === undefined ? run.rung : rung);
+  return at >= 1.00 ? 'EXCEEDS EXPECTATIONS (SUSPICIOUS)' :
+         at >= 0.70 ? 'MEETS EXPECTATIONS' :
+         at >= 0.40 ? 'DEVELOPING (HR WORD FOR STRUGGLING)' :
+         at >= 0.15 ? 'BELOW EXPECTATIONS' :
+         at >= 0.00 ? 'SEE ME — LINDA' :
          'SEE ME. TODAY. — LINDA';
 }
 function reviewScreen(dayPerf, eod, promo, ending){
@@ -6496,9 +6503,16 @@ function reviewBar(rung){
    80-90% of that span and a sloppy one at 29-54%, which is what these
    fractions are cut to. */
 const REVIEW_BANDS = { great: 1.00, good: 0.70, poor: 0.40 };
-function reviewBand(p, rung){
+/* 0 is the floor they fire you under, 1 is the bar they promote you over.
+   Everything the evening says about the day is a reading of this one number,
+   which is the only way the same words can mean the same thing at ten desks
+   with ten different score ranges. */
+function reviewAt(p, rung){
   const bar = reviewBar(rung), floor = ROLES[rung].gates.firedBelow;
-  const at = (p - floor) / Math.max(1e-6, bar - floor);
+  return (p - floor) / Math.max(1e-6, bar - floor);
+}
+function reviewBand(p, rung){
+  const at = reviewAt(p, rung);
   return at >= REVIEW_BANDS.great ? 'great'
        : at >= REVIEW_BANDS.good  ? 'good'
        : at >= REVIEW_BANDS.poor  ? 'poor' : 'bad';
@@ -12637,12 +12651,29 @@ function selfTest(runSim){
     /* the firing note states the rule that actually fires you, and the
        evenings before it are distinguishable */
     {
-      /* one sample per band — 0% and 10% SHOULD read alike, both are a
-         catastrophe; what matters is that 39% no longer reads as 0% did */
-      const names = [0, .2, .35, .5, .7, .9].map(perfName);
-      ok('review: a 39% evening does not read the same as a 0% one',
-         new Set(names).size === names.length && perfName(.39) !== perfName(0),
-         names.join(' / '));
+      /* one sample per band — the two catastrophes SHOULD read alike; what
+         matters is that the slide is visible on the way down.
+         Sampled on the floor-to-bar span, not on absolute score, and NOT via
+         .map(perfName) — map passes the array index as the second argument,
+         which would have silently graded each sample against a different
+         rung. */
+      const spanAt = (f, rung) => { const bar = reviewBar(rung),
+        fl = ROLES[rung].gates.firedBelow; return fl + (bar - fl) * f; };
+      const FRACS = [-0.5, 0.05, 0.25, 0.55, 0.85, 1.05];
+      const names = FRACS.map(f => perfName(spanAt(f, 0), 0));
+      ok('review: a struggling evening does not read the same as a lost one',
+         new Set(names).size === names.length, names.join(' / '));
+      /* AND IT READS THE SAME AT EVERY DESK. perfName was absolute while the
+         rungs were tuned individually, so a flawless day at Solutions
+         Architect was DEVELOPING (HR word for struggling) and a sloppy one on
+         the Project Team MET EXPECTATIONS. */
+      const drift = [];
+      for (let rung = 1; rung < ROLES.length; rung++)
+        for (let i = 0; i < FRACS.length; i++)
+          if (perfName(spanAt(FRACS[i], rung), rung) !== names[i])
+            drift.push(ROLES[rung].id + '@' + FRACS[i]);
+      ok('and the same day reads the same at every desk on the ladder',
+         !drift.length, drift.slice(0,6).join(' '));
       QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
       loadMap('office1'); spawnPeople();
       run.day = FIRE_GRACE + 1; run.firedStreak = 1;
