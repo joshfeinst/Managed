@@ -7335,8 +7335,20 @@ function endDay(){
   const costly = burned.slice(tolerance);
   const burnedStakes = costly.reduce((a,b) => a+b, 0)
                      + burned.slice(0, tolerance).reduce((a,b) => a+b, 0) * FORGIVEN;
-  const denom = Math.max(1, (run.stakesDone || 0) + burnedStakes);
-  const dayPerf = arrived ? clamp((run.earned || 0) / denom, 0, 1) : .5;
+  /* THE NUMBER THAT DECIDES YOUR CAREER IS THE NUMBER ON THE SCREEN. The
+     review prints "<earned> of <closed+burned> priority points banked — that
+     ratio IS your performance", and then printed a Performance line computed
+     from the UNROUNDED values. Measured over 72 bot days, 48 of them showed a
+     fraction that does not equal the percentage beside it, by up to three
+     points: "27 of 28 = 96%" next to "Performance 95%". The line's one job is
+     to explain the number, and it could not reproduce it.
+     Rounding once, here, means the fraction the player can do in their head
+     is exactly the score the gate uses. */
+  const shownEarned = Math.round(run.earned || 0);
+  const shownBurned = Math.round(burnedStakes);
+  const shownClosed = Math.round(run.stakesDone || 0);
+  const denom = Math.max(1, shownClosed + shownBurned);
+  const dayPerf = arrived ? clamp(shownEarned / denom, 0, 1) : .5;
   /* the review has to be able to explain the number it just showed you */
   run.lastScore = { tolerance, forgiven: Math.min(run.breaches, tolerance),
                     costly: costly.length,
@@ -7357,15 +7369,15 @@ function endDay(){
                        Goodwill, which are minor terms, and never showed this.
                        A diligent bot promotes in 3 days; five humans managed
                        zero, playing the way the screen implied. */
-                    earned: Math.round(run.earned || 0),
-                    burned: Math.round(burnedStakes),
+                    earned: shownEarned,
+                    burned: shownBurned,
                     /* the RAW stakes of what you closed. dayPerf divides by
                        stakesDone + burned, not by earned + burned — printing
                        the latter made the review's headline ratio disagree
                        with its own Performance line by 8-13 points, every
                        evening, which a gate tester caught and could not aim
                        at. The gap between these two IS craft. */
-                    closed: Math.round(run.stakesDone || 0),
+                    closed: shownClosed,
                     /* the three that cost the most, by name. A gate tester
                        had CRAFT 100% and SPEED 46% — both healthy — next to a
                        20% performance and no way to see what had eaten it. */
@@ -14647,15 +14659,41 @@ function selfTest(runSim){
          tester aimed at the ratio for eleven days and could not reach the bar,
          because the ratio was not what the bar measured. */
       {
-        const m = html.match(/<b>(\d+)<\/b> of (\d+)\s*priority points banked/);
-        const pm = html.match(/Performance<\/dt><dd><b>(\d+)%/);
-        const shown = m ? (+m[1]) / (+m[2]) : -1;
-        const said = pm ? (+pm[1]) / 100 : -2;
-        ok('review: the printed ratio IS the printed performance',
-           !!m && !!pm && Math.abs(shown - said) < 0.015,
-           m && pm ? m[1] + '/' + m[2] + ' = ' + Math.round(shown*100) +
-                     '% vs Performance ' + Math.round(said*100) + '%'
-                   : 'ratio ' + !!m + ' performance ' + !!pm + ' — not found on screen');
+        /* EXACTLY, AND ON REAL DAYS. This checked one hand-made scenario whose
+           numbers were integers and therefore always agreed, and it allowed a
+           1.5-point gap on top. Both halves hid the same bug: earned, closed
+           and burned were each rounded for the screen while dayPerf divided
+           the unrounded values, so over 72 bot days 48 printed a fraction that
+           did not equal the percentage beside it — "27 of 28 = 96%" against
+           "Performance 95%". A player can do that division in their head.
+           Drive real days, and require the fraction to BE the number. */
+        const read = () => {
+          const h = document.getElementById('r-stats').innerHTML;
+          const m = h.match(/<b>(\d+)<\/b> of (\d+)\s*priority points banked/);
+          const pm = h.match(/Performance<\/dt><dd><b>(\d+)%/);
+          if (!m || !pm) return null;
+          return { num:+m[1], den:+m[2], pct:+pm[1] };
+        };
+        const off = [];
+        const first = read();
+        if (!first) off.push('the ratio or the performance is not on screen');
+        else if (Math.round(first.num / first.den * 100) !== first.pct)
+          off.push(first.num + '/' + first.den + ' vs ' + first.pct + '%');
+        for (const seed of ['RATIO-A', 'RATIO-B']){
+          rngInit(seed); runInit(seed);
+          for (let d = 0; d < 2 && run; d++){
+            rollDay(); simDay(.85, { order:'pridead', pick:'best' });
+            if (!run) break;
+            const r = read();
+            if (!r){ off.push(seed + ' d' + (d+1) + ': nothing on screen'); break; }
+            if (Math.round(r.num / r.den * 100) !== r.pct)
+              off.push(seed + ' d' + (d+1) + ': ' + r.num + '/' + r.den + ' = ' +
+                       Math.round(r.num / r.den * 100) + '% vs ' + r.pct + '%');
+            startCommute();
+          }
+        }
+        ok('review: the printed ratio IS the printed performance', !off.length,
+           off.length + ': ' + off.slice(0, 3).join(' · '));
       }
       ok('review: the screen names the P1..P4 weighting',
          html.indexOf('P1 is worth ' + STAKES[4]) >= 0);
