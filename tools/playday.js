@@ -46,8 +46,20 @@ const BUDGET = +(process.argv[3] || 240) * 1000;
     return { vx: o.pos[0]*16 - cam.x + 8, vy: o.pos[1]*16 - cam.y + 8, label:o.label };
   });
 
-  const clear = async () => {                         // clear any modal politely
-    for (let i = 0; i < 30 && await dlgOpen(); i++) await S.key('KeyE', 170);
+  /* A dialogue with CHOICES does not advance on E — the box says "Press 1-3
+     or click" and hides its E indicator. Pressing E at one forever is how the
+     first version of this driver spent ten minutes of a day standing still. */
+  const optButtons = () => S.page.evaluate(() =>
+    [...document.querySelectorAll('#d-opts .opt')].map(el => {
+      const r = el.getBoundingClientRect();
+      return { x:Math.round(r.left + r.width/2), y:Math.round(r.top + r.height/2) };
+    }));
+  const clear = async () => {
+    for (let i = 0; i < 40 && await dlgOpen(); i++){
+      const opts = await optButtons();
+      if (opts.length){ await S.click(opts[0].x, opts[0].y); await S.wait(220); }
+      else await S.key('KeyE', 150);
+    }
   };
 
   /* --- get into the day ------------------------------------------------- */
@@ -70,7 +82,7 @@ const BUDGET = +(process.argv[3] || 240) * 1000;
   let step = 0, lastObj = '', stuck = 0, shots = 0;
   while (Date.now() - t0 < BUDGET){
     step++;
-    if (await dlgOpen()){ await S.key('KeyE', 170); continue; }
+    if (await dlgOpen()){ await clear(); continue; }
 
     const txt = await S.read();
     /* a board is up if the game is asking for number keys or a click */
@@ -128,6 +140,17 @@ const BUDGET = +(process.argv[3] || 240) * 1000;
       await S.key('KeyE', 150);
     }
 
+    /* A board you cannot solve is left through the pause card, which is what
+       it says on it. Without this the driver sat on a five-cable rack logging
+       530 mistakes — the same thing a tester did, for the same reason. */
+    if (stuck > 20){
+      await S.key('Escape', 320);
+      const ps = await S.clickables();
+      const out = ps.find(x => !x.disabled && /PUT IT DOWN|BACK TO WORK|LEAVE|RESUME/i.test(x.text));
+      if (out) await S.click(out.x, out.y);
+      else await S.key('Escape', 260);
+      stuck = 0;
+    }
     if (stuck > 26){ say('  !! STUCK: "' + obj + '" (clock keeps running)');
                      await S.shot('stuck-' + (++shots)); stuck = 0; }
     await S.key('KeyE', 150);
