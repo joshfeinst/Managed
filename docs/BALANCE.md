@@ -2405,3 +2405,63 @@ doing the work well.
 
 `meta.js`, 40 players of fourteen careers each: **33 reach retirement**, in
 11.0 careers on average, and the worst player tops out at Solutions Architect.
+
+---
+
+## The hands-on pass, and what it cost the ladder
+
+The senior half of the ladder was the least hands-on part of the game. Share of
+each rung's pool that opens a board, before:
+
+| rung | intern | t1 | t2 | t3 | project | procure | relmgr | solarch | vcio | director |
+|---|---|---|---|---|---|---|---|---|---|---|
+| before | 49% | 41% | 41% | 36% | 38% | 29% | 28% | 27% | 27% | 28% |
+| after | 49% | 41% | 41% | 36% | 38% | 31% | 32% | 33% | 35% | 36% |
+
+It was flat and slightly **falling** as you climbed, on a plan whose promise is
+that the games get more technical the higher you go — "subnetting at Project
+Team, quote Tetris at Procurement, budget defense at vCIO". Now it rises
+monotonically from Procurement to Director, and the intern still sits highest
+because the helpdesk is where the work is physical, which is the joke.
+
+Two kinds of change got it there. Ten new Director tickets were written, every
+one carrying a board, because that rung had twenty-nine of its own and six of
+them opened one. The other twelve needed nothing written: they were already
+describing a board in their own titles and then resolving in dialogue — a
+data-flow map that never opened the diagram board, an end-of-life notice on "a
+thing every client is running" that never opened blast, a backup review you
+have invoiced for twice and cannot evidence that never opened paper. Each was
+given the board it was already about.
+
+### What it cost
+
+Every one of the twelve gains 14 minutes of work, and its SLA widens with it.
+`bars.js`, 16 seeds x 8 days per rung, on the build that shipped it:
+
+| rung | bar | flawless p50 | sloppy p50 | gap | good clears | bad clears |
+|---|---|---|---|---|---|---|
+| intern | 73% | 78% | 58% | 21 | 69% | 0% |
+| T1 | 65% | 69% | 53% | 16 | 63% | 0% |
+| T2 | 60% | 64% | 47% | 17 | 69% | 6% |
+| T3 | 56% | 62% | 43% | 19 | 63% | 6% |
+| Project Team | 54% | 61% | 50% | 10 | 81% | 19% |
+| Procurement | 52% | 57% | 43% | 14 | 69% | 13% |
+| Relationship Mgr | 51% | 59% | 38% | 20 | 88% | 6% |
+| Solutions Architect | 55% | 64% | 46% | 18 | 81% | 6% |
+| vCIO | 54% | 57% | 43% | 15 | 81% | 25% |
+
+Still zero rungs misplaced. Solutions Architect came out of it healthier — its
+separation went 15 points to 18 and good triage clears 69% to 81% — which is
+what you would expect if craft has more places to express itself.
+
+`meta.js`, 40 players, like-for-like against the 33/40 on the previous build:
+**34 of 40 reach retirement**, in 10.5 careers on average against 11.0, and the
+worst player still tops out at Solutions Architect. A 20-seed run of the same
+build read 19/20 with every player reaching Director, which is the favourable
+half of the same distribution and is exactly why the reference number is
+forty.
+
+Project Team is the rung to watch: its separation is 10 points, the tightest on
+the ladder, and it has been drifting down (14, then 11, then 10) across three
+passes. It still clears the healthy definition. It is the next rung that will
+need content rather than a bar.
