@@ -1563,7 +1563,12 @@ const CHAT = {
   },
   raj: {
     when: [
-      { if:r => r.rung >= 6, t:'You used to sit there. I sit there now. I have not moved anything, in case you come back.' },
+      /* Raj sits at n2 and has never sat anywhere else. The line this replaces
+         had him keeping your old chair warm, which is a promotion the office
+         does not model and a desk four tiles from any he has ever occupied.
+         What IS true above the pit is that you stopped having a reason to be
+         down here and kept coming anyway. */
+      { if:r => r.rung >= 6, t:'You do not sit down here any more and you still come down here. I have decided that means something. I am not going to check with anyone.' },
       { if:r => r.rung >= 3, t:'When it gets to you it means I could not do it, so I always want to know what it was. Nobody ever tells me what it was.' },
       { if:r => r.stress > 72, t:'Are you okay? You look how I feel and I have had six coffees and a bad phone call.' },
       { if:r => r.breaches >= 2, t:'Mine are breaching too. Is that normal? Please say it is normal. Kayla just laughed.' },
@@ -15606,6 +15611,53 @@ function selfTest(runSim){
       ok('a line that counts rungs between you gets the count right',
          seen.length > 0 && !bad.length,
          seen.join(' ') + (bad.length ? ' · ' + bad.join('; ') : ''));
+    }
+    /* AND NOBODY CLAIMS A CHAIR THEY HAVE NEVER SAT IN. Raj told every
+       Relationship Manager and above "You used to sit there. I sit there now.
+       I have not moved anything, in case you come back." Raj sits at n2, which
+       is [17,3]; the four desks the player ever has in that pit are on row 7,
+       four tiles apart, and no NPC schedule in the building has ever contained
+       one of them. He was describing a promotion the office does not model, at
+       a chair he has never been within four tiles of, every day of six rungs.
+
+       The fact is worth pinning on its own — a map edit that parks somebody on
+       your chair should fail here, not read as a nice touch — and the prose
+       rule falls out of it: if no schedule ever visits a player desk, no line
+       is allowed to say one does. */
+    {
+      const at = {};                                  // anchor -> 'floor:x,y'
+      const wanted = new Set(ROLES.map(R => R.deskAnchor || 'TERMINAL'));
+      for (const id in NPCS)
+        for (const [, a] of NPCS[id].sched || []) wanted.add(a);
+      for (const fid in MAPS){
+        loadMap(fid);
+        for (const k of wanted){
+          if (at[k]) continue;
+          const q = anchorPos(k);
+          if (q) at[k] = fid + ':' + q.join(',');
+        }
+      }
+      loadMap('office1'); spawnPeople();               // leave the suite where it was
+      const desks = new Set(ROLES.map(R => at[R.deskAnchor || 'TERMINAL']).filter(Boolean));
+      const squatters = [];
+      for (const id in NPCS)
+        for (const [, a] of NPCS[id].sched || [])
+          if (desks.has(at[a]) && squatters.indexOf(id + '@' + a) < 0)
+            squatters.push(id + '@' + a);
+      /* the claim, in the words people actually reach for */
+      const CLAIM = /\bI sit (?:there|here) now\b|\byour old desk\b|\btook your desk\b|\bI have your (?:old )?desk\b/i;
+      const liars = [];
+      for (const id in CHAT){
+        const said = ((CHAT[id].when || []).map(w => w.t)).concat(CHAT[id].any || []);
+        const sitsAtYours = (NPCS[id].sched || []).some(sc => desks.has(at[sc[1]]));
+        for (const line of said)
+          if (CLAIM.test(line || '') && !sitsAtYours && liars.indexOf(id) < 0) liars.push(id);
+      }
+      ok('nobody sits at a desk that is yours at some rung, and nobody says they do',
+         desks.size === ROLES.length && !squatters.length && !liars.length,
+         desks.size + ' player desks' +
+         (squatters.length ? ' · sat on by ' + squatters.join(' ') : '') +
+         (liars.length ? ' · claimed by ' + liars.join(' ') : ''));
     }
     /* THE MORNING CARD. Four lines used to serve an entire career, so this is
        mostly a breadth check — but it also pins the one thing in it that can
