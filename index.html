@@ -4011,9 +4011,10 @@ const DIALOGUE = {
            {t:'Apologise for the outage, promise a better update rhythm, and set it up', fx:{time:11, rep:2, bonus:1, stress:5}},
            {t:'Hand it back to the account manager. It is a relationship problem now.', fx:{time:4, rep:-4, stress:-1}} ] },
 
-  'dx.d9hnd.a': { who:'linda', t:['If you were hit by a bus on Friday, what would we do on Monday.',
-    'I am not being morbid. I have been asked to ask, and the person who asked me has asked me twice.'] },
-  'dx.d9hnd.b': { who:'sys', t:['The honest handover is an order, not a document: what has to be true before the next thing can be true at all.'],
+  'dx.d9hnd.a': { who:'linda', t:['If you were hit by a bus on Friday, what would we do on Monday. I am not being morbid — I have been asked to ask, twice.',
+    'The answer, it turns out, starts on Monday. HR have onboarded them with the standard new starter checklist, the same one they send for a graduate, in the same order.'] },
+  'dx.d9hnd.b': { who:'sys', t:['Whoever replaces you gets the accounts in whatever order the form was typed in, and the form was typed in 2014.',
+    'The honest handover is an order, not a document: what has to be true before the next thing can be true at all.'],
     opts:[ {t:'Write it in dependency order and walk Derek through it in person', fx:{time:20, rep:5, bonus:1, stress:7}},
            {t:'Write it in dependency order and leave it where somebody will find it', fx:{time:13, rep:3, bonus:1, stress:4}},
            {t:'Send the runbook index. It is technically a handover.', fx:{time:4, rep:-3, stress:-2}} ] },
@@ -4960,7 +4961,14 @@ const TICKETS = {
            {goto:'TERMINAL'},{choice:'pw.wk.c'}] },
   'three-hundred-mailboxes': { tiers:[4,4], weight:3, slaMult:1.8, pri:3, stress:6,
     title:'Three hundred mailboxes move Saturday. Forty-one belong to leavers.',
-    steps:[{say:'pw.mbx.a'},{goto:'TERMINAL'},{game:'starter',diff:2},{choice:'pw.mbx.b'},
+    /* NOT THE STARTER BOARD. It was dealt one, and the starter card opens "A
+       new starter lands on Monday" over a checklist of mailbox/licence/account
+       — a new hire's first day, printed across a migration of three hundred
+       mailboxes. starter is the one board whose card asserts a whole scenario
+       rather than a mechanic, so it is the one board a ticket can contradict
+       just by opening it. Forty-one of these belong to leavers, which makes it
+       a question about who a change lands on, which is blast. */
+    steps:[{say:'pw.mbx.a'},{goto:'TERMINAL'},{game:'blast',diff:2},{choice:'pw.mbx.b'},
            {goto:'n3'},{choice:'pw.mbx.c'}] },
   'comms-room-is-a-cupboard': { tiers:[4,4], weight:3, slaMult:1.9, pri:3, stress:6,
     title:'The new site has a comms room. It has a kettle in it as well.',
@@ -5585,7 +5593,7 @@ const TICKETS = {
     title:'The client has asked for you by name and reception said you were in',
     steps:[{say:'dx.d9cal.a'},{game:'script',diff:3},{choice:'dx.d9cal.b'}] },
   'dir9-your-own-handover': { tiers:[9,9], weight:3, slaMult:2.6, pri:1, stress:8,
-    title:'If you were hit by a bus on Friday, what would we do on Monday',
+    title:'Your successor starts Monday and HR have sent the standard checklist',
     steps:[{say:'dx.d9hnd.a'},{game:'starter',diff:3},{choice:'dx.d9hnd.b'}] },
 
   /* ------------------------- downstairs, at last -------------------------
@@ -12915,6 +12923,37 @@ function selfTest(runSim){
       }
       ok('a ticket that names a priority is dealt that priority',
          !wrong.length, wrong.slice(0, 3).join(' · '));
+    }
+    /* AND THE ONE BOARD THAT ASSERTS A SCENARIO IS ONLY DEALT BY TICKETS THAT
+       SHARE IT. Every other board states a mechanic and can be applied to any
+       problem — tracing a cable is how you fix a printer, and requiring the
+       printer ticket to say "cable" would be nonsense; 67 of 117 board-dealing
+       tickets fail that rule and are all fine. `starter` is different. Its card
+       opens "A new starter lands on Monday" and its steps are mailbox, licence,
+       account, MFA, laptop — a specific person's specific first day. A ticket
+       that opens it while being about something else contradicts itself the
+       moment the board draws.
+       Two did. A migration of three hundred mailboxes was dealt it as a
+       generic dependency-ordering board, and so was a Director's succession.
+       Narrow on purpose: one board, because one board earns it. */
+    {
+      const SAYS_STARTER = ['starter','joiner','new hire','onboard','first day',
+                            'starts on monday','induction','new person','replacement',
+                            'successor','begins on','joins on'];
+      const off = [];
+      for (const tid in TICKETS){
+        const T = TICKETS[tid];
+        if (!T.steps.some(st => st.game === 'starter')) continue;
+        let text = (T.title || '').toLowerCase();
+        for (const st of T.steps){
+          const nd = DIALOGUE[st.say || st.choice];
+          if (nd) text += ' ' + nd.t.join(' ').toLowerCase();
+        }
+        if (!SAYS_STARTER.some(w => text.includes(w))) off.push(tid);
+      }
+      ok('the starter board is only dealt by a ticket about a new starter',
+         !off.length, off.length ? off.join(' ') : 'checked ' +
+         Object.keys(TICKETS).filter(t => TICKETS[t].steps.some(st => st.game === 'starter')).length);
     }
     /* THE PAPER CARD PRICES THREE OUTCOMES, SO ALL THREE HAVE TO BE PRICED
        THAT WAY. Driven on the real board: a question with nothing in your hand
