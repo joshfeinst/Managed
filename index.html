@@ -1082,7 +1082,7 @@ const ROLES = [
     queue:{ ratePerHr:1.9, meetingMin:34, slaScale:0.96 }, deskAnchor:'DESK_PIT2' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
     gates:{ nextAt:{perf:0.598, days:3}, firedBelow:0.269 },
-    queue:{ ratePerHr:1.9, meetingMin:40, slaScale:0.96 }, deskAnchor:'DESK_T3' },
+    queue:{ ratePerHr:1.9, meetingMin:40, slaScale:0.96 }, deskAnchor:'DESK_T2' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
     gates:{ nextAt:{perf:0.563, days:3}, firedBelow:0.253 },
     queue:{ ratePerHr:1.9, meetingMin:48, slaScale:0.96 }, deskAnchor:'DESK_T3' },
@@ -1211,7 +1211,7 @@ const FILLS = {
 const ANCHOR_NAMES = {
   TERMINAL:'THE HELPDESK TERMINAL', COFFEE:'THE COFFEE MACHINE', PRINTER:'THE PRINTER',
   DESK_PIT:'YOUR DESK — THE FAR END OF THE PIT', DESK_PIT2:'YOUR DESK — NEARER THE WINDOW',
-  DESK_T3:'YOUR DESK — BESIDE THE TERMINAL', DESK_PROJ:'YOUR DESK — THE PROJECT ROOM, BESIDE THE PRINTER',
+  DESK_T2:'YOUR DESK — HALFWAY ALONG THE PIT', DESK_T3:'YOUR DESK — BESIDE THE TERMINAL', DESK_PROJ:'YOUR DESK — THE PROJECT ROOM, BESIDE THE PRINTER',
   DESK_PROC:'YOUR DESK — THE PROJECT ROOM, AWAY FROM THE PRINTER',
   DESK_CLIENT:'YOUR DESK — THE CLIENT SUITE',
   DESK_ARCH:'YOUR DESK — THE DRAWING BOARD', DESK_EXEC:'YOUR DESK — THE QUIET SUITE',
@@ -1320,7 +1320,14 @@ const MAPS = { carpark: {
                desk, so the printer and the coffee machine genuinely do get
                further away as you get more senior. That is the joke and it is
                also the mechanic. */
-            DESK_PIT:[15,7], DESK_PIT2:[20,7], DESK_T3:[28,7],
+            /* T2 AND T3 SHARED A CHAIR. The handbook promises "you get
+               promoted, and your desk moves", and on one of the nine
+               promotions it did not: both rungs pointed at DESK_T3. The pit
+               row is clear from x=21 to x=27, so the walk up it is a step at
+               a time now — far end, nearer the window, halfway along, beside
+               the terminal — and every rung on the ladder has a chair of its
+               own. */
+            DESK_PIT:[15,7], DESK_PIT2:[20,7], DESK_T2:[24,7], DESK_T3:[28,7],
             DESK_PROJ:[24,15], DESK_PROC:[24,18],
             /* OUT OF THE SERVER ROOM. Both of these were parked between two
                rows of racks — the Relationship Manager had twelve of them
@@ -7671,7 +7678,7 @@ function deskToLift(lift){
    FORK. ticketWork prices a choice at a flat 7 on purpose — it is the day's
    pricing model and the option's own fx.time is billed separately — but
    workLeft has two consumers that are asking a different question: the queue
-   row's "start in Nm / too late" column, and the grace a ticket in hand gets
+   row's "start within Nm / too late" column, and the grace a ticket in hand gets
    before it breaches. Both want the minutes still to be spent, and the fork is
    most of them: the option a player is steered towards averages 15.5 minutes
    against the flat 7 the column budgeted. Measured, the column understated the
@@ -8800,7 +8807,11 @@ function renderQueue(){
     const sla = row.querySelector('.sla');
     sla.textContent = left <= 0 ? 'BREACHING'
                     : slack <= 0 ? 'too late · ' + left + 'm'
-                    : slack <= 20 ? 'start in ' + slack + 'm'
+                    /* "START IN 3M" reads as an instruction to wait three
+                       minutes, which is the opposite of what it means: three
+                       minutes is all the waiting left before this cannot be
+                       finished. One word fixes it. */
+                    : slack <= 20 ? 'start within ' + slack + 'm'
                     : left + 'm';
     sla.className = 'sla ' + (left <= 0 || slack <= 0 ? 'bad' : slack <= 20 ? 'warn' : '');
     row.classList.toggle('sel', i === sel);
@@ -15945,7 +15956,10 @@ function selfTest(runSim){
         ok('you start the morning sitting at your own desk, with no errand pending',
            !off.length, off.slice(0,3).join(' · '));
       }
-      ok('and the desk moves as you climb', seen.size >= 6,
+      /* EVERY rung, not six of them. T2 and T3 both pointed at DESK_T3, so
+         one of the nine promotions moved you nowhere while the handbook said
+         otherwise, and a threshold of six could not see it. */
+      ok('and the desk moves as you climb', seen.size === ROLES.length,
          seen.size + ' distinct desks across ' + ROLES.length + ' rungs');
       /* and every one of them is reachable from the door */
       const reach = new Set(); const q = [W2.spawn.slice()];
