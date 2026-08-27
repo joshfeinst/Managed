@@ -7004,9 +7004,17 @@ function objectiveText(){
      sleep debt that never comes off. It offers the cup only while the cup is
      still free. Nothing else here names a machine, because this line is read
      on three floors and only one of them has a kitchen. */
+  /* AND ON DAY ONE IT DOES LAST. "IT WILL NOT LAST" is true on a normal day —
+     measured, a day-three intern working each ticket the moment it lands has
+     an empty queue for 21 of 480 minutes — and false on the first, which is a
+     deliberate half load and empty for 79. The line was printed through
+     eighty minutes of a first day promising they were about to end. Day one
+     says what day one is instead; the card at breakfast already calls it a
+     half-load first day, so this agrees with it rather than contradicting it. */
   return 'QUEUE CLEAR — TALK TO PEOPLE, ' +
          (run.coffee < BURN.freeCups ? 'GET A COFFEE, ' : '') +
-         'BREATHE. IT WILL NOT LAST.';
+         (run.day === 1 ? 'BREATHE. IT IS A HALF-LOAD FIRST DAY.'
+                        : 'BREATHE. IT WILL NOT LAST.');
 }
 const DIRV = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
 function faceCell(){
@@ -15267,9 +15275,22 @@ function selfTest(runSim){
         if (/COFFEE/.test(objectiveText()) && c >= BURN.freeCups)
           pushy.push('cup ' + c + ' of ' + COFFEE_MAX);
       }
+      /* AND ONLY PROMISES THE QUIET IS ENDING ON A DAY THAT IS NOT A HALF ONE.
+         Day one deals 9.3 arrivals against a normal day's 15.1 and leaves the
+         queue empty for 79 minutes of 480 against 21 — so "IT WILL NOT LAST",
+         printed through every one of them, was a promise the first day does
+         not keep. Read BEFORE run is put back, because objectiveText needs a
+         live run and the first draft of this asked it after the restore. */
+      run.coffee = 0;
+      run.day = 1; const d1 = objectiveText();
+      run.day = 3; const d3 = objectiveText();
       run = savedRunB3;
       ok('and never sends you for a cup that costs you the day', !pushy.length,
          pushy.length ? pushy.join(' · ') : 'free until ' + BURN.freeCups);
+      ok('the empty queue only promises company on a day that brings some',
+         !/WILL NOT LAST/i.test(d1) && /HALF-LOAD/i.test(d1) &&
+         /WILL NOT LAST/i.test(d3),
+         'day 1: "' + d1.slice(-42) + '" · day 3: "' + d3.slice(-24) + '"');
     }
     /* THE QUEUE ROW COUNTS THE END OF THE DAY, NOT JUST THE SLA. The slack
        column is the one number a player triages the afternoon on, and it was

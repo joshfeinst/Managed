@@ -195,7 +195,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 470 in-game self-tests |
+| `verify.js` | boots it and runs the 471 in-game self-tests |
 | `claims.js` | re-derives every number this README states from the built game |
 | `dead.js` | finds data, state, functions and dialogue that are written and never read |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
