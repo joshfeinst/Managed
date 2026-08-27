@@ -203,6 +203,8 @@ were invisible to the ones that came before them.
 | `ladder.js` | prints the shipped ladder as a markdown table, so docs/BALANCE.md is generated rather than hand-copied — it drifted once and cost a session |
 | `meta.js` | plays whole careers across many players — the only one that can see whether the top of the ladder is reachable |
 | `save.js` | mid-day save, reload, and the afternoon has to survive it |
+| `audit.js` | the things the suite does not check — whether the content is any GOOD: pool depth, priority spread, board density, whether anything cheap is punishingly stressful |
+| `playtest.js` | three personas play whole seeded careers for pacing: days survived, promotion days, breach rates, ending distribution |
 | `human.js`, `marathon.js`, `burn.js`, `templates.js`, `dials.js`, `trace.js`, `timing.js` | input driving, long soaks, burnout curves, per-template fairness |
 
 Anything that changes a rung's content or its numbers has to be run past
