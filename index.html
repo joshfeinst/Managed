@@ -4133,7 +4133,7 @@ const DIALOGUE = {
            {t:'Log it with the agent and tell the nine people what you logged', fx:{time:7, rep:3, bonus:1, stress:3}},
            {t:'Reply to all nine explaining that it is not our barrier', fx:{time:3, rep:-4, stress:8}} ] },
 
-  'o.space.a': { who:'brenda', t:['A photograph of a numberplate has been raised as a ticket. Priority two.',
+  'o.space.a': { who:'brenda', t:['A photograph of a numberplate has been raised as a ticket. Priority two, they said. It is in your queue as a P4, because it is a photograph of a car.',
     'There is no message. There is no name. There is a photograph of a numberplate, in a bay, and it has been given an SLA.'] },
   'o.space.b': { who:'sys', t:['Somebody is angry enough to photograph a car and calm enough to raise it correctly, and those are not usually the same person.'],
     opts:[ {t:'Find out whose it is and go and talk to them, in person', fx:{time:10, rep:5, bonus:1, stress:4}},
@@ -4904,7 +4904,13 @@ const TICKETS = {
     title:'Sixty servers to decommission. Eleven answer pings and nothing else.',
     steps:[{say:'pw.decom.a'},{goto:'n6'},{game:'blast',diff:3},{choice:'pw.decom.b'},
            {goto:'TERMINAL'},{choice:'pw.decom.c'}] },
-  'the-project-that-came-back': { tiers:[4,4], weight:3, slaMult:1.8, pri:3, stress:6,
+  /* LINDA SAYS P1 AND THE ROW SAID P2. The title and pw.back.a both call this
+     a P1 fault — it is a closed project back as a live outage that only you
+     have ever seen working — and pri:3 renders P2 in the queue beside those
+     words. The text is right: this is the heaviest thing the rung deals, six
+     steps and most of a day, and a reopened production fault nobody else
+     understands is not a P2. */
+  'the-project-that-came-back': { tiers:[4,4], weight:3, slaMult:1.8, pri:4, stress:6,
     title:'The project you closed in March has reopened, at P1, as a fault.',
     steps:[{say:'pw.back.a'},{goto:'n8'},{game:'script',diff:2},{choice:'pw.back.b'},
            {goto:'TERMINAL'},{choice:'pw.back.c'}] },
@@ -5664,7 +5670,13 @@ const TICKETS = {
     title:'The barrier fob has stopped working and it is not our barrier',
     steps:[{say:'o.fob.a'},{goto:'BARRIER'},{choice:'o.fob.b'}] },
   'space-fourteen-is-a-photograph': { tiers:[0,4], weight:2, slaMult:2.5, pri:1, stress:4,
-    title:'A photograph of a numberplate has been raised as a P2',
+    /* AND HERE THE ROW IS THE RIGHT ONE. A photograph of a car is a P4 and
+       the queue deals it as one; the title and o.space.a both called it a P2,
+       which read as the game contradicting its own row rather than as the joke
+       it is. Both numbers are on screen now — what they raised it at, and what
+       it actually is — which is the joke, and is what a service desk does all
+       day. */
+    title:'A photograph of a numberplate, raised as a P2, triaged to P4',
     steps:[{say:'o.space.a'},{goto:'VISITOR'},{choice:'o.space.b'}] },
   'handover-on-a-bonnet': { tiers:[0,5], weight:2, slaMult:2.0, pri:4, stress:7,
     title:'{User} is leaving and would rather hand the laptop over in the car park',
@@ -12727,6 +12739,40 @@ function selfTest(runSim){
       if (T.from && !NPCS[T.from]) bad.push(id + ':from');
     }
     ok('every ticket is resolvable (nodes, games, fills)', !bad.length, bad.slice(0,4).join(' '));
+    /* AND A TICKET THAT NAMES ITS OWN PRIORITY IS THAT PRIORITY. The queue row
+       prints P1..P4 an inch from the title, so a title reading "reopened, at
+       P1, as a fault" beside a row saying P2 is the game arguing with itself
+       where the player cannot miss it. pri is inverted — pri:4 renders P1 —
+       which is exactly the kind of mapping that goes wrong quietly and stays
+       wrong. Two did: the reopened project was dealt P2 under a title and a
+       Linda line that both said P1, and the numberplate photograph was dealt
+       P4 under a title that said P2.
+       Naming two priorities is allowed and is the joke on the second one —
+       what they raised it at, and what it actually is — so the rule is that
+       the text must name the one the queue deals, not that it name only one. */
+    {
+      const wrong = [];
+      for (const tid in TICKETS){
+        const T = TICKETS[tid];
+        let text = T.title || '';
+        for (const st of T.steps || [])
+          for (const k of ['say','choice']){
+            const nd = st[k] && DIALOGUE[st[k]];
+            if (!nd) continue;
+            text += ' ' + (nd.t || []).join(' ');
+            for (const o of nd.opts || []) text += ' ' + o.t;
+          }
+        const m = text.match(/\bP([1-4])\b/g);
+        if (!m) continue;
+        const named = [...new Set(m.map(x => +x.slice(1)))];
+        const dealt = 5 - (T.pri || 2);
+        if (!named.includes(dealt))
+          wrong.push(tid + ' dealt P' + dealt + ', text says ' +
+                     named.map(x => 'P' + x).join('/'));
+      }
+      ok('a ticket that names a priority is dealt that priority',
+         !wrong.length, wrong.slice(0, 3).join(' · '));
+    }
     /* "every ticket fits its SLA at every rung that deals it" stood here and
        could not fail — see the notice-window guard in the sim block, which is
        what does this job now, on the formula the game actually ships. */
