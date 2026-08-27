@@ -844,6 +844,18 @@ function bakeAtlas(){
     Rt(g,4,3,8,3,'#1b2830'); Rt(g,4,10,8,3,'#1b2830');
     Rt(g,4,6,8,4,'#38817b'); Rt(g,2,5,1,2,'#1b2830'); Rt(g,13,5,1,2,'#1b2830');
     Rt(g,5,1,6,1,'#4a9a93'); });
+  /* 38, 39 two more cars. A car park of identical cars reads as wallpaper,
+     and slots 38 and 39 were the last two the atlas had. */
+  T(38, g=>{ Rt(g,0,0,16,16,'#3f434a'); Rt(g,0,0,1,16,'#c9c4b8');
+    Rt(g,3,1,10,14,'#8d939b'); Rt(g,3,1,10,1,'#a3a9b1'); Rt(g,3,14,10,1,'#6f757c');
+    Rt(g,4,3,8,3,'#1b2830'); Rt(g,4,10,8,3,'#1b2830');
+    Rt(g,4,6,8,4,'#9aa0a8'); Rt(g,2,5,1,2,'#1b2830'); Rt(g,13,5,1,2,'#1b2830');
+    Rt(g,5,1,6,1,'#b4bac1'); });
+  T(39, g=>{ Rt(g,0,0,16,16,'#3f434a'); Rt(g,0,0,1,16,'#c9c4b8');
+    Rt(g,3,1,10,14,'#8a3f3a'); Rt(g,3,1,10,1,'#a04d47'); Rt(g,3,14,10,1,'#6e322e');
+    Rt(g,4,3,8,3,'#1b2830'); Rt(g,4,10,8,3,'#1b2830');
+    Rt(g,4,6,8,4,'#96453f'); Rt(g,2,5,1,2,'#1b2830'); Rt(g,13,5,1,2,'#1b2830');
+    Rt(g,5,1,6,1,'#b05953'); });
   /* 35 the verge. Mown, and yellower than anything indoors. */
   T(35, g=>{ Rt(g,0,0,16,16,'#4e5c39');
     for (let i=0;i<11;i++) Rt(g,(i*5.3)%16,(i*3.9)%16,1,1,'#59683f');
@@ -1177,15 +1189,15 @@ const MAPS = { carpark: {
   map:[
     '########XX###########################X######',
     '#---P------------------------------b-------#',
-    '#ZZZZZ-ZZZ--Z-ZZZZZZ-ZZZZZZ-ZZ-ZZZ-ZZZZZ-ZZ#',
+    '#zZyZZ-yZz--z-ZzZZyz-zZzzzZ-yZ-zyz-zyZzz-zz#',
     '#------------------------------------------#',
-    '#ZZZZZ-ZZZZZZ-ZZ--ZZ-ZZZZZZ-ZZZZZZ-ZZZZZ-ZZ#',
+    '#zyyzz-zZyzzy-Zy--yz-ZyZZZy-zZzzyy-ZZZZy-Zy#',
     '#------------------------------------------#',
-    '#ZZZZZ-ZZZZZZ-ZZZZZZ-ZZZ-ZZ-ZZZZZZ-ZZZ-Z-ZZ#',
+    '#zzyZy-ZzzyZZ-zzzyyZ-zzz-Zz-zyyZzz-ZZZ-z-yz#',
     '#------------------------------------------#',
-    '#ZZZZZ-Z--ZZZ-ZZZZZZ-ZZZZZZ-ZZZZZZ--ZZZZ-ZZ#',
+    '#ZZyZZ-Z--zZz-ZZzyZy-yyzzzz-zyZyzZ--zzZz-ZZ#',
     '#------------------------------------------#',
-    '#ZZZZZ-ZZZZZ--ZZZZZZ-ZZZZZZ-Z-ZZZZ-ZZZZZ-ZZ#',
+    '#zzyzz-yzyyZ--zzZyZz-zZzzzz-y-ZyZz-ZzZZZ-ZZ#',
     '#------------------------------------------#',
     '#gggggggggggggggggggggggggggggggggggggggggg#',
     '#gggggggggggggggggggggggggggggggggggggggggg#',
@@ -1194,7 +1206,7 @@ const MAPS = { carpark: {
     '############################################'
   ],
   anchors:{ DOORS:[8,1], FIREEXIT:[37,1], VISITOR:[10,2],
-            YOURCAR:[16,4], SMOKERS:[34,1], BARRIER:[41,14] }
+            YOURCAR:[35,8], SMOKERS:[34,1], BARRIER:[41,14] }
 }, office1: {
   name:'PROACTIVE IT PARTNERS — FLOOR 2',
   map:[
@@ -3807,6 +3819,81 @@ const DIALOGUE = {
            {t:'Write them down and send the document round', fx:{time:8, rep:3, bonus:1, stress:5}},
            {t:'Take the laptop. It is easier than explaining.', fx:{time:3, rep:-4, stress:11}} ] },
 
+  /* ----------------- OUTSIDE: the car park (all rungs) ---------------------
+     The first errands in the game that leave the building. The register is
+     not "IT does a menial job" — it is that the car park is the one place in
+     the company with no meeting in it, so everything that cannot be said
+     inside gets said out here, and everybody already knows it. */
+  'o.fob.a': { who:'sys', t:['The barrier fob has stopped working. Nine people have reported it and four of them have reported it twice.',
+    'It is not our barrier. It is not our car park. It is not, on any reading of the contract, our fob.'] },
+  'o.fob.b': { who:'marcus', t:['Managing agent does the barrier. I do the building. You do the computers in it. Everyone finds that upsetting and it has not changed since 2019.'],
+    opts:[ {t:'Get the agent on the phone and stay on it until there is a date', fx:{time:11, rep:5, bonus:1, stress:5}},
+           {t:'Log it with the agent and tell the nine people what you logged', fx:{time:7, rep:3, bonus:1, stress:3}},
+           {t:'Reply to all nine explaining that it is not our barrier', fx:{time:3, rep:-4, stress:8}} ] },
+
+  'o.space.a': { who:'brenda', t:['A photograph of a numberplate has been raised as a ticket. Priority two.',
+    'There is no message. There is no name. There is a photograph of a numberplate, in a bay, and it has been given an SLA.'] },
+  'o.space.b': { who:'sys', t:['Somebody is angry enough to photograph a car and calm enough to raise it correctly, and those are not usually the same person.'],
+    opts:[ {t:'Find out whose it is and go and talk to them, in person', fx:{time:10, rep:5, bonus:1, stress:4}},
+           {t:'Pass it to Brenda, whose parking it actually is', fx:{time:5, rep:3, bonus:1, stress:2}},
+           {t:'Close it. It is not an IT issue and never was.', fx:{time:3, rep:-3, stress:6}} ] },
+
+  'o.bonnet.a': { who:'sys', t:['{User} left on Friday and would rather hand the laptop over in the car park than come back up.',
+    'They have not been in the building since. The laptop has the only copy of four years of something on it.'] },
+  'o.bonnet.b': { who:'sys', t:['A handover on a bonnet is still a handover. Nobody has ever written down what one is supposed to involve.'],
+    opts:[ {t:'Check it over, wipe it properly, and get the account closed today', fx:{time:12, rep:5, bonus:1, stress:4}},
+           {t:'Take it, log it, and do the leaver process this afternoon', fx:{time:8, rep:3, bonus:1, stress:3}},
+           {t:'Take it. They seemed fine.', fx:{time:3, rep:-5, stress:9}} ] },
+
+  'o.drill.a': { who:'brenda', t:['Fire drill at eleven. Everybody out, nobody back in until the marshals say so.',
+    'The roll-call list prints from a system on the second floor, which is the floor everybody has just been told to leave.'] },
+  'o.drill.b': { who:'sys', t:['The list is a compliance control and the control fails in exactly the circumstance it exists for.'],
+    opts:[ {t:'Print it before eleven and fix the process afterwards', fx:{time:10, rep:5, bonus:1, stress:4}},
+           {t:'Print it before eleven and carry it out with you', fx:{time:6, rep:3, bonus:1, stress:3}},
+           {t:'Read the names off a phone. There is signal in the car park.', fx:{time:3, rep:-3, stress:7}} ] },
+
+  'o.skip.a': { who:'callum', t:['The refit skip goes on Thursday. There are three monitors, a switch and something with a hard drive in it.',
+    'Nobody put them there deliberately. Somebody cleared a cupboard.'] },
+  'o.skip.b': { who:'noor', t:['I do not need the monitors back. I need to know what was on the drive, and I need it before Thursday rather than after.'],
+    opts:[ {t:'Pull the drive, log it, and destroy it through the proper route', fx:{time:12, rep:5, bonus:1, stress:5}},
+           {t:'Get the lot back inside and go through it properly', fx:{time:9, rep:4, bonus:1, stress:4}},
+           {t:'It is in a skip in a locked car park. It is fine.', fx:{time:3, rep:-5, stress:10}} ] },
+
+  'o.bays.a': { who:'pauline', t:['{Client} are outside. Both visitor bays have our cars in them and one of them has had our car in it since Tuesday.',
+    'They are circling. They have circled twice.'] },
+  'o.bays.b': { who:'sys', t:['This is not an IT problem in any sense that survives being written down, and you are the one standing at the window.'],
+    opts:[ {t:'Find the driver, move the car, and meet the client at the doors', fx:{time:9, rep:5, bonus:1, stress:5}},
+           {t:'Go down and wave them into a staff bay yourself', fx:{time:6, rep:3, bonus:1, stress:4}},
+           {t:'Let reception handle it. It is reception.', fx:{time:3, rep:-4, stress:7}} ] },
+
+  'o.knew.a': { who:'sys', t:['Something is down. You did not hear it from the monitoring and you did not hear it from the client.',
+    'You heard it outside, from two people having a cigarette, one of whom does not work here.'] },
+  'o.knew.b': { who:'derek', t:['It went about twenty past. I assumed somebody was on it. I am usually right about that and I was not going to be the one to check.'],
+    opts:[ {t:'Raise it properly, then find out why the monitoring did not', fx:{time:13, rep:5, bonus:1, stress:6}},
+           {t:'Raise it and get on it. The monitoring can wait.', fx:{time:8, rep:3, bonus:1, stress:7}},
+           {t:'Wait for somebody to report it through the proper channel', fx:{time:3, rep:-5, stress:10}} ] },
+
+  'o.permit.a': { who:'sys', t:['The managing agent want a list of every car, with registration, make and the name of the member of staff it belongs to.',
+    'They have asked for it in a spreadsheet, by Friday, and they have asked IT.'] },
+  'o.permit.b': { who:'yvonne', t:['Eleven spaces are leased. If the list has twenty-six cars on it, somebody at their end is going to read the list.'],
+    opts:[ {t:'Give them exactly the eleven and put the rest to Yvonne', fx:{time:10, rep:5, bonus:1, stress:5}},
+           {t:'Collect it honestly and let the numbers say what they say', fx:{time:8, rep:4, bonus:1, stress:6}},
+           {t:'It is not an IT list. Send them the org chart.', fx:{time:3, rep:-4, stress:7}} ] },
+
+  'o.eleven.a': { who:'sys', t:['The lease covers eleven spaces. Twenty-six people work here and nineteen of them drive.',
+    'It has never been a problem, which is a sentence that has been true for four years and is a description of luck rather than of a system.'] },
+  'o.eleven.b': { who:'linda', t:['If you formalise it, seven people find out they have been parking somewhere they are not entitled to. If you do not, one day they find out from a clamp.'],
+    opts:[ {t:'Formalise it, tell everybody at once, and take the week it costs', fx:{time:13, rep:5, bonus:1, stress:8}},
+           {t:'Get more spaces on the lease before anybody has to be told', fx:{time:9, rep:4, bonus:1, stress:5}},
+           {t:'It has been fine for four years.', fx:{time:3, rep:-4, stress:6}} ] },
+
+  'o.five.a': { who:'sys', t:['"Have you got five minutes? Not upstairs."',
+    'They are already putting their coat on, and it is not cold.'] },
+  'o.five.b': { who:'sys', t:['Out here there is no room booked, no calendar entry and nobody walking past, which is the entire reason you are both standing in a car park.'],
+    opts:[ {t:'Listen properly, and promise only what you can actually do', fx:{time:12, rep:5, bonus:1, stress:5}},
+           {t:'Hear it out and take it to Linda the same afternoon', fx:{time:8, rep:3, bonus:1, stress:6}},
+           {t:'Ask them to put it in an email so it is on the record', fx:{time:3, rep:-5, stress:9}} ] },
+
   /* --------- THE SENIOR HALF OF THE BUILDING: what they say down there -----
      Written to a rule: the higher the rung, the less excuse you have for not
      knowing what the room actually looks like, so the joke is never "IT does
@@ -4471,7 +4558,7 @@ const TICKETS = {
     steps:[{say:'p.raj.a'},{goto:'n2'},{choice:'p.raj.b'}] },
   'photograph-a-cupboard': { tiers:[4,7], weight:2, sla:58, slaMult:2.6, pri:2, stress:4,
     title:'Site survey: somebody must drive to {client} and photograph a cupboard',
-    steps:[{say:'p.cup.a'},{goto:'ELEV'},{choice:'p.cup.b'}] },
+    steps:[{say:'p.cup.a'},{goto:'YOURCAR'},{choice:'p.cup.b'}] },
   'firewall-rules-2011': { tiers:[4,7], weight:3, sla:52, slaMult:2.3, pri:2, stress:8,
     title:'Migrate 340 firewall rules. The newest one is from 2011.',
     steps:[{say:'p.fw.a'},{game:'blast',diff:3},{choice:'p.fw.b'}] },
@@ -4570,7 +4657,7 @@ const TICKETS = {
     steps:[{say:'r.never.a'},{choice:'r.never.b'}] },
   'lunch-with-an-agenda': { tiers:[6,8], weight:2, sla:56, slaMult:2.5, pri:2, stress:5,
     title:'Lunch with {client}. There is an agenda. Lunches do not have agendas.',
-    steps:[{say:'r.lunch.a'},{goto:'ELEV'},{choice:'r.lunch.b'}] },
+    steps:[{say:'r.lunch.a'},{goto:'YOURCAR'},{choice:'r.lunch.b'}] },
   'competitor-audit-offer': { tiers:[6,8], weight:3, sla:38, slaMult:1.8, pri:3, stress:9,
     title:'A competitor has offered {client} a free audit of our work',
     steps:[{say:'r.comp.a'},{choice:'r.comp.b'}] },
@@ -4930,19 +5017,19 @@ const TICKETS = {
      to talk somebody through it down the phone. That choice is the ticket. */
   'onsite-drive': { tiers:[3,8], weight:1, sla:90, slaMult:1.9, pri:3, stress:6,
     title:'{client} needs someone on site. Someone is you.',
-    steps:[{say:'t.onsite.a'},{goto:'ELEV'},{choice:'t.onsite.c'},{say:'t.onsite.b'},{game:'cable',diff:2}] },
+    steps:[{say:'t.onsite.a'},{goto:'YOURCAR'},{choice:'t.onsite.c'},{say:'t.onsite.b'},{game:'cable',diff:2}] },
   'onsite-cutover-hands': { tiers:[4,8], weight:1, sla:96, slaMult:2.0, pri:4, stress:9,
     title:'{client}\'s cutover needs hands in the building on the day',
-    steps:[{say:'o.hands.a'},{goto:'ELEV'},{choice:'o.hands.b'},{say:'o.hands.c'}] },
+    steps:[{say:'o.hands.a'},{goto:'YOURCAR'},{choice:'o.hands.b'},{say:'o.hands.c'}] },
   'onsite-they-asked-for-you': { tiers:[5,9], weight:1, sla:88, slaMult:1.9, pri:3, stress:7,
     title:'{client} has asked for you personally. Not the team. You.',
-    steps:[{say:'o.you.a'},{goto:'ELEV'},{choice:'o.you.b'},{say:'o.you.c'}] },
+    steps:[{say:'o.you.a'},{goto:'YOURCAR'},{choice:'o.you.b'},{say:'o.you.c'}] },
   'onsite-nothing-is-wrong': { tiers:[3,7], weight:1, sla:84, slaMult:1.9, pri:2, stress:5,
     title:'{client} insists it needs a visit. It does not need a visit.',
-    steps:[{say:'o.nowt.a'},{goto:'ELEV'},{choice:'o.nowt.b'},{say:'o.nowt.c'}] },
+    steps:[{say:'o.nowt.a'},{goto:'YOURCAR'},{choice:'o.nowt.b'},{say:'o.nowt.c'}] },
   'onsite-the-new-office': { tiers:[4,8], weight:1, sla:92, slaMult:2.0, pri:3, stress:8,
     title:'{client} has taken a second floor and nothing is in it yet',
-    steps:[{say:'o.new.a'},{goto:'ELEV'},{choice:'o.new.b'},{say:'o.new.c'}] },
+    steps:[{say:'o.new.a'},{goto:'YOURCAR'},{choice:'o.new.b'},{say:'o.new.c'}] },
   /* ------------------------- vCIO, CONTINUED (rung 8) ---------------------
      The rung had 18 templates of its own against the intern's 35, so five days
      out of six a vCIO was working somebody else's queue in a better chair.
@@ -5197,7 +5284,46 @@ const TICKETS = {
     steps:[{say:'t3.quiet.a'},{game:'script',diff:3},{choice:'t3.quiet.b'}] },
   'four-things-only-you-do': { tiers:[3,8], weight:3, sla:56, slaMult:2.4, pri:2, stress:9,
     title:'You are away next week and four things have only ever been done by you',
-    steps:[{say:'t3.four.a'},{choice:'t3.four.b'}] }
+    steps:[{say:'t3.four.a'},{choice:'t3.four.b'}] },
+
+  /* --------------------- OUTSIDE: the car park ---------------------------
+     The first errands that leave the building. Priced against the fire door
+     at the east end of the ground floor, four tiles from the east lift —
+     through the front doors the same trip costs a Solutions Architect more
+     than the whole cross-floor budget, which is why there are two ways out.
+     The two anchors nobody can reach from the drawing board (the front doors
+     themselves at 79 minutes, and the visitor bays at 83) are simply not
+     written for that rung. */
+  'the-barrier-is-not-ours': { tiers:[0,4], weight:3, sla:58, slaMult:2.2, pri:2, stress:6,
+    title:'The barrier fob has stopped working and it is not our barrier',
+    steps:[{say:'o.fob.a'},{goto:'BARRIER'},{choice:'o.fob.b'}] },
+  'space-fourteen-is-a-photograph': { tiers:[0,4], weight:3, sla:62, slaMult:2.5, pri:1, stress:4,
+    title:'A photograph of a numberplate has been raised as a P2',
+    steps:[{say:'o.space.a'},{goto:'VISITOR'},{choice:'o.space.b'}] },
+  'handover-on-a-bonnet': { tiers:[0,5], weight:3, sla:54, slaMult:2.0, pri:3, stress:7,
+    title:'{User} is leaving and would rather hand the laptop over in the car park',
+    steps:[{say:'o.bonnet.a'},{goto:'YOURCAR'},{choice:'o.bonnet.b'}] },
+  'the-drill-is-at-eleven': { tiers:[1,5], weight:3, sla:48, slaMult:1.8, pri:3, stress:7,
+    title:'The fire drill is at eleven and the roll-call list prints on floor two',
+    steps:[{say:'o.drill.a'},{goto:'FIREEXIT'},{choice:'o.drill.b'}] },
+  'the-skip-has-a-drive-in-it': { tiers:[2,6], weight:3, sla:52, slaMult:2.0, pri:3, stress:8,
+    title:'The refit skip has three monitors and something with a hard drive in it',
+    steps:[{say:'o.skip.a'},{goto:'SMOKERS'},{choice:'o.skip.b'}] },
+  'the-visitor-bays-are-ours': { tiers:[2,5], weight:3, sla:42, slaMult:1.5, pri:4, stress:9,
+    title:'{Client} are outside and both visitor bays have our cars in them',
+    steps:[{say:'o.bays.a'},{goto:'VISITOR'},{choice:'o.bays.b'}] },
+  'the-smokers-knew-first': { tiers:[3,7], weight:3, sla:40, slaMult:1.5, pri:4, stress:10,
+    title:'Something is down and you heard about it outside',
+    steps:[{say:'o.knew.a'},{goto:'SMOKERS'},{choice:'o.knew.b'}] },
+  'the-permit-list': { tiers:[5,8], weight:3, sla:60, slaMult:2.4, pri:1, stress:5,
+    title:'The managing agent want a list of every car and there are twenty-six of us',
+    steps:[{say:'o.permit.a'},{goto:'BARRIER'},{choice:'o.permit.b'}] },
+  'eleven-spaces-twenty-six-cars': { tiers:[8,9], weight:3, sla:56, slaMult:2.2, pri:2, stress:7,
+    title:'The lease covers eleven spaces. There are twenty-six of us.',
+    steps:[{say:'o.eleven.a'},{goto:'VISITOR'},{choice:'o.eleven.b'}] },
+  'five-minutes-outside': { tiers:[6,9], weight:3, sla:50, slaMult:2.0, pri:2, stress:8,
+    title:'Somebody would like five minutes and is already putting their coat on',
+    steps:[{say:'o.five.a'},{goto:'SMOKERS'},{choice:'o.five.b'}] }
 
 };
 
@@ -5612,7 +5738,7 @@ const LEGEND = {
      all would put an exit on the kitchen. Same art, an act on top. */
   'X':{f:8, act:'outside'},
   '-':{f:33}, 'g':{f:35},
-  'Z':{o:34}, 'b':{o:37, act:'bins'}, '!':{o:36, act:'barrier'}
+  'Z':{o:34}, 'z':{o:38}, 'y':{o:39}, 'b':{o:37, act:'bins'}, '!':{o:36, act:'barrier'}
 };
 const W2 = { W:0, H:0, base:null, obj:null, solid:null, act:null, anchors:{}, name:'', id:'' };
 const cellIx = (x,y) => y*W2.W + x;
@@ -6046,7 +6172,8 @@ function objectiveTarget(){
      room that happens to share its numbers */
   if (run.marker){
     if (run.markerFloor && run.markerFloor !== W2.id){
-      const L = (run.markerLift && W2.anchors[run.markerLift]) ? run.markerLift : 'ELEV';
+      /* the exit the route takes out of the map you are standing on */
+      const L = (run.markerVia || {})[W2.id] || 'ELEV';
       return W2.anchors[L] ? { pos: W2.anchors[L], label: ANCHOR_NAMES[L] || 'THE LIFT' } : null;
     }
     return { pos: run.marker, label: run.markerLabel || 'GO HERE' };
@@ -6083,8 +6210,9 @@ function objectiveText(){
   if (!run) return '';
   if (run.marker){
     if (run.markerFloor && run.markerFloor !== W2.id){
-      const L = (run.markerLift && W2.anchors[run.markerLift]) ? run.markerLift : 'ELEV';
-      return (run.markerLabel || 'THE MARKER') + ' IS ON THE OTHER FLOOR — TAKE ' +
+      const L = (run.markerVia || {})[W2.id] || 'ELEV';
+      /* "THE OTHER FLOOR" was a sentence a two-floor building could say. */
+      return (run.markerLabel || 'THE MARKER') + ' IS NOT ON THIS FLOOR — TAKE ' +
              (ANCHOR_NAMES[L] || 'THE LIFT');
     }
     return 'GO TO ' + (run.markerLabel || 'THE MARKER') + ' — FOLLOW THE ARROW';
@@ -7032,9 +7160,9 @@ function routeVia(fromMap, near, anchor){
   const home = floorOf(anchor);
   if (!home) return null;
   const K = (m, a) => m + '\u0000' + (a || '');
-  const dist = {}, hops = {}, first = {}, at = {}, seen = {};
+  const dist = {}, hops = {}, first = {}, at = {}, seen = {}, via = {};
   const s = K(fromMap, null);
-  dist[s] = 0; hops[s] = 0; first[s] = null; at[s] = { map:fromMap, a:null };
+  dist[s] = 0; hops[s] = 0; first[s] = null; at[s] = { map:fromMap, a:null }; via[s] = {};
   for (;;){
     let k = null, d = Infinity;
     for (const kk in dist) if (!seen[kk] && dist[kk] < d){ d = dist[kk]; k = kk; }
@@ -7050,6 +7178,12 @@ function routeVia(fromMap, near, anchor){
       if (dist[nk] === undefined || nd < dist[nk]){
         dist[nk] = nd; hops[nk] = hops[k] + 1;
         first[nk] = first[k] === null ? e.at : first[k];
+        /* WHICH EXIT TO TAKE, KEYED BY THE MAP YOU ARE STANDING ON. An ordered
+           list is not enough: the east lift is on the route out of office1 AND
+           is a way out of the ground floor, so a list-and-first-match arrow
+           pointed at the lift again the moment you stepped off it, and the
+           player bounced between floors forever. By map there is no ambiguity. */
+        via[nk] = Object.assign({}, via[k]); via[nk][here.map] = e.at;
         at[nk] = { map:e.to, a:e.arrive };
       }
     }
@@ -7066,7 +7200,7 @@ function routeVia(fromMap, near, anchor){
        route in a two-floor building — this is identical to comparing tiles. */
     const cost = Math.max(3, Math.round(tiles * WALK_MIN_PER_TILE)) + n * LIFT_MIN;
     if (best === null || cost < best.cost)
-      best = { tiles, hops:n, first:first[k], cost };
+      best = { tiles, hops:n, first:first[k], via:via[k], cost };
   }
   return best;
 }
@@ -8282,8 +8416,15 @@ function advanceStep(){
        the long way round to a job the game already charged them the short way
        for. Decided once, here, from where they are standing — an arrow that
        swapped ends every few steps would be worse than a wrong one. */
-    run.markerLift = a.floor !== W2.id
-      ? bestLiftTo(st.goto, [player.tx, player.ty]) : null;
+    /* WHICH WAY OUT, ON EVERY MAP BETWEEN HERE AND THERE. This stored a single
+       lift name, which is all a two-floor building can need. The car park is
+       two hops from every desk — a lift and then a door — and a single name
+       meant the arrow pointed at the lift, you rode it, and on the far side it
+       pointed at the lift again. Decided once, here, because an arrow that
+       swapped ends every few steps would be worse than a wrong one. */
+    const rr = a.floor !== W2.id
+      ? routeVia(W2.id, L => tilesBetween([player.tx, player.ty], L), st.goto) : null;
+    run.markerVia = rr ? rr.via : null;
     if (G.modal) closeModalToWork();
     const away = a.floor !== W2.id;
     toast('GO TO: ' + (ANCHOR_NAMES[st.goto] || st.goto) +
@@ -14748,11 +14889,27 @@ function selfTest(runSim){
           let guard = 0;
           while (G.state === 'modal' && dlg && guard++ < 40) dlgFinish();
           const away = !!run.marker && run.markerFloor === floorOf(dest);
-          const toLift = ((objectiveTarget() || {}).label === 'THE LIFT');
-          const lift = anchorPos('ELEV');
-          if (lift){ player.tx = lift[0]; player.ty = lift[1]; }
-          G.state = 'work';
-          takeLift();
+          /* FOLLOW THE ARROW, HOWEVER MANY HOPS IT TAKES. This forced the
+             player onto ELEV and called takeLift() once, which is all a
+             two-floor building can need. The car park is two hops from every
+             desk — a lift and then a door — so a single ride tested the first
+             half of the journey and asserted the whole of it. Walk it: read
+             the objective, check it points at a way OUT of this map, use that
+             exit, and go again. */
+          let toLift = true, guardH = 0, stuck = '';
+          while (W2.id !== floorOf(dest) && guardH++ < 5){
+            const o = objectiveTarget();
+            if (!o){ stuck = 'the objective went blank on ' + W2.id; break; }
+            const at = Object.keys(W2.anchors).find(a =>
+              W2.anchors[a][0] === o.pos[0] && W2.anchors[a][1] === o.pos[1]);
+            const e = exitsFrom(W2.id).filter(x => x.at === at)[0];
+            if (!e){ stuck = 'the objective on ' + W2.id + ' points at ' +
+                             (at || o.label) + ', which is not a way out'; break; }
+            const p = anchorPos(e.at); player.tx = p[0]; player.ty = p[1];
+            G.state = 'work';
+            takeExit(e.act);
+          }
+          if (stuck) toLift = false;
           const rode = W2.id === floorOf(dest);
           const toDest = ((objectiveTarget() || {}).label === (ANCHOR_NAMES[dest] || dest));
           let stepped = false;
@@ -14763,7 +14920,7 @@ function selfTest(runSim){
             stepped = !!run.active && run.active.si === si0 + 1;
           }
           why = [away ? '' : 'no marker on ' + floorOf(dest),
-                 toLift ? '' : 'objective missed the lift',
+                 toLift ? '' : stuck,
                  rode ? '' : 'the lift went nowhere',
                  toDest ? '' : 'objective missed ' + dest,
                  stepped ? '' : 'arriving did not advance the step'].filter(Boolean).join(', ');

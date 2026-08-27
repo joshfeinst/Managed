@@ -88,12 +88,21 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
             const wantAnchor = want && want.goto;
             const onOther = run.markerFloor && run.markerFloor !== W2.id;
             if (onOther){
-              const L = (run.markerLift && anchorPos(run.markerLift)) ? run.markerLift : 'ELEV';
-              const p = anchorPos(L);
-              if (!p){ note = 'no lift on ' + W2.id; break; }
+              /* FOLLOW THE ROUTE, NOT "THE LIFT". This took whatever lift was
+                 nearest and rode it, which is all a two-floor building can
+                 need. The car park is two hops from every desk — a lift and
+                 then a door — and on the ground floor the nearest lift goes
+                 back UP, so the harness bounced between floors six times and
+                 reported seventeen good tickets as broken. run.markerVia is
+                 the exit the route takes out of the map you are standing on. */
+              const L = (run.markerVia || {})[W2.id];
+              const e = exitsFrom(W2.id).filter(x => x.at === L)[0];
+              const p = e && anchorPos(e.at);
+              if (!p){ note = 'no way off ' + W2.id + ' towards ' +
+                              (run.markerLabel || '?') + ' (via ' + (L || 'nothing') + ')'; break; }
               player.tx = p[0]; player.ty = p[1];
-              takeLift(); lifts++;
-              if (lifts > 6){ note = 'rode the lift six times and never arrived'; break; }
+              takeExit(e.act); lifts++;
+              if (lifts > 6){ note = 'took six exits and never arrived'; break; }
               continue;
             }
             const m = run.marker;
@@ -144,7 +153,7 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
      and would pass a build in which downstairs is unreachable */
   const rode = out.filter(r => r.lifts > 0).length;
   const stops = out.reduce((a,r) => a + r.stops, 0);
-  console.log(stops + ' markers walked onto, ' + rode + ' errands took the lift');
+  console.log(stops + ' markers walked onto, ' + rode + ' errands left the floor');
   const far = out.filter(r => r.ok).sort((a,b)=>b.walked-a.walked).slice(0,5);
   console.log('longest: ' + far.map(r => r.id + ' ' + r.walked + ' tiles' +
               (r.lifts ? ' +' + r.lifts + ' lift' : '')).join(', '));
