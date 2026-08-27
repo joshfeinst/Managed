@@ -14439,6 +14439,32 @@ function selfTest(runSim){
       run = savedRunC2;
       ok('the caption under a name follows the promotion',
          !wrong.length, wrong.slice(0,3).join(' · '));
+      /* AND THE PROMOTION SCENE'S ONE CHECKABLE CLAIM STAYS TRUE. promo.t2 is
+         Linda predicting a perception and then denying it: "You will notice
+         the queue looks quieter. It is not quieter. The tickets are just
+         bigger and they arrive with somebody's name attached." Both halves of
+         the denial are statements about the data — the arrival rate, and the
+         weight-adjusted work in the pool — and a retune of either would make
+         her wrong in a scene that plays once per career and cannot be
+         re-read. */
+      {
+        const line = (DIALOGUE['promo.t2'] || { t:[] }).t.join(' ');
+        const meanWork = r => {
+          let w = 0, wt = 0;
+          for (const id in TICKETS){
+            const T = TICKETS[id];
+            if (T.tiers[0] > r || r > T.tiers[1]) continue;
+            const k = T.weight || 1; w += ticketWork(T) * k; wt += k;
+          }
+          return wt ? w / wt : 0;
+        };
+        const quieter = ROLES[2].queue.ratePerHr < ROLES[1].queue.ratePerHr;
+        const bigger = meanWork(2) > meanWork(1);
+        ok('T2 really is not quieter, and its tickets really are bigger',
+           /not quieter/i.test(line) && /bigger/i.test(line) && !quieter && bigger,
+           'rate ' + ROLES[1].queue.ratePerHr + ' -> ' + ROLES[2].queue.ratePerHr +
+           ', mean work ' + meanWork(1).toFixed(1) + ' -> ' + meanWork(2).toFixed(1));
+      }
     }
     /* THE SALARY ON THE POSTING IS THE SALARY THE JOB PAYS. Nine of them are
        written into the posting as prose — "Project Engineer (£72,000, 'no two
