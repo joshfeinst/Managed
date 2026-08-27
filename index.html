@@ -10003,10 +10003,17 @@ const CABLE_TAGS = ['A1','B2','C3','D4','E5','F6','G7'];
 /* Six prefixes, because six is what fits the panel and what an address plan
    actually argues about. hosts = 2^(32-p) - 2: the network and the broadcast
    are not yours, which is the first thing anyone gets wrong. */
-/* What marking a box that strands nothing is worth, in missed ones. Above 1
-   because the board is about being right rather than being thorough, and the
-   card says so. */
-const DIAGRAM_OVER = 1.4;
+/* What marking the wrong one is worth, in missed ones — on the two boards
+   whose whole job is picking which things matter, and whose cards both promise
+   that a false mark costs more than a miss. Above 1 because both boards are
+   about being right rather than being thorough, and both cards say so.
+
+   Both had it as a flat .25 against a miss worth 1/n, so the promise only held
+   above four items: the drawing deals two or three single points of failure on
+   78% of boards and the blast radius reaches two or three people on 81%, so
+   between them the advice was inverted on nine boards in ten. A ratio holds at
+   every board size, which is what the sentence claims. */
+const OVERMARK = 1.4;
 const SUBNET_PREFIXES = [
   { cidr:'/30', size:4,   hosts:2   },
   { cidr:'/29', size:8,   hosts:6   },
@@ -11288,7 +11295,7 @@ const GAMES = {
              The intent is a ratio, so it is written as one: a wrong box is
              worth DIAGRAM_OVER missed ones, on every board, at every size. */
           const k = Math.max(1, this.spofs.length);
-          this.score = clamp(hit / k - over * (DIAGRAM_OVER / k), 0, 1);
+          this.score = clamp(hit / k - over * (OVERMARK / k), 0, 1);
           this.finished = true; return;
         }
         const last = this.nodes.length - 1;
@@ -11670,7 +11677,12 @@ const GAMES = {
           const found = marked.filter(n => n.hits).length;
           const over  = Math.max(0, marked.length - found - (this.forgive || 0));
           this.hit = found; this.over = over;
-          this.score = clamp((this.total ? found / this.total : 1) - over*.25, 0, 1);
+          /* the same flat .25 the drawing had, and the same inversion: the
+             blast radius reaches two or three people on 81% of boards, where
+             missing one costs a third or a half and a false mark cost a
+             quarter — while the card promised the opposite. */
+          const k2 = Math.max(1, this.total);
+          this.score = clamp((this.total ? found / k2 : 1) - over * (OVERMARK / k2), 0, 1);
           this.finished = true;
           return;
         }
@@ -14328,6 +14340,34 @@ function selfTest(runSim){
         }
       ok('on the diagram board a false mark really does cost more than a miss',
          !wrong.length, [...new Set(wrong)].slice(0,3).join(' · '));
+      /* AND THE BLAST BOARD, WHOSE CARD MAKES THE SAME PROMISE — "marking
+         someone it does not reach costs you more than missing them" — and
+         which had the same flat .25 against a miss worth 1/n. It reaches two
+         or three people on 81% of boards. */
+      const wrongB = [];
+      const playB = (g, mark) => {
+        for (const n of g.all) n.marked = false;
+        for (const n of mark) n.marked = true;
+        g.applied = true; g.flash = 0; g.step(0); return g.score;
+      };
+      for (let d = 1; d <= 3; d++)
+        for (let i = 0; i < 120; i++){
+          rngInit('BLAST-ADVICE-' + d + '-' + i);
+          const a3 = GAMES.blast.init(d);
+          const hits = a3.all.filter(n => n.hits && !n.group);
+          const miss = a3.all.filter(n => !n.hits && !n.group);
+          if (hits.length < 2 || !miss.length) continue;
+          rngInit('BLAST-ADVICE-' + d + '-' + i);
+          const b3 = GAMES.blast.init(d);
+          const tooMany = playB(a3, hits.concat([miss[0]]));
+          const bHits = b3.all.filter(n => n.hits && !n.group);
+          const oneShort = playB(b3, bHits.slice(0, -1));
+          if (!(tooMany < oneShort))
+            wrongB.push(hits.length + ' reached: one too many scores ' +
+                        tooMany.toFixed(2) + ', one short scores ' + oneShort.toFixed(2));
+        }
+      ok('and on the blast board too',
+         !wrongB.length, [...new Set(wrongB)].slice(0,3).join(' · '));
     }
     /* EVERY BOARD, AT EVERY DIFFICULTY THE GAME CAN ACTUALLY REACH IT WITH.
        Twenty-odd guards in this suite deal their board at init(2) and then say
