@@ -3940,6 +3940,84 @@ const DIALOGUE = {
            {t:'Fix the four accounts this week and answer yes on Friday', fx:{time:24, rep:5, bonus:1, stress:7}},
            {t:'Sign it as pre-filled and add the exemptions to the risk register', fx:{time:5, rep:-4, stress:11}} ] },
 
+  /* ------------------ DIRECTOR: TEN THAT USE YOUR HANDS -------------------
+     The endgame had 29 tickets of its own and six of them opened a board, so
+     the last rung on the ladder was the least hands-on rung in the game —
+     28% of a Director's pool against 49% of an intern's, on a plan that says
+     the games get MORE technical as you climb. These are the senior boards
+     doing senior work: the evidence board answering an auditor, the blast
+     radius of a leavers list, a shutdown rota with nobody left to give it to.
+     Nothing in here is broken. Everything in here has your name on it. */
+  'dx.d9aud.a': { who:'sys', t:['The auditors have picked twenty-five access records at random and would like the approval for each one.',
+    'Twenty-two are clean. Two are clean and cannot be evidenced. One was approved by somebody who left in March, by forwarding an email with "fine" on it.'] },
+  'dx.d9aud.b': { who:'sys', t:['They are not hostile. They are worse than hostile: they are writing it down and they have all afternoon.'],
+    opts:[ {t:'Answer the three plainly and open the March approval yourself', fx:{time:17, rep:5, bonus:1, stress:8}},
+           {t:'Answer the twenty-two, and give the three to the auditor as a finding you found', fx:{time:11, rep:2, bonus:1, stress:5}},
+           {t:'Answer everything as approved. Nobody is going to ring a man who left in March.', fx:{time:4, rep:-4, stress:-1}} ] },
+
+  'dx.d9sup.a': { who:'sys', t:['{Client} have asked, reasonably, what happens to them if your supplier goes under.',
+    'You have never drawn it, because you already know the answer and you would rather it stayed a feeling.'] },
+  'dx.d9sup.b': { who:'noor', t:['I have been asking for that drawing for two years. I would like it minuted that I am not enjoying this.'],
+    opts:[ {t:'Draw it honestly, mark the single points, and take it to the owner unprompted', fx:{time:19, rep:5, bonus:1, stress:9}},
+           {t:'Draw it, mark the two you can fix this year, and say so', fx:{time:12, rep:2, bonus:1, stress:5}},
+           {t:'Answer the question they asked and not the one underneath it', fx:{time:5, rep:-3, stress:-2}} ] },
+
+  'dx.d9lea.a': { who:'sys', t:['Twenty-nine people left this quarter. HR have sent the list, alphabetically, in a spreadsheet with a merged header row.',
+    'Disabling an account is one click. Knowing what stops when you click it is the job, and it is the part nobody schedules.'] },
+  'dx.d9lea.b': { who:'sys', t:['Four of the twenty-nine own something. One of them owns the thing that pays everybody.'],
+    opts:[ {t:'Work the four by hand and hand the other twenty-five to Kayla with a script', fx:{time:16, rep:4, bonus:1, stress:6}},
+           {t:'Disable all twenty-nine tonight and deal with whatever screams in the morning', fx:{time:6, rep:-4, stress:-2}},
+           {t:'Stage it over a week, owners last, and tell Finance which night is theirs', fx:{time:21, rep:5, bonus:1, stress:8}} ] },
+
+  'dx.d9shut.a': { who:'sys', t:['The shutdown is nine days and somebody has to be reachable for all of them.',
+    'You have four people, two of whom have already booked the same fortnight, and a policy you wrote saying nobody does more than three.'] },
+  'dx.d9shut.b': { who:'linda', t:['Whatever you land on, you are the one who tells them. I have done it eleven times and it does not get better.'],
+    opts:[ {t:'Build it inside your own policy and take the two nobody wants', fx:{time:15, rep:5, bonus:1, stress:9}},
+           {t:'Build it inside the policy and pay the two nobody wants at double', fx:{time:11, rep:3, bonus:1, stress:4}},
+           {t:'Put yourself down for all nine. It is easier than the conversation.', fx:{time:5, rep:-2, stress:-3}} ] },
+
+  'dx.d9ren.a': { who:'yvonne', t:['Three renewals land in March. Together they are more than the quarter has.',
+    'Two of them auto-renew. The third is the one you actually want.'] },
+  'dx.d9ren.b': { who:'sys', t:['Finance will sign one number today or three numbers in March, and in March they will sign the two you did not choose.'],
+    opts:[ {t:'Break the auto-renewals now, take the pain, and buy the one that matters', fx:{time:18, rep:5, bonus:1, stress:9}},
+           {t:'Renew two short and put the third to the owner as a decision, in writing', fx:{time:12, rep:3, bonus:1, stress:5}},
+           {t:'Let all three renew. March is somebody else\'s problem and might be.', fx:{time:4, rep:-4, stress:-2}} ] },
+
+  'dx.d9brd.a': { who:'sys', t:['The board would like a paper on why IT costs what it costs. One page. They have said one page twice.',
+    'You have four years of reasons and every one of them is a sentence somebody in the room approved.'] },
+  'dx.d9brd.b': { who:'sys', t:['One of them will ask why it is not cheaper, and the honest answer names the decision they made in 2022.'],
+    opts:[ {t:'Name the decision, name who made it, and stay in the room afterwards', fx:{time:16, rep:5, bonus:1, stress:10}},
+           {t:'Show the cost, show the alternative, and let them arrive at it themselves', fx:{time:12, rep:3, bonus:1, stress:6}},
+           {t:'Write the page they asked for and leave 2022 out of it', fx:{time:5, rep:-3, stress:-1}} ] },
+
+  'dx.d9sec.a': { who:'mackenzie', t:['We have signed a second office! Twelve desks, opening in five weeks. I know. I know.',
+    'It needs an address plan and I have been told the current one is "basically full", which I did not know was a thing that happens.'] },
+  'dx.d9sec.b': { who:'sys', t:['You can carve it out of what is left, or renumber the building — this year, once, while it is twelve desks and not ninety.'],
+    opts:[ {t:'Renumber properly now and eat the weekend it costs', fx:{time:22, rep:5, bonus:1, stress:9}},
+           {t:'Carve the twelve out cleanly and write down the year it stops working', fx:{time:13, rep:2, bonus:1, stress:5}},
+           {t:'Carve it out and do not write anything down', fx:{time:5, rep:-4, stress:-2}} ] },
+
+  'dx.d9whl.a': { who:'sys', t:['The client wants the migration date brought forward, the team wants it moved back, and the margin wants it done in the hours already sold.',
+    'All three have been told, by somebody, that they are the priority. Two of those somebodies were you.'] },
+  'dx.d9whl.b': { who:'sys', t:['Nobody leaves this happy. The only question is which of the three finds out from you rather than from the calendar.'],
+    opts:[ {t:'Tell all three today, in that order, with what each one costs the others', fx:{time:17, rep:5, bonus:1, stress:9}},
+           {t:'Move the date once, tell the client why, and absorb the rest in your own hours', fx:{time:12, rep:2, bonus:1, stress:6}},
+           {t:'Say yes to the client and let the team find out when the invite moves', fx:{time:4, rep:-5, stress:-2}} ] },
+
+  'dx.d9cal.a': { who:'sys', t:['The escalation has reached the point where the client asks for you by name, and reception has already said you are in the building.',
+    'You have not taken a call like this in four years. The script is still pinned above the terminal in the pit, where you left it.'] },
+  'dx.d9cal.b': { who:'sys', t:['They are not angry about the outage. They are angry about the four days of updates that all said the same thing.'],
+    opts:[ {t:'Own the updates, give a date you can keep, and ring them yourself on that date', fx:{time:16, rep:5, bonus:1, stress:8}},
+           {t:'Apologise for the outage, promise a better update rhythm, and set it up', fx:{time:11, rep:2, bonus:1, stress:5}},
+           {t:'Hand it back to the account manager. It is a relationship problem now.', fx:{time:4, rep:-4, stress:-1}} ] },
+
+  'dx.d9hnd.a': { who:'linda', t:['If you were hit by a bus on Friday, what would we do on Monday.',
+    'I am not being morbid. I have been asked to ask, and the person who asked me has asked me twice.'] },
+  'dx.d9hnd.b': { who:'sys', t:['The honest handover is an order, not a document: what has to be true before the next thing can be true at all.'],
+    opts:[ {t:'Write it in dependency order and walk Derek through it in person', fx:{time:20, rep:5, bonus:1, stress:7}},
+           {t:'Write it in dependency order and leave it where somebody will find it', fx:{time:13, rep:3, bonus:1, stress:4}},
+           {t:'Send the runbook index. It is technically a handover.', fx:{time:4, rep:-3, stress:-2}} ] },
+
   'sm.yvonne': { who:'yvonne', t:['They are on thirty-day terms. They pay on day fifty-two. Every time, on the fifty-second day, as though it were a policy.',
     'You put eleven hours on Tuesday. Tuesday was eight hours long. I am not doing anything about it, and I would like you to know that I saw it.',
     'The out-of-hours rate is in the contract, on page nine. In four years nobody has charged it once.',
@@ -5472,6 +5550,43 @@ const TICKETS = {
   'dir9-warranty-question-nine': { tiers:[9,9], weight:4, slaMult:1.9, pri:3, stress:9,
     title:'Every answer on the insurance renewal is a warranty',
     steps:[{say:'dx.dir9war.a'},{goto:'PRINTER'},{game:'paper',diff:2},{choice:'dx.dir9war.b'}] },
+
+  /* TEN THAT USE YOUR HANDS. Six of the Director's twenty-nine own tickets
+     opened a board, so the last rung was the least hands-on in the game — 28%
+     of its pool against 49% of an intern's — on a plan whose whole promise is
+     that the games get more technical as you climb. Weight 3 so they arrive
+     often enough to be the rung's texture rather than a rarity, and priced at
+     40-56 minutes so a Director's day still cannot hold all of it. */
+  'dir9-the-audit-sample': { tiers:[9,9], weight:3, slaMult:1.8, pri:3, stress:10,
+    title:'The auditors have picked twenty-five access records at random',
+    steps:[{say:'dx.d9aud.a'},{goto:'CONF'},{game:'paper',diff:3},{choice:'dx.d9aud.b'}] },
+  'dir9-one-supplier-under-everything': { tiers:[9,9], weight:3, slaMult:2.2, pri:2, stress:9,
+    title:'{Client} have asked what happens to them if the supplier goes under',
+    steps:[{say:'dx.d9sup.a'},{goto:'SERVERS'},{game:'diagram',diff:3},{choice:'dx.d9sup.b'}] },
+  'dir9-the-leavers-quarter': { tiers:[9,9], weight:3, slaMult:1.7, pri:4, stress:11,
+    title:'Twenty-nine people left this quarter and four of them owned something',
+    steps:[{say:'dx.d9lea.a'},{game:'blast',diff:3},{choice:'dx.d9lea.b'}] },
+  'dir9-the-shutdown-rota': { tiers:[9,9], weight:3, slaMult:2.0, pri:2, stress:9,
+    title:'Nine days of shutdown cover, four people, and a policy you wrote',
+    steps:[{say:'dx.d9shut.a'},{game:'weekend',diff:3},{choice:'dx.d9shut.b'}] },
+  'dir9-three-renewals-one-month': { tiers:[9,9], weight:3, slaMult:1.9, pri:3, stress:10,
+    title:'Three renewals land in March and together they are more than the quarter has',
+    steps:[{say:'dx.d9ren.a'},{goto:'CONF'},{game:'quote',diff:3},{choice:'dx.d9ren.b'}] },
+  'dir9-the-board-paper': { tiers:[9,9], weight:3, slaMult:2.1, pri:2, stress:11,
+    title:'The board would like one page on why IT costs what it costs',
+    steps:[{say:'dx.d9brd.a'},{goto:'CONF'},{game:'paper',diff:3},{choice:'dx.d9brd.b'}] },
+  'dir9-the-second-office': { tiers:[9,9], weight:3, slaMult:2.3, pri:3, stress:8,
+    title:'A second office opens in five weeks and the address plan is basically full',
+    steps:[{say:'dx.d9sec.a'},{game:'subnet',diff:3},{choice:'dx.d9sec.b'}] },
+  'dir9-everybody-whole': { tiers:[9,9], weight:3, slaMult:1.8, pri:3, stress:11,
+    title:'The client, the team and the margin have all been told they are the priority',
+    steps:[{say:'dx.d9whl.a'},{game:'keep',diff:3},{choice:'dx.d9whl.b'}] },
+  'dir9-the-call-you-take-yourself': { tiers:[9,9], weight:3, slaMult:1.5, pri:4, stress:12,
+    title:'The client has asked for you by name and reception said you were in',
+    steps:[{say:'dx.d9cal.a'},{game:'script',diff:3},{choice:'dx.d9cal.b'}] },
+  'dir9-your-own-handover': { tiers:[9,9], weight:3, slaMult:2.6, pri:1, stress:8,
+    title:'If you were hit by a bus on Friday, what would we do on Monday',
+    steps:[{say:'dx.d9hnd.a'},{game:'starter',diff:3},{choice:'dx.d9hnd.b'}] },
 
   /* ------------------------- downstairs, at last -------------------------
      The first tickets in the game that leave the floor. Each is tiered by
