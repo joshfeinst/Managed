@@ -1535,7 +1535,13 @@ const NPCS = {
 const CHAT = {
   derek: {
     when: [
-      { if:r => r.rung >= 8, t:'You outrank me by four rungs and you still come and ask me things. That is the only compliment I know how to accept.' },
+      /* ARITHMETIC, NOT VIBES. This was one line, `r.rung >= 8`, saying "four
+         rungs" — and Derek is T3, which is rung 3, so it fired at vCIO and at
+         Director, where the gap is five and six. The joke IS the number; a
+         wrong one is just a man who cannot count his own ladder. Two lines,
+         one per rung, and a test that walks every rung and checks the sum. */
+      { if:r => r.rung >= 9, t:'You outrank me by six rungs and you still come and ask me things. That is the only compliment I know how to accept.' },
+      { if:r => r.rung === 8, t:'You outrank me by five rungs and you still come and ask me things. That is the only compliment I know how to accept.' },
       { if:r => r.rung >= 4, t:'You have gone over to the side that has meetings. I forgive you. I will still not document anything.' },
       { if:r => r.stress > 72, t:'You have the face. I had that face in 2016. I still have the 2016 face, it just moved in.' },
       { if:r => r.queue.length >= 5, t:'Five open? Rookie numbers. I once had eleven and a wedding to get to.' },
@@ -15566,6 +15572,40 @@ function selfTest(runSim){
       ok('and the office talks to a Director differently than to the intern',
          deaf.length <= 1, 'unchanged for: ' + deaf.join(' '));
       run = savedRunC;
+    }
+    /* A LINE THAT NAMES A NUMBER HAS TO BE ABLE TO DO THE SUM. Derek is T3 —
+       rung 3 — and told a vCIO and a Director alike that they outranked him by
+       four, because the line was written once against `rung >= 8` and the
+       ladder it counts across is six rungs long at the top. This walks every
+       rung, fires each predicate on its own, and checks the claimed gap
+       against the real one, so bumping the word without narrowing the
+       predicate fails exactly as loudly as the original did. */
+    {
+      const WORDS = { one:1, two:2, three:3, four:4, five:5, six:6,
+                      seven:7, eight:8, nine:9 };
+      const rungOfNpc = id => ROLES.findIndex(
+        R => R.title.split(' ')[0] === (NPCS[id].role || '').split(' ')[0]);
+      const bad = [], seen = [];
+      for (const id in CHAT){
+        for (const w of (CHAT[id].when || [])){
+          const m = /outrank(?:s)? me by ([a-z]+) rungs/i.exec(w.t || '');
+          if (!m) continue;
+          const claimed = WORDS[m[1].toLowerCase()], mine = rungOfNpc(id);
+          seen.push(id + ':' + m[1]);
+          if (claimed == null || mine < 0){ bad.push(id + ' unreadable'); continue; }
+          for (let g = 0; g < ROLES.length; g++){
+            let fires = false;
+            try { fires = !!w.if({ rung:g, stress:0, burnout:0, coffee:0, day:1,
+                                   clock:0, queue:[], breaches:0, resolved:0,
+                                   aces:0, rep:0 }); } catch (_) {}
+            if (fires && claimed !== g - mine)
+              bad.push(id + ' says ' + claimed + ' at rung ' + g + ', really ' + (g - mine));
+          }
+        }
+      }
+      ok('a line that counts rungs between you gets the count right',
+         seen.length > 0 && !bad.length,
+         seen.join(' ') + (bad.length ? ' · ' + bad.join('; ') : ''));
     }
     /* THE MORNING CARD. Four lines used to serve an entire career, so this is
        mostly a breadth check — but it also pins the one thing in it that can
