@@ -2529,3 +2529,83 @@ lowered what bad play scores rather than raising what good play scores, because
 `dayPerf` is a ratio and adding anything to the day divides everyone. Raising
 the top would mean making protection itself worth more — a change to STAKES or
 to the weighting, not to content — and that is a measurement pass of its own.
+
+---
+
+## What a ticket is worth: the pass that finally moved the top
+
+The open question at the end of the last pass. Every fix before this one widened
+the good/bad spread by lowering what **bad** play scores — more droppable work,
+heavier days, tighter windows. None raised what good play scores, and the reason
+is structural:
+
+```
+dayPerf = SUM(score x stakes) / (SUM stakes + burnedStakes)
+```
+
+is a ratio, so anything added to the day divides everybody. `STAKES` is the one
+dial that can move the top, because it sets what *protecting* a P1 is worth and
+what *burning* one costs — and forgiveness goes to the cheapest casualties
+first, so a steeper table leaves a good triager's burned P4s forgiven while a
+bad one's burned P1s are not.
+
+Only the **shape** of the table matters, never its scale: `dayPerf` divides
+stakes by stakes, so `{1,2,4,7}` and `{2,4,8,14}` are the same game. Every
+candidate is normalised to P4 = 1.
+
+`tools/stakes.js`, seven tables, 16 seeds × 8 days on all nine gated rungs,
+measured bar-independently:
+
+| table | P4:P3:P2:P1 | mean gap | worst gap | mean leak |
+|---|---|---|---|---|
+| linear | 1:2:3:4 | 13.1 | 9.1 | 17% |
+| shallower | 1:2:3:5 | 14.8 | 11.5 | 12% |
+| was shipped | 1:2:4:7 | 17.3 | 13.2 | 9% |
+| **shipped now** | **1:2:4:10** | **20.4** | **16.4** | **6%** |
+| steeper throughout | 1:3:6:12 | 19.2 | 14.9 | 6% |
+| steep top only | 1:2:4:14 | 22.7 | 17.6 | 7% |
+| steepest | 1:3:8:18 | 21.7 | 17.5 | 5% |
+
+*gap* is flawless p50 minus sloppy p50; *leak* is the share of sloppy seeds
+clearing a bar set at that table's own flawless p25. The metric is
+bar-independent on purpose — comparing "clears at today's bar" across tables
+would conflate the table with bars tuned to the old one.
+
+The **linear control measuring worse than everything** is the reason to believe
+the rest of the column: it reproduces, from scratch and by measurement, the
+finding the original `STAKES` comment was written about years of passes ago.
+
+### Confirmed at 40 seeds on both harnesses
+
+`bars.js`: every one of the nine rungs gains. Per-rung gap, before → after:
+intern 21→23, T1 16→17, T2 20→23, T3 18→20, Project Team 14→16, Procurement
+17→22, Relationship Mgr 17→22, Solutions Architect 15→16, vCIO 17→21. Flawless
+p50 rises on all of them — **the top moved, which is what this pass was for** —
+and every bar stays well placed without being touched.
+
+`meta.js`, the harness of record: **31 of 40 players reach retirement → 35**,
+careers to win 11.0 → 9.9, and the worst player's ceiling goes from Procurement
+to vCIO.
+
+### Steeper measures better and is not shipped
+
+`1:3:8:18` reaches **39 of 40 with every player reaching Director**. That is a
+roguelite that has stopped being able to say no. `1:2:4:10` leaves five players
+in forty who do not make it, changes one number rather than four, and keeps the
+P4:P3:P2 shape the original comment was written to justify.
+
+### What it cost the writing
+
+The game got less ambiguous, and the README had to say so. The two winning
+strategies were two points apart and are now four: protecting the big ones is
+the better rule rather than a coin-flip with finishing what you start. Judgement
+against hands went from 18.7/10.1 to 21.2/8.2 — the game leans further onto
+triage, which is the stated pillar, at some cost to the idea that there is no
+single right answer.
+
+`claims.js` caught all four moved numbers. It also missed one, which is now
+fixed: "two points apart, so there is no single right answer" is a sentence
+whose entire meaning is the number in front of it, and nothing checked it. It
+does now — at ±0.75 rather than the ±1.5 the percentage claims use, because a
+number spelled as a word can only be an integer, and a looser window let "two"
+pass against a measured 3.5.
