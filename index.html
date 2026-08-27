@@ -6595,9 +6595,25 @@ function objectiveText(){
     return atTerminal() ? 'THIS IS YOUR DESK — CLICK THE GREEN SCREEN, OR PRESS TAB. NOTHING IN IT YET.'
                         : 'FIND YOUR DESK — FOLLOW THE AMBER ARROW';
   }
-  if (run.queue.length)
-    return run.queue.length + (run.queue.length === 1 ? ' TICKET WAITING' : ' TICKETS WAITING') +
-           ' — TAB, OR CLICK YOUR TERMINAL';
+  if (run.queue.length){
+    /* IT NAMED A MACHINE THAT IS NOT ALWAYS THERE, AND CALLED IT YOURS. This
+       said "TAB, OR CLICK YOUR TERMINAL" at every rung, on every floor, all
+       day. Two things wrong with it. The terminal is the SHARED helpdesk
+       machine on floor two — the map calls it THE HELPDESK TERMINAL and it
+       stops being where you work the moment your desk moves out of the pit,
+       which is six of the ten rungs. And on the ground floor and in the car
+       park there is no terminal at all, so the one line that is always on
+       screen telling you what to do was naming a control that was not on the
+       map: exactly the failure the day-one branch above has a note about.
+
+       TAB and the QUEUE button work from any tile on any floor at any rung,
+       so those are the two it names. The green screen keeps its mention where
+       there is a green screen to click. */
+    const head = run.queue.length +
+      (run.queue.length === 1 ? ' TICKET WAITING' : ' TICKETS WAITING');
+    return head + (atTerminal() ? ' — CLICK THE GREEN SCREEN, OR PRESS TAB'
+                                : ' — TAB, OR QUEUE, TOP RIGHT');
+  }
   return 'QUEUE CLEAR — TALK TO PEOPLE, GET A COFFEE, BREATHE';
 }
 const DIRV = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
@@ -14263,6 +14279,29 @@ function selfTest(runSim){
       ok('and the crash only mentions jitters when you have some',
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
+    }
+    /* THE BANNER NEVER NAMES A CONTROL THAT IS NOT ON THIS FLOOR. The one
+       line that is always on screen telling the player what to do said "TAB,
+       OR CLICK YOUR TERMINAL" everywhere — including the two floors that do
+       not have a terminal on them. */
+    {
+      const savedRunB2 = run;
+      QUIET = true; rngInit('BANNER'); runInit('BANNER'); rollDay();
+      run.taughtQueue = true;
+      run.queue = [{ uid:1, id:Object.keys(TICKETS)[0], title:'x', fills:{}, at:0,
+                     deadline:400, sla:400, stress:1, si:0, bonus:0, spent:0,
+                     gameScores:[], from:null }];
+      const off = [];
+      for (const mid in MAPS){
+        loadMap(mid); spawnPeople(0, null);
+        const line = objectiveText();
+        if (/TERMINAL|GREEN SCREEN/.test(line) && !W2.anchors.TERMINAL)
+          off.push(mid + ': "' + line + '"');
+      }
+      loadMap('office1'); spawnPeople();
+      run = savedRunB2;
+      ok('the banner never names a control that is not on this floor',
+         !off.length, off.join(' · '));
     }
     /* THE QUEUE ROW COUNTS THE END OF THE DAY, NOT JUST THE SLA. The slack
        column is the one number a player triages the afternoon on, and it was
