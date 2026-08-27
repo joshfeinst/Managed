@@ -194,7 +194,7 @@ were invisible to the ones that came before them.
 | `playday.js` | plays past the first ticket — follows markers, answers dialogue, leaves boards it cannot solve |
 | `liftride.js` | takes a downstairs ticket and rides the lift with real clicks and keys |
 | `visual.js` | screenshots every screen and board at four window sizes, asserting no text lands on the canvas |
-| `boards.js` | plays every minigame perfectly, carelessly and at random, and reports the spread |
+| `boards.js` | plays every minigame perfectly, carelessly, at random, and **blind** — the best rule that needs no comprehension — and reports the spread |
 | `keys.js` | presses every key each board's how-to-play card promises, and pokes every click rect — the card list is read off `GAME_BRIEF`, because the hand-kept one omitted the board that had a dead key |
 | `bars.js` | where should each promotion bar sit? `--sweep` finds the deal rate that best separates good triage from bad; `--careers --target=0.75` bisects every bar at once against the share of careers that reach retirement |
 | `gate.js` | `--ladder` measures every rung against the debt recorded in the game |

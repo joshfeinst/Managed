@@ -242,9 +242,100 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
         random: g => { g.tasks.forEach(t => t.to = Ri('game', g.staff.length + 1)); g.send(); }
       }
     };
+    /* ------------------------------- BLIND --------------------------------
+       careless is "the first legal move" and random is a coin. Neither is what
+       a player who will not read the card actually does: they find a RULE that
+       needs no comprehension — always the longest answer, always tick the box,
+       concede everything — and apply it every time. Three of those were worth
+       more than the board's own game before they were measured (jargon 49.8%
+       against a 33.3% baseline, keep 81.0%, paper 62.4%), and none of the
+       three columns above could see any of them.
+       Each entry is a list, because which surface rule pays is itself a fact
+       about the board; the runner takes the best and names it, since the worst
+       a cynic can do is not the interesting number. */
+    const BLIND = {
+      cable: [
+        /* "they must be in order" — plug right row i into left row i */
+        { n:'by row', f: g => {
+            if (g.side === 0){ const i = g.left.findIndex(l => g.linked[l.i] < 0);
+              if (i < 0) return; g.pickL = i; g.side = 1; return; }
+            const Lc = g.left[g.pickL], port = g.pickL;
+            if (g.linked.includes(port) || Lc.i !== g.right[port].i) g.mistakes++;
+            g.linked[Lc.i] = g.right.findIndex(r => r.i === Lc.i);
+            g.side = 0; g.pickL = -1; } }
+      ],
+      pw:      [ { n:'approve everything', f: g => { if (g.items[g.at].ok) g.right++; g.at++; } },
+                 { n:'reject everything',  f: g => { if (!g.items[g.at].ok) g.right++; g.at++; } } ],
+      starter: [ { n:'straight down the sheet', f: g => {
+                     const st = g.steps.find(x => !g.done[x.id]); if (!st) return;
+                     if (!g.canDo(st)) g.wrong++; g.done[st.id] = 1; } },
+                 { n:'up the sheet backwards', f: g => {
+                     const st = g.steps.slice().reverse().find(x => !g.done[x.id]); if (!st) return;
+                     if (!g.canDo(st)) g.wrong++; g.done[st.id] = 1; } } ],
+      jargon:  [ { n:'always the longest', f: g => {
+                     const o = g.rounds[g.at].opts, L = o.map(x => x.t.length);
+                     if (o[L.indexOf(Math.max.apply(null, L))].ok) g.right++; g.at++; } },
+                 { n:'always the shortest', f: g => {
+                     const o = g.rounds[g.at].opts, L = o.map(x => x.t.length);
+                     if (o[L.indexOf(Math.min.apply(null, L))].ok) g.right++; g.at++; } },
+                 { n:'always the first', f: g => {
+                     if (g.rounds[g.at].opts[0].ok) g.right++; g.at++; } } ],
+      script:  [ { n:'always the 1st line', f: g => g.play(0) },
+                 { n:'always the 2nd line', f: g => g.play(1) },
+                 { n:'always the 3rd line', f: g => g.play(2) },
+                 { n:'always the 4th line', f: g => g.play(3) } ],
+      subnet:  [ { n:'always the smallest block', f: g => { g.cur = 0; g.take(); } },
+                 { n:'always the biggest block', f: g => {
+                     g.cur = SUBNET_PREFIXES.length - 1; g.take(); } },
+                 { n:'always a /28', f: g => { g.cur = 2; g.take(); } } ],
+      quote:   [ { n:'best line every time',  f: g => { g.rows.forEach(r => r.pick = 0); g.send();
+                     if (!g.submitted){ g.rows.forEach(r => r.pick = 2); g.send(); } } },
+                 { n:'middle line every time', f: g => { g.rows.forEach(r => r.pick = 1); g.send();
+                     if (!g.submitted){ g.rows.forEach(r => r.pick = 2); g.send(); } } },
+                 { n:'cheapest line every time', f: g => { g.rows.forEach(r => r.pick = 2); g.send(); } } ],
+      keep:    [ { n:'biggest total swing', f: g => {
+                     const sum = mv => mv.fx.c + mv.fx.t + mv.fx.m;
+                     let best = -1, bv = -99;
+                     g.hand.forEach((mv, j) => { if (!mv.done && sum(mv) > bv){ bv = sum(mv); best = j; } });
+                     if (best < 0){ g.left = 0; return; } g.cur = best; g.play(); } },
+                 { n:'top of the list', f: g => { const j = g.hand.findIndex(h => !h.done);
+                     if (j < 0){ g.left = 0; return; } g.cur = j; g.play(); } } ],
+      diagram: [ { n:'mark nothing', f: g => { g.submitted = true; } },
+                 { n:'mark everything', f: g => {
+                     for (let i = 1; i < g.nodes.length; i++) g.marked.add(i);
+                     g.submitted = true; } } ],
+      paper:   [ { n:'concede every question', f: g => g.concede() },
+                 { n:'cite the top card', f: g => { const j = g.hand.findIndex(c => !c.used);
+                     if (j < 0){ g.concede(); return; } g.cur = j; g.cite(); } } ],
+      weekend: [ { n:'take it all yourself', f: g => {
+                     g.tasks.forEach(t => t.to = g.staff.length); g.send(); } },
+                 { n:'give it all to one person', f: g => {
+                     g.tasks.forEach(t => t.to = 0); g.send(); } },
+                 { n:'share it out in turn', f: g => {
+                     g.tasks.forEach((t, i) => t.to = i % (g.staff.length + 1)); g.send(); } } ],
+      blast:   [ { n:'mark nobody', f: g => { g.applied = true; } },
+                 { n:'mark everybody', f: g => {
+                     g.all.forEach(nd => { if (!nd.group) nd.marked = true; }); g.applied = true; } } ]
+    };
     const rows = [];
     for (const id of Object.keys(DRIVE)){
       const res = {};
+      /* the best any surface rule manages, and which one it was */
+      let bScore = null, bName = '';
+      for (const rule of (BLIND[id] || [])){
+        let sum = 0, done = 0;
+        for (let i = 0; i < N; i++){
+          rngInit('BL-' + id + '-' + i);
+          const g = GAMES[id].init(2);
+          for (let step = 0; step < 60 && !g.finished; step++){
+            try { rule.f(g); } catch (_) { break; }
+            g.flash = 0; g.step(0);
+          }
+          if (g.finished){ sum += g.score; done++; }
+        }
+        if (done && (bScore === null || sum / done > bScore)){ bScore = sum / done; bName = rule.n; }
+      }
+      res.blind = bScore; res.blindName = bName;
       for (const pol of ['perfect','careless','random']){
         let sum = 0, done = 0;
         for (let i = 0; i < N; i++){
@@ -265,22 +356,39 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   }, { N });
 
   const p = v => v === null ? '  --' : (v*100).toFixed(0).padStart(3) + '%';
+  /* What a surface rule is allowed to reach. Set from the measured table on the
+     day the column was added, at the tightest board rather than a round number:
+     starter's printed checklist is the board's own designed trap and pays 74%,
+     so 26 is what "a rule that needs no reading" actually earns here. A board
+     that lets one earn more than that has no game in it — it has a password. */
+  const BLIND_GAP = 26;
   console.log('BOARD DIFFICULTY — ' + N + ' rounds each, difficulty 2\n');
-  console.log('  board      perfect  careless  random |  gap  | finished');
+  console.log('  board      perfect  careless  random   blind |  gap  bgap | finished');
   let bad = 0;
   for (const r of out){
     const gap = (r.perfect !== null && r.careless !== null)
       ? Math.round((r.perfect - r.careless) * 100) : 0;
+    const bgap = (r.perfect !== null && r.blind !== null)
+      ? Math.round((r.perfect - r.blind) * 100) : 999;
     const flat = gap < 20;
+    const readable = bgap < BLIND_GAP;
     const unwinnable = r.perfect === null || r.perfect < .95;
-    if (flat || unwinnable) bad++;
+    if (flat || unwinnable || readable) bad++;
     console.log('  ' + r.id.padEnd(10) + p(r.perfect) + '    ' + p(r.careless) +
-      '     ' + p(r.random) + ' | ' + String(gap).padStart(4) + '  | ' +
-      r.perfectN + '/' + N +
-      (unwinnable ? '   PERFECT PLAY CANNOT FINISH IT' : flat ? '   CARELESS PLAY IS TOO CLOSE' : ''));
+      '     ' + p(r.random) + '   ' + p(r.blind) + ' | ' + String(gap).padStart(4) +
+      '  ' + String(bgap).padStart(4) + ' | ' + r.perfectN + '/' + N +
+      (unwinnable ? '   PERFECT PLAY CANNOT FINISH IT'
+       : flat ? '   CARELESS PLAY IS TOO CLOSE'
+       : readable ? '   A RULE BEATS READING IT' : ''));
   }
+  console.log('\n  best surface rule per board:');
+  for (const r of out)
+    console.log('    ' + r.id.padEnd(10) + p(r.blind) + '  ' + (r.blindName || '--'));
   console.log('\n  perfect play must reach ~100%. careless must not come within 20 points of it,');
   console.log('  or the board has no game in it. random is where an unread card starts you.');
+  console.log('  blind is the best a rule that needs NO comprehension manages — always the');
+  console.log('  longest answer, tick everything, concede everything. It must stay at least');
+  console.log('  ' + BLIND_GAP + ' points below perfect, or the board can be played without being read.');
   console.log(bad ? '\n' + bad + ' BOARD(S) NEED WORK' : '\nALL BOARDS DISCRIMINATE');
   await browser.close();
   process.exit(bad ? 1 : 0);
