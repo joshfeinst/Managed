@@ -5789,13 +5789,13 @@ const EVENTS = {
 const JARGON = [
   { j:'We need to leverage synergies across the stack to unlock value.',
     ok:'Please make the two programs share data.',
-    no:['The stairs are now load-bearing.','We are buying a boat.'] },
+    no:['The stairs are load-bearing and must not be unlocked.','We are buying a boat.'] },
   { j:'Circle back offline about the bandwidth on your end.',
     ok:'Talk later about whether you have time.',
     no:['Your internet will be taken as payment.','Walk in circles until unplugged.'] },
   { j:'The cloud migration will be transparent to end users.',
     ok:'Users should not notice anything changed.',
-    no:['The servers will be made of glass.','Users will be migrated into the cloud.'] },
+    no:['The servers will be made of glass so you can see the work.','Users will be migrated into the cloud.'] },
   { j:'Let\'s not boil the ocean; think MVP and iterate.',
     ok:'Do the small version first.',
     no:['The aquarium project is cancelled.','Most Valuable Printer goes first.'] },
@@ -5807,7 +5807,7 @@ const JARGON = [
     no:['Everyone must now stand proactively.','The patches will march in rhythm.'] },
   { j:'Let\'s socialise the deck with stakeholders before we go firm.',
     ok:'Show the slides around before deciding anything.',
-    no:['The slides are lonely and need friends.','Stakeholders will be introduced to each other.'] },
+    no:['The slides are lonely and are being taken out to meet people.','Stakeholders will be introduced to each other.'] },
   { j:'There\'s no appetite for that spend in this fiscal.',
     ok:'No. There is no money.',
     no:['Nobody is hungry until January.','The budget is on a diet, briefly.'] },
@@ -5822,7 +5822,7 @@ const JARGON = [
     no:['The pool has been divided by department.','Runbooks must be refreshed while swimming.'] },
   { j:'This is a P1 for optics, not for impact.',
     ok:'It does not matter, but someone important is watching.',
-    no:['The monitor is broken again.','Glasses have been escalated.'] },
+    no:['The monitor is broken again and has been escalated to P1.','Glasses have been escalated.'] },
   { j:'We\'ll take that as an action and close the loop async.',
     ok:'Nobody will do this, but it is written down now.',
     no:['The loop will be closed with a padlock.','Actions are stored asynchronously in the cupboard.'] },
@@ -14660,6 +14660,37 @@ function selfTest(runSim){
          'too generous: wrong on the spot ' + wrongNow + '/' + tried +
          ', starves a later site ' + starved + '/' + tried +
          ', /24 spent exactly on ' + exact + '/' + boards + ' boards');
+    }
+    /* AND YOU CANNOT BEAT THE JARGON BOARD WITHOUT READING IT. The three
+       translations are a sentence and two absurd literal readings of it, and
+       the only thing meant to separate them is meaning — but the correct one
+       was the LONGEST of the three on ten of the eighteen entries, because a
+       plain-English translation of a management sentence is naturally wordier
+       than a one-line joke. Always picking the longest option, without reading
+       a word, scored 49.8% of rounds against a 33.3% baseline: half again as
+       good as guessing, on the board whose whole subject is comprehension.
+       Four of the wrong answers are longer now and the pool is balanced 6/18
+       either way. Both heuristics are held inside a band around chance —
+       two-sided, because a rule that reliably LOSES is a tell as well. */
+    {
+      const bots = { longest:0, shortest:0 }, seen = { n:0 };
+      for (let d = 1; d <= 5; d++)
+        for (let k = 0; k < 20; k++){
+          rngInit('JARGON-TELL-' + d + '-' + k);
+          const g = GAMES.jargon.init(d);
+          for (const r of g.rounds){
+            const L = r.opts.map(o => o.t.length);
+            if (r.opts[L.indexOf(Math.max.apply(null, L))].ok) bots.longest++;
+            if (r.opts[L.indexOf(Math.min.apply(null, L))].ok) bots.shortest++;
+            seen.n++;
+          }
+        }
+      const pc = v => seen.n ? 100 * v / seen.n : 0;
+      const inBand = v => pc(v) >= 20 && pc(v) <= 45;      // chance is 33.3
+      ok('the jargon board cannot be played by counting characters',
+         seen.n > 200 && inBand(bots.longest) && inBand(bots.shortest),
+         'always-longest ' + pc(bots.longest).toFixed(1) + '% · always-shortest ' +
+         pc(bots.shortest).toFixed(1) + '% of ' + seen.n + ' rounds (chance 33.3%)');
     }
     /* THE DIAGRAM CARD SAYS A FALSE MARK COSTS MORE THAN A MISS, SO IT MUST.
        It did not: a miss cost 1/spofs and a false mark a flat .25, so the
