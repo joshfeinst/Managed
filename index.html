@@ -6909,6 +6909,13 @@ const DAY_OVERRUN = 20;        // how far past 17:00 a meeting can hold the day 
 const MIN_SLACK = 18;          // minutes you always get to notice a ticket exists
 const ACE = .95;               // what actually counts as a job well done
 const COFFEE_MAX = 4;          // cups the machine will give you in one day
+/* HOW LONG A CUP LASTS. This was the literal 90 in FOUR places — the crash the
+   coffee machine schedules, the crash simDay's bot schedules, the number the
+   toast quotes at you, and the sentence in the handbook — four copies agreeing
+   by coincidence, which is exactly the shape the jitters bug had: the game and
+   the balance model disagreeing about the same mechanic by one step, with a
+   comment over each of them stating the other's number. */
+const COFFEE_CRASH = 90;
 const EVENT_WARN = 12;         // minutes of notice a meeting gives you
 const DUCK_DEBT = .55;         // burnout per point of stress dodged rather than spent
 /* what the calendar invite is actually called */
@@ -8614,14 +8621,14 @@ function interact(act){
     case 'coffee':
       if (run.coffee >= COFFEE_MAX){ toast('YOUR HANDS ARE ALREADY VIBRATING. THE MACHINE REFUSES.', 'red', 2600); sfx('err'); break; }
       run.coffee++; run.stress = Math.max(0, run.stress - BURN.cup);
-      run.crashes.push(run.clock + 90); run.crashes.sort((a,b)=>a-b);
+      run.crashes.push(run.clock + COFFEE_CRASH); run.crashes.sort((a,b)=>a-b);
       slog('coffee #' + run.coffee + ' (stress ' + Math.round(run.stress) + ')');
       sfx('coffee');
       /* written from the record, like the handbook: this line quoted -12 for a
          cup worth 15, advertised a four-cup allowance, and warned about the
          jitters a cup after they had already started */
       toast('COFFEE ' + run.coffee + ' OF ' + COFFEE_MAX + ' — STRESS -' + BURN.cup +
-            ' NOW, +' + BURN.crashStress + ' WHEN IT CRASHES IN 90 MIN' +
+            ' NOW, +' + BURN.crashStress + ' WHEN IT CRASHES IN ' + COFFEE_CRASH + ' MIN' +
             (run.coffee > BURN.freeCups
                ? ' · JITTERS (HARDER HANDS-ON WORK) AND SLEEP DEBT'
                : run.coffee === BURN.freeCups
@@ -12378,7 +12385,7 @@ function simDay(skill, policy){
     if (policy.coffee !== false && run.stress > (policy.coffeeAt ?? 62) && run.coffee < COFFEE_MAX){
       walkToAnchor('COFFEE');
       run.coffee++; run.stress = Math.max(0, run.stress - BURN.cup);
-      run.crashes.push(run.clock + 90); run.crashes.sort((a,b)=>a-b);
+      run.crashes.push(run.clock + COFFEE_CRASH); run.crashes.sort((a,b)=>a-b);
     }
     if (!run.queue.length){
       const nextA = P2.ai < P2.arrivals.length ? P2.arrivals[P2.ai].at : DAY_MIN;
@@ -14188,6 +14195,16 @@ function selfTest(runSim){
       QUIET = true;
       ok('the cup the machine warns you about is the cup your hands shake on',
          !rows.length && run.coffee === COFFEE_MAX, rows.join(' · ') || 'ok');
+      /* ...and the cup lasts as long as the machine says it does. */
+      {
+        run.coffee = 0; run.stress = 50; run.crashes = []; run.clock = 100;
+        interact('coffee');
+        const said = /IN (\d+) MIN/.exec(TOAST_LOG[TOAST_LOG.length - 1] || '');
+        const due = run.crashes.length ? run.crashes[0] - run.clock : -1;
+        ok('the cup crashes when the machine says it will',
+           !!said && +said[1] === due,
+           said ? 'says ' + said[1] + ' min, crashes in ' + due : 'the toast no longer says');
+      }
       /* ...and the crash says JITTERS only when there are some. */
       const crashSaid = [];
       for (const cups of [1, COFFEE_MAX]){
@@ -19174,7 +19191,7 @@ function writeHandbook(){
   if (!el) return;
   el.innerHTML =
     '<b>Coffee</b> takes ' + BURN.cup + ' off your stress now and gives ' + BURN.crashStress +
-    ' back when it crashes 90 minutes later. Past ' + BURN.freeCups +
+    ' back when it crashes ' + COFFEE_CRASH + ' minutes later. Past ' + BURN.freeCups +
     ' cups it also gives you the jitters — hands-on work gets harder — and costs you sleep, ' +
     'which is burnout you keep. So does <b>stress</b> itself: above ' + BURN.frayed +
     ' your hands stop cooperating, and the walk to the kitchen stops being a break and ' +
