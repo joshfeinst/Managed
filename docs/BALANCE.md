@@ -2703,9 +2703,62 @@ Not one of 560 bad-triage careers got out of the helpdesk pit. Craft is worth
 it says — and "everybody wins" was the wrong question to have rejected a stakes
 table on, because only one kind of everybody was ever asked.
 
-`1:2:4:14` is still the table `stakes.js` prefers, and it now measures better
-on every reading a sample can resolve: ladder debt **23 → 20**, intern flawless
-**28/32 → 30/32** at unchanged sloppy, every rung's skill gap two to five points
-wider, all bars still well placed. Not shipped in this pass, which was a
-correctness pass; the shipped table is healthy on every harness in the repo.
-It is the named next job, and the harness needed to settle it now exists.
+`1:2:4:14` is the table `stakes.js` prefers, and with the harness able to ask
+the question properly it measures better on every reading a sample can resolve.
+
+## 1:2:4:14 shipped (2026-08-27)
+
+Same argument that took P1 from 7 to 10: move the top of the range without
+touching the `P4:P3:P2` shape, and change **one** number — which is the case
+`1:3:8:18` could never make. Measured on this build against `1:2:4:10`:
+
+| | 1:2:4:10 | 1:2:4:14 |
+|---|---|---|
+| ladder debt, total (`gate.js --ladder`) | 23 | **20** |
+| intern flawless clears (32 seeds) | 28/32 | **30/32** |
+| intern sloppy clears | 1/32 | 1/32 |
+| skill gap, every rung (`bars.js`, 16 seeds) | — | **+2 to +5 points** |
+| bars well placed | 9/9 | 9/9, none moved |
+| retirement, good triage (40 players) | 40/40, 7.3 careers | 40/40, **7.2** |
+| retirement, bad triage (40 players) | 0/40 | 0/40 |
+| sloppy leak (`stakes.js`) | 4% | **3%** |
+| mean gap (`stakes.js`) | 20.6 | **23.6** |
+
+**Nothing measured worse**, which was not the expected answer. The sweep
+recorded in `index.html` months ago, on smaller pools, said the leak would go
+6% → 7%: a steeper top ought to pay a bad triager more for the P1s they stumble
+into. Re-measured on the current content it goes the other way, 4% → 3% — the
+same steepness that pays for a lucky P1 punishes a burned one harder, and a
+worst-first bot burns far more than it catches. I had quoted the old recorded
+figures as if they were current, and writing "the one number that got worse"
+into the source was a claim the game does not make. Both are corrected, and the
+whole seven-table sweep is re-recorded from this build.
+
+### `stakes.js` was comparing against a table the game stopped using
+
+The row it labelled `SHIPPED` was hardcoded `{1,2,4,7}`. The game shipped 10 in
+August and 14 today; the tool called 7 "the shipped table" throughout, so every
+`CANDIDATES THAT BEAT THE SHIPPED TABLE` verdict it printed — including the one
+that prompted this change — was measured against a two-revision-old baseline.
+Its restore step put `STAKES` back to that stale table too. It reads the live
+`STAKES` as its baseline now and prints which named candidate the shipped table
+corresponds to (`SHIPPED = steep top only`), so it cannot go stale again. With
+the baseline correct its verdict is **NO TABLE BEATS THE SHIPPED ONE on both
+gap and leak**, and the shipped row has the highest gap on all nine rungs.
+
+Three per-rung ratchet rows went up across the two re-recordings this session —
+solarch 2→3, project 1→2, relmgr loose 0→1 — and all three were re-measured at
+32 seeds, where a seed is 3 points rather than 8.3: solarch 28/32 flawless with
+5/32 sloppy, relmgr 29/32 with 4/32, project OK. `bars.js` agrees on all nine.
+The rows are a coarse tripwire; the total is the number, and it has gone 50 → 23
+→ 20 in a day.
+
+Every player-facing surface moved with the table on its own, because all of them
+read `STAKES` rather than a literal: the handbook and the queue header now say a
+P1 is worth 14, and the trade they quote re-derived itself to *"one P1 outweighs
+13 P4s"* — 13 being the largest number of P4s a P1 actually beats, which is a
+self-test rather than a sentence somebody remembered to edit. The README's
+strategy table was **not** self-deriving and `claims.js` caught all five of its
+now-stale numbers: protect-the-big-ones 72.0 → 74.2, order-of-arrival 57.4 →
+59.9, hands 8.2 → 10.5, judgement 21.2 → 23.3, and the gap between the two
+winning rules two → four points.

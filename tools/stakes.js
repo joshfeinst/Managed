@@ -46,11 +46,20 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   }
   throw e; } }
 
-/* pri 1..4 -> value. pri:4 renders P1 and is the dear one. */
+/* pri 1..4 -> value. pri:4 renders P1 and is the dear one.
+   THE SHIPPED ROW IS NOT IN THIS LIST, and used to be. It was hardcoded as
+   {1,2,4,7} and labelled SHIPPED; the game shipped 10 and then 14, and this
+   file went on calling 7 "the shipped table" for both. Every verdict it
+   printed -- including "CANDIDATES THAT BEAT THE SHIPPED TABLE" -- was
+   measured against a table the game had stopped using, which is a tool saying
+   one thing and doing another, and it is the whole reason it kept recommending
+   a change that had already been made. The baseline is read from the live
+   STAKES now, so it cannot go stale again. 1:2:4:7 stays below as a named
+   historical control, which is what it always actually was. */
 const TABLES = [
   { name:'linear (rejected once)', t:{ 1:1, 2:2, 3:3, 4:4  } },
   { name:'shallower',              t:{ 1:1, 2:2, 3:3, 4:5  } },
-  { name:'SHIPPED',                t:{ 1:1, 2:2, 3:4, 4:7  } },
+  { name:'shipped to 26 Aug',      t:{ 1:1, 2:2, 3:4, 4:7  } },
   { name:'steeper top',            t:{ 1:1, 2:2, 3:4, 4:10 } },
   { name:'steeper throughout',     t:{ 1:1, 2:3, 3:6, 4:12 } },
   { name:'steep top only',         t:{ 1:1, 2:2, 3:4, 4:14 } },
@@ -83,8 +92,14 @@ const TABLES = [
     const pct = (arr, p) => { const a = arr.slice().sort((x,y)=>x-y);
       return a[Math.min(a.length-1, Math.floor(p/100 * a.length))]; };
     const seeds = Array.from({ length:SEEDS }, (_, i) => 'GATE-' + i);
+    /* the baseline is whatever the game is actually holding right now */
+    const LIVE = { 1:STAKES[1], 2:STAKES[2], 3:STAKES[3], 4:STAKES[4] };
+    const same = x => [1,2,3,4].every(k => x.t[k] === LIVE[k]);
+    const twin = TABLES.find(same);
+    const CANDS = [{ name:'SHIPPED', alias:twin ? twin.name : null, t:LIVE }]
+                    .concat(TABLES.filter(x => !same(x)));
     const results = [];
-    for (const cand of TABLES){
+    for (const cand of CANDS){
       /* STAKES is const-bound but its properties are not, and stakesOf reads
          it live — which is the only reason this sweep can exist in-process. */
       for (const k of [1,2,3,4]) STAKES[k] = cand.t[k];
@@ -104,9 +119,9 @@ const TABLES = [
           gap:pct(tight,50) - pct(loose,50),
           leak: loose.filter(v => v >= at).length / loose.length });
       }
-      results.push({ name:cand.name, t:cand.t, rungs });
+      results.push({ name:cand.name, alias:cand.alias || null, t:cand.t, rungs });
     }
-    for (const k of [1,2,3,4]) STAKES[k] = TABLES.find(x => x.name === 'SHIPPED').t[k];
+    for (const k of [1,2,3,4]) STAKES[k] = LIVE[k];   /* put the game back as found */
     return results;
   }, { SEEDS, DAYS, TABLES });
 
@@ -117,10 +132,11 @@ const TABLES = [
   for (const r of out){
     const gaps = r.rungs.map(x => x.gap), leaks = r.rungs.map(x => x.leak);
     const mean = a => a.reduce((x,y)=>x+y,0)/a.length;
-    const s = { name:r.name, t:r.t, meanGap:mean(gaps), worstGap:Math.min.apply(null,gaps),
+    const s = { name:r.name, alias:r.alias, t:r.t, meanGap:mean(gaps),
+                worstGap:Math.min.apply(null,gaps),
                 meanLeak:mean(leaks), worstLeak:Math.max.apply(null,leaks), rungs:r.rungs };
     summary.push(s);
-    console.log('  ' + r.name.padEnd(22) +
+    console.log('  ' + (r.name + (r.alias ? ' = ' + r.alias : '')).padEnd(22) +
       [1,2,3,4].map(k => r.t[k]).join(':').padStart(10) + ' |' +
       (s.meanGap*100).toFixed(1).padStart(9) + (s.worstGap*100).toFixed(1).padStart(11) + ' |' +
       pc(s.meanLeak).padStart(10) + pc(s.worstLeak).padStart(11));

@@ -7073,10 +7073,13 @@ const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.6, freeCups:2,
    about a third longer to work than a P2, so a linear 4/3 weighting made the
    two worth an identical 0.11 stakes per minute and left a rational player
    indifferent between them — which is exactly the choice the day is supposed
-   to be about. The order is strictly monotone in value per minute — P1 0.267,
-   P2 0.116, P3 0.061, P4 0.030 — and working the P1 is simply right.
+   to be about. The order is strictly monotone in value per minute — P1 0.374,
+   P2 0.115, P3 0.061, P4 0.030 — and working the P1 is simply right.
+   (Re-derived 2026-08-27 as STAKES[p] over the mean ticketWork of the band,
+   across all 357 tickets: 37.5, 34.7, 32.6 and 33.5 minutes. P2 had drifted a
+   thousandth from the 0.116 recorded here as the pools grew.)
 
-   P1 IS 10, AND HERE IS THE PASS THAT SAYS SO. Every balance fix before this
+   P1 IS 14, AND HERE IS THE PASS THAT SAYS SO. Every balance fix before this
    one widened the good/bad spread by lowering what BAD play scores: more
    droppable work, heavier days, tighter windows. None raised what good play
    scores, and the reason is structural — dayPerf is a ratio, so anything added
@@ -7091,13 +7094,18 @@ const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.6, freeCups:2,
    p25):
 
      table                P4:P3:P2:P1   mean gap   worst gap   mean leak
-     linear                  1:2:3:4       13.1        9.1        17%
-     shallower               1:2:3:5       14.8       11.5        12%
-     was shipped             1:2:4:7       17.3       13.2         9%
-     THIS                   1:2:4:10       20.4       16.4         6%
-     steeper throughout     1:3:6:12       19.2       14.9         6%
-     steep top only         1:2:4:14       22.7       17.6         7%
-     steepest               1:3:8:18       21.7       17.5         5%
+     linear                  1:2:3:4       13.4        9.2        15%
+     shallower               1:2:3:5       15.2       10.6        10%
+     shipped until 26 Aug    1:2:4:7       17.7       14.5         8%
+     shipped until 27 Aug   1:2:4:10       20.6       15.7         4%
+     steeper throughout     1:3:6:12       19.2       15.3         3%
+     THIS (steep top only)  1:2:4:14       23.6       18.2         3%
+     steepest               1:3:8:18       21.8       17.2         3%
+
+   (Re-measured 2026-08-27 on the current pools, which is why these differ by a
+   few tenths from the figures first recorded here. THIS is the best mean gap
+   and the best worst-gap of the seven, and ties for the lowest leak, so the
+   tool's verdict line now reads NO TABLE BEATS THE SHIPPED ONE.)
 
    The linear control measuring WORSE than everything is the reason to believe
    the rest of the column: it reproduces, from scratch, the finding the first
@@ -7135,15 +7143,36 @@ const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.6, freeCups:2,
    design working, and it is also why "everybody wins" was the wrong question
    to reject a table on.
 
-   1:2:4:14 remains the candidate tools/stakes.js prefers -- it changes one
-   number and keeps the shape, exactly like this one, and it measures better on
-   every reading that a sample can resolve: ladder debt total 23 -> 20, intern
-   flawless 28/32 -> 30/32 at unchanged sloppy, every rung's skill gap two to
-   five points wider, all bars still well placed. It is NOT shipped here only
-   because this pass was a correctness pass and the shipped table is healthy on
-   every harness in the repo. It is the named next job, and the harness that
-   was missing for it now exists. */
-const STAKES = { 1:1, 2:2, 3:4, 4:10 };
+   SO 1:2:4:14 IS WHAT SHIPS, and the reason to prefer it over 1:2:4:10 is the
+   same reason 10 was preferred over 7: it moves the top of the range without
+   touching the P4:P3:P2 shape the first paragraph was written to justify. It
+   changes ONE number, like 10 did, which is the argument the rejected 1:3:8:18
+   could not make. Measured on this build, against 1:2:4:10:
+
+     ladder debt, total            23 -> 20   (tools/gate.js --ladder)
+     intern flawless clears     28/32 -> 30/32, sloppy unchanged at 1/32
+     every rung's skill gap        +2 to +5 points (tools/bars.js, 16 seeds)
+     all nine bars                 still well placed, none moved
+     retirement, good triage      40/40, 7.3 -> 7.2 careers to win
+     retirement, bad triage        0/40, still nothing out of the pit
+
+   What the player is told moves with it, because every surface that states the
+   rule reads STAKES rather than a literal: the handbook and the queue header
+   both now say a P1 is worth 14, and the trade they quote is re-derived to
+   "one P1 outweighs 13 P4s" -- 13 is the largest number of P4s a P1 actually
+   beats, which is a self-test, not a sentence somebody remembered to edit.
+
+   NOTHING MEASURES WORSE, which was not the expected answer and is worth the
+   sentence. A steeper top ought to pay a bad triager more for the P1s they
+   stumble into, and the sweep recorded above -- taken months ago, on smaller
+   pools -- said it did: leak 6% -> 7%. Re-measured on the current content it
+   goes the other way, 4% -> 3%, because the same steepness that pays for a
+   lucky P1 punishes a burned one harder, and a worst-first bot burns far more
+   of them than it catches. The lesson is the one this file keeps relearning: a
+   number recorded in a comment is a measurement with a date on it, not a fact.
+   The tool now reads the shipped table out of the game rather than carrying
+   its own copy, so it cannot quietly compare against the wrong one again. */
+const STAKES = { 1:1, 2:2, 3:4, 4:14 };
 function stakesOf(id){ return STAKES[(TICKETS[id] && TICKETS[id].pri) || 2] || 2; }
 /* A breach inside the allowance is DISCOUNTED, not free. A hard write-off made
    the first few casualties worth exactly zero, so which one you dropped was
@@ -7300,19 +7329,24 @@ const GATE_DEBT = {
      give back less — so a rung reached on day 12 is played by a worse player
      than the same rung would be on day 3. That is the next problem.
 
-     RE-RECORDED 2026-08-27, and the tool's own instruction is what asks for it:
-     when the total comes in under budget it prints "Lower GATE_DEBT_BUDGET and
-     the rows that moved." It came in at 23 against 50. Seven rungs improved --
-     t2 4->0, t3 5->2, project 5->1, procure 4->1, relmgr 4->3, and the loose
-     column fell on six -- and one row went UP: solarch 2->3.
-     That one is sample granularity, not decay. It reads 3/12 on the build
-     before this session's stakes change as well, so nothing here caused it,
-     and measured at 32 seeds instead of 12 solarch clears 28/32 = 87.5% of
-     flawless seeds with 5/32 sloppy, which gate.js calls healthy and bars.js
-     agrees with. At n=12 one seed is 8.3 points; these rows cannot resolve
-     finer than that, and the total is the number that means something. */
-  tight: { intern:3, t1:3, t2:0, t3:2, project:1, procure:1,
-           relmgr:3, solarch:3, vcio:2 },
+     RE-RECORDED TWICE ON 2026-08-27, and the tool's own instruction is what
+     asks for it: when the total comes in under budget it prints "Lower
+     GATE_DEBT_BUDGET and the rows that moved." 50 -> 23 on the correctness
+     pass, then 23 -> 20 when 1:2:4:14 shipped.
+
+     Three rows have gone UP across those two re-recordings -- solarch 2->3,
+     project 1->2, relmgr loose 0->1 -- and every one of them is sample
+     granularity rather than decay. These rows are twelve seeds, so one seed is
+     8.3 points and they cannot resolve finer than that. Each was re-measured
+     at 32, where a seed is 3 points, and all three come back healthy:
+       solarch  28/32 flawless, 5/32 sloppy   GATE SHAPE OK
+       relmgr   29/32 flawless, 4/32 sloppy   GATE SHAPE OK
+       project                                GATE SHAPE OK
+     bars.js agrees on all nine at 16 seeds. The per-rung rows are a coarse
+     tripwire; the TOTAL is the number that means something, and it has fallen
+     by thirty since it was last a budget rather than a measurement. */
+  tight: { intern:1, t1:2, t2:0, t3:1, project:2, procure:1,
+           relmgr:2, solarch:3, vcio:2 },
   /* seeds out of 12 on which SLOPPY play clears it anyway.
      THIS COLUMN WENT UP, 2026-08-26, and it is not the regression it looks
      like. It was zero on every rung because the bars were so high that
@@ -7324,7 +7358,7 @@ const GATE_DEBT = {
      it may only fall from here.
      vCIO's 4/12 is the worst of them and the one to fix first. */
   loose: { intern:0, t1:1, t2:1, t3:0, project:1, procure:1,
-           relmgr:0, solarch:0, vcio:1 }
+           relmgr:1, solarch:0, vcio:1 }
 };
 /* 45. The loose column is one seed in twelve on eight rungs of nine — bad
    triage almost never promotes now, where a week ago it did so on up to four
@@ -7367,7 +7401,7 @@ const GATE_DEBT = {
    Procurement is now the narrowest rung on the ladder at 8 points and the one
    rung bars.js still calls misplaced. It has already had its chaff; the gap is
    structural. It is the named next job. */
-const GATE_DEBT_BUDGET = 23;      /* re-recorded from measurement, 2026-08-27 */
+const GATE_DEBT_BUDGET = 20;      /* re-recorded from measurement, 2026-08-27 */
 /* How many POINTS short of its own bar flawless play falls at the intern gate.
    19 on 2026-08-25 21:0x, the first measurement ever taken with the bot walking
    at a player's speed. Every earlier number in this file — GATE_DEBT above,
