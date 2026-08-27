@@ -56,21 +56,102 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
                      lh:getComputedStyle(el).lineHeight });
           continue;
         }
-        /* clipped away by an ancestor that hides overflow? */
-        for (let a = el; a; a = a.parentElement){
-          const cs = getComputedStyle(a);
-          if (!/hidden|clip|auto|scroll/.test(cs.overflowX + cs.overflowY)) continue;
-          const c = a.getBoundingClientRect();
-          const ix = Math.min(g.right, c.right) - Math.max(g.left, c.left);
-          const iy = Math.min(g.bottom, c.bottom) - Math.max(g.top, c.top);
-          const visibleArea = Math.max(0, ix) * Math.max(0, iy);
-          if (visibleArea < g.w * g.h * 0.30){
-            out.push({ tag:el.tagName.toLowerCase(), cls:String(el.className).slice(0,40), id:el.id,
-                       text:own.slice(0,46),
-                       why:'clipped by <' + a.tagName.toLowerCase() + (a.id?'#'+a.id:'') + '>',
-                       lh:getComputedStyle(el).lineHeight });
-            break;
+        /* Clipped away by an ancestor? How much of the glyph box survives every
+           ancestor that clips, as a fraction of the whole. */
+        const showing = (box) => {
+          let worst = 1, by = null;
+          for (let a = el; a; a = a.parentElement){
+            const cs = getComputedStyle(a);
+            if (!/hidden|clip|auto|scroll/.test(cs.overflowX + cs.overflowY)) continue;
+            const c = a.getBoundingClientRect();
+            const ix = Math.min(box.right, c.right) - Math.max(box.left, c.left);
+            const iy = Math.min(box.bottom, c.bottom) - Math.max(box.top, c.top);
+            const f = (Math.max(0, ix) * Math.max(0, iy)) / Math.max(1, box.w * box.h);
+            if (f < worst){ worst = f; by = a; }
           }
+          return { frac:worst, by };
+        };
+        /* Painted over where it actually sits? Two boxes in the same strip of
+           pixels is the failure this file exists for and the one the scroll
+           carve-out below would otherwise wave through: scrolling an element
+           to the middle of the port moves it out from under whatever was
+           covering it, so a covered element looks fine the moment you look for
+           it. So ask here, before any scrolling, at the position the player is
+           actually looking at. Ancestors and descendants are not occluders —
+           only a box that is neither. */
+        const coveredBy = (box) => {
+          /* elementFromPoint answers "what would a click hit", and the HUD is
+             pointer-events:none by design — it floats over the canvas and lets
+             clicks through to the world. Hit-testing therefore names the canvas
+             as the occluder of every clock digit and meter label on screen,
+             which is not occlusion, it is the layer working. Where the element
+             cannot be hit at all, hit-testing cannot answer the question, so
+             do not let it pretend to. */
+          for (let a = el; a; a = a.parentElement)
+            if (getComputedStyle(a).pointerEvents === 'none') return null;
+          const hit = document.elementFromPoint(Math.round((box.left + box.right) / 2),
+                                                Math.round((box.top + box.bottom) / 2));
+          if (!hit || hit === el || el.contains(hit) || hit.contains(el)) return null;
+          /* The action bar is the one box in the game designed to be drawn over
+             other content: it is pinned so a mouse-only player always has a way
+             off the screen, and scrolling slides whatever is under it out from
+             under it. So text under the bar is not a bug — UNLESS that text is
+             pinned as well, because then it does not slide. Two sticky boxes in
+             one scroller can never be scrolled apart: whichever loses is
+             covered at every scroll position there is, which is exactly how
+             eight sticky certificate rows ended up sharing one strip of pixels
+             with the buttons on top of them. Sticky is the word that separates
+             "underneath for now" from "underneath for good". */
+          if (hit.closest('.screen > .row:last-child')){
+            let pinned = false;
+            for (let a = el; a && a !== document.body; a = a.parentElement)
+              if (getComputedStyle(a).position === 'sticky'){ pinned = true; break; }
+            if (!pinned) return null;
+          }
+          return '<' + hit.tagName.toLowerCase() + (hit.id ? '#' + hit.id : '') +
+                 (hit.className ? '.' + String(hit.className).slice(0, 24) : '') + '>';
+        };
+        let seen = showing(g);
+        let over = seen.frac >= 0.30 ? coveredBy(g) : null;
+        /* A SCROLLER IS NOT A CLIP. Text below the fold of something the player
+           can scroll is not invisible text — it is the second half of a menu,
+           and calling it a bug means a screen may never be taller than the
+           smallest window we test at. So scroll to it and look again; only
+           what stays hidden counts. What this must NOT do is wave through the
+           thing it was written for, so the second look also asks whether the
+           text is actually PAINTED: the certificate shelf's rows were fully
+           inside the scrollport and still unreadable, because eight sticky
+           opaque bars were stacked on top of one another. In view but not on
+           top is the same bug as out of view, and elementFromPoint knows the
+           difference. */
+        /* A SCROLLER IS NOT A CLIP, AND A PINNED BAR IS NOT A LID. Text below
+           the fold of something the player can scroll is not invisible text —
+           it is the second half of a menu — and neither is text under the
+           action bar that scrolling slides out from under it. Calling either a
+           bug means no screen may ever be taller than the smallest window we
+           test at. So when the first look is bad, scroll to it and look again,
+           and report only what is STILL clipped or still covered. The first
+           look is not wasted: it is the only one that can see two things drawn
+           into the same strip of pixels, because scrolling a box to the middle
+           of the port is exactly what moves it out from under whatever was on
+           top of it. */
+        const scrollable = seen.by && /auto|scroll/.test(
+              getComputedStyle(seen.by).overflowX + getComputedStyle(seen.by).overflowY);
+        if (seen.frac < 0.30 && scrollable){
+          const keep = [];
+          for (let a = el.parentElement; a; a = a.parentElement) keep.push([a, a.scrollTop]);
+          el.scrollIntoView({ block:'center', inline:'nearest' });
+          const g2 = glyphRect(el);
+          if (g2) seen = showing(g2);
+          for (const [a, t] of keep) a.scrollTop = t;
+        }
+        if (seen.frac < 0.30 || over){
+          const a = seen.by;
+          out.push({ tag:el.tagName.toLowerCase(), cls:String(el.className).slice(0,40), id:el.id,
+                     text:own.slice(0,46),
+                     why: over ? 'painted over by ' + over + ', at every scroll position'
+                        : 'clipped by <' + (a ? a.tagName.toLowerCase() + (a.id?'#'+a.id:'') : '?') + '>',
+                     lh:getComputedStyle(el).lineHeight });
         }
       }
       return out;

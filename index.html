@@ -226,12 +226,20 @@ body.screenopen .toastwrap{display:none}
 .screen > *{flex-shrink:0}
 /* The buttons are the only way off a screen for a mouse-only player, so they
    never scroll out of sight: pinned to the bottom of the scrollport the moment
-   the content is taller than the window, in normal flow when it isn't. */
-.screen > .row{position:sticky; bottom:0; z-index:3; width:100%;
+   the content is taller than the window, in normal flow when it isn't.
+   ONLY THE ACTION BAR, which is why this says :last-child. The bar is one row
+   per screen and always the last child — the only code that adds anything to a
+   screen inserts before lastElementChild, twice, both in actSetup. Without the
+   qualifier this matched the certificate rows too, because they are laid out
+   with .row as well, and eight opaque sticky bars piled up in the same strip of
+   pixels: two certificates drawn on top of each other and the buttons drawn on
+   top of both, with the reputation line pushed off the bottom of the screen.
+   The shop only had four rows when this was written, and four fitted. */
+.screen > .row:last-child{position:sticky; bottom:0; z-index:3; width:100%;
   padding-block:clamp(8px,1.6vh,14px); background:rgba(13,15,19,.99);}
 /* the row itself is opaque so nothing shows through half a line of text behind
    a button; the fade above it is what says "there is more up there" */
-.screen > .row::before{content:""; position:absolute; left:0; right:0; bottom:100%;
+.screen > .row:last-child::before{content:""; position:absolute; left:0; right:0; bottom:100%;
   height:clamp(16px,3.2vh,30px); pointer-events:none;
   background:linear-gradient(180deg, rgba(13,15,19,0), rgba(13,15,19,.99));}
 .screen[hidden]{display:none}
@@ -13830,7 +13838,7 @@ function selfTest(runSim){
        Force the overflow and prove the row is still on screen and still the
        thing a click lands on; a wrong z-index would put the panel on top and
        the button would be visible and dead. */
-    for (const sid of ['s-review', 's-over', 's-pause']){
+    for (const sid of ['s-setup', 's-review', 's-over', 's-pause', 's-controls', 's-options']){
       const sc = document.getElementById(sid);
       const row = sc && sc.querySelector(':scope > .row');
       if (!row){ ok('ui: ' + sid + ' keeps its buttons on screen', false, 'no action row'); continue; }
@@ -17678,10 +17686,43 @@ function selfTest(runSim){
       meta.certs = []; meta.rep = 99;
       actSetup();
       const rows = document.querySelectorAll('.certrow button').length;
+      /* ...AND EVERY ROW OF IT IS SOMEWHERE YOU CAN SEE. The shelf rows are
+         laid out with .row, which on a screen also meant "the action bar":
+         sticky, opaque, pinned to the bottom. Four rows fitted the window, so
+         nobody noticed; at eight, two certificates were painted into the same
+         strip of pixels as each other and the ACCEPT OFFER bar was painted
+         over both, with the reputation line pushed off the bottom edge.
+         Both halves below are the rule, and neither alone is: no row may hide
+         another, AND the buttons must still be pinned when the shelf is taller
+         than the glass, because a mouse-only player who cannot reach ACCEPT
+         OFFER is stuck on the careers portal for good. Measured in a window
+         deliberately too short for the shelf — in a tall one nothing overflows,
+         nothing is pinned, and the check would pass without proving anything. */
+      const setupEl = document.getElementById('s-setup');
+      const barEl = setupEl.lastElementChild, savedH = setupEl.style.height;
+      setupEl.style.height = '260px'; setupEl.scrollTop = 0;
+      const shelf = [...setupEl.querySelectorAll('.row.certrow')];
+      let stacked = '';
+      for (let i = 0; i < shelf.length && !stacked; i++)
+        for (let j = i + 1; j < shelf.length; j++){
+          const a = shelf[i].getBoundingClientRect(), b = shelf[j].getBoundingClientRect();
+          const share = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+          if (share > 1){ stacked = 'rows ' + i + ' and ' + j + ' share ' +
+                                    Math.round(share) + 'px of screen'; break; }
+        }
+      const sBox = setupEl.getBoundingClientRect(), bBox = barEl.getBoundingClientRect();
+      const overflows = setupEl.scrollHeight > setupEl.clientHeight + 1;
+      const pinned = bBox.top >= sBox.top - 1 && bBox.bottom <= sBox.bottom + 1;
+      setupEl.style.height = savedH;
       meta.certs = savedCerts; meta.rep = savedRep; actSetup();
       show(null); G.state = 'title';
       ok('the study list offers every certificate you do not hold',
          rows >= Object.keys(CERTS).length, rows + ' rows for ' + Object.keys(CERTS).length + ' certs');
+      ok('and no certificate is drawn on top of another', !stacked, stacked);
+      ok('and the buttons stay on screen when the shelf overflows', overflows && pinned,
+         !overflows ? 'the shelf fitted a 260px window, so this proved nothing'
+                    : 'bar at ' + Math.round(bBox.top) + '-' + Math.round(bBox.bottom) +
+                      ' in a screen of ' + Math.round(sBox.top) + '-' + Math.round(sBox.bottom));
       /* and two things that slow burnout must compound, not overwrite */
       const savedRuns = meta.runsPlayed;
       meta.certs = ['cissp']; meta.runsPlayed = 99;
