@@ -1092,8 +1092,32 @@ const ROLES = [
 
        So the fix is CONTENT, not a number: Project Team needs heavier tickets,
        so its day is oversubscribed by work rather than by count. That is a
-       writing pass, and it is the next thing this rung wants. */
-    gates:{ nextAt:{perf:0.628, days:3}, firedBelow:0.283, cert:null },
+       writing pass, and it is the next thing this rung wants.
+
+       WRITTEN, AND HERE IS WHAT IT MOVED. Fourteen tickets of sixty-five to a
+       hundred and ten minutes each — two boards and two legs apiece — took the
+       rung's weighted mean work from 35.8 minutes to 42.6 and its day from
+       1.02 oversubscribed to 1.22, inside the band every other rung sits in.
+       bars.js at 40 seeds now reads the rung healthy for the first time this
+       project: good triage clears 85% of seeds against bad triage's 20%.
+
+       The bar had to come down with the work. Heavier days score lower, and
+       0.628 was suddenly above the MEDIAN flawless player, so good triage
+       cleared 35% of seeds — the rung was unleaveable rather than hard. 0.540
+       was flawless p25 measured on that build; firedBelow keeps the 0.45 ratio
+       the whole ladder uses.
+
+       AND THE WEIGHT IS 3, NOT 4, BECAUSE meta.js SAID SO. At weight 4 the
+       fourteen made the rung healthy and the CAREER worse: 40 players finished
+       18 retirements against 26 on the build without them, which is far past
+       this harness's noise. Careers were stalling at Project Team instead of
+       passing through it. Measured across the three settings on the same 40
+       seeds: weight 4 -> 18, weight 2 -> 24, weight 3 -> 26, level with the
+       build that had none of them. Their stress came down with it — a
+       hundred-minute planning job is a job that eats the day, not one that
+       spikes your pulse, and pricing them like a phones-down P1 was burning
+       players out three days early. */
+    gates:{ nextAt:{perf:0.540, days:3}, firedBelow:0.243, cert:null },
     queue:{ ratePerHr:1.5, meetingMin:60, slaScale:0.96 }, deskAnchor:'DESK_PROJ' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
     gates:{ nextAt:{perf:0.521, days:3}, firedBelow:0.234, cert:null },
@@ -2776,6 +2800,180 @@ const DIALOGUE = {
     opts:[ {t:'Walk them through it in person until somebody can repeat it back', fx:{time:22, rep:4, bonus:1}},
            {t:'Send the runbook and close the project', fx:{time:5, rep:-2, stress:6}},
            {t:'Stay on as escalation for two weeks', fx:{time:12, rep:2, bonus:1, stress:6}} ] },
+  /* ------------------- THE FOURTEEN THAT TAKE A MORNING --------------------
+     Project Team is the one rung on the ladder whose day FITS. Measured, it
+     deals 1.02 times as much work as the day has room for, against 1.23 to
+     1.47 at every other rung — so nothing has to be protected from anything,
+     and the decision the whole game is about never gets asked. The cause is
+     not the rate and not the priority spread, both of which measure healthy;
+     it is that the rung inherited a hundred helpdesk templates and its own
+     thirty are the same size as them. A project is not the same size as a
+     printer.
+
+     These fourteen are. Two boards and two legs each, eighty to a hundred
+     minutes of clock, and they only exist at rung 4 — Procurement is already
+     at 1.33 and would tip. They are what makes the rung's day too big to
+     finish, which is the only thing that makes triage mean anything. */
+  'pw.wk.a': { who:'mackenzie', t:['Four workstreams have all booked the same Saturday. Each one says it is the one that cannot move.',
+    'Two of them are right and I have stopped being able to tell which two.',
+    'The client has told their staff the office opens Monday either way.'] },
+  'pw.wk.b': { who:'sys', t:['In sequence you finish at four in the morning. In parallel you find out which two shared a dependency, at about the same hour.'],
+    opts:[ {t:'Sequence it, publish the order, and take the four a.m.', fx:{time:24, rep:4, bonus:1, stress:6}},
+           {t:'Run them in parallel with a bridge call open all night', fx:{time:14, rep:1, stress:11}},
+           {t:'Move the two that say they cannot be moved', fx:{time:10, rep:-2, stress:8}} ] },
+  'pw.wk.c': { who:'sys', t:['Whatever is written down is what happens on Saturday. On Saturday nobody is reading anything else.'],
+    opts:[ {t:'Runbook with a named owner and a back-out on every step', fx:{time:20, rep:4, bonus:1}},
+           {t:'Write the steps, put "restore from backup" as the back-out', fx:{time:8, rep:-1, stress:7}},
+           {t:'Send the plan and take the questions on the night', fx:{time:5, rep:-3, stress:10}} ] },
+
+  'pw.mbx.a': { who:'client', t:['We would like all three hundred mailboxes moved on Saturday. They are all current staff.',
+    'Forty-one of them are people you have personally had a leaving card for.',
+    'Two are on the leadership page of your own website, under FORMER.'] },
+  'pw.mbx.b': { who:'sys', t:['Every leaver you migrate is a licence they pay for and a mailbox somebody can still get into.'],
+    opts:[ {t:'Reconcile the list against payroll before you move anything', fx:{time:22, rep:4, bonus:1}},
+           {t:'Move all three hundred and raise the forty-one afterwards', fx:{time:8, rep:-1, stress:8}},
+           {t:'Move the leavers to an archive and tell them what you did', fx:{time:16, rep:3, bonus:1, stress:4}} ] },
+  'pw.mbx.c': { who:'kayla', t:['On Monday the desk gets three hundred people who cannot find their mail.',
+    'I would like to know that before Monday and not at nine on Monday.'],
+    opts:[ {t:'Write the one-page card and put it on every desk on Friday', fx:{time:18, rep:4, bonus:1}},
+           {t:'Send an email about the email outage', fx:{time:4, rep:-2, stress:9}},
+           {t:'Staff the phones yourself on Monday morning', fx:{time:12, rep:2, stress:7}} ] },
+
+  'pw.cup.a': { who:'derek', t:['The new site has a comms room. I have seen the photograph and it is a comms room.',
+    'It has a kettle in it. And a mop. And, in the corner, a comms room.'] },
+  'pw.cup.b': { who:'sys', t:['Sixteen U of kit, no ventilation, and a door that the cleaners need.'],
+    opts:[ {t:'Refuse the room in writing and price the one that works', fx:{time:22, rep:4, bonus:1, stress:5}},
+           {t:'Fit it, and put a temperature sensor in with it', fx:{time:16, rep:2, bonus:1, stress:6}},
+           {t:'Fit it. It is their building.', fx:{time:6, rep:-3, stress:10}} ] },
+  'pw.cup.c': { who:'sys', t:['Whatever goes in that cupboard, somebody will have to work in it at two in the morning one day.'],
+    opts:[ {t:'Label every port and leave the drawing on the inside of the door', fx:{time:18, rep:4, bonus:1}},
+           {t:'Label the uplinks and photograph the rest', fx:{time:9, rep:1, stress:4}},
+           {t:'It is obvious which one is which', fx:{time:3, rep:-3, stress:9}} ] },
+
+  'pw.pilot.a': { who:'mackenzie', t:['Go-live is a week Monday. The pilot group is forty people and the pilot has been running for six weeks.',
+    'Nobody has logged in. Not a slow start — the report says zero.',
+    'The pilot group was chosen by whoever answered the email.'] },
+  'pw.pilot.b': { who:'sys', t:['A pilot nobody used is not evidence. It is six weeks that looked like evidence.'],
+    opts:[ {t:'Say so now, and ask for two weeks and forty real users', fx:{time:24, rep:4, bonus:1, stress:6}},
+           {t:'Pick ten people you can sit with and pilot it properly this week', fx:{time:18, rep:3, bonus:1, stress:5}},
+           {t:'Report the pilot complete. Technically it ran.', fx:{time:5, rep:-4, stress:13}} ] },
+  'pw.pilot.c': { who:'client', t:['We have already booked the training. The training is on the Tuesday.'],
+    opts:[ {t:'Move the training to after go-live and say why', fx:{time:14, rep:3, bonus:1}},
+           {t:'Train them on the old system one last time', fx:{time:10, rep:1, stress:5}},
+           {t:'Leave it. Somebody will enjoy the sandwiches.', fx:{time:4, rep:-2, stress:7}} ] },
+
+  'pw.sw.a': { who:'sys', t:['Nineteen switches, four hundred leads, and a building that unlocks at seven on Monday.',
+    'The old ones come out as the new ones go in, which means the middle of the job is a floor of cable and no network.'] },
+  'pw.sw.b': { who:'raj', t:['I can do the second floor if somebody labels it first.'],
+    opts:[ {t:'Label the whole run on Friday so Saturday is only hands', fx:{time:22, rep:4, bonus:1}},
+           {t:'Label as you go and keep a spreadsheet open', fx:{time:12, rep:1, stress:7}},
+           {t:'Colour is enough. Blue is data.', fx:{time:4, rep:-3, stress:11}} ] },
+  'pw.sw.c': { who:'sys', t:['At seven on Monday somebody sits down and either it works or your weekend was the story instead of the fix.'],
+    opts:[ {t:'Test every port before you leave, floor by floor', fx:{time:20, rep:4, bonus:1, stress:4}},
+           {t:'Test a desk per room and go home', fx:{time:8, rep:-1, stress:8}},
+           {t:'Come in at six on Monday and test it live', fx:{time:12, rep:1, stress:9}} ] },
+
+  'pw.vlan.a': { who:'sys', t:['Everything at {client} is on VLAN 1. The tills, the cameras, the door locks and the guest wireless.',
+    'It has worked for eleven years, which is the argument that will be made at you.',
+    'It has worked for eleven years the way a tent works until it rains.'] },
+  'pw.vlan.b': { who:'sys', t:['Segmenting it live means every device finds out at once that it has moved.'],
+    opts:[ {t:'Plan it in four phases and start with the cameras', fx:{time:24, rep:4, bonus:1, stress:5}},
+           {t:'Do it in one night with everyone in the building', fx:{time:14, rep:1, stress:12}},
+           {t:'Leave the door locks where they are. They are locks.', fx:{time:8, rep:-3, stress:9}} ] },
+  'pw.vlan.c': { who:'mackenzie', t:['They have asked me whether the tills go down. I said I would ask you before I answered.'],
+    opts:[ {t:'Move the tills last, out of hours, with the vendor on the phone', fx:{time:18, rep:4, bonus:1}},
+           {t:'Promise the tills will not go down', fx:{time:4, rep:-4, stress:13}},
+           {t:'Tell them the tills go down for eleven minutes on a Sunday', fx:{time:12, rep:3, bonus:1, stress:4}} ] },
+
+  'pw.decom.a': { who:'sys', t:['Sixty servers to decommission at {client}. Eleven of them answer pings and nothing else.',
+    'No name in the CMDB, no owner, no open ports worth having. Eleven small machines being quietly alive.'] },
+  'pw.decom.b': { who:'brenda', t:['If you turn one off and it mattered, that is a Monday I have to be part of.'],
+    opts:[ {t:'Shut them down and leave them racked for thirty days', fx:{time:20, rep:4, bonus:1}},
+           {t:'Trace what talks to them first, all eleven', fx:{time:26, rep:4, bonus:1, stress:4}},
+           {t:'Pull the power. Nothing has asked for them in a year.', fx:{time:6, rep:-3, stress:10}} ] },
+  'pw.decom.c': { who:'sys', t:['Whatever you decide, somebody in three years reads the note you leave and has to act on it.'],
+    opts:[ {t:'Write down what each one was and who could not be found', fx:{time:16, rep:3, bonus:1}},
+           {t:'Log the serials and close it', fx:{time:6, rep:0, stress:4}},
+           {t:'Close it as complete', fx:{time:3, rep:-2, stress:7}} ] },
+
+  'pw.back.a': { who:'linda', t:['The project you closed in March is open again. Not as a project — as a P1 fault.',
+    'The handover said support owned it. Support say the handover was a calendar invite.',
+    'You are the only person who has ever seen it working.'] },
+  'pw.back.b': { who:'linda', t:['Fixing it today is an hour. Fixing why it came back is the rest of the week and nobody has asked me for that.'],
+    opts:[ {t:'Fix it, then finish the handover properly this time', fx:{time:24, rep:4, bonus:1, stress:5}},
+           {t:'Fix it and hand it straight back to support', fx:{time:10, rep:0, stress:7}},
+           {t:'Fix it quietly and let the project stay closed', fx:{time:8, rep:-2, stress:9}} ] },
+  'pw.back.c': { who:'raj', t:['If this comes to us again I am putting your name in the queue note.'],
+    opts:[ {t:'Sit with them until somebody on the desk can fix it themselves', fx:{time:20, rep:4, bonus:1}},
+           {t:'Record a five-minute video and attach it to the article', fx:{time:12, rep:3, bonus:1}},
+           {t:'Tell them to escalate it to you personally next time', fx:{time:5, rep:-1, stress:8}} ] },
+
+  'pw.tb.a': { who:'sys', t:['Four terabytes to move, a twenty-megabit line, and a date the client has already announced.',
+    'At line rate and with nobody else using it, the copy finishes eight days after the date.'] },
+  'pw.tb.b': { who:'derek', t:['Can we not just zip it?'],
+    opts:[ {t:'Seed it on disk, courier it, and sync the delta over the line', fx:{time:22, rep:4, bonus:1}},
+           {t:'Start the copy now and throttle it to nights and weekends', fx:{time:16, rep:2, bonus:1, stress:6}},
+           {t:'Move the date. It is the only number here that can move.', fx:{time:12, rep:3, stress:7}} ] },
+  'pw.tb.c': { who:'sys', t:['Whichever way it goes, the last hour before cutover is when you find out what changed while you were copying.'],
+    opts:[ {t:'Freeze writes for the final delta and say so in advance', fx:{time:18, rep:4, bonus:1}},
+           {t:'Run the delta live and reconcile afterwards', fx:{time:10, rep:0, stress:9}},
+           {t:'Assume nothing changed. It is a Saturday.', fx:{time:4, rep:-4, stress:12}} ] },
+
+  'pw.sign.a': { who:'sys', t:['The design needs sign-off from {User}. {User} left in April.',
+    'The document has been sitting in an approval queue addressed to a mailbox you personally disabled.'] },
+  'pw.sign.b': { who:'client', t:['Can you not just sign it? You wrote it.'],
+    opts:[ {t:'Find who inherited the decision and take them through it', fx:{time:24, rep:4, bonus:1}},
+           {t:'Ask their manager to sign it on the strength of the summary', fx:{time:14, rep:2, bonus:1, stress:4}},
+           {t:'Sign it yourself and note that you signed it', fx:{time:6, rep:-3, stress:10}} ] },
+  'pw.sign.c': { who:'sys', t:['There are four more documents behind this one in the same queue, addressed to the same person.'],
+    opts:[ {t:'Fix the approver list for all of them now', fx:{time:18, rep:4, bonus:1}},
+           {t:'Fix this one and raise the rest as a risk', fx:{time:9, rep:2, stress:5}},
+           {t:'This one is the urgent one', fx:{time:4, rep:-2, stress:8}} ] },
+
+  'pw.uat.a': { who:'mackenzie', t:['User acceptance testing starts Monday. Here is the test plan.',
+    'It is a document called TEST PLAN. It has a title page and a table of contents for nothing.'] },
+  'pw.uat.b': { who:'sys', t:['Forty users arrive Monday with a system to break and no instructions on how to break it usefully.'],
+    opts:[ {t:'Write twenty scripted cases from the requirements tonight', fx:{time:26, rep:4, bonus:1, stress:5}},
+           {t:'Write five that cover the things that would stop go-live', fx:{time:16, rep:3, bonus:1}},
+           {t:'Let them use it and log whatever they say', fx:{time:6, rep:-2, stress:9}} ] },
+  'pw.uat.c': { who:'noor', t:['Whatever comes back on Friday has to become a list somebody either fixes or signs to accept.',
+    'If it is not written down it was not tested. That is not me being difficult, that is the question I get asked.'],
+    opts:[ {t:'Triage the findings with the client in the room', fx:{time:18, rep:4, bonus:1}},
+           {t:'Sort them into fix, defer and not-a-defect and send it', fx:{time:12, rep:2, bonus:1, stress:4}},
+           {t:'Forward the raw list to the developers', fx:{time:4, rep:-2, stress:8}} ] },
+
+  'pw.dom.a': { who:'sys', t:['The merger completes Friday. Both companies have a domain called CORP.',
+    'Both have a file server called FS01, both have a user called jsmith, and the two jsmiths are different people.'] },
+  'pw.dom.b': { who:'sys', t:['Trusts between two domains with the same name do not fail politely. They fail on Monday, at both companies.'],
+    opts:[ {t:'Build a third domain and migrate both into it', fx:{time:26, rep:4, bonus:1, stress:6}},
+           {t:'Rename one side first and take the fortnight it needs', fx:{time:20, rep:4, bonus:1, stress:5}},
+           {t:'Join them and see. It may be fine.', fx:{time:8, rep:-4, stress:13}} ] },
+  'pw.dom.c': { who:'client', t:['We told everyone Friday. There is a photograph booked.'],
+    opts:[ {t:'Let Friday be the photograph and the email domain, and nothing else', fx:{time:16, rep:4, bonus:1}},
+           {t:'Do the email on Friday and the rest in phases', fx:{time:12, rep:3, bonus:1, stress:4}},
+           {t:'Everything on Friday', fx:{time:6, rep:-3, stress:12}} ] },
+
+  'pw.cab.a': { who:'sys', t:['The new kit has arrived. It is in reception, it is large, and it is signed for.',
+    'The cabinet it goes in is full. It has been full since before the order was raised.'] },
+  'pw.cab.b': { who:'brenda', t:['It cannot stay in reception. There is a photograph of the reception on the website.'],
+    opts:[ {t:'Audit the cabinet, decommission what is dead, and fit it properly', fx:{time:24, rep:4, bonus:1}},
+           {t:'Order a second cabinet and store the kit until it lands', fx:{time:12, rep:2, bonus:1, stress:4}},
+           {t:'Stack it on top of the cabinet for now', fx:{time:5, rep:-3, stress:9}} ] },
+  'pw.cab.c': { who:'sys', t:['Half of what is in there has no label and two things in it are not on any diagram at all.'],
+    opts:[ {t:'Label the whole cabinet while it is open', fx:{time:18, rep:4, bonus:1}},
+           {t:'Label the new kit and photograph the rest', fx:{time:8, rep:1, stress:4}},
+           {t:'Close the door', fx:{time:3, rep:-2, stress:7}} ] },
+
+  'pw.pack.a': { who:'sys', t:['The desk will not take the project on until there is a handover pack. That is the whole message.',
+    'There has never been a handover pack for anything. This is the hill.'] },
+  'pw.pack.b': { who:'raj', t:['You wrote three of the runbooks I cannot follow. I am not doing a fourth.'],
+    opts:[ {t:'Write the pack: diagram, runbook, contacts, known faults', fx:{time:26, rep:4, bonus:1}},
+           {t:'Write the runbook and the contacts, and book a walkthrough', fx:{time:18, rep:3, bonus:1, stress:4}},
+           {t:'Send the design document. It has a diagram in it.', fx:{time:6, rep:-3, stress:9}} ] },
+  'pw.pack.c': { who:'sys', t:['A pack nobody has read is the same as no pack, and you have been on the other side of this.'],
+    opts:[ {t:'Sit the desk down and walk it through until they can do it', fx:{time:20, rep:4, bonus:1}},
+           {t:'Run it as a lunch session and record it', fx:{time:12, rep:3, bonus:1}},
+           {t:'Attach it to the ticket and close the project', fx:{time:4, rep:-2, stress:8}} ] },
   't2.rst.a':  { who:'client', t:['They deleted "2023 FINAL" and need it by lunch. It is 11:20.',
     'There is also a "2023 FINAL v2" and a "2023 FINAL (USE THIS)". They do not want those.'] },
   't2.rst.b':  { who:'sys', t:['The backup is there. Restoring it over the live folder is how you make today much worse.'],
@@ -4600,6 +4798,65 @@ const TICKETS = {
   'handover-to-your-old-desk': { tiers:[4,8], weight:2, slaMult:2.4, pri:1, stress:6,
     title:'Hand the project over to the helpdesk. You know exactly what they will say.',
     steps:[{say:'p.hand.a'},{goto:'TERMINAL'},{choice:'p.hand.b'}] },
+  /* --------- THE FOURTEEN THAT TAKE A MORNING (see the pw.* dialogue) -----
+     tiers:[4,4] on purpose. Every other rung is already oversubscribed and
+     these would tip it; this is the one that needs them. */
+  'the-weekend-that-is-one-weekend': { tiers:[4,4], weight:3, slaMult:1.5, pri:4, stress:7,
+    title:'Cutover weekend at {client}. One weekend, four things that need it.',
+    steps:[{say:'pw.wk.a'},{goto:'SERVERS'},{game:'weekend',diff:2},{choice:'pw.wk.b'},
+           {goto:'TERMINAL'},{choice:'pw.wk.c'}] },
+  'three-hundred-mailboxes': { tiers:[4,4], weight:3, slaMult:1.8, pri:3, stress:6,
+    title:'Three hundred mailboxes move Saturday. Forty-one belong to leavers.',
+    steps:[{say:'pw.mbx.a'},{goto:'TERMINAL'},{game:'starter',diff:2},{choice:'pw.mbx.b'},
+           {goto:'n3'},{choice:'pw.mbx.c'}] },
+  'comms-room-is-a-cupboard': { tiers:[4,4], weight:3, slaMult:1.9, pri:3, stress:6,
+    title:'The new site has a comms room. It has a kettle in it as well.',
+    steps:[{say:'pw.cup.a'},{goto:'SERVERS'},{game:'cable',diff:2},{choice:'pw.cup.b'},
+           {goto:'SHELF'},{choice:'pw.cup.c'}] },
+  'pilot-group-never-logged-in': { tiers:[4,4], weight:3, slaMult:1.6, pri:4, stress:7,
+    title:'Go-live is a week Monday. The pilot group has not logged in once.',
+    steps:[{say:'pw.pilot.a'},{goto:'CONF'},{game:'jargon',diff:2},{choice:'pw.pilot.b'},
+           {goto:'TERMINAL'},{choice:'pw.pilot.c'}] },
+  'nineteen-switches-one-weekend': { tiers:[4,4], weight:3, slaMult:1.8, pri:3, stress:6,
+    title:'Nineteen switches, four hundred leads, and a building that opens at seven.',
+    steps:[{say:'pw.sw.a'},{goto:'SHELF'},{game:'cable',diff:3},{choice:'pw.sw.b'},
+           {goto:'SERVERS'},{choice:'pw.sw.c'}] },
+  'vlan-one-carries-everything': { tiers:[4,4], weight:3, slaMult:1.6, pri:4, stress:7,
+    title:'Everything at {client} is on VLAN 1. Including the door locks.',
+    steps:[{say:'pw.vlan.a'},{goto:'SERVERS'},{game:'subnet',diff:3},{choice:'pw.vlan.b'},
+           {goto:'n7'},{choice:'pw.vlan.c'}] },
+  'decommission-what-answers-pings': { tiers:[4,4], weight:3, slaMult:2.2, pri:2, stress:4,
+    title:'Sixty servers to decommission. Eleven answer pings and nothing else.',
+    steps:[{say:'pw.decom.a'},{goto:'n6'},{game:'blast',diff:3},{choice:'pw.decom.b'},
+           {goto:'TERMINAL'},{choice:'pw.decom.c'}] },
+  'the-project-that-came-back': { tiers:[4,4], weight:3, slaMult:1.8, pri:3, stress:6,
+    title:'The project you closed in March has reopened, at P1, as a fault.',
+    steps:[{say:'pw.back.a'},{goto:'n8'},{game:'script',diff:2},{choice:'pw.back.b'},
+           {goto:'TERMINAL'},{choice:'pw.back.c'}] },
+  'four-terabytes-and-a-date': { tiers:[4,4], weight:3, slaMult:1.5, pri:4, stress:7,
+    title:'Four terabytes, a twenty-meg line, and a date already announced.',
+    steps:[{say:'pw.tb.a'},{goto:'n1'},{game:'keep',diff:2},{choice:'pw.tb.b'},
+           {goto:'TERMINAL'},{choice:'pw.tb.c'}] },
+  'sign-off-from-someone-who-left': { tiers:[4,4], weight:3, slaMult:2.1, pri:2, stress:5,
+    title:'Sign-off has to come from {User}. {User} left the company in April.',
+    steps:[{say:'pw.sign.a'},{goto:'TERMINAL'},{game:'jargon',diff:3},{choice:'pw.sign.b'},
+           {goto:'CONF'},{choice:'pw.sign.c'}] },
+  'the-test-plan-nobody-wrote': { tiers:[4,4], weight:3, slaMult:2.2, pri:2, stress:4,
+    title:'UAT starts Monday. The test plan is an empty file called TEST PLAN.',
+    steps:[{say:'pw.uat.a'},{goto:'CONF'},{game:'script',diff:2},{choice:'pw.uat.b'},
+           {goto:'n5'},{choice:'pw.uat.c'}] },
+  'two-domains-one-name': { tiers:[4,4], weight:3, slaMult:1.8, pri:3, stress:7,
+    title:'The merger is Friday. Both companies have a domain called CORP.',
+    steps:[{say:'pw.dom.a'},{goto:'SERVERS'},{game:'subnet',diff:3},{choice:'pw.dom.b'},
+           {goto:'CONF'},{choice:'pw.dom.c'}] },
+  'the-cabinet-is-full': { tiers:[4,4], weight:3, slaMult:2.6, pri:1, stress:4,
+    title:'The new kit has arrived. There is no space left in the cabinet.',
+    steps:[{say:'pw.cab.a'},{goto:'SERVERS'},{game:'cable',diff:2},{choice:'pw.cab.b'},
+           {goto:'SHELF'},{choice:'pw.cab.c'}] },
+  'the-handover-pack': { tiers:[4,4], weight:3, slaMult:2.5, pri:1, stress:4,
+    title:'Support will not take the project without a pack nobody has written.',
+    steps:[{say:'pw.pack.a'},{goto:'n2'},{game:'diagram',diff:2},{choice:'pw.pack.b'},
+           {goto:'TERMINAL'},{choice:'pw.pack.c'}] },
   /* ----------------------- PROCUREMENT (rung 5) ---------------------------
      Project Team plans it; Procurement gets blamed for it. The unit of pain
      is money now, and the cruelty of the rung is that you have lost the
