@@ -7911,7 +7911,16 @@ function walkToClick(vx, vy){
   const cx2 = Math.round(cam.x), cy2 = Math.round(cam.y);
   const tx = Math.floor((vx + cx2) / TILE), ty = Math.floor((vy + cy2) / TILE);
   if (tx < 0 || ty < 0 || tx >= W2.W || ty >= W2.H) return false;
-  const blocked = solidAt(tx, ty) || entAt(tx, ty);
+  /* A THING YOU USE IS NOT ALWAYS A THING YOU CANNOT WALK ON. This asked
+     solidAt() alone, which is true of every prop in the building — the lift
+     doors, the coffee machine, the printer — and false of a door you walk
+     THROUGH. So a pointer clicking the front doors was routed onto them and
+     then nothing happened, on all four doors, in both directions, while the
+     lift beside them worked. Standing on the tile is no help either: use is
+     facing-based, so from on top of a door faceCell() looks at the wall
+     beyond it. Route to a tile beside it and use it, exactly as for a prop. */
+  const actAt = inMap(tx, ty) ? W2.act[cellIx(tx, ty)] : null;
+  const blocked = solidAt(tx, ty) || entAt(tx, ty) || !!actAt;
   if (blocked && Math.abs(tx - player.tx) + Math.abs(ty - player.ty) === 1){
     player.dir = tx<player.tx?'left':tx>player.tx?'right':ty<player.ty?'up':'down';
     press.use = true; return true;         // next to it already: face it and use it
@@ -9179,8 +9188,14 @@ const TOASTC = { amber:'var(--amber)', corp:'var(--corp)', red:'var(--alert)', o
    five lift lines and thirty-three lines of small talk went unheard. A test
    can read this and ask whether a thing was said, rather than asking a helper
    whether it would have been. Capped; it is evidence, not a log. */
-let TOAST_LOG = [];
+let TOAST_LOG = [], TOAST_N = 0;
 function toast(text, kind, ms){
+  /* TOAST_N counts, TOAST_LOG remembers. The log is capped at 24 and shifts,
+     so its LENGTH stops growing — which quietly defeated the first version of
+     the pointer guard below: it asked "did the length go up?" to mean "did the
+     game say anything?", and after two dozen toasts the answer was always no.
+     Every prop in the building reported itself unusable. */
+  TOAST_N++;
   TOAST_LOG.push(text); if (TOAST_LOG.length > 24) TOAST_LOG.shift();
   if (QUIET) return;
   const wrap = document.getElementById('toasts'); if (!wrap) return;
@@ -12918,6 +12933,65 @@ function selfTest(runSim){
           SAVE_SUSPEND = keepQ;
           ok('a save comes back in the building it was made in',
              !wrong.length, wrong.join(' · '));
+        }
+        /* AND A POINTER CAN USE EVERY ONE OF THEM. walkToClick offered "use
+           it" only for a tile solidAt() calls solid, which is true of every
+           prop in the building and false of a door you walk THROUGH — so
+           clicking the front doors routed the player onto them and nothing
+           happened, on all four doors, in both directions, while the lift
+           beside them worked. mouseonly.js and touch.js both read OK over it,
+           because neither of them has ever opened a door.
+           Behavioural: click the tile, run the walk to its end, and take the
+           act as having fired only if the world changed — a different map, a
+           new toast, or a panel. */
+        {
+          const keepS = G.state, keepM = G.modal, dead = [];
+          for (const mid in MAPS){
+            const seenAct = new Set();
+            for (let y = 0; y < 1; y++){}                 // (loadMap below)
+            rngInit('PTR'); runInit('PTR'); run.rung = 5; run.day = 4;
+            run.clock = 200; rollDay(); loadMap(mid);
+            const acts = [];
+            for (let c = 0; c < W2.W * W2.H; c++){
+              const a = W2.act[c];
+              if (!a || seenAct.has(a)) continue;
+              seenAct.add(a); acts.push([a, c % W2.W, (c / W2.W) | 0]);
+            }
+            for (const [a, x, y] of acts){
+              rngInit('PTR'); runInit('PTR'); run.rung = 5; run.day = 4;
+              run.clock = 200; rollDay(); loadMap(mid); spawnPeople();
+              G.state = 'work'; G.modal = null;
+              /* stand on a walkable tile beside it, which is where the anchor
+                 for a prop is and where a player would be */
+              let st = null;
+              for (const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]])
+                if (!solidAt(x+dx, y+dy)){ st = [x+dx, y+dy]; break; }
+              if (!st){ dead.push(mid + '/' + a + ' has nowhere to stand'); continue; }
+              player.tx = st[0]; player.ty = st[1];
+              player.px = st[0]*TILE; player.py = st[1]*TILE;
+              cam.x = clamp(st[0]*TILE - VW/2, 0, Math.max(0, W2.W*TILE - VW));
+              cam.y = clamp(st[1]*TILE - VH/2, 0, Math.max(0, W2.H*TILE - VH));
+              G.autoPath = null; clearInput();
+              const was = W2.id, toasts = TOAST_N;
+              if (!walkToClick(x*TILE + TILE/2 - cam.x, y*TILE + TILE/2 - cam.y)){
+                dead.push(mid + '/' + a + ' the click did not route'); continue;
+              }
+              let fired = false;
+              for (let i = 0; i < 240 && !fired; i++){
+                autoWalk();
+                if (press.use){ workInput(); press.use = false; }
+                if (W2.id !== was || TOAST_N > toasts || G.modal) fired = true;
+                if (!G.autoPath) break;
+                player.px = player.tx*TILE; player.py = player.ty*TILE;
+              }
+              if (!fired) dead.push(mid + '/' + a);
+              clearInput(); G.autoPath = null;
+              if (G.modal) closeModalToWork();
+            }
+          }
+          G.state = keepS; G.modal = keepM; loadMap('office1');
+          ok('every thing in the building can be used with a pointer alone',
+             !dead.length, dead.join(' '));
         }
       }
 
