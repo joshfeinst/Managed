@@ -92,6 +92,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 | `visual.js` | screenshots every screen and board at four window sizes, asserting no text is invisible — clipped where it cannot be scrolled to, or painted over where it sits |
 | `stakes.js` | sweeps what a ticket is worth by priority and reports how far it separates good triage from bad, against the table the game is actually holding |
 | `stale.js` | checks every balance number quoted in a source comment against the one the game holds |
+| `clock.js` | reads every dialogue option that says how long it takes and checks it against what it charges — with a written list of the durations that belong to the world rather than to your afternoon |
 | `boards.js` | plays every minigame perfectly, carelessly, at random, and **blind** — the best rule that needs no comprehension — and reports the spread |
 | `keys.js` | presses every key each board's how-to-play card promises, and pokes every click rect — the card list is read off `GAME_BRIEF`, because the hand-kept one omitted the board that had a dead key |
 | `bars.js` | where should each promotion bar sit? `--sweep` finds the deal rate that best separates good triage from bad; `--careers --target=0.75` bisects every bar at once against the share of careers that reach retirement |
