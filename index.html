@@ -12016,7 +12016,17 @@ function toTitle(){
   const lived = meta.runsPlayed
     ? 'Careers lived: ' + meta.runsPlayed + ' · Banked reputation: ' + meta.rep +
       ' · Best: day ' + meta.best.days + ', ' + ROLES[meta.best.rung].title +
-      (meta.certs.length ? ' · Certs: ' + meta.certs.join(', ').toUpperCase() : '')
+      /* THE NAME ON THE CERTIFICATE, NOT THE KEY IN THE TABLE. This joined
+         meta.certs and shouted it, so the first line on the title screen
+         listed "APLUS, ITIL, PMP, CISSP" — and pmp is the key for PRINCE2
+         PRACTITIONER, which is a different qualification from a different
+         body. The game sells you PRINCE2 on the posting screen, charges nine
+         reputation for it, and then told you every time you came back that
+         you held a PMP. The setup screen has always used CERTS[k].name; this
+         one is the odd screen out. */
+      (meta.certs.length
+        ? ' · Certs: ' + meta.certs.map(k => (CERTS[k] ? CERTS[k].name : k)).join(', ')
+        : '')
     : '';
   const inProgress = saved
     ? 'Saved career: ' + (ROLES[saved.rung] ? ROLES[saved.rung].title : 'INTERN') +
@@ -14356,6 +14366,27 @@ function selfTest(runSim){
       meta.certs = savedCerts; meta.rep = savedRep; actSetup();
       ok('the study list says what each certificate does',
          !hidden.length, hidden.join(' '));
+      /* AND THE TITLE SCREEN CALLS THEM WHAT THE STUDY LIST CALLED THEM. The
+         "Certs:" run on the first line of the game joined the meta.certs KEYS
+         and shouted them — APLUS, ITIL, PMP, CISSP — so the qualification the
+         posting screen sells as PRINCE2 PRACTITIONER, for nine reputation,
+         came back as a PMP: a different certificate, from a different body,
+         printed on the screen a returning player reads first. */
+      const savedC2 = (meta.certs || []).slice(), savedRuns = meta.runsPlayed;
+      meta.certs = Object.keys(CERTS); meta.runsPlayed = Math.max(1, savedRuns);
+      toTitle();
+      const line = (document.getElementById('t-meta') || {}).textContent || '';
+      meta.certs = savedC2; meta.runsPlayed = savedRuns; toTitle();
+      const unnamed = Object.keys(CERTS).filter(k => line.indexOf(CERTS[k].name) < 0);
+      /* and it is not merely CONTAINING the name by accident of the key */
+      const keyed = Object.keys(CERTS).filter(k =>
+        CERTS[k].name.toUpperCase().indexOf(k.toUpperCase()) < 0 &&
+        new RegExp('\\b' + k + '\\b', 'i').test(line));
+      ok('and the title screen calls a certificate by its name',
+         !unnamed.length && !keyed.length,
+         (unnamed.length ? 'missing: ' + unnamed.join(' ') : '') +
+         (keyed.length ? ' · listed by key: ' + keyed.join(' ') : '') ||
+         line.slice(line.indexOf('Certs:')).slice(0, 90));
     }
     /* THE CAPTION UNDER A NAME FOLLOWS THE PROMOTION. The Director scene says
        "Linda reports to you as of this morning", and then every conversation
