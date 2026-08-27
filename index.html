@@ -3645,6 +3645,83 @@ const DIALOGUE = {
            {t:'Present this quarter and answer the questions honestly', fx:{time:9, rep:2, bonus:1, stress:4}},
            {t:'Reuse last quarter\'s deck. Nobody reads the appendix.', fx:{time:4, rep:-4, stress:7}} ] },
 
+  /* ------------- T3, WHERE THE ESCALATION STOPS (rung 3) -------------------
+     T3 had twenty-four tickets of its own, the thinnest authored rung in the
+     game, on a rung players spend real days at. Third line is the floor the
+     escalation matrix promises and does not have: everything below you can
+     hand a ticket upward and you cannot, so the joke at this rung is always
+     that the depth was you all along, and the thing that broke has been
+     broken for longer than anyone has been looking at it. */
+  't3.one.a': { who:'sys', t:['ESCALATED TO THIRD LINE. Priority raised. Owner: unassigned.',
+    'Third line is a group in the ticket system. The group has one person in it. You have met him.'] },
+  't3.one.b': { who:'derek', t:['It came from the pit. It went to second line. Second line sent it to third line. Third line is eleven feet from the pit.'],
+    opts:[ {t:'Fix it, then rewrite the escalation matrix so it says what is true', fx:{time:13, rep:5, bonus:1, stress:5}},
+           {t:'Fix it and raise the matrix as a separate problem', fx:{time:8, rep:3, bonus:1, stress:4}},
+           {t:'Fix it. The matrix has been wrong for two years.', fx:{time:4, rep:-3, stress:8}} ] },
+
+  't3.pw2.a': { who:'sys', t:['The password for the box is in the credentials document.',
+    'The credentials document is password protected. Both were set in the same week in 2019 by the same person, who is now at a different company.'] },
+  't3.pw2.b': { who:'sys', t:['There is exactly one way in and it left in 2019.'],
+    opts:[ {t:'Break in properly: console access, documented, and reset both', fx:{time:14, rep:5, bonus:1, stress:6}},
+           {t:'Reset the box and rebuild the document from what you find', fx:{time:9, rep:3, bonus:1, stress:5}},
+           {t:'Email him. He was decent about the last one.', fx:{time:4, rep:-3, stress:9}} ] },
+
+  't3.filt.a': { who:'sys', t:['The alert everybody has a mail rule for has started being right.',
+    'Four engineers wrote that rule independently. None of them mentioned it. It has been correct since Tuesday, entirely inside a folder.'] },
+  't3.filt.b': { who:'kayla', t:['I have got nine hundred of them. I did not read the one that mattered because I have not read any of them since March.'],
+    opts:[ {t:'Fix the alert so it only fires when it means something', fx:{time:13, rep:5, bonus:1, stress:5}},
+           {t:'Deal with what it is telling you and tune it after', fx:{time:9, rep:3, bonus:1, stress:6}},
+           {t:'Tell everybody to take the rule off', fx:{time:3, rep:-4, stress:9}} ] },
+
+  't3.rot.a': { who:'sys', t:['The fault was at ten to midnight. The logs rotate at midnight.',
+    'It is the most reliable scheduled task in the estate. It has never missed a run. It deleted the evidence ten minutes after it became evidence.'] },
+  't3.rot.b': { who:'sys', t:['You can find out what happened, or you can make sure you find out next time. There is not time for both.'],
+    opts:[ {t:'Change the retention first, then reproduce it tonight', fx:{time:12, rep:5, bonus:1, stress:6}},
+           {t:'Reconstruct it from what survived elsewhere', fx:{time:9, rep:3, bonus:1, stress:7}},
+           {t:'Close it as unreproducible. It probably will not happen again.', fx:{time:3, rep:-5, stress:9}} ] },
+
+  't3.dead.a': { who:'sys', t:['{Client}\'s DNS still points at a server decommissioned in 2021. The decommission was done properly, signed off and photographed.',
+    'Something on that address is answering. It has been answering for four years.'] },
+  't3.dead.b': { who:'sys', t:['It has no name, no owner and no ticket, and people have been happily using it since before you were on this account.'],
+    opts:[ {t:'Find out what it is before you touch anything at all', fx:{time:14, rep:5, bonus:1, stress:7}},
+           {t:'Trace who is using it, then move them, then kill it', fx:{time:10, rep:4, bonus:1, stress:5}},
+           {t:'Pull it. It should not exist.', fx:{time:3, rep:-5, stress:11}} ] },
+
+  't3.dupe.a': { who:'sys', t:['A ticket has been closed four times as a duplicate of itself.',
+    'A merge went the wrong way in 2022. Every closure was technically correct and every SLA on it was met.'] },
+  't3.dupe.b': { who:'linda', t:['The reporting is beautiful. The customer has been waiting three years.'],
+    opts:[ {t:'Break the loop, raise it clean, and go and ring the customer', fx:{time:12, rep:5, bonus:1, stress:4}},
+           {t:'Raise a fresh one and reference the mess', fx:{time:7, rep:3, bonus:1, stress:3}},
+           {t:'Close it as a duplicate. That is what it is.', fx:{time:3, rep:-5, stress:8}} ] },
+
+  't3.gate.a': { who:'sys', t:['The change needs a test. The test needs the change approved.',
+    'Both gates were written by the same person, three years apart, each one to prevent exactly this.'] },
+  't3.gate.b': { who:'noor', t:['I wrote the second one. I am aware. There is a sentence that gets you through and it means nothing, which is the only reason it works.'],
+    opts:[ {t:'Do it properly: emergency change, tested after, written up honestly', fx:{time:13, rep:5, bonus:1, stress:6}},
+           {t:'Use the sentence and log why you used it', fx:{time:7, rep:3, bonus:1, stress:5}},
+           {t:'Use the sentence. Everybody uses the sentence.', fx:{time:3, rep:-3, stress:7}} ] },
+
+  't3.run.a': { who:'sys', t:['The runbook is eleven screenshots. One of them is of a different server.',
+    'It has been followed successfully forty times, which is exactly why nobody has ever noticed.'] },
+  't3.run.b': { who:'raj', t:['I have done this one loads of times. Which step is wrong? I do not know which step is wrong.'],
+    opts:[ {t:'Rewrite it as text with the hostnames in it', fx:{time:12, rep:5, bonus:1, stress:4}},
+           {t:'Find the wrong step and replace that screenshot', fx:{time:8, rep:3, bonus:1, stress:5}},
+           {t:'Leave it. Forty for forty.', fx:{time:3, rep:-4, stress:8}} ] },
+
+  't3.quiet.a': { who:'sys', t:['{Client} stopped reporting it in November. It is still happening.',
+    'You have been measuring a fault by how often somebody complains about it, and they went quiet because they built a workaround.'] },
+  't3.quiet.b': { who:'sys', t:['The workaround is a woman on their reception desk who does it by hand every morning before anybody else arrives.'],
+    opts:[ {t:'Fix it, and tell them what she has been doing since November', fx:{time:13, rep:5, bonus:1, stress:5}},
+           {t:'Fix it quietly and close the ticket', fx:{time:8, rep:3, bonus:1, stress:4}},
+           {t:'It is not being reported. It is not a live issue.', fx:{time:3, rep:-5, stress:9}} ] },
+
+  't3.four.a': { who:'sys', t:['You are away next week. Four things have only ever been done by you.',
+    'Nobody announced this. It took about three years.'] },
+  't3.four.b': { who:'sys', t:['You are writing the list at twenty to five on a Friday, and you are writing it in the voice of a man who is in Croatia.'],
+    opts:[ {t:'Write all four down properly and sit with somebody while they do one', fx:{time:15, rep:5, bonus:1, stress:4}},
+           {t:'Write them down and send the document round', fx:{time:8, rep:3, bonus:1, stress:5}},
+           {t:'Take the laptop. It is easier than explaining.', fx:{time:3, rep:-4, stress:11}} ] },
+
   /* --------- THE SENIOR HALF OF THE BUILDING: what they say down there -----
      Written to a rule: the higher the rung, the less excuse you have for not
      knowing what the room actually looks like, so the joke is never "IT does
@@ -5000,7 +5077,42 @@ const TICKETS = {
     steps:[{say:'a.pin.a'},{goto:'PITMID'},{choice:'a.pin.b'}] },
   'the-rack-you-drew': { tiers:[7,8], weight:3, sla:50, slaMult:1.9, pri:3, stress:9,
     title:'The rack elevation you signed has a 2U gap. The gap has a switch in it.',
-    steps:[{say:'a.rack.a'},{goto:'SERVERS'},{choice:'a.rack.b'}] }
+    steps:[{say:'a.rack.a'},{goto:'SERVERS'},{choice:'a.rack.b'}] },
+
+  /* ---------------------- T3 HELPDESK, DEEPENED (rung 3) ------------------
+     Twenty-four tickets of its own, the thinnest authored rung in the game,
+     and one players spend real days at. Third line is the floor the
+     escalation matrix promises and does not have. */
+  'third-line-is-one-person': { tiers:[3,5], weight:3, sla:42, slaMult:1.9, pri:2, stress:8,
+    title:'Escalated to third line. Third line is a group with one person in it.',
+    steps:[{say:'t3.one.a'},{goto:'n1'},{choice:'t3.one.b'}] },
+  'password-inside-the-password': { tiers:[3,6], weight:3, sla:46, slaMult:2.0, pri:2, stress:8,
+    title:'The password for the box is in a document that is password protected',
+    steps:[{say:'t3.pw2.a'},{game:'pw',diff:3},{choice:'t3.pw2.b'}] },
+  'alert-everybody-filters': { tiers:[3,7], weight:3, sla:36, slaMult:1.7, pri:4, stress:10,
+    title:'The alert everybody has a mail rule for has started being right',
+    steps:[{say:'t3.filt.a'},{goto:'n3'},{choice:'t3.filt.b'}] },
+  'logs-rotate-at-midnight': { tiers:[3,7], weight:3, sla:48, slaMult:2.1, pri:3, stress:9,
+    title:'The fault was at ten to midnight. The logs rotate at midnight.',
+    steps:[{say:'t3.rot.a'},{choice:'t3.rot.b'}] },
+  'answering-from-a-dead-box': { tiers:[3,7], weight:3, sla:44, slaMult:2.0, pri:3, stress:9,
+    title:'{Client}\'s DNS points at a server we decommissioned in 2021, and something is answering',
+    steps:[{say:'t3.dead.a'},{game:'blast',diff:2},{choice:'t3.dead.b'}] },
+  'duplicate-of-itself': { tiers:[3,6], weight:3, sla:54, slaMult:2.4, pri:1, stress:6,
+    title:'A ticket has been closed four times as a duplicate of itself',
+    steps:[{say:'t3.dupe.a'},{choice:'t3.dupe.b'}] },
+  'test-needs-the-change': { tiers:[3,8], weight:3, sla:50, slaMult:2.2, pri:2, stress:8,
+    title:'The change needs a test. The test needs the change approved.',
+    steps:[{say:'t3.gate.a'},{goto:'n5'},{choice:'t3.gate.b'}] },
+  'runbook-is-screenshots': { tiers:[3,6], weight:3, sla:52, slaMult:2.3, pri:1, stress:6,
+    title:'The runbook is eleven screenshots and one of them is of a different server',
+    steps:[{say:'t3.run.a'},{goto:'n2'},{choice:'t3.run.b'}] },
+  'stopped-reporting-it': { tiers:[3,7], weight:3, sla:40, slaMult:1.8, pri:3, stress:9,
+    title:'{Client} stopped reporting it in November. It is still happening.',
+    steps:[{say:'t3.quiet.a'},{game:'script',diff:3},{choice:'t3.quiet.b'}] },
+  'four-things-only-you-do': { tiers:[3,8], weight:3, sla:56, slaMult:2.4, pri:2, stress:9,
+    title:'You are away next week and four things have only ever been done by you',
+    steps:[{say:'t3.four.a'},{choice:'t3.four.b'}] }
 
 };
 
@@ -7530,6 +7642,16 @@ function workInput(){
   }
   if (near.length === 1) interact(near[0]);
 }
+/* EVERY LINE THIS PERSON CAN SAY WHEN NOTHING IN PARTICULAR HAS HAPPENED.
+   Factored out of smalltalk() so the invariant can ask the same question the
+   game answers, rather than a re-implementation of it that can drift. */
+function smallTalkPool(id){
+  const N = NPCS[id]; if (!N) return [];
+  const out = [...(((CHAT[id] || {}).any) || [])];
+  const node = DIALOGUE[N.talk];
+  if (node) for (const l of node.t) if (out.indexOf(l) < 0) out.push(l);
+  return out;
+}
 function smalltalk(e){
   const N = NPCS[e.id];
   const count = run.satOn[e.id] || 0;
@@ -7540,9 +7662,22 @@ function smalltalk(e){
   if (C){
     hit = (C.when || []).find(w => { try { return w.if(run); } catch(_){ return false; } });
     if (hit) pool.push(hit.t);
-    pool.push(...(C.any || []));
   }
-  if (!pool.length){ const node = DIALOGUE[N.talk]; pool.push(...node.t); }
+  for (const l of smallTalkPool(e.id)) if (pool.indexOf(l) < 0) pool.push(l);
+  /* ALWAYS, not only when CHAT is empty. This was a fallback — `if
+     (!pool.length)` — written when three of the seven people had no CHAT
+     entry at all. Every one of the twelve has one now, so the branch had been
+     dead since the day that was fixed, and with it went THIRTY-THREE written
+     lines of small talk that no player could hear: all six of Noor's, all six
+     of Callum's, all four of Marcus's, all six of Yvonne's, and both of
+     Linda's, Derek's, Raj's and Gary's. Four of the twelve survived only
+     because somebody had copied their two lines into CHAT.any by hand.
+     Marcus explaining that the landlord's system runs the air conditioning,
+     the access control and, for reasons nobody living can explain, the
+     kettle, is one of the best lines in the file and it had never once been
+     said. The two pools are one pool now, deduplicated for the four that were
+     copied. Small talk consumes no seeded stream — chatPick is a pure hash —
+     and costs no clock, so a wider pool changes nothing but what you hear. */
   let i = chatPick(e.id, run.day, count, pool.length);
   /* When the day HAS earned a reaction, say it about half the time. Simply
      dropping it in the pool made it one option in fourteen, so a 4pm office
@@ -13499,6 +13634,46 @@ function selfTest(runSim){
       }
       ok('everybody in the office has more than a couple of things to say',
          !thin.length, thin.join(' '));
+      /* AND EVERY LINE WRITTEN FOR THEM CAN ACTUALLY BE HEARD. The general
+         pool used to be reachable only when CHAT held nothing, so once
+         everybody had a CHAT entry the DIALOGUE nodes behind `talk:` went
+         silent — thirty-three lines of them, including every line Noor,
+         Callum and Marcus have. Nothing failed, because a line nobody can
+         reach breaks no invariant; it simply stops existing. */
+      {
+        /* DRIVEN, NOT DERIVED. The first version of this asked smallTalkPool()
+           whether a line was in the pool, which is the helper smalltalk()
+           happens to use — so reverting smalltalk() to the shipped fallback
+           left the guard green over the bug it was written for. It talks to
+           each person instead, many times, and collects what they actually
+           said. */
+        const savedRunS = run, savedModal = G.modal, savedState = G.state;
+        rngInit('HEARD'); runInit('HEARD'); rollDay();
+        run.clock = 200; run.stress = 30; run.coffee = 0; run.queue = [];
+        run.breaches = 0; run.burnout = 10; run.rep = 0;
+        const heard = {};
+        for (const id in NPCS){
+          heard[id] = new Set();
+          const n = 8 + smallTalkPool(id).length * 6;
+          for (let k = 0; k < n; k++){
+            run.satOn[id] = k;
+            try { smalltalk({ id }); } catch (_) { break; }
+            const said = (run.lastChat || {})[id];
+            if (said) heard[id].add(said);
+          }
+        }
+        G.modal = savedModal; G.state = savedState;
+        dlg = null;
+        const silent = [];
+        for (const id in NPCS){
+          const node = DIALOGUE[NPCS[id].talk];
+          const miss = (node ? node.t : []).filter(l => !heard[id].has(l));
+          if (miss.length) silent.push(id + ' (' + miss.length + ')');
+        }
+        run = savedRunS;
+        ok('and every line written for them can actually be heard',
+           !silent.length, silent.join(' '));
+      }
       ok('and the office talks to a Director differently than to the intern',
          deaf.length <= 1, 'unchanged for: ' + deaf.join(' '));
       run = savedRunC;
