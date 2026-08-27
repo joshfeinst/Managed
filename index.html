@@ -17923,6 +17923,22 @@ function selfTest(runSim){
       ok('review: the breach row does not call the discount a write-off',
          FORGIVEN === 0 ? /written off/.test(row) : !/written off/.test(row),
          'FORGIVEN is ' + FORGIVEN + ' and the row says "' + row.trim() + '"');
+      /* ...and neither does anything else the player reads. Three separate
+         screens said the allowance was free: this row, the handbook, and Raj
+         on the first breach of a career. */
+      {
+        writeHandbook();
+        const hb = (document.getElementById('hb-burn') || {}).textContent || '';
+        const raj = ((DIALOGUE['i.firstbreach'] || {}).t || []).join(' ');
+        const loose = [];
+        const claimsFree = t => /written off|does not count|are forgiven|for free/i.test(t);
+        if (FORGIVEN > 0){
+          if (claimsFree(hb))  loose.push('the handbook');
+          if (claimsFree(raj)) loose.push('Raj, on your first breach');
+        }
+        ok('and nothing else tells you the allowance is free either',
+           !loose.length, loose.join(' and ') + ' — FORGIVEN is ' + FORGIVEN);
+      }
       ok('review: a day past tolerance really does hold some against you',
          /\d+ held against you/.test(row), row || '(no breach row)');
       ok('review: and the breach row names the priority it lost',
@@ -19357,8 +19373,11 @@ function writeHandbook(){
     'carry, the less each night gives back, so it compounds.' +
     '<br><br><b>How the day is scored.</b> ' + stakesRule() +
     ' You cannot clear the queue — it is oversubscribed on purpose — so the only ' +
-    'question that matters is WHICH tickets you let burn. The first few casualties ' +
-    'are forgiven; after that, what you dropped is what you lose.';
+    /* "are forgiven" was the third screen saying a discount is a write-off.
+       FORGIVEN is a quarter, and the quarter is the point: it is what keeps
+       WHICH one you drop worth deciding inside the allowance too. */
+    'question that matters is WHICH tickets you let burn. The first few cost you ' +
+    'a quarter of what they were worth; after that, what you dropped is what you lose.';
 }
 const BOOTLINES = [
   'MANAGED SERVICES KERNEL v2.6 (EOL)',
