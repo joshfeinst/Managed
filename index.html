@@ -1055,7 +1055,14 @@ const ROLES = [
     gates:{ nextAt:{perf:0.73, days:3}, firedBelow:0.329, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:30, slaScale:1.0 }, deskAnchor:'DESK_PIT' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
-    gates:{ nextAt:{perf:0.706, days:3}, firedBelow:0.318, cert:null },
+    /* 0.706 -> 0.650. T1 is the second-highest bar on the ladder after the
+       intern's, and it was already the rung bars.js called misplaced before
+       this session added anything. Its pool then grew: ten car park errands
+       tiered from intern upward all flow into it, so the day got longer while
+       the bar stayed where a shorter day had put it, and a flawless player's
+       clear rate fell to 35% of seeds. Set from bars.js at 40 seeds (flawless
+       p25); firedBelow stays 0.45x the bar, the ratio every rung uses. */
+    gates:{ nextAt:{perf:0.650, days:3}, firedBelow:0.293, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:34, slaScale:0.96 }, deskAnchor:'DESK_PIT2' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
     gates:{ nextAt:{perf:0.598, days:3}, firedBelow:0.269, cert:null },
@@ -9080,6 +9087,13 @@ function serializeRun(){
       deadline:t.deadline, sla:t.sla, stress:t.stress, si:t.si, bonus:t.bonus,
       gameScores:t.gameScores, from:t.from, gameCap:t.gameCap,
       paidStep: t.paidStep === undefined ? null : t.paidStep })),
+    /* WHICH BUILDING YOU WERE IN. The save stored a position and not a map,
+       and resumeRun unconditionally loaded office1, so SAVE & QUIT in the post
+       room came back in the lift lobby upstairs — and not even at the saved
+       tile, because those coordinates are solid up there, so spawnPeople fell
+       through to the map's spawn point. Two floors made that a quirk; three
+       make it a habit. */
+    map: W2.id || 'office1',
     px:player ? player.tx : null, py:player ? player.ty : null,
     rng: rngState() };
 }
@@ -9137,7 +9151,10 @@ function resumeRun(s){
   if (run.clock >= DAY_MIN){ loadMap('office1'); endDay(); return; }
   /* saved at the commute screen: present the SAVED plan, don't re-roll */
   if (run.clock <= 0.001){ presentCommute(); return; }
-  loadMap('office1');
+  /* back where you were standing, on the floor you were standing on. A save
+     from before this field existed has no map and resumes upstairs, which is
+     exactly what it used to do. */
+  loadMap(r.map && MAPS[r.map] ? r.map : 'office1');
   spawnPeople(run.clock, (r.px !== null && r.px !== undefined) ? [r.px, r.py] : null);
   G.state = 'work'; show(null); clearInput();
   hudShow(true);
@@ -12873,6 +12890,35 @@ function selfTest(runSim){
         }
         ok('...and every floor can be reached from every other',
            !stranded.length, stranded.join(' '));
+        /* AND A SAVE COMES BACK WHERE IT WAS LEFT. serializeRun stored a
+           position and no map, and resumeRun unconditionally loaded office1,
+           so SAVE & QUIT in the post room came back in the lift lobby
+           upstairs — and not even at the saved tile, because those
+           coordinates are solid up there and spawnPeople fell through to the
+           map's own spawn point. Two floors made that a quirk; three make it
+           a habit. Driven, not read: save from each map and resume. */
+        {
+          const keepQ = SAVE_SUSPEND, wrong = [];
+          const spots = { office1:'SERVERS', ground:'POST', carpark:'YOURCAR' };
+          for (const mid in MAPS){
+            const a = spots[mid] || Object.keys(MAPS[mid].anchors || {})[0];
+            rngInit('SAVEPLACE'); runInit('SAVEPLACE');
+            run.rung = 5; run.day = 4; run.clock = 200; rollDay();
+            loadMap(mid); spawnPeople(); G.state = 'work';
+            const p = anchorPos(a); if (!p) continue;
+            player.tx = p[0]; player.ty = p[1];
+            const wire = serializeRun();
+            run = null; loadMap('office1');
+            rngInit('SAVEPLACE'); runInit('SAVEPLACE');
+            loadMap(wire.map && MAPS[wire.map] ? wire.map : 'office1');
+            spawnPeople(200, [wire.px, wire.py]);
+            if (W2.id !== mid || player.tx !== p[0] || player.ty !== p[1])
+              wrong.push(mid + '@' + p + ' -> ' + W2.id + '@' + player.tx + ',' + player.ty);
+          }
+          SAVE_SUSPEND = keepQ;
+          ok('a save comes back in the building it was made in',
+             !wrong.length, wrong.join(' · '));
+        }
       }
 
       /* ride each one and come out at its own counterpart */
