@@ -90,22 +90,23 @@ coffee run is a P1. The client who wants MFA switched off is a P4. Learning
 whose absurdity outranks whose is the skill.
 
 At the end of the day you're scored on what you protected against what was at
-stake. A P1 is worth seven times a P4. Dropping tickets is expected, and there's
+stake. A P1 is worth ten times a P4. Dropping tickets is expected, and there's
 some forgiveness for your first casualties. Dropping the wrong ones is what
 hurts.
 
 Measured across 16 seeds and six days each, with every board played perfectly
 so that only the triage rule differs, the two strategies that work are
-*protect the big ones* (70.0%) and *close what you can actually finish*
-(67.7%) — two points apart, so there is no single right answer, which is the
-point. Two things lose you the most: doing the least important thing first
+*protect the big ones* (72.0%) and *close what you can actually finish*
+(67.7%) — four points apart, so protecting the big ones is the better rule and
+finishing what you start is a defensible second, which is the point. Two
+things lose you the most: doing the least important thing first
 (51.2%), and **working the queue in the order it arrived** (55.7%). Going in
 order costs you nearly as much as choosing badly, and it feels like diligence
 the whole time you are doing it.
 
 Skill at the minigames matters and judgement matters more: fumbling every
-board against acing them is 10.1 points, and the best triage rule against the
-worst is 18.7. Hands are worth having; they will not save a day you triaged
+board against acing them is 8.2 points, and the best triage rule against the
+worst is 21.2. Hands are worth having; they will not save a day you triaged
 badly.
 
 Some other things worth knowing:
@@ -201,6 +202,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 | `playday.js` | plays past the first ticket — follows markers, answers dialogue, leaves boards it cannot solve |
 | `liftride.js` | takes a downstairs ticket and rides the lift with real clicks and keys |
 | `visual.js` | screenshots every screen and board at four window sizes, asserting no text lands on the canvas |
+| `stakes.js` | sweeps what a ticket is worth by priority and reports how far it separates good triage from bad |
 | `stale.js` | checks every balance number quoted in a source comment against the one the game holds |
 | `boards.js` | plays every minigame perfectly, carelessly, at random, and **blind** — the best rule that needs no comprehension — and reports the spread |
 | `keys.js` | presses every key each board's how-to-play card promises, and pokes every click rect — the card list is read off `GAME_BRIEF`, because the hand-kept one omitted the board that had a dead key |

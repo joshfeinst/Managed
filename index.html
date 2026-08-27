@@ -7001,9 +7001,48 @@ const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.6, freeCups:2,
    about a third longer to work than a P2, so a linear 4/3 weighting made the
    two worth an identical 0.11 stakes per minute and left a rational player
    indifferent between them — which is exactly the choice the day is supposed
-   to be about. At 7/4 the priority order is strictly monotone in value per
-   minute (P1 .19, P2 .14, P3 .07, P4 .03) and working the P1 is simply right. */
-const STAKES = { 1:1, 2:2, 3:4, 4:7 };
+   to be about. The order is strictly monotone in value per minute — P1 0.267,
+   P2 0.116, P3 0.061, P4 0.030 — and working the P1 is simply right.
+
+   P1 IS 10, AND HERE IS THE PASS THAT SAYS SO. Every balance fix before this
+   one widened the good/bad spread by lowering what BAD play scores: more
+   droppable work, heavier days, tighter windows. None raised what good play
+   scores, and the reason is structural — dayPerf is a ratio, so anything added
+   to the day divides everybody. This table is the only dial that can move the
+   top, because it sets what protecting a P1 is worth and what burning one
+   costs, and forgiveness goes to the cheapest casualties first: a good
+   triager's burned P4s stay forgiven while a bad one's burned P1s do not.
+
+   tools/stakes.js sweeps it. Seven tables, 16 seeds x 8 days on all nine gated
+   rungs, measured bar-independently (gap = flawless p50 minus sloppy p50;
+   leak = share of SLOPPY seeds clearing a bar set at that table's own flawless
+   p25):
+
+     table                P4:P3:P2:P1   mean gap   worst gap   mean leak
+     linear                  1:2:3:4       13.1        9.1        17%
+     shallower               1:2:3:5       14.8       11.5        12%
+     was shipped             1:2:4:7       17.3       13.2         9%
+     THIS                   1:2:4:10       20.4       16.4         6%
+     steeper throughout     1:3:6:12       19.2       14.9         6%
+     steep top only         1:2:4:14       22.7       17.6         7%
+     steepest               1:3:8:18       21.7       17.5         5%
+
+   The linear control measuring WORSE than everything is the reason to believe
+   the rest of the column: it reproduces, from scratch, the finding the first
+   paragraph of this comment was written about.
+
+   Confirmed at 40 seeds on both harnesses. bars.js: every one of the nine rungs
+   gains, flawless p50 rises on all of them, and all bars stay well placed
+   without being moved. meta.js, the harness of record: 31 of 40 players reach
+   retirement -> 35, careers to win 11.0 -> 9.9, and the worst player's ceiling
+   goes from Procurement to vCIO.
+
+   STEEPER MEASURES BETTER AND IS NOT SHIPPED. 1:3:8:18 reaches 39 of 40 with
+   EVERY player reaching Director, which is a roguelite that has stopped being
+   able to say no. 1:2:4:10 leaves five players in forty who do not make it,
+   changes one number rather than four, and keeps the P4:P3:P2 shape the
+   paragraph above was written to justify. */
+const STAKES = { 1:1, 2:2, 3:4, 4:10 };
 function stakesOf(id){ return STAKES[(TICKETS[id] && TICKETS[id].pri) || 2] || 2; }
 /* A breach inside the allowance is DISCOUNTED, not free. A hard write-off made
    the first few casualties worth exactly zero, so which one you dropped was

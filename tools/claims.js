@@ -167,6 +167,21 @@ async function launch(){
   claim('working the queue in the order it arrived',
     /the queue in the order it arrived\*\* \((\d+(?:\.\d+)?)%\)/,
     m => near(+m[1], T.oldest, 1.5));
+  /* THE GAP BETWEEN THE TWO WINNING RULES IS A CLAIM TOO. The README said "two
+     points apart, so there is no single right answer" — a sentence whose whole
+     meaning is the number in front of it. Steepening STAKES took the gap to
+     four and left the sentence behind, saying the opposite of what the table
+     above it now shows. */
+  claim('how far apart the two winning rules are',
+    /\((\d+(?:\.\d+)?)%\) — (\w+) points apart/,
+    m => { const W = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7 };
+           const said = W[m[2].toLowerCase()], got = T.pridead - T.shortest;
+           /* tighter than the percentage claims on purpose: this one is
+              spelled as a WORD, so it can only ever be an integer, and a ±1.5
+              window let "two" pass against a measured 3.5 — which is the exact
+              sentence this check exists to catch. */
+           return { ok: said != null && Math.abs(said - got) <= 0.75,
+                    why: 'README ' + m[2] + ', measured ' + got.toFixed(1) + ' (±0.75)' }; });
   claim('what hands are worth', /acing them is (\d+(?:\.\d+)?) points/,
     m => near(+m[1], T.pridead - T.noHands, 1.5));
   claim('what judgement is worth', /the best triage rule against the\s*worst is (\d+(?:\.\d+)?)/,
