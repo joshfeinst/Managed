@@ -2261,3 +2261,75 @@ them.
 
 The fix this rung actually wants is **heavier tickets**, so its day is
 oversubscribed by work rather than by count. That is a writing pass.
+
+### The writing pass, and what the harnesses said about it
+
+Fourteen Project Team tickets of sixty-five to a hundred and ten minutes —
+two boards and two legs apiece, `tiers:[4,4]` because every other rung is
+already oversubscribed and would tip.
+
+| | before | after |
+|---|---|---|
+| weighted mean work | 35.8 min | 42.6 min |
+| work dealt ÷ day room | 1.02 | 1.22 |
+| bars.js, good triage clears | 35% | 85% |
+| bars.js, bad triage clears | 8% | 20% |
+
+The rung reads healthy for the first time in this project. The bar came down
+with the work — 0.628 was above the *median* flawless player once the days got
+heavier, so the rung was unleaveable rather than hard — to 0.540, flawless p25.
+
+**And the weight is 3, not 4, because `meta.js` said so.** At weight 4 the rung
+read healthy and the career got worse; careers stalled *at* Project Team rather
+than passing through it. Swept on the same 40 seeds:
+
+| heavy-ticket weight | oversub | meta.js, 40 players |
+|---|---|---|
+| none (before) | 1.02 | 26 / 40 |
+| 4 | 1.29 | **18 / 40** |
+| 2 | 1.16 | 24 / 40 |
+| **3 (shipped)** | **1.22** | **26 / 40** |
+
+Their stress came down with the weight. A hundred-minute planning job eats the
+day; it does not spike your pulse, and pricing it like a phones-down P1 was
+burning players out three days early.
+
+### Doing the job properly was costing you the score for being prompt
+
+`resolveTicket` measured promptness off the raw clock, and an option's
+`fx.time` is charged to that clock — so every minute the honest answer cost
+came off the score for being on time, and the expensive option is the one
+carrying the rep and the bonus. Over the 1,189 (ticket, rung) pairs the game
+can deal:
+
+| how you played it | full marks on |
+|---|---|
+| the best option every time | 609 / 1,189 |
+| the cheapest option every time | 1,174 / 1,189 |
+
+The forks' minutes are credited back now. The day still pays for them — that
+was always the point of `fx.time` — but they are not evidence that you let the
+ticket wait. What it did to the ladder:
+
+| | before | after |
+|---|---|---|
+| bars.js, rungs misplaced | 1 (t3, flagged all session) | **0** |
+| meta.js, 40 players | 26 / 40 | **33 / 40** |
+| worst career tops out at | Procurement | Solutions Architect |
+
+The gates had been tuned against a player who was being quietly docked for
+doing the work well.
+
+### Re-barring the whole ladder to flawless p25: measured, rejected
+
+Every bar now sits *below* the p25 `bars.js` suggests, so the obvious follow-up
+was to raise the ladder back to its own method. Built and measured at 40 seeds:
+
+| | shipped bars | every bar at flawless p25 |
+|---|---|---|
+| bars.js, rungs misplaced | 0 | 0 |
+| meta.js, 40 players | **33 / 40** | 20 / 40 |
+
+Both readings are healthy by `bars.js`, and `bars.js` is not the harness of
+record. Thirteen fewer players in forty reach retirement for no gain in
+separation. **Not shipped.**
