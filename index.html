@@ -12095,6 +12095,17 @@ function actSetup(){
     b.style.fontSize = '8px';
     if (!can){ b.disabled = true; b.style.opacity = '.45'; }
     b.title = C.desc + ' — ' + C.note;
+    /* WHAT IT DOES, ON THE SCREEN. This lived in the button's title attribute
+       and nowhere else: a hover tooltip, on a game whose handbook opens "the
+       mouse plays the whole game" and which ships a harness proving it plays
+       with taps alone. A phone could not read it at all, and a mouse had to
+       find it. Four certificates, one reputation pool, and the only screen
+       where you choose between them showed four names and four prices. */
+    const what = document.createElement('span');
+    what.className = 'hint';
+    what.style.cssText = 'display:block;margin:2px 0 0;font-size:7px';
+    what.textContent = C.desc + ' ' + C.note;
+    row.appendChild(what);
     setup.insertBefore(row, setup.lastElementChild);
   }
   /* what you are carrying, so the screen is a record and not just a shop */
@@ -14308,6 +14319,20 @@ function selfTest(runSim){
       ok('and the crash only mentions jitters when you have some',
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
+    }
+    /* WHAT A CERTIFICATE DOES IS ON THE SCREEN, NOT IN A TOOLTIP. The study
+       list showed four names and four prices, with the effect in the button's
+       title attribute — unreadable on a phone, which this game ships a
+       harness to prove it supports, and undiscoverable with a mouse. */
+    {
+      const savedCerts = (meta.certs || []).slice(), savedRep = meta.rep;
+      meta.certs = []; meta.rep = 99;
+      actSetup();
+      const shown = (document.getElementById('s-setup') || {}).textContent || '';
+      const hidden = Object.keys(CERTS).filter(k => shown.indexOf(CERTS[k].desc) < 0);
+      meta.certs = savedCerts; meta.rep = savedRep; actSetup();
+      ok('the study list says what each certificate does',
+         !hidden.length, hidden.join(' '));
     }
     /* THE CAPTION UNDER A NAME FOLLOWS THE PROMOTION. The Director scene says
        "Linda reports to you as of this morning", and then every conversation
