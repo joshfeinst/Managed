@@ -2465,3 +2465,67 @@ Project Team is the rung to watch: its separation is 10 points, the tightest on
 the ladder, and it has been drifting down (14, then 11, then 10) across three
 passes. It still clears the healthy definition. It is the next rung that will
 need content rather than a bar.
+
+---
+
+## Project Team: the rung had nothing to lose
+
+Flagged at the end of the last pass and fixed here. Its flawless/sloppy
+separation was the tightest on the ladder and had drifted 14 → 11 → 10 across
+three passes.
+
+The previous fix for this rung made its day oversubscribed — fourteen heavy
+tickets took it from 1.02 to 1.22 — and that held; it sits at 1.23 now. What
+had drifted back is the other half of triage. Measured over thirty seeds:
+
+| | P4s dealt per day | share of arrivals | p10 stakes/minute |
+|---|---|---|---|
+| Project Team | 1.8 of 12.0 | 15% | 0.031 |
+| every other rung | — | 20–28% | 0.020–0.037 |
+
+A sloppy triager works the worst priority first. At Project Team they ran out
+of droppable work after two tickets and spent the rest of the day on P3s and
+P2s, which are worth having. **Bad triage could not lose there because there
+was nothing to lose** — and the rung's *cheapest* ticket per minute was among
+the dearest on the ladder.
+
+Ten P4s of forty to eighty minutes: the RAID log nobody has touched since
+kickoff, the status report forty-one people receive and four open, the plan in
+the tool that disagrees with the plan in the spreadsheet by eleven days, a
+lessons-learned workshop for a project that finished in April, a change request
+for a change made in March that has been live ever since. Project administration
+that eats an afternoon and protects nobody, worth one point each.
+
+| | P4 share | p10 stakes/min | value spread |
+|---|---|---|---|
+| before | 15% | 0.031 | 7.1× |
+| after | 25% | 0.019 | 14.4× |
+
+### The sweep, at 40 seeds like-for-like
+
+| variant | flawless p50 | sloppy p50 | good clears | bad clears | meta | careers |
+|---|---|---|---|---|---|---|
+| before | 64% | 49% | 85% | **25%** | 34/40 | 10.5 |
+| weight 3 | 60% | 46% | 75% | 10% | 31/40 | 11.0 |
+| **weight 2 (shipped)** | 61% | 48% | **85%** | **15%** | 31/40 | 11.3 |
+
+Weight 3 buys the best bad-clear number and pays for it with good play.
+Weight 2 leaves good triage exactly where it was and still takes ten points off
+bad triage, so that is what shipped.
+
+The p50 gap stayed at 14 either way, and that is the honest headline: this did
+not widen the spread, it moved the bottom of it. Both p50s fall a little
+because more low-value work dilutes `dayPerf` for everybody and a burned P4
+still adds its point to the denominator.
+
+Both weights cost the same three careers in forty, so the cost is the content
+existing rather than how often it arrives. That is not a regression to tune
+away: the worst player now tops out at Procurement instead of Solutions
+Architect, which is weak triage stalling one rung past the gate that was
+supposed to catch it. Thirty-one players in forty still retire.
+
+**Still open**: no rung's p50 gap has moved this session. Every fix so far has
+lowered what bad play scores rather than raising what good play scores, because
+`dayPerf` is a ratio and adding anything to the day divides everyone. Raising
+the top would mean making protection itself worth more — a change to STAKES or
+to the weighting, not to content — and that is a measurement pass of its own.

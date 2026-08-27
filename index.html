@@ -5047,39 +5047,58 @@ const TICKETS = {
      after two tickets and spends the rest of the day on P3s and P2s, which are
      worth having. Bad triage could not lose here because there was nothing to
      lose. These are P4s of forty to eighty minutes: project administration
-     that eats an afternoon and protects nobody, worth one point apiece. */
-  'the-raid-log': { tiers:[4,5], weight:3, slaMult:2.6, pri:1, stress:5,
+     that eats an afternoon and protects nobody, worth one point apiece.
+
+     WEIGHT 2, SWEPT NOT GUESSED, all at 40 seeds like-for-like:
+
+       variant     flaw p50  slop p50  good clears  bad clears  meta  careers
+       before          64        49        85%         25%      34/40   10.5
+       weight 3        60        46        75%         10%      31/40   11.0
+       weight 2        61        48        85%         15%      31/40   11.3
+
+     Weight 3 buys the best bad-clear number and pays for it with good play:
+     flawless drops four points and good triage stops clearing on one seed in
+     ten it used to. Weight 2 leaves good triage exactly where it was and still
+     takes ten points off bad triage, so that is what ships.
+
+     Both weights cost the same three careers in forty, so the cost is the
+     content existing rather than how often it arrives — more low-value work
+     dilutes dayPerf for everybody, and a burned P4 still adds its point to the
+     denominator. That is not a regression to be tuned away: the worst player
+     now tops out at Procurement instead of Solutions Architect, which is weak
+     triage stalling one rung past the gate that was supposed to catch it. */
+  'the-raid-log': { tiers:[4,5], weight:2, slaMult:2.6, pri:1, stress:5,
     title:'The RAID log has four risks on it, all green, all written by a leaver',
     steps:[{say:'pa.raid.a'},{goto:'TERMINAL'},{game:'paper',diff:2},{choice:'pa.raid.b'}] },
-  'weekly-status-nobody-reads': { tiers:[4,5], weight:3, slaMult:2.8, pri:1, stress:4,
+  'weekly-status-nobody-reads': { tiers:[4,5], weight:2, slaMult:2.8, pri:1, stress:4,
     title:'The weekly status report goes to forty-one people and four open it',
     steps:[{say:'pa.stat.a'},{goto:'PRINTER'},{choice:'pa.stat.b'},{goto:'TERMINAL'},{choice:'pa.stat.b'}] },
-  'the-plan-and-the-spreadsheet': { tiers:[4,5], weight:3, slaMult:2.4, pri:1, stress:6,
+  'the-plan-and-the-spreadsheet': { tiers:[4,5], weight:2, slaMult:2.4, pri:1, stress:6,
     title:'The plan in the tool and the plan in the spreadsheet disagree by eleven days',
     steps:[{say:'pa.plan.a'},{goto:'CONF'},{game:'diagram',diff:2},{choice:'pa.plan.b'}] },
-  'lessons-learned-in-april': { tiers:[4,5], weight:3, slaMult:2.9, pri:1, stress:5,
+  'lessons-learned-in-april': { tiers:[4,5], weight:2, slaMult:2.9, pri:1, stress:5,
     title:'A lessons-learned workshop for a project that finished in April',
     steps:[{say:'pa.less.a'},{goto:'CONF'},{choice:'pa.less.b'},{goto:'TERMINAL'},{choice:'pa.less.b'}] },
-  'benefits-realisation-2022': { tiers:[4,6], weight:3, slaMult:2.5, pri:1, stress:6,
+  'benefits-realisation-2022': { tiers:[4,6], weight:2, slaMult:2.5, pri:1, stress:6,
     title:'Finance want the benefits realisation for the programme that saved four hundred thousand',
     steps:[{say:'pa.ben.a'},{goto:'ACCOUNTS'},{game:'quote',diff:2},{choice:'pa.ben.b'}] },
-  're-baseline-the-third-time': { tiers:[4,5], weight:3, slaMult:2.3, pri:1, stress:7,
+  're-baseline-the-third-time': { tiers:[4,5], weight:2, slaMult:2.3, pri:1, stress:7,
     title:'Re-baseline the dates. It has slipped twice and nobody counts the first two.',
     steps:[{say:'pa.base.a'},{goto:'CONF'},{game:'jargon',diff:2},{choice:'pa.base.b'}] },
-  'stakeholder-map-of-one': { tiers:[4,5], weight:3, slaMult:2.7, pri:1, stress:4,
+  'stakeholder-map-of-one': { tiers:[4,5], weight:2, slaMult:2.7, pri:1, stress:4,
     title:'The gate needs a stakeholder map. This project has one stakeholder.',
     steps:[{say:'pa.stak.a'},{goto:'LOBBY'},{choice:'pa.stak.b'},{goto:'TERMINAL'},{choice:'pa.stak.b'}] },
-  'sign-off-everyone-remembers': { tiers:[4,6], weight:3, slaMult:2.2, pri:1, stress:6,
+  'sign-off-everyone-remembers': { tiers:[4,6], weight:2, slaMult:2.2, pri:1, stress:6,
     title:'Everyone remembers agreeing it in February. Nobody signed anything.',
     steps:[{say:'pa.sign.a'},{goto:'n8'},{choice:'pa.sign.b'},{goto:'TERMINAL'},{choice:'pa.sign.b'}] },
-  'change-request-for-march': { tiers:[4,5], weight:3, slaMult:2.5, pri:1, stress:6,
+  'change-request-for-march': { tiers:[4,5], weight:2, slaMult:2.5, pri:1, stress:6,
     title:'A change request for a change made in March that has been live since',
     /* NOT starter — caught by the guard written for exactly this an hour
        earlier. The form wants an impact assessment, a rollback plan and an
        approval date, all three of which would be works of fiction: that is
        "answer it with a fact, or say you cannot", which is paper. */
     steps:[{say:'pa.chg.a'},{goto:'TERMINAL'},{game:'paper',diff:2},{choice:'pa.chg.b'}] },
-  'the-project-mailbox': { tiers:[4,5], weight:3, slaMult:2.4, pri:1, stress:7,
+  'the-project-mailbox': { tiers:[4,5], weight:2, slaMult:2.4, pri:1, stress:7,
     title:'The project mailbox has nine hundred unread and no owner',
     steps:[{say:'pa.mbx.a'},{goto:'TERMINAL'},{game:'blast',diff:2},{choice:'pa.mbx.b'}] },
   'three-hundred-mailboxes': { tiers:[4,4], weight:3, slaMult:1.8, pri:3, stress:6,
