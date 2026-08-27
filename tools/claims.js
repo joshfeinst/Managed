@@ -84,6 +84,10 @@ async function launch(){
       per, arrivals:mean('arr'), worked:mean('res'),
       intern:of('intern'), procure:of('procure'), vcio:of('vcio'),
       stakeRatio: STAKES[4] / STAKES[1],
+      /* the structure the docs describe, so a fifth map or a re-measured
+         ceiling cannot leave a sentence behind saying there are four */
+      maps: Object.keys(MAPS).length,
+      budgets: [WALK_BUDGET, CROSS_FLOOR_BUDGET, OFF_SITE_BUDGET],
       paceMins: PACES.map(p => DAY_MIN / p.rate / 60),
       tests: (typeof selfTest === 'function') ? null : null
     };
@@ -202,6 +206,15 @@ async function launch(){
              why: 'triage ' + (T.pridead - T.worstpri).toFixed(1) +
                   ' vs hands ' + (T.pridead - T.noHands).toFixed(1) }));
 
+  claim('how many maps there are', /## (\w+) maps, three kinds of trip/,
+    m => { const said = WORDS[m[1].toLowerCase()] || +m[1];
+           return { ok: said === M.maps,
+                    why: 'docs say ' + m[1] + ', the game has ' + M.maps }; });
+  claim('the three travel ceilings',
+    /`WALK_BUDGET` (\d+) for one floor,\s*`CROSS_FLOOR_BUDGET` (\d+) for two,\s*`OFF_SITE_BUDGET` (\d+) for a drive/,
+    m => { const said = [+m[1], +m[2], +m[3]];
+           return { ok: said.join() === M.budgets.join(),
+                    why: 'docs say ' + said.join('/') + ', the game holds ' + M.budgets.join('/') }; });
   claim('the pace dial',
     /about (\w+) minutes on Relaxed, (\w+) on Standard, (\w+) on Crunch/,
     m => { const said = [num(m[1]), num(m[2]), num(m[3])];

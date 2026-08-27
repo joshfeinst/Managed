@@ -92,7 +92,10 @@ Some other things worth knowing:
 
 - Work tickets at your terminal, or hit Tab from anywhere.
 - Some tickets need you to physically go somewhere, and the game draws you a
-  route.
+  route. A few of them send you off the premises entirely: down to the car
+  park, into your car, and out to the client. Those are the biggest tickets in
+  the game — the drive is real, it is priced like any other errand, and the
+  queue row tells you it is a drive before you take it.
 - Grab a ticket when it lands and work it straight through and you win the
   promptness half outright, on any template — the clock you're racing is the one
   that runs while it sits there, not the one that runs while you're on it. What
@@ -138,9 +141,11 @@ set.
 
 Things we want to build next, roughly in the order they'd make the game better.
 
-**Somewhere to go.** The lift reaches two floors of the same building. Client
-sites are the obvious next place: the dreaded on-site visit, a server room that
-isn't yours, a drive that eats half a day and can't be interrupted.
+**More than one client site.** There is one now — Unit 4 on the estate, with a
+comms cupboard that has a mop in it — and four tickets that drive you out to
+it. One site means every visit is the same building. A handful of them, each
+with its own layout and its own guy, is what makes the drive a place rather
+than a corridor.
 
 **More depth per rung.** Every rung is healthy now, but Project Team is the one
 where triaging well and triaging badly are closest together, and the ladder is

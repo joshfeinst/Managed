@@ -3,6 +3,19 @@
 How Managed is built and how its numbers were arrived at. Players want
 [the README](../README.md); this is for anyone changing the thing.
 
+## Four maps, three kinds of trip
+
+Floor 2 (the pit and the senior end), the ground floor (reception, post,
+canteen, accounts), the car park, and one client site — Unit 4 on the estate.
+They are joined by a general `EXITS` table and a Dijkstra over it, so a route
+can be any number of hops: a cupboard errand from a senior desk is lift, walk,
+fire door, walk, car, drive, walk.
+
+Each kind of trip has its own measured ceiling, because each is a different
+trip: `WALK_BUDGET` 62 for one floor, `CROSS_FLOOR_BUDGET` 78 for two,
+`OFF_SITE_BUDGET` 99 for a drive. They are ratchets — measured from the layout,
+and they only ever come down.
+
 ## Shape
 
 One file, eight script blocks: core (seeded RNG, input, audio), art (tiles and
