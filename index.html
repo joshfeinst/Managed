@@ -8467,7 +8467,7 @@ function smalltalk(e){
   (run.lastChat = run.lastChat || {})[e.id] = line;
   run.satOn[e.id] = count + 1;
   if (run.satOn[e.id] === 1) run.stress = Math.max(0, run.stress - 1);
-  openDlg(null, {}, null, { who:N.name, role:N.role, text:line, portrait:e.portrait });
+  openDlg(null, {}, null, { who:N.name, role:npcRole(e.id), text:line, portrait:e.portrait });
   const [pdx,pdy] = DIRV[player.dir];
   e.dir = pdx === 1 ? 'left' : pdx === -1 ? 'right' : pdy === 1 ? 'up' : 'down';
 }
@@ -9712,7 +9712,19 @@ function whoOf(node, fills, custom){
   if (node.who === 'sys') return ['DISPATCH', '· narrating your life'];
   if (node.who === 'client') return [(fills.client || 'CLIENT').toUpperCase(), '· on line 2'];
   const N = NPCS[node.who];
-  return N ? [N.name, '· ' + N.role] : ['?', ''];
+  return N ? [N.name, '· ' + npcRole(node.who)] : ['?', ''];
+}
+/* WHAT IT SAYS UNDER THEIR NAME, WHICH IS NOT ALWAYS THE SAME THING.
+   promo.director says "Linda reports to you as of this morning. She has been
+   here longer than you have. Neither of you is going to mention it." — and
+   then every conversation with her for the rest of the career carried the
+   line "Service Manager · your boss" under her name. The one promotion the
+   whole ladder is aimed at, contradicted by a caption, every time she spoke.
+   Neither of them mentions it; the caption should not either. */
+const ROLE_AT_TOP = { linda:'Service Manager · reports to you, as of Monday' };
+function npcRole(id){
+  const top = (typeof run !== 'undefined' && run && !ROLES[run.rung].gates.nextAt);
+  return (top && ROLE_AT_TOP[id]) || (NPCS[id] || {}).role || '';
 }
 function openDlg(nodeId, fills, onDone, custom, ticket){
   const node = custom ? null : DIALOGUE[nodeId];
@@ -14296,6 +14308,27 @@ function selfTest(runSim){
       ok('and the crash only mentions jitters when you have some',
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
+    }
+    /* THE CAPTION UNDER A NAME FOLLOWS THE PROMOTION. The Director scene says
+       "Linda reports to you as of this morning", and then every conversation
+       with her carried "Service Manager · your boss" under her name for the
+       rest of the career — the one promotion the whole ladder is aimed at,
+       contradicted by a caption, every time she spoke. Checked in both
+       directions, because the caption is the joke below the top rung. */
+    {
+      const savedRunC2 = run;
+      QUIET = true; rngInit('CAPTION'); runInit('CAPTION');
+      const capAt = rung => { run.rung = rung; return whoOf({ who:'linda' }, {})[1]; };
+      const boss = /your boss/i;
+      const top = ROLES.length - 1;
+      const wrong = [];
+      if (boss.test(capAt(top)))
+        wrong.push('at ' + ROLES[top].id + ' she is still "' + capAt(top) + '"');
+      for (let r = 0; r < top; r++)
+        if (!boss.test(capAt(r))) wrong.push('at ' + ROLES[r].id + ' she is not your boss');
+      run = savedRunC2;
+      ok('the caption under a name follows the promotion',
+         !wrong.length, wrong.slice(0,3).join(' · '));
     }
     /* THE SALARY ON THE POSTING IS THE SALARY THE JOB PAYS. Nine of them are
        written into the posting as prose — "Project Engineer (£72,000, 'no two
