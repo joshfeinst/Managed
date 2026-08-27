@@ -16715,7 +16715,15 @@ function selfTest(runSim){
         /* the posting must name the rung it is actually hiring you into */
         const want = ROLES[clamp(startingRung(), 0, ROLES.length-1)];
         if (c === 0 && !/Intern/i.test(txt)) mismatch = 'rung0:' + txt;
-        void want;
+        /* AND THE NUMBER ON IT IS THE NUMBER. Ten postings quote ten salaries
+           and nothing tied any of them to ROLES[].pay, so a rung retune would
+           leave the offer letter quoting last year's figure on the one screen
+           whose entire subject is what you are worth. The offer the player is
+           actually shown is read here, not the table behind it. */
+        const money = /£([\d,]+)/.exec(txt);
+        const said = money ? +money[1].replace(/,/g, '') : 0;
+        if (said !== want.pay && !mismatch)
+          mismatch = want.id + ' offers ' + said + ', pays ' + want.pay;
       }
       meta.carry = savedCarry; actSetup();
       ok('the job posting is for the job you are being offered',
