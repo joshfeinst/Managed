@@ -1394,23 +1394,58 @@ ground: {
    entry and not an engine change. The bots hold no certificates, which means
    every number in docs/BALANCE.md is measured on the bare game — certificates
    make it easier from a known floor, which is the only honest way round. */
+/* WHAT A CAREER BANKS, MEASURED, so the shelf below can be priced against it
+   instead of against nothing. Twelve careers driven end to end through the real
+   systems, taking the best dialogue option every time: the median career banks
+   161 reputation. Playing the WORST option every time banks 0 — reputation is
+   the social axis and answers to how you treat people, not to craft, which is
+   why skill barely moves it (161 flawless against 157 mediocre).
+
+   THE SHELF USED TO COST 31. All four certificates, together, for a fifth of
+   ONE career's earnings — so the meta-progression was over before the second
+   career started, every row read STUDY from then on, and "LOCKED: CISSP (13
+   REP)" implied a scarcity that did not exist for even one day. A currency
+   with one thing to buy and five times too much income is not a progression;
+   it is a number going up in the corner.
+
+   Priced against the measurement now: eight certificates totalling 1,355, which
+   is about eight careers of good play, against the ten a career takes to reach
+   retirement. You cannot hold them all until near the end, and which two you
+   hold first is a real choice. */
+const REP_PER_CAREER = 161;    // median banked, best-choices play, 12 careers
 const CERTS = {
   aplus: { name:'COMPTIA A+ (PRACTICE EXAM)',
            desc:'Minigames start one step easier.',
            note:'The practice exam. The real one is £250 and the company will not fund it.',
-           cost:{rep:3}, fx:{gameDiff:-1} },
+           cost:{rep:45}, fx:{gameDiff:-1} },
   itil:  { name:'ITIL FOUNDATION',
            desc:'One more casualty forgiven every day.',
            note:'Two days, a workbook, and a vocabulary you will use ironically for the rest of your life.',
-           cost:{rep:6}, fx:{tolerance:1} },
+           cost:{rep:90}, fx:{tolerance:1} },
+  net:   { name:'NETWORK+ ',
+           desc:'Every ticket arrives with six more minutes on its clock.',
+           note:'Nothing about you got faster. People started padding your deadlines, which is what the letters are actually for.',
+           cost:{rep:120}, fx:{sla:6} },
   pmp:   { name:'PRINCE2 PRACTITIONER',
            desc:'Meetings take a fifth less of your day.',
            note:'You will not run projects better. You will be allowed to say no to a meeting.',
-           cost:{rep:9}, fx:{meeting:0.8} },
+           cost:{rep:140}, fx:{meeting:0.8} },
+  itil2: { name:'ITIL INTERMEDIATE',
+           desc:'A second casualty forgiven every day.',
+           note:'The same vocabulary, at greater length, for four times the money.',
+           cost:{rep:180}, fx:{tolerance:1} },
   cissp: { name:'CISSP',
            desc:'Evenings cost you less. Burnout accrues a fifth slower.',
            note:'Five years of experience required, which they check, and a fee that is not the point.',
-           cost:{rep:13}, fx:{burnout:0.8} }
+           cost:{rep:220}, fx:{burnout:0.8} },
+  mba:   { name:'AN MBA, PART TIME, OVER FOUR YEARS',
+           desc:'Meetings take a further seventh out of your day.',
+           note:'You did it on Tuesday evenings. Nobody has mentioned it once, and you are somehow in fewer rooms.',
+           cost:{rep:260}, fx:{meeting:0.86} },
+  sec:   { name:'SECURITY+ AND THE VENDOR TRACK BEHIND IT',
+           desc:'Minigames start a second step easier.',
+           note:'Eleven exams. You can no longer be surprised by anything on a whiteboard.',
+           cost:{rep:300}, fx:{gameDiff:-1} }
 };
 const PERKS = {
   ref:    { name:'A GUY WHO KNOWS A GUY', need:{runs:2},
@@ -8251,7 +8286,10 @@ function makeArrival(id, at, role){
      minimum that rounds down is not one. */
   const window = workMin * (T.slaMult || 1.9) * (URGENT_GRACE[T.pri || 2] || 1)
                * role.queue.slaScale * dayEase;
-  const sla = Math.ceil(Math.max(window, workMin + MIN_SLACK));
+  /* NETWORK+ buys minutes, so it has to actually add them. metaFx('sla') is
+     additive and zero for a profile that holds no such certificate, so this is
+     the same arithmetic it always was until somebody has earned it. */
+  const sla = Math.ceil(Math.max(window, workMin + MIN_SLACK)) + metaFx('sla');
   return { at, id, uid: run.uid++, title: fill(T.title, fills), fills,
            sla: sla, stress: T.stress };
 }
@@ -14992,6 +15030,27 @@ function selfTest(runSim){
       meta.certs = savedCerts; meta.rep = savedRep; actSetup();
       ok('the study list says what each certificate does',
          !hidden.length, hidden.join(' '));
+      /* AND THE SHELF COSTS MORE THAN ONE CAREER EARNS. It used to cost 31
+         reputation in total against a median career's 161 — the whole
+         meta-progression bought out before the second career started, every
+         row reading STUDY from then on, and "LOCKED: CISSP (13 REP)" implying
+         a scarcity that never existed for a single day. A currency with one
+         thing to buy and five times too much income is a number going up in
+         the corner, not a progression.
+         Two ends are pinned, because pricing is a band and not a floor: the
+         shelf must take at least four careers to clear, and the cheapest
+         certificate must be affordable after ONE, or the progression never
+         starts and the screen is just a list of things you cannot have. */
+      {
+        const costs = Object.values(CERTS).map(c => c.cost.rep);
+        const shelf = costs.reduce((a, b) => a + b, 0);
+        const cheapest = Math.min.apply(null, costs);
+        ok('the certificate shelf costs more than one career banks',
+           shelf >= REP_PER_CAREER * 4 && cheapest <= REP_PER_CAREER,
+           shelf + ' rep for ' + costs.length + ' certificates — ' +
+           (shelf / REP_PER_CAREER).toFixed(1) + ' careers at ' + REP_PER_CAREER +
+           ' a career, cheapest ' + cheapest);
+      }
       /* AND THE TITLE SCREEN CALLS THEM WHAT THE STUDY LIST CALLED THEM. The
          "Certs:" run on the first line of the game joined the meta.certs KEYS
          and shouted them — APLUS, ITIL, PMP, CISSP — so the qualification the
@@ -17532,7 +17591,7 @@ function selfTest(runSim){
        change what metaFx returns, and the screen has to offer all of them. */
     {
       const savedCerts = (meta.certs || []).slice(), savedRep = meta.rep;
-      const KNOWN = ['gameDiff','rep','meeting','tolerance','burnout'];
+      const KNOWN = ['gameDiff','rep','meeting','tolerance','burnout','sla'];
       const unread = [], inert = [];
       for (const k in CERTS){
         for (const f in CERTS[k].fx) if (!KNOWN.includes(f)) unread.push(k + '.' + f);
