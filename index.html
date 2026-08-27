@@ -7098,8 +7098,13 @@ function objectiveText(){
   if (run.marker){
     if (run.markerFloor && run.markerFloor !== W2.id){
       const L = (run.markerVia || {})[W2.id] || 'ELEV';
-      /* "THE OTHER FLOOR" was a sentence a two-floor building could say. */
-      return (run.markerLabel || 'THE MARKER') + ' IS NOT ON THIS FLOOR — TAKE ' +
+      /* "THE OTHER FLOOR" was a sentence a two-floor building could say, and
+         "NOT ON THIS FLOOR" is one only a building can say at all: a car park
+         is not a floor and an industrial estate is not upstairs. */
+      const where = run.markerFloor === 'clientsite' ? ' IS OUT AT THE CLIENT — TAKE '
+                  : run.markerFloor === 'carpark'    ? ' IS OUTSIDE — TAKE '
+                  : ' IS NOT ON THIS FLOOR — TAKE ';
+      return (run.markerLabel || 'THE MARKER') + where +
              (ANCHOR_NAMES[L] || 'THE LIFT');
     }
     return 'GO TO ' + (run.markerLabel || 'THE MARKER') + ' — FOLLOW THE ARROW';
@@ -9424,7 +9429,11 @@ function takeExit(act){
     if (d < bd){ bd = d; use = e; }
   }
   if (!use || !MAPS[use.to] || !run || G.state !== 'work'){
-    toast(elevatorLine(), 'corp', 2400); return;
+    /* THE FAILURE MESSAGE HAS TO BE ABOUT THE THING YOU TRIED TO USE. This was
+       elevatorLine(), from when the only exit was a lift, so pushing at a door
+       you cannot use -- or trying to drive off with no run -- answered "IT GOES
+       TO OTHER FLOORS". You are standing at a car. */
+    toast(exitLine(act), 'corp', 2400); return;
   }
   const to = use.to;
   run.clock += use.mins;
@@ -9457,12 +9466,20 @@ function elevatorLine(){ return exitLine('elevator'); }
 function exitLine(act){
   const r = run ? run.rung : 0;
   if (act === 'outside'){
-    if (run && run.active && /^onsite/.test(run.active.id))
-      return 'NINETY MINUTES EACH WAY AND A SANDWICH AT A SERVICE STATION.';
+    if (run && run.active && /^onsite|^site-/.test(run.active.id))
+      return 'A DRIVE, AND A SANDWICH AT A SERVICE STATION.';
     return r >= 8 ? 'OUTSIDE. IT IS STILL LIGHT, WHICH YOU HAD NOT EXPECTED.'
          : r >= 4 ? 'OUTSIDE. THE SMOKERS KNEW ABOUT THE OUTAGE BEFORE THE MONITORING DID.'
          : 'OUTSIDE. NOBODY ASKED WHERE YOU WERE GOING. THAT IS NEW.';
   }
+  /* THE DRIVE HAD NO LINES AND FELL THROUGH TO THE LIFT'S, so a player who had
+     just driven to an industrial estate was told "IT GOES TO OTHER FLOORS".
+     Every act in EXITS needs its own copy, and a self-test says so now. */
+  if (act === 'drive')
+    return r >= 8 ? 'YOU USED TO DRIVE TO THESE. NOW YOU DECIDE WHO DOES.'
+         : r >= 5 ? 'THE ESTATE. UNIT 4. THE SIGN IS FOR A COMPANY THAT LEFT IN 2019.'
+         : r >= 3 ? 'THIRTY MINUTES OF RADIO AND A CAR PARK WITH NO VISITOR BAYS.'
+         : 'YOU HAVE BEEN SENT OUT. NOBODY HAS EXPLAINED THE PARKING.';
   return r >= 9 ? 'IT GOES TO OTHER FLOORS. SO, IT TURNS OUT, DID YOUR CAREER.'
        : r >= 7 ? 'IT GOES TO OTHER FLOORS. YOU HAVE BEEN TO TWO OF THEM THIS WEEK.'
        : r >= 4 ? 'IT GOES TO OTHER FLOORS. YOUR CAREER IS STARTING TO.'
@@ -9748,8 +9765,15 @@ function advanceStep(){
     run.markerVia = rr ? rr.via : null;
     if (G.modal) closeModalToWork();
     const away = a.floor !== W2.id;
+    /* NAME THE WAY OUT THE ROUTE ACTUALLY PICKED. This said "TAKE THE LIFT" for
+       anything off this map, from when off-this-map meant the other floor. The
+       car park is reached through a door and the estate through a car, so the
+       first instruction a player got for either was to take a lift. routeVia
+       has already decided which exit to use from here; say that one. */
+    const leg = (rr && rr.via) ? rr.via[W2.id] : null;
     toast('GO TO: ' + (ANCHOR_NAMES[st.goto] || st.goto) +
-          (away ? ' — TAKE THE LIFT' : ' — FOLLOW THE AMBER ARROW'), 'corp', 2600);
+          (away ? ' — TAKE ' + (ANCHOR_NAMES[leg] || 'THE LIFT')
+                : ' — FOLLOW THE AMBER ARROW'), 'corp', 2600);
     return;
   }
   /* Charged ONCE per step, at the same price the balance model pays.
@@ -17810,7 +17834,54 @@ function selfTest(runSim){
           }
         }
         run = savedRun; if (run) run.rung = savedRung;
-        ok('the queue row promises the walk it charges', !bad.length,
+        /* AND THE BANNER NAMES THE ONE THE ROUTE PICKED. "TAKE THE LIFT" was
+         hardcoded into both the GO TO toast and the off-map banner, from when
+         off-this-map meant the other floor. The car park is reached through a
+         door and the estate through a car, so the first instruction a player
+         got for either was to take a lift they did not need. */
+      {
+        const keep = run;
+        rngInit('OBJX'); runInit('OBJX'); run.rung = 5; loadMap('office1');
+        spawnPeople(0, anchorPos(ROLES[5].deskAnchor));
+        const wrong = [];
+        for (const target of ['SITECOMMS', 'SITEFLOOR', 'YOURCAR', 'POST', 'ACCOUNTS']){
+          const home = floorOf(target); if (!home || home === W2.id) continue;
+          const rr = routeVia(W2.id, L => tilesBetween([player.tx, player.ty], L), target);
+          const leg = (rr && rr.via) ? rr.via[W2.id] : null;
+          run.marker = [0, 0]; run.markerFloor = home;
+          run.markerVia = rr ? rr.via : null;
+          run.markerLabel = ANCHOR_NAMES[target] || target;
+          const said = objectiveText(), want = ANCHOR_NAMES[leg];
+          if (want && said.indexOf(want) < 0)
+            wrong.push(target + ' via ' + leg + ': banner said "' + said + '"');
+        }
+        run = keep;
+        ok('the banner names the way out the route picked', !wrong.length,
+           wrong.slice(0, 2).join(' · '));
+      }
+      /* EVERY WAY OUT NEEDS ITS OWN WORDS. exitLine handled 'outside' and then
+         fell through to the lift's copy for everything else, so the day the
+         drive was added a player who had just driven to an industrial estate
+         was told "IT GOES TO OTHER FLOORS". Distinct lines per act, at every
+         rung, because the fall-through is invisible until somebody reads it. */
+      {
+        const acts = [...new Set(EXITS.map(e => e.act))];
+        const clash = [];
+        for (let r = 0; r < ROLES.length; r++){
+          const keep = run; run = run || {}; run.rung = r;
+          const said = {};
+          for (const a of acts){
+            const line = exitLine(a);
+            if (!line) clash.push(a + '@' + r + ': nothing to say');
+            else if (said[line]) clash.push(a + '@' + r + ': same words as ' + said[line]);
+            else said[line] = a;
+          }
+          run = keep;
+        }
+        ok('every way out of the building has its own words',
+           !clash.length, clash.slice(0, 3).join(' · '));
+      }
+      ok('the queue row promises the walk it charges', !bad.length,
            bad.length + ': ' + bad.slice(0, 3).join(' · '));
         ok('...and says which way it is going', !wrongWay.length,
            wrongWay.length + ': ' + wrongWay.slice(0, 3).join(' · '));
