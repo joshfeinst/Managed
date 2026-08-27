@@ -1273,11 +1273,11 @@ const MAPS = { carpark: {
     '#---P------------------------------b-------#',
     '#zZyZZ-yZz--z-ZzZZyz-zZzzzZ-yZ-zyz-zyZzz-zz#',
     '#------------------------------------------#',
-    '#zyyzz-zZyzzy-Zy--yz-ZyZZZy-zZzzyy-ZZZZy-Zy#',
+    '#zyyzz-zZyzzy-Zy--yz-ZyZZZy-zZzzyy-ZZQZy-Zy#',
     '#------------------------------------------#',
     '#zzyZy-ZzzyZZ-zzzyyZ-zzz-Zz-zyyZzz-ZZZ-z-yz#',
     '#------------------------------------------#',
-    '#ZZyZZ-Z--zZz-ZZzyZy-yyzzzz-zyZyzZQ-zzZz-ZZ#',
+    '#ZZyZZ-Z--zZz-ZZzyZy-yyzzzz-zyZyzZ--zzZz-ZZ#',
     '#------------------------------------------#',
     '#zzyzz-yzyyZ--zzZyZz-zZzzzz-y-ZyZz-ZzZZZ-ZZ#',
     '#------------------------------------------#',
@@ -1288,7 +1288,13 @@ const MAPS = { carpark: {
     '############################################'
   ],
   anchors:{ DOORS:[8,1], FIREEXIT:[37,1], VISITOR:[10,2],
-            YOURCAR:[35,8], SMOKERS:[34,1], BARRIER:[41,14] }
+            /* YOUR CAR MOVED TO THE FIRE-EXIT END. The fire door exists
+               because it is four tiles from the east lift; parking the one car
+               that matters at the far end of a forty-four-tile car park threw
+               that saving straight back away. It is the bay by the fire exit
+               now, which is also where somebody leaving the building in a
+               hurry actually parks. */
+            YOURCAR:[37,3], SMOKERS:[34,1], BARRIER:[41,14] }
 }, office1: {
   name:'PROACTIVE IT PARTNERS — FLOOR 2',
   map:[
@@ -2949,7 +2955,7 @@ const DIALOGUE = {
            {t:'Ask him for a favour, again', fx:{time:6, rep:-2, stress:9}},
            {t:'Re-plan around him and lose the week', fx:{time:14, rep:1, stress:4}} ] },
   'p.cup.a': { who:'mackenzie', t:['We need photographs of the comms cupboard at {client} before we can quote the cabling.',
-    'It is an hour each way. Nobody has ever seen this cupboard.'] },
+    'It is out on the estate. Nobody has ever seen this cupboard.'] },
   'p.cup.b': { who:'sys', t:['Somebody on site could photograph it in ninety seconds if anybody on site would answer the phone.'],
     opts:[ {t:'Drive out and do it properly with a tape measure', fx:{time:26, rep:2, bonus:1}},
            {t:'Get the receptionist to send phone pictures', fx:{time:8, rep:1, bonus:1, stress:2}},
@@ -3719,7 +3725,7 @@ const DIALOGUE = {
     opts:[ {t:'Reconstruct it honestly and flag the gap', fx:{time:6, rep:2, stress:6, bonus:1}},
            {t:'Produce what you can and say nothing about the rest', fx:{time:3, stress:4}},
            {t:'Backdate the spreadsheet', fx:{bonus:1, rep:-2, stress:5}} ] },
-  't.onsite.a':{ who:'derek', t:['{client} needs someone physically present. It is ninety minutes each way and the fault is, per the phone call, "the internet".'] },
+  't.onsite.a':{ who:'derek', t:['{client} needs someone physically present. It is out on the estate, and the fault is, per the phone call, "the internet".'] },
   /* NOT "You arrive." This fired after the choice on every branch, so a
      player who picked "Talk them through it and hope" was told they had
      driven three hours. The steps are linear and the dialogue engine
@@ -3729,10 +3735,51 @@ const DIALOGUE = {
   't.onsite.b':{ who:'sys', t:['It is a switch that somebody has unplugged to charge a phone. It has been unplugged for nine days.',
     'Whether you found that out standing in front of it or talked somebody else into looking behind a desk, it was always going to be that.'] },
 
-  't.onsite.c':{ who:'sys', t:['Ninety minutes each way. You could also try to talk somebody through it.'],
+  't.onsite.c':{ who:'sys', t:['It is a drive, and then whatever is actually wrong. You could also try to talk somebody through it.'],
     opts:[ {t:'Drive out. Do it properly, once.', fx:{time:66, rep:4, bonus:1, stress:5}},
            {t:'Try the phone first, drive if it fails', fx:{time:38, rep:2, bonus:1, stress:7}},
            {t:'Talk them through it and hope', fx:{time:16, rep:-1, stress:6}} ] },
+
+  /* ------------------------- OUT AT THE CLIENT ---------------------------
+     The first tickets in the game that physically leave the building. The
+     five older onsite templates narrate the drive as an option's fx.time,
+     deliberately -- their choice IS drive-or-phone, and steps are linear, so
+     a ticket that walked you to the estate would have contradicted the
+     player who picked the phone. These are the other shape: the visit is not
+     in question, only what you do once you are standing in it. The drive is
+     a goto, priced by the same walkLegs every other errand is priced by, and
+     the decision happens at the far end. */
+  'site.cup.a': { who:'mackenzie', t:['{client} want a quote for recabling and nobody here has ever seen the room it goes in.',
+    'It is out on the estate. Take a tape measure and take photographs, because you will not be going twice.'] },
+  'site.cup.b': { who:'sys', t:['The comms cupboard is a cupboard. There is a mop in it.',
+    'The switch is on a shelf, the shelf is held up by a phone book, and the phone book is from a year when phone books were still printed.'],
+    opts:[ {t:'Measure it properly and photograph every face of the rack', fx:{time:14, rep:4, bonus:2, stress:3}},
+           {t:'Photograph it and estimate the rest from the photographs', fx:{time:6, rep:1, bonus:1, stress:2}},
+           {t:'Write down what the last site like this cost', fx:{time:2, rep:-3, stress:6}} ] },
+
+  'site.desk.a': { who:'sys', t:['You are expected at {client} at eleven. This is the entire content of the calendar invitation.'] },
+  'site.desk.b': { who:'sys', t:['Reception has no record of you. The person who booked it is on annual leave until the ninth.',
+    'There is a visitor book, a lanyard in a drawer, and a chair that faces the car park.'],
+    opts:[ {t:'Wait, sign in properly, and let somebody find the person', fx:{time:16, rep:3, bonus:1, stress:4}},
+           {t:'Ring your own account manager from their reception', fx:{time:9, rep:2, bonus:1, stress:6}},
+           {t:'Walk in behind somebody with a pass', fx:{time:3, rep:-4, stress:8}} ] },
+
+  'site.floor.a': { who:'derek', t:['While you are out there, {client} would like somebody to "have a look at the wifi".',
+    'That is the whole ticket. That is what it says.'] },
+  'site.floor.b': { who:'sys', t:['Six people stop you between the door and the far wall. Four of them have a different problem. One of them is the wifi.',
+    'You are the first person from the supplier any of them have seen in person.'],
+    opts:[ {t:'Survey it properly, write the four down, and say when', fx:{time:18, rep:5, bonus:2, stress:5}},
+           {t:'Fix the wifi, and log the other four when you get back', fx:{time:11, rep:3, bonus:1, stress:4}},
+           {t:'Fix the wifi and tell the other four to raise tickets', fx:{time:4, rep:-2, stress:5}} ] },
+
+  'site.store.a': { who:'yvonne', t:['{client} say they have eleven laptops in a store room and our asset register says four.',
+    'One of those numbers is being depreciated and it is not the one in the room.'] },
+  'site.store.b': { who:'sys', t:['There are nine. Two are in somebody\'s car. Three still have the film on the screens.',
+    'The register has four because four is how many were ever put on it.'],
+    opts:[ {t:'Serial-number all nine and reconcile it in front of them', fx:{time:20, rep:5, bonus:2, stress:4}},
+           {t:'Count them, send the number, let Finance reconcile it', fx:{time:8, rep:2, bonus:1, stress:3}},
+           {t:'Report eleven, because that is what they told you', fx:{time:2, rep:-4, stress:7}} ] },
+
   'o.hands.a': { who:'sys', t:['{client}\'s cutover needs somebody physically in the building on the day.',
     'Everything else can be done remotely. This cannot, because at some point a cable has to come out of one hole and go into another one, and there is nobody there who will do it.'] },
   'o.hands.b': { who:'sys', t:['Whoever goes loses the day. Whoever does not go finds out on Monday.'],
@@ -5752,12 +5799,38 @@ const TICKETS = {
 
      THE DRIVE COSTS WHAT THE DRIVE COSTS. This said "ninety minutes each way"
      and then charged you a walk to the lift and a cable board — about eleven
-     minutes. An on-site is the largest single decision in a day: it is worth a
+     minutes. The charge was fixed; the SENTENCE was not, and went on saying
+     ninety each way over an option costing sixty-six in total, which is the
+     same lie in the other direction. Events solved this with a {cost} fill
+     taken from their own fx.time, but a choice node has three options and
+     three different costs, so there is no one number for the prose to quote.
+     So it quotes none: it is "a drive", and the options say what they cost.
+     The same edit went through p.cup.a, which promised an hour each way over
+     an option charging twenty-six. An on-site is the largest single decision in a day: it is worth a
      lot and it eats a third of the shift, and the alternative is always trying
      to talk somebody through it down the phone. That choice is the ticket. */
   'onsite-drive': { tiers:[3,8], weight:1, slaMult:1.9, pri:3, stress:6,
     title:'{client} needs someone on site. Someone is you.',
     steps:[{say:'t.onsite.a'},{goto:'YOURCAR'},{choice:'t.onsite.c'},{say:'t.onsite.b'},{game:'cable',diff:2}] },
+  /* THE ONES THAT ACTUALLY GO. Priced by walkLegs like every other errand, so
+     the drive is not a number somebody typed: from a T3 desk this is a walk to
+     the lift, the lift, a walk to the car park, the drive, and the same again
+     coming back. They are the biggest tickets in the game and they should be. */
+  'site-the-cupboard-is-a-cupboard': { tiers:[3,7], weight:1, slaMult:2.4, pri:3, stress:7,
+    title:'{client} want a recabling quote and nobody has seen the cupboard',
+    steps:[{say:'site.cup.a'},{goto:'SITECOMMS'},{game:'cable',diff:2},{choice:'site.cup.b'}] },
+  'site-nobody-knew-you-were-coming': { tiers:[4,8], weight:1, slaMult:2.4, pri:2, stress:6,
+    title:'You are expected at {client} at eleven. They are not expecting you.',
+    steps:[{say:'site.desk.a'},{goto:'SITEDESK'},{choice:'site.desk.b'}] },
+  'site-have-a-look-at-the-wifi': { tiers:[4,9], weight:1, slaMult:2.4, pri:3, stress:8,
+    title:'{client} would like somebody to "have a look at the wifi"',
+    steps:[{say:'site.floor.a'},{goto:'SITEFLOOR'},{game:'diagram',diff:2},{choice:'site.floor.b'}] },
+  'site-eleven-laptops-or-four': { tiers:[4,8], weight:1, slaMult:2.4, pri:3, stress:6,
+    title:'{client} say eleven laptops. The asset register says four.',
+    /* no board: the starter checklist is reserved for tickets about an actual
+       new starter, which the suite enforces, and counting nine laptops is not
+       a puzzle -- it is a number somebody has to be told. */
+    steps:[{say:'site.store.a'},{goto:'SITESTORE'},{choice:'site.store.b'}] },
   'onsite-cutover-hands': { tiers:[4,8], weight:1, slaMult:2.0, pri:4, stress:9,
     title:'{client}\'s cutover needs hands in the building on the day',
     steps:[{say:'o.hands.a'},{choice:'o.hands.b'},{say:'o.hands.c'}] },
@@ -7464,8 +7537,22 @@ const GATE_DEBT = {
      bars.js agrees on all nine at 16 seeds. The per-rung rows are a coarse
      tripwire; the TOTAL is the number that means something, and it has fallen
      by thirty since it was last a budget rather than a measurement. */
-  tight: { intern:1, t1:2, t2:0, t3:1, project:2, procure:1,
-           relmgr:2, solarch:3, vcio:2 },
+  /* RE-RECORDED AGAIN when the client site landed. Four on-site tickets at
+     rungs 3-9, weight 1 each, and the TOTAL did not move: 20 before, 20 after.
+     What moved was where it sits. Three rungs got better -- relmgr tight 2->0,
+     solarch 3->0, vcio 2->1 -- and the loose column rose by one on four of
+     them, which is the shape a big expensive ticket makes: it is worth four
+     points and costs a fifth of the day, so a worst-first bot that ignores it
+     loses nothing while a by-priority bot that takes it spends the afternoon.
+     That is not a bug in the tickets. An on-site pays in REPUTATION -- the
+     options carry rep 4 and 5 and two points of quality -- and reputation is
+     not in the day score these rows measure, so a harness that only reads
+     dayPerf will always price a site visit as a trap. bars.js reads all nine
+     rungs healthy on this build; the ladder total is flat; and the thing the
+     player is actually buying out there is goodwill, which is exactly what an
+     on-site buys in life. */
+  tight: { intern:1, t1:2, t2:0, t3:1, project:3, procure:1,
+           relmgr:0, solarch:0, vcio:1 },
   /* seeds out of 12 on which SLOPPY play clears it anyway.
      THIS COLUMN WENT UP, 2026-08-26, and it is not the regression it looks
      like. It was zero on every rung because the bars were so high that
@@ -7476,8 +7563,8 @@ const GATE_DEBT = {
      now backs into a promotion on 1-4 seeds in 12. That is the real number and
      it may only fall from here.
      vCIO's 4/12 is the worst of them and the one to fix first. */
-  loose: { intern:0, t1:1, t2:1, t3:0, project:1, procure:1,
-           relmgr:1, solarch:0, vcio:1 }
+  loose: { intern:0, t1:1, t2:1, t3:0, project:2, procure:2,
+           relmgr:3, solarch:0, vcio:2 }
 };
 /* 45. The loose column is one seed in twelve on eight rungs of nine — bad
    triage almost never promotes now, where a week ago it did so on up to four
@@ -8083,6 +8170,19 @@ const WALK_BUDGET = 62;
    hand. It buys the rule the ground floor is built to — anything a ticket can
    be sent to down there lives within twelve tiles of the lift. */
 const CROSS_FLOOR_BUDGET = 78;
+/* AND THE SAME CEILING AGAIN FOR A TRIP THAT LEAVES THE SITE, which is a third
+   different number for the same reason the second one exists: it is a third
+   different trip. The walk to the lift, the lift, the walk across the ground
+   floor, the fire door, the walk to the car, DRIVE_MIN, and the walk in at the
+   far end. No off-site errand was ever going to fit inside 78, because the
+   walk to the CAR PARK alone already costs 51 to 69 depending on the desk --
+   at or above the cross-floor ceiling before the engine is started.
+   Measured, not chosen, exactly like the two above it: the worst case the
+   layout allows is the Relationship Manager to the comms cupboard at 97, so
+   this is that with two minutes in hand. A ratchet -- it only ever goes down,
+   and moving your car to the bay by the fire exit has already taken seven
+   minutes off every rung's number once. */
+const OFF_SITE_BUDGET = 99;
 /* How strongly a rung's priority must predict its urgency: corr(pri, slaMult)
    has to be at least this negative. Measured, not chosen — the ladder runs
    -0.54 to -0.74 and T3, the loosest, was -0.28 when a quadrant of its P1s
@@ -8177,6 +8277,9 @@ function isOffFloor(anchor){
   const h = floorOf(anchor);
   return !!h && !!W2.id && h !== W2.id;
 }
+/* Not merely off this floor: off the premises. Priced against its own ceiling
+   because it is its own kind of trip -- see OFF_SITE_BUDGET. */
+function isOffSite(anchor){ return floorOf(anchor) === 'clientsite'; }
 function floorDist(map, a, b){
   const t = FLOOR_DIST[map];
   return t && t[a] && t[a][b] !== undefined ? t[a][b] : null;
@@ -9497,11 +9600,23 @@ function legHint(t){
   /* Say it is a different floor. The lift is four minutes and the walk at the
      far end is not free, and a player who cannot see that in the row is being
      asked to triage an errand whose cost is hidden. */
-  const via = L.crossed.length
-    ? (floorOf(L.crossed[0]) === 'ground' ? ', downstairs' : ', upstairs') : '';
+  /* AND SAY WHICH WAY. This was a two-way test -- ground means downstairs,
+     anything else means upstairs -- written when there were two floors and
+     never revisited when the car park arrived. Every errand to your own car
+     has therefore been advertised as "your car, UPSTAIRS" since the day the
+     car park shipped, and the estate would have inherited it. The row is the
+     only place a player can see what an errand costs before taking it, so a
+     direction it gets wrong is worse than one it omits. */
+  const off = L.crossed.some(isOffSite);
+  const via = !L.crossed.length ? ''
+    : off                                    ? ', out at the client'
+    : floorOf(L.crossed[0]) === 'carpark'     ? ', outside'
+    : floorOf(L.crossed[0]) === 'ground'      ? ', downstairs'
+    : ', upstairs';
   const far = L.mins >= 25;
   return '<span class="leg" style="color:' + (far ? 'var(--alert)' : 'var(--corp)') + '">· ' +
-         L.names.join(' then ').toLowerCase() + via + ', ~' + L.mins + ' min walk</span>';
+         L.names.join(' then ').toLowerCase() + via + ', ~' + L.mins +
+         (off ? ' min drive' : ' min walk') + '</span>';
 }
 function renderQueue(){
   const list = document.getElementById('tix-list');
@@ -17646,7 +17761,9 @@ function selfTest(runSim){
                now, against the ceiling for the trip it actually is. */
             const away = isOffFloor(a);
             if (!anchorPos(a) && !away) continue;    // covered by the anchor lint
-            const m = walkCost(a, desk), cap = away ? CROSS_FLOOR_BUDGET : WALK_BUDGET;
+            const m = walkCost(a, desk),
+                  cap = isOffSite(a) ? OFF_SITE_BUDGET
+                      : away          ? CROSS_FLOOR_BUDGET : WALK_BUDGET;
             if (m > worst){ worst = m; worstAt = R.id + '->' + a; }
             if (m > cap) over.push(R.id + '->' + a + ':' + m + '>' + cap);
           }
@@ -17666,20 +17783,37 @@ function selfTest(runSim){
         const savedRun = run, savedRung = run && run.rung;
         rngInit('LEGP'); runInit('LEGP'); loadMap('office1');
         const here = (typeof player !== 'undefined' && player) ? [player.tx, player.ty] : null;
-        const bad = [];
+        const bad = [], wrongWay = [];
         for (const id in TICKETS){
           const T = TICKETS[id];
           run.rung = T.tiers[0];
           const L = walkLegs(T.steps, 0, here);
-          const promised = /~(\d+) min walk/.exec(legHint({ id:id, si:0 }));
+          const promised = /~(\d+) min (?:walk|drive)/.exec(legHint({ id:id, si:0 }));
           if (!L.names.length){
             if (promised) bad.push(id + ': priced a walk it does not have');
           } else if (!promised) bad.push(id + ': ' + L.mins + ' min walk, unadvertised');
           else if (+promised[1] !== L.mins) bad.push(id + ': says ' + promised[1] + ', costs ' + L.mins);
+          /* ...AND POINTS THE RIGHT WAY. The direction was a two-way test that
+             predates the car park -- ground means downstairs, anything else
+             means upstairs -- so every errand to your own car has read "your
+             car, UPSTAIRS" since the day the car park shipped, and the estate
+             would have inherited it. The row is the only place a player can
+             see what an errand costs before taking it. */
+          if (L.crossed.length){
+            const said = legHint({ id:id, si:0 });
+            const home = L.crossed.some(isOffSite) ? 'clientsite' : floorOf(L.crossed[0]);
+            const want = { clientsite:'out at the client', carpark:'outside',
+                           ground:'downstairs', office1:'upstairs' }[home];
+            if (want && said.indexOf(want) < 0)
+              wrongWay.push(id + ': ' + home + ' called "' +
+                ((/, (upstairs|downstairs|outside|out at the client)/.exec(said) || [,'nothing'])[1]) + '"');
+          }
         }
         run = savedRun; if (run) run.rung = savedRung;
         ok('the queue row promises the walk it charges', !bad.length,
            bad.length + ': ' + bad.slice(0, 3).join(' · '));
+        ok('...and says which way it is going', !wrongWay.length,
+           wrongWay.length + ': ' + wrongWay.slice(0, 3).join(' · '));
       }
       /* A LEG IS WALKED, NOT SKIPPED. advanceStep resolved a goto with
          anchorPos(), which answers for the loaded map only, and treated the

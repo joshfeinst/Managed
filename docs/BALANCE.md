@@ -2802,3 +2802,44 @@ Five invariants, each proven red on a mutation: relief and day cost exactly what
 backlog lands on one day only (not clearing it fails it); it runs out
 (`perCareer:99` fails it); and the evening card actually offers the button
 (removing it fails it).
+
+## The client site, and seventeen tickets that said "upstairs" (2026-08-27)
+
+Four tickets now physically drive to the estate — the comms cupboard, their
+reception, their office floor, their store room. They are priced by the same
+`walkLegs` every other errand is priced by, which makes them the biggest
+tickets in the game: 51–69 minutes to reach the car park from a desk, plus
+`DRIVE_MIN` 26, plus the walk in at the far end.
+
+**A third budget, for a third kind of trip.** `WALK_BUDGET` 62 is one floor;
+`CROSS_FLOOR_BUDGET` 78 is two. Neither could hold a drive, because the walk to
+the car park *alone* already costs 51–69 — at or above the cross-floor ceiling
+before the engine starts. `OFF_SITE_BUDGET` is 99: the worst case the layout
+allows (Relationship Manager to the comms cupboard, 97) with two in hand, the
+same way the other two were derived.
+
+Moving your car from the far end of the car park to the bay by the fire exit
+took **seven minutes off every rung's number** and cost nothing. The fire door
+exists because it is four tiles from the east lift; parking the one car that
+matters forty tiles away threw that saving straight back.
+
+**Seventeen tickets have been telling players the wrong direction.** `legHint`
+decided which way an errand went with a two-way test — ground means downstairs,
+anything else means upstairs — written when there were two floors. Every errand
+to your own car has read *"your car, upstairs"* since the day the car park
+shipped. It now says `outside` for the car park and `out at the client` for the
+estate, and reads `min drive` rather than `min walk` when you are driving. A
+self-test asserts the row's direction against where the anchor actually lives;
+restoring the old two-way test fails it with all seventeen named.
+
+**What four big tickets did to the ladder: nothing, in total.** `GATE_DEBT`
+stayed at 20. It redistributed — relmgr tight 2→0, solarch 3→0, vcio 2→1, and
+the loose column up one on four rungs. That last shape is what a large,
+low-priority ticket makes: worth four points, costs a fifth of the day, so a
+worst-first bot that ignores it loses nothing while a by-priority bot that
+takes it spends the afternoon. It is not a bug in the tickets. **An on-site
+pays in reputation** — the options carry rep 4 and 5 and two points of quality
+— and reputation is not in the day score those rows measure, so a harness that
+reads only `dayPerf` will always price a site visit as a trap. `bars.js` reads
+all nine rungs healthy; `meta.js` moved 7.3 → 8.1 careers to win, which is the
+game getting harder because it got bigger.

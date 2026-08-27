@@ -342,6 +342,12 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
      naming Relationship Manager as the weakest rung for two content passes
      after Project Team took the title. These numbers are already here, so the
      claim is checked here rather than believed. */
+  /* Counted separately from misplaced rungs, and said separately. Folding it
+     into `bad` printed "2 RUNG(S) MISPLACED" over a ladder whose nine rungs
+     were all healthy -- the document was wrong, not the game, and a verdict
+     line that cannot tell those apart sends the next person to re-tune bars
+     that are fine. */
+  let docDrift = 0;
   const doc = path.join(path.dirname(path.resolve(target)), 'docs', 'DESIGN.md');
   if (fs.existsSync(doc)){
     const md = fs.readFileSync(doc, 'utf8').replace(/\s+/g, ' ');
@@ -350,22 +356,25 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
     const hi = gaps.reduce((a, b) => b.gap > a.gap ? b : a);
     const said = (re, what) => { const m = re.exec(md);
       if (!m) return '  docs/DESIGN.md no longer names the ' + what + ' rung';
-      const name = m[1].toLowerCase().replace(/[^a-z]/g, '');
+      const name = m[1].toLowerCase().replace(/[^a-z0-9]/g, '');
       const want = (what === 'narrowest' ? lo : hi);
       const alias = { projectteam:'project', procurement:'procure',
-                      relationshipmanager:'relmgr', solutionsarchitect:'solarch' };
+                      relationshipmanager:'relmgr', solutionsarchitect:'solarch',
+                      t1helpdesk:'t1', t2helpdesk:'t2', t3helpdesk:'t3',
+                      directorofit:'director' };
       const got = alias[name] || name;
       return got === want.id && Math.abs(+m[2] - want.gap) <= 2 ? ''
         : '  docs/DESIGN.md says the ' + what + ' rung is ' + m[1] + ' at ' + m[2] +
           '; measured it is ' + want.id + ' at ' + want.gap.toFixed(0);
     };
-    const wrong = [ said(/\*\*([A-Za-z ]+?) is the narrowest rung at (\d+) points\*\*/, 'narrowest'),
-                    said(/\*\*([A-Za-z ]+?) is the widest at (\d+)\*\*/, 'widest') ].filter(Boolean);
-    if (wrong.length){ bad += wrong.length; console.log('\n' + wrong.join('\n')); }
+    const wrong = [ said(/\*\*([A-Za-z0-9 ]+?) is the narrowest rung at (\d+) points\*\*/, 'narrowest'),
+                    said(/\*\*([A-Za-z0-9 ]+?) is the widest at (\d+)\*\*/, 'widest') ].filter(Boolean);
+    if (wrong.length){ docDrift = wrong.length; console.log('\n' + wrong.join('\n')); }
     else console.log('\n  docs/DESIGN.md names the right narrowest and widest rungs.');
   }
   console.log(bad ? '\n' + bad + ' RUNG(S) MISPLACED' : '\nALL BARS WELL PLACED');
+  if (docDrift) console.log(docDrift + ' STALE CLAIM(S) IN docs/DESIGN.md');
   await browser.close();
-  process.exit(bad ? 1 : 0);
+  process.exit(bad || docDrift ? 1 : 0);
 })();
 function rows0(x){ return x; }

@@ -37,8 +37,8 @@ badly.
 `tools/bars.js` measures each rung's separation as flawless p50 minus sloppy
 p50, in points of day score. All nine are healthy — good triage clears at least
 60% of seeds and bad triage no more than 30% — but they are not equal:
-**Project Team is the narrowest rung at 18 points**, and **Procurement is the
-widest at 30**. A narrow rung is one where the day is closest to fitting, so
+**T3 Helpdesk is the narrowest rung at 19 points**, and **Procurement is the
+widest at 34**. A narrow rung is one where the day is closest to fitting, so
 there is least to decide.
 
 That pair of names is checked: `bars.js` re-reads this paragraph and fails if
@@ -66,7 +66,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 484 in-game self-tests |
+| `verify.js` | boots it and runs the 485 in-game self-tests |
 | `claims.js` | re-derives every number the README and this file state from the built game |
 | `dead.js` | finds data, state, functions and dialogue that are written and never read |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
