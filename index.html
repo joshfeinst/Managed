@@ -15956,6 +15956,28 @@ function selfTest(runSim){
         ok('you start the morning sitting at your own desk, with no errand pending',
            !off.length, off.slice(0,3).join(' · '));
       }
+      /* AND THE HANDBOOK'S CLAIM ABOUT WHICH WALKS GET LONGER IS MEASURED.
+         It used to name the server room alongside the printer and the coffee
+         machine as things the pit is near and the quiet suite is far from; the
+         racks are at the south end and the senior desks are nearer them than
+         the pit has ever been. */
+      {
+        const savedRunW2 = run;
+        rngInit('WALKS'); runInit('WALKS'); loadMap('office1');
+        const from = (rung, a3) => { run.rung = rung; return walkCostFromDesk(a3); };
+        const pit = ROLES.findIndex(R => R.deskAnchor === 'DESK_PIT');
+        const quiet = ROLES.findIndex(R => R.deskAnchor === 'DESK_EXEC');
+        const board = ROLES.findIndex(R => R.deskAnchor === 'DESK_ARCH');
+        const wrong = [];
+        for (const a3 of ['PRINTER', 'COFFEE'])
+          if (!(from(pit, a3) < from(quiet, a3)))
+            wrong.push(a3 + ' is not further from the quiet suite than from the pit');
+        if (!(from(board, 'SERVERS') < from(pit, 'SERVERS')))
+          wrong.push('the drawing board is not nearer the racks than the pit');
+        run = savedRunW2;
+        ok('the handbook is right about which walks get longer as you climb',
+           !wrong.length, wrong.join(' · '));
+      }
       /* EVERY rung, not six of them. T2 and T3 both pointed at DESK_T3, so
          one of the nine promotions moved you nowhere while the handbook said
          otherwise, and a threshold of six could not see it. */
@@ -19130,11 +19152,20 @@ function writeHandbook(){
   if (d){
     const mins = m => m >= 60 ? (Math.round(m / 6) / 10) + ' hours' : m + ' minutes';
     d.innerHTML =
+      /* MEASURED, AND THE SERVER ROOM WAS THE WRONG WAY ROUND. This named
+         three props as "a short walk from the pit, a long one from the quiet
+         suite": true of the printer (16-25 minutes against 32) and the coffee
+         machine (32-37 against 50), and false of the server room, which is at
+         the south end of the floor — 40 minutes from the intern's chair and 16
+         from the drawing board. Climbing does not simply move you further from
+         everything; it moves you nearer the racks and further from the coffee,
+         which is a better sentence and also the true one. */
       '<b>You get promoted, and your desk moves.</b> You start each morning at whichever one ' +
-      'is currently yours, and every job is costed from it — so the printer, the coffee ' +
-      'machine and the server room are a short walk from the pit, a long one from the quiet ' +
-      'suite at the far end of the same floor, and a lift ride from anything on the ground ' +
-      'floor. The calendar fills up as you climb too. An intern spends about ' +
+      'is currently yours, and every job is costed from it — so the printer and the coffee ' +
+      'machine are a short walk from the pit and a long one from the quiet suite at the far ' +
+      'end of the same floor, while the server room is the other way round: the drawing ' +
+      'board is nearer the racks than the pit has ever been. Anything on the ground floor is ' +
+      'a lift ride from all of them. The calendar fills up as you climb too. An intern spends about ' +
       mins(ROLES[0].queue.meetingMin) + ' a day in rooms; a ' + ROLES[8].title + ' spends ' +
       mins(ROLES[8].queue.meetingMin) + ', and the ones that will not fit get cancelled, ' +
       'which is the best part of anyone\'s week. The printer is possessed. Welcome aboard.';
