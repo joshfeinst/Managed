@@ -215,7 +215,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 | `score.js` | takes the day score apart into the three terms it is made of — stakes closed, realisation, burn — because `bars.js` reports the number those produce and cannot say which one moved |
 | `probe.js` | dumps what a triage rule actually closes, ticket by ticket, with what it was worth and what it cost |
 | `ladder.js` | prints the shipped ladder as a markdown table, so docs/BALANCE.md is generated rather than hand-copied — it drifted once and cost a session |
-| `meta.js` | plays whole careers across many players — the only one that can see whether the top of the ladder is reachable |
+| `meta.js` | plays whole careers across many players — the only one that can see whether the top of the ladder is reachable. Takes triage and choice policy as arguments, so it can be asked about a bad player and not only a good one |
 | `save.js` | mid-day save, reload, and the afternoon has to survive it |
 | `audit.js` | the things the suite does not check — whether the content is any GOOD: pool depth, priority spread, board density, whether anything cheap is punishingly stressful |
 | `playtest.js` | three personas play whole seeded careers for pacing: days survived, promotion days, breach rates, ending distribution |

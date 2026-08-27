@@ -2668,3 +2668,44 @@ career or most of a playthrough to get there.
 *placement* that is arguably right — a bar should be set for a player who has not
 bought help — but it should be a stated choice rather than an accident, and it is
 stated here now.
+
+## The harness of record could only play one kind of player (2026-08-27)
+
+`tools/meta.js` decides what ships. It is the tie-breaker named in the README
+and in three separate comments in `index.html`. It hardcoded
+`simDay(SKILL, {order:'pridead', pick:'best'})` — perfect triage, best option
+every time — and exposed only the **craft** dial. Every player it has ever
+simulated triaged perfectly. Forty players meant forty perfect triagers.
+
+That matters because of what was decided on it. The stakes comment rejects
+`1:3:8:18` for reaching "39 of 40 with EVERY player reaching Director, which is
+a roguelite that has stopped being able to say no" — a count of a cohort the
+harness had no way to make lose.
+
+`gate.js` had the identical hole in its main sweep, and its own `--ladder`
+comment had already diagnosed it thirty lines away: *"at .35 with correct
+priority order the bot clears everything, which says nothing about the gate and
+everything about craft not mattering. Triage is the axis this game has."* Both
+are parameterised now. `gate.js`'s bottom row is `worstpri`; `meta.js` takes
+`order` and `pick` as arguments, defaulting to what it used to hardcode, and
+the control run reproduces the old numbers exactly — 8/8, `9,8,9,7,7,5,6,7`.
+
+Asked properly, on the shipped table, 40 players × 14 careers:
+
+| cohort | retire | careers to win | best rung reached |
+|---|---|---|---|
+| good triage, craft .85 | **40/40** | 7.3 | Director |
+| good triage, craft .60 | **40/40** | 7.5 | Director |
+| bad triage, craft .35 | **0/40** | never | **intern**, min and max |
+
+Not one of 560 bad-triage careers got out of the helpdesk pit. Craft is worth
+0.2 careers; triage is worth the whole game. The design is doing exactly what
+it says — and "everybody wins" was the wrong question to have rejected a stakes
+table on, because only one kind of everybody was ever asked.
+
+`1:2:4:14` is still the table `stakes.js` prefers, and it now measures better
+on every reading a sample can resolve: ladder debt **23 → 20**, intern flawless
+**28/32 → 30/32** at unchanged sloppy, every rung's skill gap two to five points
+wider, all bars still well placed. Not shipped in this pass, which was a
+correctness pass; the shipped table is healthy on every harness in the repo.
+It is the named next job, and the harness needed to settle it now exists.

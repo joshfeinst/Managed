@@ -5788,7 +5788,15 @@ const TICKETS = {
   'dir9-three-renewals-one-month': { tiers:[9,9], weight:3, slaMult:1.9, pri:3, stress:10,
     title:'Three renewals land in March and together they are more than the quarter has',
     steps:[{say:'dx.d9ren.a'},{goto:'CONF'},{game:'quote',diff:3},{choice:'dx.d9ren.b'}] },
-  'dir9-the-board-paper': { tiers:[9,9], weight:3, slaMult:2.1, pri:2, stress:11,
+  /* P2, not P3. At stress 11 against the 2 points a P3 is worth, this was the
+     one ticket in the game that cost more to do than its whole band pays --
+     the audit's "nothing cheap is punishingly stressful" rule, and the only
+     row under it. The stress is right: it is a board paper whose honest
+     version names the executive who made the decision, and the top option
+     adds ten more on its own. The band was what was wrong. A paper the board
+     has asked for twice is a P2 at this rung, which is exactly where
+     dir9-everybody-whole sits at the same weight and the same stress. */
+  'dir9-the-board-paper': { tiers:[9,9], weight:3, slaMult:2.1, pri:3, stress:11,
     title:'The board would like one page on why IT costs what it costs',
     steps:[{say:'dx.d9brd.a'},{goto:'CONF'},{game:'paper',diff:3},{choice:'dx.d9brd.b'}] },
   'dir9-the-second-office': { tiers:[9,9], weight:3, slaMult:2.3, pri:3, stress:8,
@@ -7105,7 +7113,36 @@ const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.6, freeCups:2,
    EVERY player reaching Director, which is a roguelite that has stopped being
    able to say no. 1:2:4:10 leaves five players in forty who do not make it,
    changes one number rather than four, and keeps the P4:P3:P2 shape the
-   paragraph above was written to justify. */
+   paragraph above was written to justify.
+
+   READ THAT LAST PARAGRAPH AGAIN, 2026-08-27, BECAUSE ONE LEG OF IT WAS NEVER
+   MEASURED. "Every player reaching Director" was counted by tools/meta.js, and
+   meta.js could only ever simulate ONE KIND OF PLAYER: it hardcoded
+   order:'pridead' with pick:'best' -- perfect triage, best option every time --
+   and varied only the craft dial. Forty players, forty perfect triagers. So a
+   table was rejected for making everybody win when the harness had no way to
+   play anybody who might lose. gate.js's main sweep had the identical hole and
+   was fixed the same day; meta.js takes order and pick as arguments now.
+
+   Asked properly, the game says no, emphatically. Forty players, fourteen
+   careers each, on this shipped table:
+     good triage, craft .85   40/40 retire, 7.3 careers to win
+     good triage, craft .60   40/40 retire, 7.5 careers to win
+     bad triage,  craft .35    0/40 retire, and not one of 560 careers got
+                               out of the helpdesk pit -- best rung, min and
+                               max across all forty players: intern.
+   Craft is worth 0.2 careers. Triage is worth the entire game. That is the
+   design working, and it is also why "everybody wins" was the wrong question
+   to reject a table on.
+
+   1:2:4:14 remains the candidate tools/stakes.js prefers -- it changes one
+   number and keeps the shape, exactly like this one, and it measures better on
+   every reading that a sample can resolve: ladder debt total 23 -> 20, intern
+   flawless 28/32 -> 30/32 at unchanged sloppy, every rung's skill gap two to
+   five points wider, all bars still well placed. It is NOT shipped here only
+   because this pass was a correctness pass and the shipped table is healthy on
+   every harness in the repo. It is the named next job, and the harness that
+   was missing for it now exists. */
 const STAKES = { 1:1, 2:2, 3:4, 4:10 };
 function stakesOf(id){ return STAKES[(TICKETS[id] && TICKETS[id].pri) || 2] || 2; }
 /* A breach inside the allowance is DISCOUNTED, not free. A hard write-off made

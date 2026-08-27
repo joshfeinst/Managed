@@ -6,6 +6,18 @@ const fs=require('fs'), path=require('path');
 const target=process.argv[2]||'/home/user/managed/index.html';
 const PLAYERS=+(process.argv[3]||8), MAXCAREERS=+(process.argv[4]||14);
 const SKILL=+(process.argv[5]||0.85);
+/* TRIAGE IS THE AXIS THIS GAME HAS, AND THIS HARNESS COULD NOT VARY IT. Every
+   player it has ever simulated ran order:'pridead' with pick:'best' -- perfect
+   triage, best option every time -- and differed only in the craft dial. So
+   "40 of 40 reach retirement" was never a statement about whether the game can
+   say no; it was a statement about one kind of player, repeated forty times.
+   gate.js had the same hole in its main sweep and says so in its own --ladder
+   comment: at .35 with correct priority order the bot clears everything, which
+   says nothing about the gate and everything about craft not mattering.
+   Now a parameter, so the bad player can be asked the same question:
+     node tools/meta.js <file> [players=40] [maxCareers=14] [skill=.85]
+                               [order=pridead] [pick=best]                */
+const ORDER=process.argv[6]||'pridead', PICK=process.argv[7]||'best';
 async function launch(){ try { return await chromium.launch(); } catch(e){
   const base='/opt/pw-browsers';
   for (const d of fs.readdirSync(base).filter(x=>x.startsWith('chromium'))){
@@ -17,7 +29,7 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   p.on('pageerror',e=>console.log('PAGEERROR',e.message));
   await p.goto('file://'+target);
   await p.waitForFunction(()=>typeof G!=='undefined'&&typeof simDay==='function');
-  const out=await p.evaluate(({PLAYERS,MAXCAREERS,SKILL})=>{
+  const out=await p.evaluate(({PLAYERS,MAXCAREERS,SKILL,ORDER,PICK})=>{
     SAVE_SUSPEND=true; QUIET=true; A.sfxVol=0;
     const players=[];
     for (let pl=0; pl<PLAYERS; pl++){
@@ -30,7 +42,7 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
         let g=0, ending='timeout';
         while (run && g++<80){
           startCommute(); if (!run) break;
-          simDay(SKILL,{order:'pridead',pick:'best'}); if (!run) break;
+          simDay(SKILL,{order:ORDER,pick:PICK}); if (!run) break;
           if (run.pendingEnd){ ending=run.pendingEnd; const d=run.day, r=run.rung;
             startCommute(); careers.push({start:startRung,end:r,days:d,ending}); break; }
         }
@@ -59,7 +71,7 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
     }
     SAVE_SUSPEND=false; QUIET=false;
     return players;
-  },{PLAYERS,MAXCAREERS,SKILL});
+  },{PLAYERS,MAXCAREERS,SKILL,ORDER,PICK});
   const NAMES=['intern','T1','T2','T3','project','procure','relmgr','solarch','vCIO','DIRECTOR'];
   out.forEach((pl,i)=>{
     const arc = pl.careers.map(c=>`${NAMES[c.start]}->${NAMES[c.end]}(${c.days}d,${c.ending[0]})`).join(' · ');
