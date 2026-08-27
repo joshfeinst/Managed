@@ -3146,7 +3146,14 @@ const DIALOGUE = {
            {t:'Produce what you can and say nothing about the rest', fx:{time:3, stress:4}},
            {t:'Backdate the spreadsheet', fx:{bonus:1, rep:-2, stress:5}} ] },
   't.onsite.a':{ who:'derek', t:['{client} needs someone physically present. It is ninety minutes each way and the fault is, per the phone call, "the internet".'] },
-  't.onsite.b':{ who:'sys', t:['You arrive. It is a switch that somebody has unplugged to charge a phone. It has been unplugged for nine days.'] },
+  /* NOT "You arrive." This fired after the choice on every branch, so a
+     player who picked "Talk them through it and hope" was told they had
+     driven three hours. The steps are linear and the dialogue engine
+     branches per option, not per step, so the honest fix is a line that is
+     true whichever way it went — and the fault was always going to be the
+     same fault. */
+  't.onsite.b':{ who:'sys', t:['It is a switch that somebody has unplugged to charge a phone. It has been unplugged for nine days.',
+    'Whether you found that out standing in front of it or talked somebody else into looking behind a desk, it was always going to be that.'] },
 
   't.onsite.c':{ who:'sys', t:['Ninety minutes each way. You could also try to talk somebody through it.'],
     opts:[ {t:'Drive out. Do it properly, once.', fx:{time:66, rep:4, bonus:1, stress:5}},
@@ -3170,6 +3177,20 @@ const DIALOGUE = {
     opts:[ {t:'Go, and make it worth the drive while you are there', fx:{time:64, rep:4, bonus:1, stress:4}},
            {t:'Offer a video call at a time that suits them', fx:{time:24, rep:2, bonus:1, stress:5}},
            {t:'Explain again why it does not need a visit', fx:{time:11, rep:-3, stress:7}} ] },
+  /* AN OUTCOME, BECAUSE THERE WAS NONE. Three of these charged you most of a
+     day for a journey and then ended on {goto:'ELEV'} — the walk to the lift
+     was the last step, so the ticket closed the moment you reached it and
+     the choice you had just made paid nothing back at all. Each of these
+     has to read true under all three options, including the one where you
+     did not go. */
+  'o.hands.c': { who:'sys', t:['The cable comes out of one hole at ten past eight and goes into another one at twenty past.',
+    'The rest of the day is watching it not go wrong, and nobody at that end will ever be told that this was the hard part of it.'] },
+  'o.you.c':   { who:'sys', t:['They walk somebody round the building, introduce them to four people, and buy them lunch.',
+    'At half past two somebody says "while you are here" and takes out a folder. It was always going to be a folder.'] },
+  'o.new.c':   { who:'sys', t:['It is a beautiful empty room with one socket in it, and the socket is in the wrong corner.',
+    'That takes eleven minutes to establish and could not have been established from the photograph.'] },
+  'o.nowt.c':  { who:'sys', t:['It was a setting. It took forty seconds.',
+    'They were delighted, said so twice, and will ask for a visit again in March.'] },
   'o.new.a':   { who:'sys', t:['{client} has taken the second floor. Nothing is in it. They move in on the 14th.',
     'There is a photograph attached of an empty room with one network socket in it, which somebody has circled.'] },
   'o.new.b':   { who:'sys', t:['Everything about this is easier before there are desks in the way.'],
@@ -4845,19 +4866,19 @@ const TICKETS = {
      to talk somebody through it down the phone. That choice is the ticket. */
   'onsite-drive': { tiers:[3,8], weight:1, sla:90, slaMult:1.9, pri:3, stress:6,
     title:'{client} needs someone on site. Someone is you.',
-    steps:[{say:'t.onsite.a'},{choice:'t.onsite.c'},{goto:'ELEV'},{say:'t.onsite.b'},{game:'cable',diff:2}] },
+    steps:[{say:'t.onsite.a'},{goto:'ELEV'},{choice:'t.onsite.c'},{say:'t.onsite.b'},{game:'cable',diff:2}] },
   'onsite-cutover-hands': { tiers:[4,8], weight:1, sla:96, slaMult:2.0, pri:4, stress:9,
     title:'{client}\'s cutover needs hands in the building on the day',
-    steps:[{say:'o.hands.a'},{choice:'o.hands.b'},{goto:'ELEV'}] },
+    steps:[{say:'o.hands.a'},{goto:'ELEV'},{choice:'o.hands.b'},{say:'o.hands.c'}] },
   'onsite-they-asked-for-you': { tiers:[5,9], weight:1, sla:88, slaMult:1.9, pri:3, stress:7,
     title:'{client} has asked for you personally. Not the team. You.',
-    steps:[{say:'o.you.a'},{choice:'o.you.b'},{goto:'ELEV'}] },
+    steps:[{say:'o.you.a'},{goto:'ELEV'},{choice:'o.you.b'},{say:'o.you.c'}] },
   'onsite-nothing-is-wrong': { tiers:[3,7], weight:1, sla:84, slaMult:1.9, pri:2, stress:5,
     title:'{client} insists it needs a visit. It does not need a visit.',
-    steps:[{say:'o.nowt.a'},{choice:'o.nowt.b'}] },
+    steps:[{say:'o.nowt.a'},{goto:'ELEV'},{choice:'o.nowt.b'},{say:'o.nowt.c'}] },
   'onsite-the-new-office': { tiers:[4,8], weight:1, sla:92, slaMult:2.0, pri:3, stress:8,
     title:'{client} has taken a second floor and nothing is in it yet',
-    steps:[{say:'o.new.a'},{choice:'o.new.b'},{goto:'ELEV'}] },
+    steps:[{say:'o.new.a'},{goto:'ELEV'},{choice:'o.new.b'},{say:'o.new.c'}] },
   /* ------------------------- vCIO, CONTINUED (rung 8) ---------------------
      The rung had 18 templates of its own against the intern's 35, so five days
      out of six a vCIO was working somebody else's queue in a better chair.
