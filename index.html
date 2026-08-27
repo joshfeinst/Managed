@@ -8524,7 +8524,12 @@ const PROP_LINES = {
     'THERE IS A LAPTOP IN HERE FOR SOMEBODY WHO STARTED THREE WEEKS AGO.'
   ],
   window: [
-    'THE CAR PARK. YOUR CAR. THE SPACE WITH YOUR NAME ON IT, WHICH YOU ASKED THEM NOT TO DO.',
+    /* THE LADDER GIVES YOU A NAMED SPACE AT RUNG EIGHT. The commute line for
+       rung 8 and up says "there is a space with your name on it NOW", and this
+       said you had one from the window on your first morning as an intern, at
+       every rung, for the whole project. The window keeps the car and gives
+       the reserved bay back to the promotion that grants it. */
+    'THE CAR PARK. YOUR CAR, IN WHATEVER WAS LEFT AT TEN PAST NINE.',
     'FROM UP HERE THE PIT IS A ROOM WITH FOUR DESKS IN IT. IT DID NOT LOOK LIKE THAT FROM INSIDE.',
     'IT IS STILL LIGHT. YOU HAVE NOT SEEN IT STILL LIGHT ON A WEDNESDAY IN SOME TIME.',
     'THE BUILDING OPPOSITE HAS A FLOOR OF EMPTY DESKS AND ALL THE LIGHTS ON.',
@@ -14279,6 +14284,28 @@ function selfTest(runSim){
       ok('and the crash only mentions jitters when you have some',
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
+    }
+    /* NOTHING YOU CAN SEE ON DAY ONE MAY CLAIM WHAT THE LADDER GIVES YOU
+       LATER. The commute card at rung 8 says "there is a space with your name
+       on it NOW" — a promotion perk, and one of the few times the office
+       admits you have climbed. The window prop said you had one already, to
+       every intern, from the first morning. One table, so the next one of
+       these is a row rather than a rediscovery. */
+    {
+      const LATE = [
+        { what:'a reserved parking space', re:/SPACE WITH YOUR NAME/i,
+          granted:/space with your name on it now/i }
+      ];
+      const early = [];
+      for (const g of LATE){
+        const gate = (COMMUTE.when || []).find(w => g.granted.test(w.t));
+        if (!gate){ early.push(g.what + ': nothing grants it any more'); continue; }
+        for (const k in PROP_LINES)
+          for (const l of PROP_LINES[k])
+            if (g.re.test(l)) early.push('prop:' + k + ' claims ' + g.what);
+      }
+      ok('nothing in the office claims what a promotion is supposed to give you',
+         !early.length, [...new Set(early)].join(' · '));
     }
     /* THE BANNER NEVER NAMES A CONTROL THAT IS NOT ON THIS FLOOR. The one
        line that is always on screen telling the player what to do said "TAB,
