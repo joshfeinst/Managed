@@ -1600,7 +1600,23 @@ const NPCS = {
   marcus:  { name:'MARCUS', role:'Building facilities · does not work for you',
     look:{skin:2,hair:0,shirt:'#5a6b3f',smile:false},
     sched:[[0,'POST'],[90,'MEET_A'],[130,'POST'],[240,'FRONT'],[280,'POST']],
-    talk:'sm.marcus' }
+    talk:'sm.marcus' },
+
+  /* OUT AT THE CLIENT. schedAnchor resolves against the LOADED map and
+     spawnPeople skips an NPC whose anchor is not on it, so these two exist
+     only at the estate and nobody had to be taught about maps. They are the
+     two archetypes the writing guide names and the office cast cannot cover,
+     because neither of them works for you and one of them is the reason the
+     ticket exists: the person who was not told you were coming, and the guy.
+     Nine years, a home network, and a strong view about the firewall. */
+  bev:     { name:'BEV', role:'Meridian Freight · was not told you were coming',
+    look:{skin:2,hair:4,shirt:'#6b4a72',hairLong:true},
+    sched:[[0,'SITEDESK'],[150,'SITEFLOOR'],[190,'SITEDESK'],[330,'SITESTORE'],[360,'SITEDESK']],
+    talk:'sm.bev' },
+  dennis:  { name:'DENNIS', role:'Meridian Freight · "we have a guy". He is the guy.',
+    look:{skin:0,hair:5,shirt:'#4a5a3f',glasses:true},
+    sched:[[0,'SITEFLOOR'],[120,'SITECOMMS'],[170,'SITEFLOOR'],[300,'SITECOMMS'],[350,'SITEFLOOR']],
+    talk:'sm.dennis' }
 
 };
 
@@ -1879,6 +1895,48 @@ const CHAT = {
       'I have keys to rooms your directors have never seen. Nobody has ever asked me what is in them.',
       'The fire panel goes off at four on the first Tuesday. It is a test. It is always a test.',
       'Whatever you are about to ask, the answer starts with a form and ends with the managing agent.'
+    ]
+  },
+
+  /* OUT AT THE CLIENT. Neither of them works for you, and neither of them can
+     be talked to at head office, so their reactive lines key off what the
+     visit costs rather than what the office is doing. */
+  bev: {
+    when: [
+      { if:r => r.rung >= 7, t:'They send somebody senior now. I do not know whether that is a compliment to us or a worry.' },
+      { if:r => r.rung <= 1, t:'They have sent the new one. Sit down, I will find somebody, it will be a while.' },
+      { if:r => r.clock >= 300, t:'You have come out at this time? You will hit the ring road on the way back. I would not.' },
+      { if:r => r.stress > 60, t:'Sit down for a minute. Whatever it is, the cupboard has been like that for four years.' }
+    ],
+    any: [
+      'Nobody tells me anything. You are the fourth person this month here for a meeting I have no record of.',
+      'The man who books you lot is on annual leave. He is always on annual leave. I have theories.',
+      'That cupboard has been like that since before I started. Somebody photographed it in 2022, I think.',
+      'You are the first one who has signed the book. I am going to remember that, and it will help you.',
+      'There is a visitor lanyard in this drawer that says CONTRACTOR and has done since the last lot.',
+      'I have worked here eleven years and I still do not know what half of the building does.',
+      'If you want the good coffee it is the machine upstairs, and you did not hear that from me.',
+      'The last company sent a different person every time. I never learnt one of their names.',
+      'Park in the visitor bay next time. The one by the fence belongs to a man who will find you.'
+    ]
+  },
+  dennis: {
+    when: [
+      { if:r => r.rung >= 6, t:'You are the one who signs things now, are you. Good. I have a list.' },
+      { if:r => r.rung <= 2, t:'You will not know this yet, but I have been doing this here since 2016, so.' },
+      { if:r => r.burnout > 50, t:'You look how I felt the year I did it all myself. Nobody thanks you for it either.' },
+      { if:r => r.queue.length >= 4, t:'You are busy. I get that. I only need five minutes and it is quite important.' }
+    ],
+    any: [
+      'I do the IT here. Not officially. Officially I do transport planning. The wifi is mine though.',
+      'I have a NAS at home. Same drives. Never a problem with it, so I do not know what you all worry about.',
+      'I did not put that switch on the shelf. I want to be very clear that I did not put it there.',
+      'You will not need the password. I will log in for you. It is easier. Everybody uses that one.',
+      'I read an article about this. It said the whole thing can be done in the cloud for nothing.',
+      'The last engineer said the same as you and then nothing happened for two years, so.',
+      'I built the spreadsheet that runs the loading bay. It has a macro. Do not touch the macro.',
+      'I am not being difficult. I am being the only person here who knows where anything is.',
+      'If it goes down at the weekend it is me who comes in. That is why I have opinions about it.'
     ]
   }
 
@@ -3565,6 +3623,14 @@ const DIALOGUE = {
     'Your client is in Meeting Room One. He has been in Meeting Room One since twenty past. Nobody told me either.',
     'I have seen four IT companies in this building. Yours is the one that says hello.',
     'If you are going up, take the post. I am not a courier. I have been very clear about that for eleven years.'] },
+  'sm.bev':{ who:'sys', t:['Nobody tells me anything. You are the fourth person this month who has arrived for a meeting I have no record of.',
+    'The man who books you lot is on annual leave. He is always on annual leave. I have started to think there are two of him and neither works Fridays.',
+    'That cupboard has been like that since before I started. Somebody from your company photographed it in, I want to say, 2022.',
+    'You are the first one who has signed the book. I am going to remember that, and it is going to help you one day.'] },
+  'sm.dennis':{ who:'sys', t:['I do the IT here. Not officially. Officially I do transport planning, but I set up the wifi in 2016 and now it is mine.',
+    'I have a NAS at home. Same drives. Never had a problem with it, so I do not know what you are all worried about.',
+    'I did not put that switch on the shelf. I want to be very clear that I did not put that switch on the shelf.',
+    'You will not need the password. I will just log in for you. It is easier. Everybody uses it.'] },
   'sm.marcus':{ who:'sys', t:['I do the building. Not the computers in it. Everyone finds that distinction upsetting.',
     'The lift is fine. It has always been fine. It is slow, which is different from broken, which is what everyone reports.',
     'Your air conditioning is on the landlord\'s system. So is your access control. So is, for reasons nobody living can explain, your kettle.',
@@ -3751,15 +3817,15 @@ const DIALOGUE = {
      the decision happens at the far end. */
   'site.cup.a': { who:'mackenzie', t:['{client} want a quote for recabling and nobody here has ever seen the room it goes in.',
     'It is out on the estate. Take a tape measure and take photographs, because you will not be going twice.'] },
-  'site.cup.b': { who:'sys', t:['The comms cupboard is a cupboard. There is a mop in it.',
-    'The switch is on a shelf, the shelf is held up by a phone book, and the phone book is from a year when phone books were still printed.'],
+  'site.cup.b': { who:'dennis', t:['That is the comms cupboard. There is a mop in it because there is nowhere else for the mop.',
+    'The switch is on the shelf. The shelf is held up by a phone book. I did not do that, and I would like that written down somewhere.'],
     opts:[ {t:'Measure it properly and photograph every face of the rack', fx:{time:14, rep:4, bonus:2, stress:3}},
            {t:'Photograph it and estimate the rest from the photographs', fx:{time:6, rep:1, bonus:1, stress:2}},
            {t:'Write down what the last site like this cost', fx:{time:2, rep:-3, stress:6}} ] },
 
   'site.desk.a': { who:'sys', t:['You are expected at {client} at eleven. This is the entire content of the calendar invitation.'] },
-  'site.desk.b': { who:'sys', t:['Reception has no record of you. The person who booked it is on annual leave until the ninth.',
-    'There is a visitor book, a lanyard in a drawer, and a chair that faces the car park.'],
+  'site.desk.b': { who:'bev', t:['I have no record of you. The man who books you lot is on annual leave until the ninth.',
+    'There is the book, there is a lanyard in this drawer, and there is a chair that faces the car park. It is up to you.'],
     opts:[ {t:'Wait, sign in properly, and let somebody find the person', fx:{time:16, rep:3, bonus:1, stress:4}},
            {t:'Ring your own account manager from their reception', fx:{time:9, rep:2, bonus:1, stress:6}},
            {t:'Walk in behind somebody with a pass', fx:{time:3, rep:-4, stress:8}} ] },
