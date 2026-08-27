@@ -9962,6 +9962,10 @@ const CABLE_TAGS = ['A1','B2','C3','D4','E5','F6','G7'];
 /* Six prefixes, because six is what fits the panel and what an address plan
    actually argues about. hosts = 2^(32-p) - 2: the network and the broadcast
    are not yours, which is the first thing anyone gets wrong. */
+/* What marking a box that strands nothing is worth, in missed ones. Above 1
+   because the board is about being right rather than being thorough, and the
+   card says so. */
+const DIAGRAM_OVER = 1.4;
 const SUBNET_PREFIXES = [
   { cidr:'/30', size:4,   hosts:2   },
   { cidr:'/29', size:8,   hosts:6   },
@@ -11227,7 +11231,19 @@ const GAMES = {
           const hit = [...this.marked].filter(i => this.spofs.includes(i)).length;
           let over = Math.max(0, this.marked.size - hit - (this.forgive || 0));
           this.hit = hit; this.over = over;
-          this.score = clamp(hit / Math.max(1, this.spofs.length) - over * .25, 0, 1);
+          /* THE CARD SAYS A FALSE MARK COSTS MORE THAN A MISS. It did not.
+             A miss costs 1/spofs, and the penalty for marking a box that
+             strands nothing was a flat .25 — so the card's advice only held
+             on boards with more than four single points of failure, and this
+             deals two or three on 78% of them and five or more on 3%. On
+             ninety-seven boards in a hundred the game was steering the player
+             towards the MORE expensive mistake, in writing, on the card it
+             hands them before they start.
+
+             The intent is a ratio, so it is written as one: a wrong box is
+             worth DIAGRAM_OVER missed ones, on every board, at every size. */
+          const k = Math.max(1, this.spofs.length);
+          this.score = clamp(hit / k - over * (DIAGRAM_OVER / k), 0, 1);
           this.finished = true; return;
         }
         const last = this.nodes.length - 1;
@@ -14121,6 +14137,37 @@ function selfTest(runSim){
       ok('and the crash only mentions jitters when you have some',
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
+    }
+    /* THE DIAGRAM CARD SAYS A FALSE MARK COSTS MORE THAN A MISS, SO IT MUST.
+       It did not: a miss cost 1/spofs and a false mark a flat .25, so the
+       advice only held above four single points of failure and the board
+       deals two or three on 78% of them. Two boards played out of every deal:
+       one that marks every SPOF and one box too many, one that marks every
+       SPOF but one. The first has to score lower. */
+    {
+      rngInit('DIAGRAM-ADVICE');
+      const wrong = [];
+      const play = (g, marks) => {
+        g.marked = new Set(marks); g.submitted = true; g.flash = 0;
+        g.step(0); return g.score;
+      };
+      for (let d = 2; d <= 3; d++)
+        for (let i = 0; i < 120; i++){
+          const a2 = GAMES.diagram.init(d);
+          const spofs = a2.spofs.slice();
+          if (spofs.length < 2) continue;
+          const notSpof = a2.nodes.map((n, ix) => ix).find(ix => spofs.indexOf(ix) < 0);
+          if (notSpof === undefined) continue;
+          const b2 = GAMES.diagram.init(d);
+          b2.spofs = spofs.slice(); b2.nodes = a2.nodes;
+          const tooMany = play(a2, spofs.concat([notSpof]));
+          const oneShort = play(b2, spofs.slice(0, -1));
+          if (!(tooMany < oneShort))
+            wrong.push(spofs.length + ' spofs: one too many scores ' +
+                       tooMany.toFixed(2) + ', one short scores ' + oneShort.toFixed(2));
+        }
+      ok('on the diagram board a false mark really does cost more than a miss',
+         !wrong.length, [...new Set(wrong)].slice(0,3).join(' · '));
     }
     /* AND THE TWO BOARDS THAT PROMISE A SOLUTION EXISTS ALWAYS DEAL ONE.
        "A hand that gets all three home always exists" and "a rota that works
