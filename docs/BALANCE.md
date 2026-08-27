@@ -2224,3 +2224,40 @@ lines and a fifth about the car park, written, asserted upon by a green
 self-test, and unreadable in play. `TOAST_LOG` records what the game actually
 said, so the new guard drives eight real trips and reads the log back rather
 than asking a helper what it would have returned.
+
+### Project Team, and a change that measured worse and did not ship
+
+`bars.js` has called Project Team misplaced through every pass of this
+session, and no bar fixed it: sloppy triage kept clearing a quarter of seeds at
+whatever bar was suggested, which is the harness's own way of saying *the rung
+needs content, not a number*. Three hypotheses, measured in order:
+
+| | project | rest of the ladder |
+|---|---|---|
+| P1 share of the weighted draw | 24% | 9–28% |
+| P4 share | 19% | 19–28% |
+| board (hands-on) share | 31% | 27–46% |
+| **work dealt ÷ day room** | **1.06** | **1.18–1.48** |
+
+The priority spread is the healthiest on the ladder and the board density sits
+exactly between its neighbours. What is different is that **the day is not
+oversubscribed**: twelve seeds deal 443 minutes of work into 420 minutes of
+room. A rung whose day FITS cannot ask which ticket you protect, and a player
+who chooses badly still gets through nearly all of it.
+
+Raising `ratePerHr` from 1.5 fixes the rung and costs the ladder:
+
+| project rate | oversub | flawless/sloppy (12 seeds) | bars verdict | **meta.js, 20 players** |
+|---|---|---|---|---|
+| 1.5 (shipped) | 1.06 | 51% / 39% | misplaced | **12 / 20** |
+| 1.7 | 1.19 | — | — | 10 / 20 |
+| 1.9 | 1.31 | 51% / 27% | healthy, 83% vs 18% | 10 / 20 |
+
+`meta.js` is the harness of record when the two disagree, and it says the
+shipped rate is the best of the three. 12 against 10 is close to this sample's
+noise, but a change that measures no better does not ship. **Reverted**, with
+the numbers written into the role record so the next pass does not re-derive
+them.
+
+The fix this rung actually wants is **heavier tickets**, so its day is
+oversubscribed by work rather than by count. That is a writing pass.

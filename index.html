@@ -1071,6 +1071,28 @@ const ROLES = [
     gates:{ nextAt:{perf:0.563, days:3}, firedBelow:0.253, cert:null },
     queue:{ ratePerHr:1.9, meetingMin:48, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
+    /* ratePerHr STAYS AT 1.5, and here is the measurement that says so.
+       Project Team is the rung bars.js has called misplaced through every pass
+       this session, and no bar fixes it — sloppy triage keeps clearing a
+       quarter of seeds at whatever bar is suggested. The cause is not the
+       priority spread, which is the healthiest on the ladder (24% P1 against
+       19% P4), nor the board density, which sits exactly between its
+       neighbours. It is that the day is not oversubscribed: measured over
+       twelve seeds it deals 443 minutes of work into 420 minutes of room —
+       1.06, against 1.18 to 1.48 everywhere else. A rung whose day FITS
+       cannot ask which ticket you protect.
+
+       Raising the rate does fix the rung and costs the ladder. At 1.9 the
+       flawless/sloppy gap goes from 12 points to 24 and bars.js reports the
+       rung healthy at 83% against 18% — and meta.js, which is the harness of
+       record when the two disagree, falls from 12 players in 20 reaching
+       retirement to 10. At 1.7 it is also 10. Both were measured against the
+       same twenty seeds; 12 vs 10 is close to this sample's noise, but a
+       change that measures no better does not ship.
+
+       So the fix is CONTENT, not a number: Project Team needs heavier tickets,
+       so its day is oversubscribed by work rather than by count. That is a
+       writing pass, and it is the next thing this rung wants. */
     gates:{ nextAt:{perf:0.628, days:3}, firedBelow:0.283, cert:null },
     queue:{ ratePerHr:1.5, meetingMin:60, slaScale:0.96 }, deskAnchor:'DESK_PROJ' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
