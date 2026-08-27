@@ -12792,6 +12792,32 @@ function selfTest(runSim){
         }
         ok('content: no two desks on the ladder read the same', !dupes.length, dupes.join(' · '));
 
+        /* A TITLE SAID TWICE HAS TO EARN THE SECOND TIME. Nineteen tickets
+           open by repeating their own title as the first line of dialogue,
+           and that is the house voice rather than a mistake: the queue row
+           lands the gag, the box lands it again in somebody's mouth, and the
+           SECOND line is the turn — "The vendor says it is our network. It is
+           not our network." An adversarial read of this file called those a
+           craft failure and proposed rewriting them; measured, all nineteen
+           carry a second line and every one of them advances. What must never
+           ship is the half of it without the turn: a queue row and a dialogue
+           box that say the same sentence, and then nothing. */
+        const echo = [];
+        const flat = x => String(x).toLowerCase().replace(/\{(\w+)\}/g, '$1')
+                            .replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+        for (const id in TICKETS){
+          const T = TICKETS[id];
+          const st = (T.steps || []).find(x => x.say || x.choice);
+          const n = st && DIALOGUE[st.say || st.choice];
+          if (!n || !n.t || !n.t.length) continue;
+          const a = flat(T.title), l = flat(n.t[0]);
+          const same = l === a || (l.startsWith(a) && l.length - a.length < 4)
+                                || (a.startsWith(l) && a.length - l.length < 4);
+          if (same && n.t.length < 2) echo.push(id);
+        }
+        ok('content: a ticket that repeats its own title has somewhere to go next',
+           !echo.length, echo.join(' '));
+
         /* AND EVERY DESK IN THE BUILDING IS SOMEWHERE THE JOB SENDS YOU.
            Yvonne, Noor, Callum and Mackenzie had desks, schedules, faces and
            small talk, and not one ticket walked you to any of them; two of the
