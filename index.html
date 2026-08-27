@@ -1012,15 +1012,31 @@ function bakePortrait(look){
    ========================================================================== */
 
 /* The ladder. perf is a rolling 0..1 score of ticket outcomes; a promotion
-   needs perf >= nextAt.perf held for nextAt.days consecutive days (plus the
-   cert, once certs exist at higher rungs). firedBelow two days running = gone.
-   The QUEUE is deliberately flat above the intern rung: measuring it showed
-   that ramping load per rung made T2 upward unwinnable even for perfect play.
-   Climbing gets harder because the gate rises and because every ticket costs
-   more stress the higher you are — the job does not get busier, it gets
-   heavier, and burnout is what eventually ends the career.
-   Only the intern rung is content-complete in the v0.1 slice; the rest of the
-   ladder is real data so the systems and tests see the whole shape. */
+   needs perf >= nextAt.perf held for nextAt.days consecutive days.
+   firedBelow two days running = gone.
+
+   `cert:null` used to sit on every one of these gates, over a note saying
+   "plus the cert, once certs exist at higher rungs". Certificates have
+   existed for a long time — there are four of them — and nothing has ever
+   read gates.cert: an author writing cert:'itil' here would believe they had
+   gated a promotion behind an exam and would have gated nothing. Same dead
+   field as TICKETS.sla, removed for the same reason. Requiring a certificate
+   to be promoted is a design change and a balance change, and it belongs to
+   whoever makes it, not to a null nobody reads.
+
+   The DEAL RATE is near-flat: ramping load per rung measured T2-upward
+   unwinnable even for perfect play, so climbing gets harder because the gate
+   rises, because every ticket costs more stress, and because the calendar
+   fills — meetingMin runs 30 minutes at intern to 88 at vCIO. The job does
+   not get busier, it gets heavier, and burnout is what ends the career.
+
+   THIS USED TO SAY "only the intern rung is content-complete in the v0.1
+   slice". It was true when it was written and has not been for a long time:
+   every rung on the ladder now has 28 to 44 templates of its own, five or six
+   meetings of its own, and its own boards. 337 templates, 799 dialogue nodes
+   and 65 events across the ten. A comment in this file is a record, and a
+   record that describes a build from three passes ago is the same failure
+   every other note in here is about. */
 /* ratePerHr AND THE BARS ARE MEASURED, NOT CHOSEN. Both used to be one number
    copy-pasted down the ladder: ratePerHr 3.0 on eight consecutive rungs, and a
    bar of 0.44-0.46 on all nine — while the tickets underneath got steadily
@@ -1052,7 +1068,7 @@ function bakePortrait(look){
    docs/BALANCE.md rather than tuned around. */
 const ROLES = [
   { id:'intern', title:'INTERN',        pay:0,
-    gates:{ nextAt:{perf:0.73, days:3}, firedBelow:0.329, cert:null },
+    gates:{ nextAt:{perf:0.73, days:3}, firedBelow:0.329 },
     queue:{ ratePerHr:1.9, meetingMin:30, slaScale:1.0 }, deskAnchor:'DESK_PIT' },
   { id:'t1',     title:'T1 HELPDESK',   pay:38000,
     /* 0.706 -> 0.650. T1 is the second-highest bar on the ladder after the
@@ -1062,13 +1078,13 @@ const ROLES = [
        the bar stayed where a shorter day had put it, and a flawless player's
        clear rate fell to 35% of seeds. Set from bars.js at 40 seeds (flawless
        p25); firedBelow stays 0.45x the bar, the ratio every rung uses. */
-    gates:{ nextAt:{perf:0.650, days:3}, firedBelow:0.293, cert:null },
+    gates:{ nextAt:{perf:0.650, days:3}, firedBelow:0.293 },
     queue:{ ratePerHr:1.9, meetingMin:34, slaScale:0.96 }, deskAnchor:'DESK_PIT2' },
   { id:'t2',     title:'T2 HELPDESK',   pay:46000,
-    gates:{ nextAt:{perf:0.598, days:3}, firedBelow:0.269, cert:null },
+    gates:{ nextAt:{perf:0.598, days:3}, firedBelow:0.269 },
     queue:{ ratePerHr:1.9, meetingMin:40, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'t3',     title:'T3 HELPDESK',   pay:58000,
-    gates:{ nextAt:{perf:0.563, days:3}, firedBelow:0.253, cert:null },
+    gates:{ nextAt:{perf:0.563, days:3}, firedBelow:0.253 },
     queue:{ ratePerHr:1.9, meetingMin:48, slaScale:0.96 }, deskAnchor:'DESK_T3' },
   { id:'project',title:'PROJECT TEAM',  pay:72000,
     /* ratePerHr STAYS AT 1.5, and here is the measurement that says so.
@@ -1117,16 +1133,16 @@ const ROLES = [
        hundred-minute planning job is a job that eats the day, not one that
        spikes your pulse, and pricing them like a phones-down P1 was burning
        players out three days early. */
-    gates:{ nextAt:{perf:0.540, days:3}, firedBelow:0.243, cert:null },
+    gates:{ nextAt:{perf:0.540, days:3}, firedBelow:0.243 },
     queue:{ ratePerHr:1.5, meetingMin:60, slaScale:0.96 }, deskAnchor:'DESK_PROJ' },
   { id:'procure',title:'PROCUREMENT',   pay:70000,
-    gates:{ nextAt:{perf:0.521, days:3}, firedBelow:0.234, cert:null },
+    gates:{ nextAt:{perf:0.521, days:3}, firedBelow:0.234 },
     queue:{ ratePerHr:1.9, meetingMin:68, slaScale:0.96 }, deskAnchor:'DESK_PROC' },
   { id:'relmgr', title:'RELATIONSHIP MGR', pay:84000,
-    gates:{ nextAt:{perf:0.511, days:3}, firedBelow:0.23, cert:null },
+    gates:{ nextAt:{perf:0.511, days:3}, firedBelow:0.23 },
     queue:{ ratePerHr:1.9, meetingMin:78, slaScale:0.96 }, deskAnchor:'DESK_CLIENT' },
   { id:'solarch',title:'SOLUTIONS ARCHITECT', pay:110000,
-    gates:{ nextAt:{perf:0.553, days:3}, firedBelow:0.249, cert:null },
+    gates:{ nextAt:{perf:0.553, days:3}, firedBelow:0.249 },
     queue:{ ratePerHr:1.7, meetingMin:84, slaScale:0.96 }, deskAnchor:'DESK_ARCH' },
   { id:'vcio',   title:'vCIO',          pay:135000,
     /* 0.653 -> 0.540. The vCIO bar was already the one bars.js called
@@ -1138,10 +1154,10 @@ const ROLES = [
        player cannot reach was hiding it. Set from bars.js at 40 seeds
        (flawless p25), not from taste. firedBelow stays at 0.45 x the bar,
        which is the ratio every other rung on the ladder uses. */
-    gates:{ nextAt:{perf:0.540, days:3}, firedBelow:0.243, cert:null },
+    gates:{ nextAt:{perf:0.540, days:3}, firedBelow:0.243 },
     queue:{ ratePerHr:1.7, meetingMin:88, slaScale:0.96 }, deskAnchor:'DESK_EXEC' },
   { id:'director',title:'DIRECTOR OF IT', pay:160000,
-    gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.31, cert:null },
+    gates:{ nextAt:null, retireAfterDays:3, firedBelow:0.31 },
     queue:{ ratePerHr:1.6, meetingMin:80, slaScale:1.05 }, deskAnchor:'DESK_CORNER' }
 ];
 
@@ -1359,7 +1375,8 @@ ground: {
             FRONT:[8,15], FIREDOOR:[37,15], STORES:[27,15], CANTEEN:[37,12], ACCOUNTS:[35,4] }
 }};
 
-/* meta-progression (slice: one cert + one perk visible, more later) */
+/* meta-progression. Four certificates and three perks; this said "one cert
+   and one perk visible, more later" for long after later arrived. */
 /* THE ONLY THING TO SPEND A CAREER ON WAS ONE EXAM. Reputation accumulates
    across every career you have ever had, and there was a single certificate
    costing three of it — after which banked reputation did nothing at all
@@ -7884,6 +7901,13 @@ function presentCommute(){
        number two names, and one of those names already belonged to something
        else. The in-run number is Goodwill everywhere it appears. */
     '<dt>Goodwill</dt><dd>' + run.rep + '</dd>' +
+    /* WHAT THE JOB PAYS, WHICH THE FILE HAS ALWAYS KNOWN AND NEVER SAID.
+       Every rung carries a `pay` — 0 at the intern, 38,000 at T1, 160,000 in
+       the corner office — and nothing in ten thousand lines has ever read it.
+       A game about climbing a career ladder that never tells you what the
+       next rung is worth is missing the one number everybody actually asks
+       about, and it was sitting in the data the whole time. */
+    '<dt>Pay</dt><dd>' + payLine(run.rung) + '</dd>' +
     /* Day one is deliberately lighter, and never saying so made day two read
        as your play collapsing when it was the difficulty arriving. */
     (run.day === 1 ? '<dt>Today</dt><dd>a half-load first day, and everyone knows it</dd>' : '') +
@@ -7992,6 +8016,18 @@ function commuteLine(){
   if (hit) return hit.t;
   const pool = COMMUTE.any;
   return pool[(run.day * 7 + run.rung * 3) % pool.length];
+}
+/* The salary, and what it is worth saying about it. An internship pays
+   nothing and everyone involved knows it; a promotion is worth naming as a
+   raise, because that is the only place anybody ever sees one. */
+function payLine(rung){
+  const pay = ROLES[rung].pay || 0;
+  const money = n => '\u00a3' + n.toString().replace(/\B(?=(\d{3})+$)/g, ',');
+  if (!pay) return 'nothing, and everyone has been very clear about that';
+  const prev = rung > 0 ? (ROLES[rung-1].pay || 0) : 0;
+  const rise = pay - prev;
+  return money(pay) + (rise > 0 && rung > 0
+    ? ' \u2014 up ' + money(rise) + ' on the last one' : '');
 }
 function fmtDate(d){
   const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
@@ -14059,6 +14095,28 @@ function selfTest(runSim){
       ok('and the crash only mentions jitters when you have some',
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
+    }
+    /* AND THE MORNING SAYS WHAT THE JOB PAYS. Every rung has carried a `pay`
+       since the first build and nothing had ever read it: a game about
+       climbing a career ladder that never told you what the next rung was
+       worth. Ten mornings, one per rung, each has to print its own number. */
+    {
+      const savedRunPay = run;
+      QUIET = true; rngInit('PAY-TEST'); runInit('PAY-TEST');
+      loadMap('office1');
+      const missing = [];
+      for (let r = 0; r < ROLES.length; r++){
+        run.rung = r; run.day = 2; run.pendingEnd = null;
+        startCommute();
+        const html = document.getElementById('r-stats').innerHTML;
+        const pay = ROLES[r].pay || 0;
+        const want = pay ? String(pay).replace(/\B(?=(\d{3})+$)/g, ',') : null;
+        if (!/<dt>Pay<\/dt>/.test(html)) missing.push(ROLES[r].id + ': no pay row');
+        else if (want && html.indexOf(want) < 0) missing.push(ROLES[r].id + ': not ' + want);
+      }
+      ok('the morning says what the job pays, at every rung',
+         !missing.length, missing.slice(0,3).join(' · '));
+      run = savedRunPay; G.state = 'title'; show(null);
     }
     /* THE STRESS METER TURNS WHERE THE SIM TURNS. Amber is BURN.thresh, the
        line above which tonight becomes burnout you keep; red is BURN.frayed,
