@@ -14637,16 +14637,32 @@ function selfTest(runSim){
        [2,6,0,5,1,4,3], so the paper opens with the mailbox and fails on its
        own first line. That card is the one hint the board gives and it was
        describing a different checklist. */
+    /* ONE DEAL IS NOT "ALWAYS". This read a single board at difficulty 3 and
+       held the card to it, while the card's own sentence is "It has ALWAYS
+       put the mailbox first" — the same n=1 shape as the notice-window guard
+       that ran at the one rung whose slaScale is 1.0 and missed a bug at the
+       other nine. The board deals five, six or seven steps depending on
+       difficulty, so it walks every size and every one has to agree with the
+       word on the card. */
     {
-      rngInit('STARTER-CARD');
       const W2 = ['zeroth','first','second','third','fourth','fifth','sixth','seventh'];
       const m = /puts the mailbox (\w+)/.exec(GAME_BRIEF.starter.watch || '');
       const said = m ? W2.indexOf(m[1]) : -1;
-      const g = GAMES.starter.init(3);
-      const at = g.steps.findIndex(st => st.id === 'mbx') + 1;
+      const seen = {}, off = [];
+      for (let d = 1; d <= 5; d++)
+        for (let k = 0; k < 8; k++){
+          rngInit('STARTER-CARD-' + d + '-' + k);
+          const g = GAMES.starter.init(d);
+          const at = g.steps.findIndex(st => st.id === 'mbx') + 1;
+          seen[at] = (seen[at] || 0) + 1;
+          if (at !== said && off.length < 3)
+            off.push('diff ' + d + ' puts it ' + (W2[at] || at));
+        }
       ok('the starter card knows where the checklist puts the mailbox',
-         said === at, m ? 'card says ' + m[1] + ', the paper puts it ' +
-                          (W2[at] || at) : 'the card no longer says');
+         said > 0 && !off.length,
+         m ? 'card says ' + m[1] + ', the paper agrees on ' +
+             (seen[said] || 0) + '/40 deals' + (off.length ? ' · ' + off.join(', ') : '')
+           : 'the card no longer says');
     }
     /* AND THE SUBNET CARD DESCRIBES THE PENALTY THIS BOARD ACTUALLY APPLIES.
        Its one hint promised a deferred trap — "one size too generous fits
