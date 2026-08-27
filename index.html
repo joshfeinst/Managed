@@ -5949,31 +5949,44 @@ const PW_PETS    = ['Fluffy','Rex','Mittens','Biscuit','Waffles','Bandit','Noodl
 const PW_WORDS   = ['correct','battery','stapler','tuesday','marmalade','lantern','otter',
                     'bramble','quiet','trombone','gravel','pumice'];
 const PW_SYM     = '!@#$%&*?';
+/* Each entry is a rule the policy prints, a maker that breaks it, the line the
+   player is shown when they get it wrong — and a TEST, so the generator can be
+   held to its own policy. Without the test the three halves drift silently:
+   the only thing that could ever have caught a maker producing a password the
+   printed policy does not actually forbid was somebody reading it. */
 const PW_BAD = [
   { rule:'no season + year',
     why:'a season plus a year is not a password',
-    make:() => PW_SEASONS[Ri('game',PW_SEASONS.length)] + (2018 + Ri('game',10)) + '!' },
+    make:() => PW_SEASONS[Ri('game',PW_SEASONS.length)] + (2018 + Ri('game',10)) + '!',
+    test:s => new RegExp('^(' + PW_SEASONS.join('|') + ')(19|20)\\d\\d', 'i').test(s) },
   { rule:'no company name + year',
     why:'company name plus a year',
-    make:() => 'Proactive' + (2018 + Ri('game',10)) },
+    make:() => 'Proactive' + (2018 + Ri('game',10)),
+    test:s => /^proactive(19|20)\d\d/i.test(s) },
   { rule:'no pet names',
     why:'known pet — it is on the list',
-    make:() => PW_PETS[Ri('game',PW_PETS.length)] + '_' + ['goodboy','4ever','2024','love'][Ri('game',4)] },
+    make:() => PW_PETS[Ri('game',PW_PETS.length)] + '_' + ['goodboy','4ever','2024','love'][Ri('game',4)],
+    test:s => new RegExp('^(' + PW_PETS.join('|') + ')[_\\W]', 'i').test(s) },
   { rule:'nothing with "password" in it',
     why:'contains "password"',
-    make:() => ['password','Password','PASSWORD'][Ri('game',3)] + '!'.repeat(1+Ri('game',3)) },
+    make:() => ['password','Password','PASSWORD'][Ri('game',3)] + '!'.repeat(1+Ri('game',3)),
+    test:s => /password/i.test(s) },
   { rule:'not the onboarding default',
     why:'it is the default we set on their first day',
-    make:() => 'Welcome' + (1 + Ri('game',9)) },
+    make:() => 'Welcome' + (1 + Ri('game',9)),
+    test:s => /^welcome\d$/i.test(s) },
   { rule:'not last time\'s plus another "!"',
     why:'the previous password with another ! on the end',
-    make:() => PW_SEASONS[Ri('game',PW_SEASONS.length)] + (2018 + Ri('game',8)) + '!!' },
+    make:() => PW_SEASONS[Ri('game',PW_SEASONS.length)] + (2018 + Ri('game',8)) + '!!',
+    test:s => /!!$/.test(s) },
   { rule:'not a walk across the keyboard',
     why:'that is just the keyboard',
-    make:() => ['Qwerty','qwerty123','asdfghjk','zxcvbnm'][Ri('game',4)] + (Ri('game',2) ? '1' : '') },
+    make:() => ['Qwerty','qwerty123','asdfghjk','zxcvbnm'][Ri('game',4)] + (Ri('game',2) ? '1' : ''),
+    test:s => /^(qwerty|asdfgh|zxcvbn)/i.test(s) },
   { rule:'not their name + birth year',
     why:'their own name and their own birth year',
-    make:() => ['Janet','Dale','Sharon','Doug'][Ri('game',4)] + (1970 + Ri('game',40)) }
+    make:() => ['Janet','Dale','Sharon','Doug'][Ri('game',4)] + (1970 + Ri('game',40)),
+    test:s => /^(janet|dale|sharon|doug)(19|20)\d\d$/i.test(s) }
 ];
 function pwStrong(){
   const U='ABCDEFGHJKLMNPQRSTUVWXYZ', L='abcdefghijkmnpqrstuvwxyz', D='23456789';
@@ -10080,8 +10093,11 @@ const GAME_BRIEF = {
       ['2', 'REJECT this one'],
       ['CLICK', 'or click either button']
     ],
-    watch: 'Each password is either clean or breaks exactly one rule, and you are ' +
-           'told which rule you missed when you get one wrong.'
+    /* said "breaks exactly one rule": measured over four thousand draws, one
+       rejection in eight breaks two of them — password!!! is both "nothing
+       with password in it" and "the previous one with another !" */
+    watch: 'Every password you should reject breaks at least one printed rule, ' +
+           'and you are told which one you missed when you get one wrong.'
   },
   jargon: {
     what: 'Somebody in the meeting has said a sentence made entirely of words. ' +
@@ -14095,6 +14111,31 @@ function selfTest(runSim){
       ok('and the crash only mentions jitters when you have some',
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
+    }
+    /* THE POLICY ON THE BOARD IS THE POLICY THE GENERATOR ENFORCES. The
+       password board prints its rules from PW_BAD and marks you against what
+       pwItem() deals, and nothing had ever checked that the two agree — the
+       only thing that could catch a maker producing something the printed
+       policy does not forbid, or a strong password that trips one of the
+       printed rules and is therefore right to reject and marked wrong, was
+       somebody reading it. Each rule carries its own test now. */
+    {
+      rngInit('PW-POLICY');
+      const wrongMake = [], falseReject = [];
+      for (const b2 of PW_BAD)
+        for (let i = 0; i < 120; i++){
+          const pw = b2.make();
+          if (!b2.test(pw)) wrongMake.push('"' + pw + '" does not break "' + b2.rule + '"');
+        }
+      for (let i = 0; i < 2000; i++){
+        const pw = pwStrong();
+        const hit = PW_BAD.find(b2 => b2.test(pw));
+        if (hit) falseReject.push('"' + pw + '" trips "' + hit.rule + '"');
+      }
+      ok('every rejection the board deals breaks a rule the board printed',
+         !wrongMake.length, wrongMake.slice(0,2).join(' · '));
+      ok('and no password it wants you to approve breaks one',
+         !falseReject.length, falseReject.slice(0,2).join(' · '));
     }
     /* AND THE MORNING SAYS WHAT THE JOB PAYS. Every rung has carried a `pay`
        since the first build and nothing had ever read it: a game about
