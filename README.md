@@ -77,10 +77,12 @@ tickets, the deadlines and the scoring are the same at all three, so it changes
 how much room you get and nothing else. A profile that hasn't finished a career
 yet starts on Relaxed.
 
-You cannot clear the queue. That's deliberate: about eighteen tickets arrive
-against a day you can work eight or nine of, so deciding what to let burn is the
-game. The ratio holds as you climb, but the shape of it changes — a vCIO is
-dealt fewer, heavier things and spends a third of the week in rooms.
+You cannot clear the queue. That's deliberate: about fourteen tickets arrive
+against a day a flawless triager gets through five or six of, so deciding what
+to let burn is the game. It gets harsher as you climb, not gentler — an intern
+works nine of fifteen, a Procurement Specialist five of fifteen — because the
+work gets bigger and the calendar gets fuller. An intern loses five per cent of
+the day to meetings; a vCIO loses sixteen.
 
 Every ticket has a priority, P1 through P4, on its queue row, and it's the
 office's priority rather than the technically correct one. The account manager's
@@ -181,6 +183,7 @@ were invisible to the ones that came before them.
 | | |
 |---|---|
 | `verify.js` | boots it and runs the 424 in-game self-tests |
+| `claims.js` | re-derives every number this README states from the built game |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
 | `mouseonly.js` | plays from the title screen to a worked ticket without pressing a single key, because the handbook's first line promises the mouse can |
 | `touch.js` | plays it on a 390x844 phone with taps alone, in both orientations, measures what a finger can reach, and plays all twelve boards to a result |
