@@ -8015,11 +8015,27 @@ function takeExit(act){
   sfx('door');
   toast(W2.name.replace(/^.*—\s*/, '') + ' · ' + use.mins + ' MINUTES OF YOUR DAY' +
         (to === 'office1' ? ' · BACK WHERE THE WORK IS' : ''), 'corp', 2600);
+  /* and once a day, the thought that goes with it */
+  const k = '_exit' + act;
+  if (!(run.satOn[k] = (run.satOn[k] || 0) + 1) || run.satOn[k] === 1)
+    toast(exitLine(act), 'corp', 2400);
 }
-function elevatorLine(){
-  const r = run.rung;
-  if (run.active && /^onsite/.test(run.active.id))
-    return 'DOWN TO THE CAR PARK. NINETY MINUTES EACH WAY AND A SANDWICH AT A SERVICE STATION.';
+/* FOUR LINES NOBODY COULD READ. takeLift() only ever reached this when the
+   destination map was missing, and with both floors always present that was
+   never. The lift's own joke — "YOUR CAREER DOES NOT. YET." — is a promise
+   the PROP_LINES comment forty lines down complains was never paid off, and
+   it could not be, because the line had no way to the screen. Said once a day
+   now, on the first trip, where a thought about the lift belongs. */
+function elevatorLine(){ return exitLine('elevator'); }
+function exitLine(act){
+  const r = run ? run.rung : 0;
+  if (act === 'outside'){
+    if (run && run.active && /^onsite/.test(run.active.id))
+      return 'NINETY MINUTES EACH WAY AND A SANDWICH AT A SERVICE STATION.';
+    return r >= 8 ? 'OUTSIDE. IT IS STILL LIGHT, WHICH YOU HAD NOT EXPECTED.'
+         : r >= 4 ? 'OUTSIDE. THE SMOKERS KNEW ABOUT THE OUTAGE BEFORE THE MONITORING DID.'
+         : 'OUTSIDE. NOBODY ASKED WHERE YOU WERE GOING. THAT IS NEW.';
+  }
   return r >= 9 ? 'IT GOES TO OTHER FLOORS. SO, IT TURNS OUT, DID YOUR CAREER.'
        : r >= 7 ? 'IT GOES TO OTHER FLOORS. YOU HAVE BEEN TO TWO OF THEM THIS WEEK.'
        : r >= 4 ? 'IT GOES TO OTHER FLOORS. YOUR CAREER IS STARTING TO.'
@@ -9000,7 +9016,14 @@ function resumeRun(s){
    ========================================================================== */
 let QUIET = false;                    // headless sims silence the DOM chatter
 const TOASTC = { amber:'var(--amber)', corp:'var(--corp)', red:'var(--alert)', ok:'var(--ok)' };
+/* WHAT THE GAME ACTUALLY SAID. A line that is written, referenced and
+   unreachable breaks no invariant — it simply stops existing, which is how
+   five lift lines and thirty-three lines of small talk went unheard. A test
+   can read this and ask whether a thing was said, rather than asking a helper
+   whether it would have been. Capped; it is evidence, not a log. */
+let TOAST_LOG = [];
 function toast(text, kind, ms){
+  TOAST_LOG.push(text); if (TOAST_LOG.length > 24) TOAST_LOG.shift();
   if (QUIET) return;
   const wrap = document.getElementById('toasts'); if (!wrap) return;
   while (wrap.children.length > 3) wrap.firstChild.remove();
@@ -14850,6 +14873,37 @@ function selfTest(runSim){
       ok('the elevator stops saying your career does not go anywhere',
          bottom !== top && /YET/.test(bottom) && !/YET/.test(top),
          bottom.slice(-28) + ' -> ' + top.slice(-28));
+      /* AND SOMEBODY CAN ACTUALLY READ IT. The test above has been green over
+         dead content since the day the ground floor shipped: takeLift() only
+         reached elevatorLine() when the destination map was missing, and with
+         both floors always present it never was. Four rung-flavoured lines,
+         written, asserted-upon and unreadable. So drive the real trip and
+         read what the game actually SAID — TOAST_LOG is what came out, not
+         what a helper thinks would have. */
+      {
+        const savedRunE = run, savedStateE = G.state, savedMapE = W2.id;
+        const heard = {};
+        for (const act of ['elevator', 'outside']){
+          for (const rung of [0, 4, 7, 9]){
+            rngInit('SAID'); runInit('SAID'); run.rung = rung; run.day = 3; rollDay();
+            loadMap(act === 'elevator' ? 'office1' : 'ground');
+            spawnPeople(); G.state = 'work'; G.modal = null;
+            const from = exitsFrom(W2.id).filter(e => e.act === act)[0];
+            if (!from) continue;
+            const p = anchorPos(from.at); if (!p) continue;
+            player.tx = p[0]; player.ty = p[1];
+            TOAST_LOG = [];
+            takeExit(act);
+            const want = (heard[act + rung] = exitLine(act));
+            heard[act + rung] = TOAST_LOG.indexOf(want) >= 0;
+          }
+        }
+        const unsaid = Object.keys(heard).filter(k => !heard[k]);
+        run = savedRunE; G.state = savedStateE; loadMap(savedMapE || 'office1');
+        ok('and the line the lift and the door have is one a player can read',
+           Object.keys(heard).length >= 6 && !unsaid.length,
+           Object.keys(heard).length + ' trips, unheard on: ' + (unsaid.join(' ') || 'none'));
+      }
       run = savedRunP;
     }
     /* THE OFFER HAS TO BE FOR THE JOB. The posting screen was static markup, so
