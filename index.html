@@ -7891,7 +7891,12 @@ function presentCommute(){
        then simply ends the career, so the only ending you can actually earn
        arrived as an unheralded text card — you finished a day like any other
        and the game told you it was over. It gets a morning now. */
-    (lastDayAtTop() ? '<dt>Today</dt><dd>your last one, if you want it to be</dd>' : '') +
+    /* "if you want it to be" offered a choice the day does not have:
+       retireAfterDays ends the career this evening whatever you do. What IS
+       still yours is WHICH ending — the Big Migration is force-fed as the
+       first arrival of this day, and landing it is the whole difference
+       between the two of them. */
+    (lastDayAtTop() ? '<dt>Today</dt><dd>your last one — how it ends is still up to you</dd>' : '') +
     /* THE BEST PART OF ANYONE'S WEEK, WHICH NOBODY COULD SEE. The handbook
        promises that the meetings which will not fit get cancelled, and the
        roller does exactly that — on seven days in ten across the ladder, and
@@ -11740,9 +11745,15 @@ function hudUpdate(){
   q.className = breaching ? 'breach' : '';
   const sm = document.getElementById('h-stressm');
   sm.firstElementChild.style.width = Math.round(run.stress) + '%';
-  /* the meter turns at the threshold that actually costs you burnout tonight,
-     not at a round number that means nothing */
-  sm.className = 'meter' + (run.stress > BURN.thresh + 20 ? ' bad'
+  /* BOTH TURNS ARE THRESHOLDS THE SIM ACTUALLY USES. The amber one always
+     was — BURN.thresh is the line above which tonight converts into burnout
+     you keep — and the red one was thresh + 20, which is exactly the round
+     number that means nothing this comment was written to rule out. The next
+     thing that actually happens to you above thresh is BURN.frayed: your
+     hands stop cooperating and every board gets a step harder. That is what
+     red means now, and both numbers come from the record rather than from
+     arithmetic on it. */
+  sm.className = 'meter' + (run.stress > BURN.frayed ? ' bad'
                           : run.stress > BURN.thresh ? ' warn' : '');
   const bm = document.getElementById('h-burnm');
   bm.firstElementChild.style.width = Math.round(run.burnout) + '%';
@@ -14048,6 +14059,29 @@ function selfTest(runSim){
       ok('and the crash only mentions jitters when you have some',
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
+    }
+    /* THE STRESS METER TURNS WHERE THE SIM TURNS. Amber is BURN.thresh, the
+       line above which tonight becomes burnout you keep; red is BURN.frayed,
+       where your hands stop cooperating and every board gets a step harder.
+       Red used to be thresh + 20 — a number nothing in the sim has ever read.
+       Driven through the real hudUpdate at four stress levels. */
+    {
+      const savedRunM2 = run;
+      QUIET = true; rngInit('METER-TEST'); runInit('METER-TEST');
+      run.rung = 0; loadMap('office1'); hudShow(true);
+      const at = v => { run.stress = v; hudUpdate();
+                        return document.getElementById('h-stressm').className; };
+      const want = [[BURN.thresh - 1, 'meter'], [BURN.thresh + 1, 'meter warn'],
+                    [BURN.frayed - 1, 'meter warn'], [BURN.frayed + 1, 'meter bad']];
+      const wrong = [];
+      for (const [v, cls] of want){
+        const got = at(v);
+        if (got !== cls) wrong.push('at ' + v + ' the meter is "' + got + '", not "' + cls + '"');
+      }
+      hudShow(false);
+      ok('the stress meter turns where the sim turns',
+         !wrong.length, wrong.join(' · '));
+      run = savedRunM2;
     }
     /* AN OPTION THAT PUTS A DURATION IN BRACKETS HAS TO MEAN IT. The dialogue
        box prints the option's own fx.time beside its label — "(-15 min)" — so
