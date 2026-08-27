@@ -79,6 +79,29 @@ async function launch(){
     };
   });
 
+  /* the strategy table: five careers per rule, same seeds, boards played
+     perfectly so the ONLY difference is which ticket the bot picks next */
+  const T = await page.evaluate(() => {
+    SAVE_SUSPEND = true; QUIET = true; loadMap('office1');
+    const play = (seed, order, skill) => {
+      const o = []; rngInit(seed); runInit(seed);
+      for (let d = 0; d < 6 && run && !run.pendingEnd; d++){
+        rollDay(); simDay(skill, { order }); if (!run) break;
+        o.push(run.perfHist[run.perfHist.length - 1]);
+        if (run.pendingEnd) break; startCommute();
+      }
+      run = null; return o;
+    };
+    const runAll = (order, skill) => {
+      const all = [];
+      for (let i = 0; i < 16; i++) all.push.apply(all, play('ORD-' + i, order, skill));
+      return 100 * all.reduce((x, y) => x + y, 0) / all.length;
+    };
+    const best = runAll('pridead', 1);
+    return { pridead:best, shortest:runAll('shortest', 1), oldest:runAll('oldest', 1),
+             worstpri:runAll('worstpri', 1), noHands:runAll('pridead', 0) };
+  });
+
   /* the suite count is its own claim and its own run */
   const tests = await page.evaluate(() => selfTest(true).length);
 
@@ -129,6 +152,30 @@ async function launch(){
   claim('what a P1 is worth', /A P1 is worth (\w+) times a P4/,
     m => ({ ok: num(m[1]) === M.stakeRatio,
             why: 'README ' + num(m[1]) + ', STAKES says ' + M.stakeRatio }));
+
+  const near = (said, got, tol) => ({ ok: Math.abs(said - got) <= tol,
+    why: 'README ' + said + ', measured ' + got.toFixed(1) + ' (±' + tol + ')' });
+
+  claim('protect the big ones', /\*protect the big\s*ones\* \((\d+(?:\.\d+)?)%\)/,
+    m => near(+m[1], T.pridead, 1.5));
+  claim('close what you can actually finish',
+    /close what you can actually finish\*\s*\((\d+(?:\.\d+)?)%\)/,
+    m => near(+m[1], T.shortest, 1.5));
+  claim('doing the least important thing first',
+    /doing the least important thing first\s*\((\d+(?:\.\d+)?)%\)/,
+    m => near(+m[1], T.worstpri, 1.5));
+  claim('working the queue in the order it arrived',
+    /the queue in the order it arrived\*\* \((\d+(?:\.\d+)?)%\)/,
+    m => near(+m[1], T.oldest, 1.5));
+  claim('what hands are worth', /acing them is (\d+(?:\.\d+)?) points/,
+    m => near(+m[1], T.pridead - T.noHands, 1.5));
+  claim('what judgement is worth', /the best triage rule against the\s*worst is (\d+(?:\.\d+)?)/,
+    m => near(+m[1], T.pridead - T.worstpri, 1.5));
+  claim('and judgement is worth more than hands',
+    /judgement matters more/,
+    () => ({ ok: (T.pridead - T.worstpri) > (T.pridead - T.noHands),
+             why: 'triage ' + (T.pridead - T.worstpri).toFixed(1) +
+                  ' vs hands ' + (T.pridead - T.noHands).toFixed(1) }));
 
   claim('the pace dial',
     /about (\w+) minutes on Relaxed, (\w+) on Standard, (\w+) on Crunch/,

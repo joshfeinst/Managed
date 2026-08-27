@@ -94,18 +94,19 @@ stake. A P1 is worth seven times a P4. Dropping tickets is expected, and there's
 some forgiveness for your first casualties. Dropping the wrong ones is what
 hurts.
 
-Measured across 24 seeds, the two strategies that work are *protect the big
-ones* (71.0%) and *close what you can actually finish* (71.3%) — a third of a
-point apart, so there is no single right answer, which is the point. Two things
-lose you the most: doing the least important thing first (59.6%), and **working
-the queue in the order it arrived** (62.3%). Going in order costs you nearly
-as much as choosing badly, and it feels like diligence the whole time you are
-doing it.
+Measured across 16 seeds and six days each, with every board played perfectly
+so that only the triage rule differs, the two strategies that work are
+*protect the big ones* (70.0%) and *close what you can actually finish*
+(67.7%) — two points apart, so there is no single right answer, which is the
+point. Two things lose you the most: doing the least important thing first
+(51.2%), and **working the queue in the order it arrived** (55.7%). Going in
+order costs you nearly as much as choosing badly, and it feels like diligence
+the whole time you are doing it.
 
-Skill at the minigames is worth almost as much as good triage — a 9.9-point
-spread between fumbling every board and acing them, against 11.7 points between
-the best triage rule and the worst. Judgement leads, hands are a close second,
-and neither one alone is enough.
+Skill at the minigames matters and judgement matters more: fumbling every
+board against acing them is 10.1 points, and the best triage rule against the
+worst is 18.7. Hands are worth having; they will not save a day you triaged
+badly.
 
 Some other things worth knowing:
 
