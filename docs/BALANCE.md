@@ -2375,3 +2375,28 @@ game that makes the work harder from cup three. Lifted into `botJitter()` and
 held against `gameDiff()` by a test: same three conditions, same thresholds,
 one step of difficulty per 0.08 of craft, swept over every cup and both stress
 thresholds.
+
+### Where the ladder stands at the end of this session
+
+`bars.js`, 40 seeds × 8 days per rung:
+
+| rung | bar | flawless p50 | sloppy p50 | good clears | bad clears |
+|---|---|---|---|---|---|
+| intern | 73% | 78% | 57% | 78% | 3% |
+| T1 | 65% | 70% | 53% | 73% | 5% |
+| T2 | 60% | 65% | 44% | 70% | 3% |
+| T3 | 56% | 62% | 45% | 70% | 10% |
+| Project Team | 54% | 64% | 49% | 88% | 23% |
+| Procurement | 52% | 57% | 43% | 78% | 5% |
+| Relationship Mgr | 51% | 60% | 39% | 90% | 15% |
+| Solutions Architect | 55% | 60% | 47% | 75% | 15% |
+| vCIO | 54% | 64% | 46% | 85% | 18% |
+
+**Zero rungs misplaced** — every rung clears the harness's own definition of
+healthy (good triage above 60%, bad triage below 30%). This is the first pass
+in the project where that has been true, and the promptness fix is what did
+it: the gates had been tuned against a player who was being quietly docked for
+doing the work well.
+
+`meta.js`, 40 players of fourteen careers each: **33 reach retirement**, in
+11.0 careers on average, and the worst player tops out at Solutions Architect.
