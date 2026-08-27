@@ -7530,21 +7530,9 @@ function bestLiftTo(anchor, from){
   const r = routeVia(W2.id, L => tilesBetween(from, L), anchor);
   return r ? r.first : null;
 }
-/* Which lift you are standing at. takeLift needs it: arriving at the far end
-   of the other floor because you happened to use the second shaft is the whole
-   point of there being a second shaft. */
-function nearestLift(pos){
-  const from = pos || (typeof player !== 'undefined' && player ? [player.tx, player.ty] : null);
-  if (!from) return 'ELEV';
-  let best = 'ELEV', bd = Infinity;
-  for (const L of LIFTS){
-    const p = anchorPos(L);
-    if (!p) continue;
-    const d = Math.abs(from[0] - p[0]) + Math.abs(from[1] - p[1]);
-    if (d < bd){ bd = d; best = L; }
-  }
-  return best;
-}
+/* nearestLift() stood here. Its comment said "takeLift needs it" and takeLift
+   had stopped needing it: takeExit picks the nearest exit of the right kind
+   itself, on whichever map you are standing on. Nothing called it. */
 
 function tilesBetween(from, anchor){
   const a = anchorPos(anchor);
@@ -8545,8 +8533,10 @@ function interact(act){
          jitters a cup after they had already started */
       toast('COFFEE ' + run.coffee + ' OF ' + COFFEE_MAX + ' — STRESS -' + BURN.cup +
             ' NOW, +' + BURN.crashStress + ' WHEN IT CRASHES IN 90 MIN' +
-            (run.coffee >= BURN.freeCups ? ' · JITTERS FROM HERE (HARDER HANDS-ON WORK)' : '') +
-            (run.coffee > BURN.freeCups ? ' AND SLEEP DEBT' : ''),
+            (run.coffee > BURN.freeCups
+               ? ' · JITTERS (HARDER HANDS-ON WORK) AND SLEEP DEBT'
+               : run.coffee === BURN.freeCups
+               ? ' · ONE MORE AND YOUR HANDS START SHAKING' : ''),
             'corp', 3600);
       break;
     case 'couch':
@@ -9802,10 +9792,19 @@ function abandonScore(g){
   }
   return 0;
 }
-function openGame(id, diff, onDone){
-  G.state = 'modal'; G.modal = { kind:'game' };
+/* HOW HARD THE HANDS-ON WORK IS RIGHT NOW, AND WHY. Lifted out of openGame so
+   the toast that warns you about the jitters and the code that inflicts them
+   can be held against each other by a test — they had drifted apart by exactly
+   one cup. The threshold was the literal 3 while the warning read BURN.freeCups
+   (2), so the machine announced JITTERS FROM HERE on your second cup and
+   nothing got harder until your third. The record above the toast says a
+   previous pass moved that warning because it fired A CUP LATE; it moved it a
+   cup too far. Both ends read the constant now. */
+function gameDiff(diff){
   let d = diff + metaFx('gameDiff');
-  if (run && run.coffee >= 3) d += 1;          // the jitters: cup four was a choice
+  /* sleep debt starts past the free cups and so do the jitters: they are the
+     same cup, and the toast says so */
+  if (run && run.coffee > BURN.freeCups) d += 1;
   /* A meter that ten systems write to and nothing ever reads is decoration.
      Stress is what the hands-on work is supposed to cost you, so it costs you:
      frayed hands make the work a step harder, and past that it is two. Measured
@@ -9814,7 +9813,11 @@ function openGame(id, diff, onDone){
      anything. Coffee is a loan; a loan has to be worth taking. */
   if (run && run.stress > BURN.frayed) d += 1;
   if (run && run.stress > BURN.wrecked) d += 1;
-  MG = GAMES[id].init(Math.max(1, d));
+  return Math.max(1, d);
+}
+function openGame(id, diff, onDone){
+  G.state = 'modal'; G.modal = { kind:'game' };
+  MG = GAMES[id].init(gameDiff(diff));
   document.body.classList.add('panelopen');
   document.body.classList.add('gameopen');
   /* on the easiest games there is no difficulty left to remove, so the cert
@@ -13926,6 +13929,36 @@ function selfTest(runSim){
       ok('and no ticket arrives already marked too late to start',
          !born.length, born.length + ': ' + born.slice(0,3).join(' · '));
       run = savedRunW;
+    }
+    /* THE CUP THE MACHINE WARNS YOU ABOUT IS THE CUP YOUR HANDS SHAKE ON.
+       The jitters threshold was the literal 3 inside openGame while the toast
+       read BURN.freeCups, which is 2 — so the machine said JITTERS FROM HERE
+       on your second cup and nothing got harder until your third. Drive the
+       real coffee machine four times and hold each toast against what
+       gameDiff() actually returns at that cup count. */
+    {
+      const savedRunJ = run;
+      QUIET = false; rngInit('COFFEE-TEST'); runInit('COFFEE-TEST');
+      run.rung = 0; run.stress = 0; run.coffee = 0; run.crashes = [];
+      loadMap('office1');
+      const base = gameDiff(2);
+      const rows = [];
+      for (let cup = 1; cup <= COFFEE_MAX; cup++){
+        /* the last line the machine said, NOT a slice from a remembered
+           length — TOAST_LOG caps at 24 and shifts, so on a full log a slice
+           from the old length is empty and every cup reads as silent */
+        interact('coffee');
+        const said = TOAST_LOG[TOAST_LOG.length - 1] || '';
+        const claims = /JITTERS \(HARDER/.test(said);
+        const harder = gameDiff(2) > base;
+        if (claims !== harder)
+          rows.push('cup ' + cup + ' ' + (claims ? 'claims jitters, nothing is harder'
+                                                 : 'is harder and says nothing'));
+      }
+      QUIET = true;
+      ok('the cup the machine warns you about is the cup your hands shake on',
+         !rows.length && run.coffee === COFFEE_MAX, rows.join(' · ') || 'ok');
+      run = savedRunJ;
     }
     /* THE CANCELLED MEETINGS ARE TODAY'S, AND THE MORNING SAYS SO. The
        handbook promises that meetings which will not fit the rung's calendar
