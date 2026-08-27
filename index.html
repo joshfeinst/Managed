@@ -14319,6 +14319,19 @@ function selfTest(runSim){
       }
       ok('the salary on the posting is the salary the job pays',
          !off.length, off.slice(0,3).join(' · '));
+      /* ...and the one joke on that screen that depends on the numbers.
+         Procurement's perk line is "The salary is lower than the last one.
+         Nobody mentions it." — which is only funny while it is true, and
+         re-pricing the ladder is exactly the thing that would quietly stop
+         it being true. */
+      const cut = [];
+      for (let r = 1; r < ROLES.length; r++)
+        if (/lower than the last one/i.test((JOB_POSTING[r] || {}).perk || '') &&
+            !((ROLES[r].pay || 0) < (ROLES[r-1].pay || 0)))
+          cut.push(ROLES[r].id + ' says the salary drops, from ' +
+                   (ROLES[r-1].pay || 0) + ' to ' + (ROLES[r].pay || 0));
+      ok('and the rung whose joke is a pay cut really is one',
+         !cut.length, cut.join(' · '));
     }
     /* NOTHING YOU CAN SEE ON DAY ONE MAY CLAIM WHAT THE LADDER GIVES YOU
        LATER. The commute card at rung 8 says "there is a space with your name
