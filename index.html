@@ -11041,7 +11041,14 @@ const GAMES = {
       while (hand.length < dealt && pool.length)
         hand.push(pool.splice(Ri('game', pool.length), 1)[0]);
     } while (!solvable(hand) && guard++ < 80);
-    return { kind:'keep', hand, cur:0, left:picks, picks,
+    /* THE BRIEFING PROMISES A HAND THAT GETS ALL THREE HOME ALWAYS EXISTS.
+       The retry loop gives up after eighty deals and ships whatever it has,
+       and nothing checked which. Measured over 2,400 boards the worst deal
+       needed four retries, so the cap has never been reached — but a content
+       change is exactly what would reach it, and the board would then be
+       unwinnable while its own card said otherwise. The answer travels with
+       the board now, and a test reads it. */
+    return { kind:'keep', hand, fair:solvable(hand), cur:0, left:picks, picks,
       c:START, t:START, m:START, goal:GOAL, played:[],
       flash:0, flashTxt:'', flashOk:false, click:null,
       obj:'THREE PEOPLE. ' + picks + ' MOVES. NOBODY GETS EVERYTHING.',
@@ -11412,8 +11419,11 @@ const GAMES = {
         tasks.push({ t:t.t, s:t.s, w:t.w, to:-1 });
       }
     } while (!solvable(tasks, staff) && guard++ < 80);
+    /* same as `keep`: the card promises a rota that works without you always
+       exists, and this is what makes that checkable. Worst deal measured over
+       2,400 boards needed eighteen retries of the eighty allowed. */
     /* YOU are index staff.length — every skill, and two units of weekend */
-    return { kind:'weekend', tasks, staff, you:{ name:'YOU', cap:2 },
+    return { kind:'weekend', tasks, staff, fair:solvable(tasks, staff), you:{ name:'YOU', cap:2 },
       cur:0, submitted:false, flash:0, flashTxt:'', flashOk:false, click:null,
       /* IT DEALS FOUR TO SIX. The headline said FIVE THINGS on a board whose
          size is 4 + min(diff,2), so a Director's own migration announced the
@@ -14111,6 +14121,24 @@ function selfTest(runSim){
       ok('and the crash only mentions jitters when you have some',
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
+    }
+    /* AND THE TWO BOARDS THAT PROMISE A SOLUTION EXISTS ALWAYS DEAL ONE.
+       "A hand that gets all three home always exists" and "a rota that works
+       without you always exists" are printed on the cards; both deals retry
+       up to eighty times and then ship whatever they have. Nothing checked
+       which. */
+    {
+      rngInit('FAIR-TEST');
+      const unfair = [];
+      for (const gid of ['keep', 'weekend'])
+        for (let d = 1; d <= 3; d++)
+          for (let i = 0; i < 150; i++){
+            const g = GAMES[gid].init(d);
+            if (g.fair === false) unfair.push(gid + ' at difficulty ' + d);
+          }
+      ok('the boards that promise a solution exists always deal one',
+         !unfair.length, [...new Set(unfair)].join(' · ') +
+         (unfair.length ? ' (' + unfair.length + ' of 900)' : ''));
     }
     /* THE POLICY ON THE BOARD IS THE POLICY THE GENERATOR ENFORCES. The
        password board prints its rules from PW_BAD and marks you against what
