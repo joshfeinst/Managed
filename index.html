@@ -5148,13 +5148,20 @@ const TICKETS = {
     steps:[{say:'a.old.a'},{choice:'a.old.b'}] },
   'compliance-asks-for-a-map': { tiers:[7,8], weight:3, slaMult:2.1, pri:2, stress:7,
     title:'Compliance wants a data-flow map by Friday. Nobody has ever made one.',
-    steps:[{say:'a.comp.a'},{choice:'a.comp.b'}] },
+    /* HANDS AT THE TOP OF THE LADDER. The senior half was 27-29% hands-on
+       against an intern's 49%, on a plan whose promise is the opposite, and
+       six of these tickets were already asking for a board in their own
+       titles. Nothing is rewritten: each gets the board it was describing.
+       A data-flow map is the diagram board's whole subject. */
+    steps:[{say:'a.comp.a'},{game:'diagram',diff:3},{choice:'a.comp.b'}] },
   'proof-of-concept-went-live': { tiers:[7,8], weight:3, slaMult:1.8, pri:3, stress:10,
     title:'The proof of concept has 200 users on it. It was never meant to.',
     steps:[{say:'a.poc.a'},{choice:'a.poc.b'}] },
   'estimate-in-the-room': { tiers:[7,8], weight:3, slaMult:1.5, pri:4, stress:9,
     title:'They want a number now, in the room, with everyone looking at you',
-    steps:[{say:'a.est.a'},{choice:'a.est.b'}] },
+    /* the quote board opens "Finance have given you a number. It is not
+       enough" — which is this ticket, said from the other side of the table */
+    steps:[{say:'a.est.a'},{game:'quote',diff:3},{choice:'a.est.b'}] },
   'standard-build-nobody-uses': { tiers:[7,8], weight:2, slaMult:2.4, pri:2, stress:6,
     title:'The standard build exists. Fourteen sites have each improved on it.',
     steps:[{say:'a.std.a'},{game:'pw',diff:3},{choice:'a.std.b'}] },
@@ -5166,7 +5173,9 @@ const TICKETS = {
     steps:[{say:'a.lic.a'},{choice:'a.lic.b'}] },
   'nobody-owns-the-network': { tiers:[7,8], weight:2, slaMult:2.3, pri:2, stress:7,
     title:'Three teams administer this network and none of them designs it',
-    steps:[{say:'a.own.a'},{choice:'a.own.b'}] },
+    /* three administrators and no owner is a question about who a change
+       lands on, which is what blast asks */
+    steps:[{say:'a.own.a'},{game:'blast',diff:3},{choice:'a.own.b'}] },
   'draw-it-for-the-board': { tiers:[7,8], weight:2, slaMult:2.5, pri:1, stress:5,
     title:'The board needs the architecture on one slide, in colour, by ten',
     steps:[{say:'a.slide.a'},{choice:'a.slide.b'}] },
@@ -5192,10 +5201,13 @@ const TICKETS = {
     steps:[{say:'v.bud.a'},{goto:'CONF'},{choice:'v.bud.b'}] },
   'cfo-wants-a-saving': { tiers:[8,8], weight:3, slaMult:1.9, pri:3, stress:9,
     title:'The CFO needs eight percent out and has suggested where',
-    steps:[{say:'v.cfo.a'},{choice:'v.cfo.b'}] },
+    /* eight per cent out of a list where some lines are marked must-keep */
+    steps:[{say:'v.cfo.a'},{game:'quote',diff:3},{choice:'v.cfo.b'}] },
   'shadow-it-is-winning': { tiers:[8,8], weight:3, slaMult:2.0, pri:3, stress:8,
     title:'Marketing has bought a platform. Marketing has bought four platforms.',
-    steps:[{say:'v.shadow.a'},{choice:'v.shadow.b'}] },
+    /* absorb them, kill them, or leave them: a client, your own team and the
+       margin, which is the keep board exactly */
+    steps:[{say:'v.shadow.a'},{game:'keep',diff:3},{choice:'v.shadow.b'}] },
   'succession-of-one-person': { tiers:[8,8], weight:3, slaMult:2.1, pri:3, stress:9,
     title:'One person can restore the core system and he is 61',
     steps:[{say:'v.succ.a'},{goto:'n2'},{choice:'v.succ.b'}] },
@@ -5213,7 +5225,8 @@ const TICKETS = {
     steps:[{say:'v.bench.a'},{choice:'v.bench.b'}] },
   'the-quiet-resignation': { tiers:[8,8], weight:3, slaMult:2.0, pri:3, stress:9,
     title:'Their best engineer has resigned and nobody has told you why',
-    steps:[{say:'v.quit.a'},{choice:'v.quit.b'}] },
+    /* the cover has to come from somewhere and everybody left has a name */
+    steps:[{say:'v.quit.a'},{game:'weekend',diff:3},{choice:'v.quit.b'}] },
   'sponsor-changes-mid-flight': { tiers:[8,8], weight:2, slaMult:2.3, pri:2, stress:8,
     title:'The executive who sponsored the whole programme has left',
     steps:[{say:'v.spon.a'},{choice:'v.spon.b'}] },
