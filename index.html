@@ -1103,12 +1103,19 @@ const FILLS = {
 const ANCHOR_NAMES = {
   TERMINAL:'THE HELPDESK TERMINAL', COFFEE:'THE COFFEE MACHINE', PRINTER:'THE PRINTER',
   DESK_PIT:'YOUR DESK — THE FAR END OF THE PIT', DESK_PIT2:'YOUR DESK — NEARER THE WINDOW',
-  DESK_T3:'YOUR DESK — BESIDE THE TERMINAL', DESK_PROJ:'YOUR DESK — THE PROJECT ROOM',
-  DESK_PROC:'YOUR DESK — THE PROJECT ROOM', DESK_CLIENT:'YOUR DESK — THE CLIENT SUITE',
+  DESK_T3:'YOUR DESK — BESIDE THE TERMINAL', DESK_PROJ:'YOUR DESK — THE PROJECT ROOM, BESIDE THE PRINTER',
+  DESK_PROC:'YOUR DESK — THE PROJECT ROOM, AWAY FROM THE PRINTER',
+  DESK_CLIENT:'YOUR DESK — THE CLIENT SUITE',
   DESK_ARCH:'YOUR DESK — THE DRAWING BOARD', DESK_EXEC:'YOUR DESK — THE QUIET SUITE',
   DESK_CORNER:'YOUR DESK — THE CORNER',
   VEND:'THE VENDING MACHINE', ARCADE:'THE ARCADE CABINET', COOLER:'THE WATER COOLER',
   SHELF:'THE SUPPLY SHELF', ELEV:'THE LIFT', ELEV_E:'THE EAST LIFT', SERVERS:'THE SERVER ROOM',
+  /* LEGEND's 'Y' creates this anchor, interact() has a live case for it and
+     PROP_LINES has four lines behind it, and it had no name here at all —
+     the same latent failure this file documents for n5 four blocks down.
+     Nothing sends you to a window today, so nothing had printed the raw
+     anchor at anybody yet. */
+  WINDOW:'THE CORNER WINDOW',
   CONF:'THE CONFERENCE ROOM', KITCHEN:'THE KITCHEN', KITCHEN2:'THE KITCHEN',
   /* Two floors, two receptions, and the queue row only ever shows a name —
      so the one upstairs says which floor it is on. */
@@ -3904,7 +3911,7 @@ const TICKETS = {
     steps:[{say:'x.ven.a'},{choice:'x.ven.b'}] },
   'one-slide-for-linda': { tiers:[5,9], weight:4, sla:54, slaMult:2.2, pri:2, stress:6,
     title:'Linda needs one slide. It will not be one slide.',
-    steps:[{say:'x.slide.a'},{goto:'n1'},{choice:'x.slide.b'}] },
+    steps:[{say:'x.slide.a'},{goto:'n8'},{choice:'x.slide.b'}] },
   'parking-space-politics': { tiers:[6,9], weight:3, sla:56, slaMult:2.3, pri:1, stress:5,
     title:'Two people want the same parking space and both escalated to you',
     steps:[{say:'x.park.a'},{choice:'x.park.b'}] },
@@ -4131,7 +4138,7 @@ const TICKETS = {
     steps:[{say:'p.date.a'},{choice:'p.date.b'}] },
   'two-projects-one-derek': { tiers:[4,7], weight:3, sla:52, slaMult:1.8, pri:3, stress:9,
     title:'Two projects need Derek on Thursday. There is one Derek.',
-    steps:[{say:'p.derek.a'},{goto:'n2'},{choice:'p.derek.b'}] },
+    steps:[{say:'p.derek.a'},{goto:'n1'},{choice:'p.derek.b'}] },
   'change-window-tonight': { tiers:[4,8], weight:3, sla:42, slaMult:1.5, pri:4, stress:11,
     title:'CAB approved tonight only. The approver is now on annual leave.',
     steps:[{say:'p.cab.a'},{goto:'TERMINAL'},{choice:'p.cab.b'}] },
@@ -12558,6 +12565,39 @@ function selfTest(runSim){
         ok('content: a ticket that says "my desk" sends you to that desk',
            !wrongRoom.length, wrongRoom.slice(0,3).join(' · '));
 
+        /* AND THE PERSON AT THE DESK IS THE PERSON WHOSE DESK IT IS. The guard
+           above only fires on the literal words "my desk", so it could not see
+           the two that were actually wrong. "Just one slide. For the board."
+           is spoken by Linda on both sides of the walk, and the walk went to
+           n1 — DEREK'S DESK — while Linda's schedule keeps her in n8 all day.
+           "Two projects need Derek on Thursday. There is one Derek." went to
+           n2, RAJ'S DESK, and Derek was the one standing there talking.
+           The player is told GO TO: DEREK'S DESK, follows an arrow to it, and
+           is met by their manager who works at the other end of the building.
+           Mechanical and general: if an errand walks you to somebody's desk,
+           the next person who speaks has to be the person who sits there. */
+        const wrongDesk = [];
+        const homeOf = {};
+        for (const nid in NPCS){ const h = (NPCS[nid].sched || [])[0]; if (h) homeOf[nid] = h[1]; }
+        for (const id in TICKETS){
+          const T = TICKETS[id];
+          for (let i = 0; i < T.steps.length; i++){
+            const g = T.steps[i].goto;
+            if (!g || !/^n[1-9]$/.test(g)) continue;
+            for (let j = i + 1; j < T.steps.length; j++){
+              const n = DIALOGUE[T.steps[j].say || T.steps[j].choice];
+              if (!n || !n.who || !NPCS[n.who]) continue;
+              const home = homeOf[n.who];
+              if (home && /^n[1-9]$/.test(home) && home !== g)
+                wrongDesk.push(id + ': to ' + (ANCHOR_NAMES[g] || g) + ', met by ' +
+                               n.who + ' of ' + (ANCHOR_NAMES[home] || home));
+              break;
+            }
+          }
+        }
+        ok('content: the person at the desk is the person whose desk it is',
+           !wrongDesk.length, wrongDesk.slice(0,3).join(' · '));
+
         /* EVERY PLACE THE JOB CAN SEND YOU HAS A NAME. n5 had none — nothing
            had ever sent anybody to it — so the first ticket that did would
            have printed the raw anchor at the player: "GO TO n5 — FOLLOW THE
@@ -12565,6 +12605,36 @@ function selfTest(runSim){
         const nameless = [...sent].filter(a => !ANCHOR_NAMES[a]);
         ok('content: every place a ticket sends you has a name a player can read',
            !nameless.length, nameless.join(' '));
+
+        /* AND EVERY ANCHOR THE MAP ITSELF MAKES, whether a ticket has found it
+           yet or not. The guard above only looks at anchors some ticket sends
+           you to, so WINDOW — created by LEGEND's 'Y', with a live interact
+           case and four lines of PROP_LINES behind it — had no name and
+           nothing noticed, because no errand had reached it. That is the n5
+           failure exactly: latent until the first ticket, then the player
+           reads the raw anchor id. Read off LEGEND, so a glyph that names an
+           anchor is covered the day it is added. */
+        const unnamedGlyphs = [];
+        for (const g in LEGEND){
+          const a = LEGEND[g].anchor;
+          if (a && !ANCHOR_NAMES[a]) unnamedGlyphs.push("'" + g + "' makes " + a);
+        }
+        ok('content: every anchor the map makes has a name a player can read',
+           !unnamedGlyphs.length, unnamedGlyphs.join(' · '));
+
+        /* AND NO TWO OF YOUR DESKS READ THE SAME. Project Team and Procurement
+           are consecutive rungs and both printed "YOUR DESK — THE PROJECT
+           ROOM", so the promotion between them moved the arrow and not the
+           words: the queue row, the toast and the objective line were all
+           byte-identical either side of a promotion. */
+        const deskNames = {}, dupes = [];
+        for (const a in ANCHOR_NAMES){
+          if (!/^DESK_/.test(a)) continue;
+          const n = ANCHOR_NAMES[a];
+          if (deskNames[n]) dupes.push(deskNames[n] + ' and ' + a + ' are both "' + n + '"');
+          deskNames[n] = a;
+        }
+        ok('content: no two desks on the ladder read the same', !dupes.length, dupes.join(' · '));
 
         /* AND EVERY DESK IN THE BUILDING IS SOMEWHERE THE JOB SENDS YOU.
            Yvonne, Noor, Callum and Mackenzie had desks, schedules, faces and
