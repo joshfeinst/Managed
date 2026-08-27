@@ -1234,6 +1234,11 @@ const ANCHOR_NAMES = {
   WINDOW:'THE CORNER WINDOW',
   DOORS:'THE FRONT DOORS — OUTSIDE', FIREEXIT:'THE FIRE DOOR — OUTSIDE',
   FIREDOOR:'THE FIRE DOOR', VISITOR:'THE VISITOR BAYS', YOURCAR:'YOUR CAR',
+  /* out at the client. Named for what they are to YOU, not to them: you are a
+     visitor here and the queue row should read like one. */
+  SITEPARK:'THE CLIENT SITE — THE VISITOR BAY', SITEDESK:'THEIR RECEPTION DESK',
+  SITECOMMS:'THEIR COMMS CUPBOARD', SITEFLOOR:'THEIR OFFICE FLOOR',
+  SITESTORE:'THEIR STORE ROOM',
   SMOKERS:'THE BINS', BARRIER:'THE BARRIER',
   CONF:'THE CONFERENCE ROOM', KITCHEN:'THE KITCHEN', KITCHEN2:'THE KITCHEN',
   /* Two floors, two receptions, and the queue row only ever shows a name —
@@ -1272,7 +1277,7 @@ const MAPS = { carpark: {
     '#------------------------------------------#',
     '#zzyZy-ZzzyZZ-zzzyyZ-zzz-Zz-zyyZzz-ZZZ-z-yz#',
     '#------------------------------------------#',
-    '#ZZyZZ-Z--zZz-ZZzyZy-yyzzzz-zyZyzZ--zzZz-ZZ#',
+    '#ZZyZZ-Z--zZz-ZZzyZy-yyzzzz-zyZyzZQ-zzZz-ZZ#',
     '#------------------------------------------#',
     '#zzyzz-yzyyZ--zzZyZz-zZzzzz-y-ZyZz-ZzZZZ-ZZ#',
     '#------------------------------------------#',
@@ -1388,6 +1393,43 @@ ground: {
      rooms part of the job. */
   anchors:{ RECEPTION:[5,6], POST:[17,10], MEET_A:[12,2], MEET_B:[23,3],
             FRONT:[8,15], FIREDOOR:[37,15], STORES:[27,15], CANTEEN:[37,12], ACCOUNTS:[35,4] }
+}, clientsite: {
+  /* THE FIRST PLACE THAT IS NOT PROACTIVE. Five onsite tickets have narrated a
+     drive since the day they were written -- "ninety minutes each way", and
+     then a dialogue node, and then you were somehow back at your desk. The car
+     park was built so the drive had somewhere to start from; this is somewhere
+     for it to end.
+
+     It is a unit on an industrial estate, which is what an MSP client actually
+     is: a reception nobody is sitting at, an open office, a store room, and a
+     comms cupboard with a mop in it. Nothing here is anchored with a name the
+     building uses -- every anchor is SITE-prefixed -- because anchors resolve
+     against the LOADED map and a RECEPTION out here would silently answer a
+     goto meant for the one at head office. That mistake is written up twice
+     already, on the ground floor and in the legend; this is the third place it
+     would have happened. */
+  name:'MERIDIAN FREIGHT — UNIT 4, THE ESTATE',
+  map:[
+    '############################################',
+    '#------------------------------------------#',
+    '#--zz---zz---zz--------------zz---zz---zz--#',
+    '#------------------------------------------#',
+    '#--b---------------------------------zz----#',
+    '#------------------------------------------#',
+    '####################DD######################',
+    '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,#',
+    '#,,NN,,,,,,,,,,,,,,,dq,,,,,,,,,,,,,,,,Uv,,,#',
+    '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,#',
+    '####D#############D################D########',
+    '#........#..................#..............#',
+    '#..SS....#....dq....dq......#....h.........#',
+    '#........#..................#....h.........#',
+    '#..f.....#....dq....dq...v..#..............#',
+    '#........#..................#..............#',
+    '############################################'
+  ],
+  anchors:{ SITEPARK:[21,5], SITEDESK:[21,9], SITECOMMS:[4,13],
+            SITEFLOOR:[18,15], SITESTORE:[35,15] }
 }};
 
 /* meta-progression. Four certificates and three perks; this said "one cert
@@ -6505,7 +6547,12 @@ const LEGEND = {
      all would put an exit on the kitchen. Same art, an act on top. */
   'X':{f:8, act:'outside'},
   '-':{f:33}, 'g':{f:35},
-  'Z':{o:34}, 'z':{o:38}, 'y':{o:39}, 'b':{o:37, act:'bins'}, '!':{o:36, act:'barrier'}
+  'Z':{o:34}, 'z':{o:38}, 'y':{o:39}, 'b':{o:37, act:'bins'}, '!':{o:36, act:'barrier'},
+  /* YOUR car, as opposed to the forty others. The YOURCAR anchor is the tarmac
+     BESIDE it, not this tile: you stand in the aisle and face the car, the way
+     every other act in the game is reached, and goto:'YOURCAR' still has
+     somewhere walkable to walk to. */
+  'Q':{o:34, act:'drive'}
 };
 const W2 = { W:0, H:0, base:null, obj:null, solid:null, act:null, anchors:{}, name:'', id:'' };
 const cellIx = (x,y) => y*W2.W + x;
@@ -7275,6 +7322,12 @@ const MEETING_GAP = 12;
 const LIFT_MIN = 4;
 /* You push a door and you are through. A lift you wait for. */
 const DOOR_MIN = 2;
+/* WHAT THE DRIVE COSTS, each way. An on-site is meant to be the biggest single
+   decision in a day -- the STAKES note prices it at "sixty-odd minutes against
+   a day of 480, or you try to talk somebody through it down the phone for
+   twenty" -- and a round trip at 26 is 52 before you have looked at anything,
+   which is that number with the walk to the car park included. */
+const DRIVE_MIN = 26;
 const OTHER_FLOOR = { office1:'ground', ground:'office1' };
 /* What one step of the starter checklist done out of order costs. Set from
    tools/boards.js: at a flat 1/steps the careless run — straight down the
@@ -8162,7 +8215,13 @@ const EXITS = [
   { from:'ground',  to:'carpark', at:'FRONT',    arrive:'DOORS',    act:'outside', mins:DOOR_MIN },
   { from:'carpark', to:'ground',  at:'DOORS',    arrive:'FRONT',    act:'outside', mins:DOOR_MIN },
   { from:'ground',  to:'carpark', at:'FIREDOOR', arrive:'FIREEXIT', act:'outside', mins:DOOR_MIN },
-  { from:'carpark', to:'ground',  at:'FIREEXIT', arrive:'FIREDOOR', act:'outside', mins:DOOR_MIN }
+  { from:'carpark', to:'ground',  at:'FIREEXIT', arrive:'FIREDOOR', act:'outside', mins:DOOR_MIN },
+  /* AND OUT. One car, one client site, both ways -- the same shape as the
+     lift and the fire door, which is why driving needed no new machinery:
+     takeExit already picks the nearest exit of an act on the map you are
+     standing on. */
+  { from:'carpark',    to:'clientsite', at:'YOURCAR',  arrive:'SITEPARK', act:'drive', mins:DRIVE_MIN },
+  { from:'clientsite', to:'carpark',    at:'SITEPARK', arrive:'YOURCAR',  act:'drive', mins:DRIVE_MIN }
 ];
 /* every exit that is actually built: both ends have to exist on their maps */
 function exitsFrom(mapId){
@@ -9352,6 +9411,7 @@ function interact(act){
     case 'shelf': toast(propLine('shelf'), 'corp', 2600); break;
     case 'elevator': takeLift(); break;
     case 'outside':  takeExit('outside'); break;
+    case 'drive':    takeExit('drive'); break;
     case 'bins':     toast(propLine('bins'), 'corp', 2600); break;
     case 'barrier':  toast(propLine('barrier'), 'corp', 2800); break;
   }
