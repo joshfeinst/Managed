@@ -6894,22 +6894,99 @@ function floorDist(map, a, b){
    the game goes through this — the SLA a ticket is born with, the slack column,
    the walk hint on the queue row — so there is exactly one place that decides
    it. */
-const LIFTS = ['ELEV', 'ELEV_E'];
-function liftsOn(mapId){
-  return LIFTS.filter(L => FLOOR_POS[mapId] && FLOOR_POS[mapId][L]);
+/* THE BUILDING IS A GRAPH, NOT A PAIR. This was `LIFTS = ['ELEV','ELEV_E']`
+   and a router that composed exactly one hop, and required that hop to be a
+   connector present by the SAME anchor name on both maps. Two floors joined by
+   two shafts is the only shape that fits, and the failure mode for anything
+   else is silent: a map with no lift on it makes liftsOn() return [], the loop
+   body never runs, crossTiles returns null, and walkCost's null branch hands
+   back WALK_FALLBACK + LIFT_MIN — a flat eighteen minutes from every desk at
+   every rung, which is the exact flat-price bug this subsystem was written to
+   kill. Nothing throws.
+
+   An exit is: leave map `from` at anchor `at`, arrive on map `to` at anchor
+   `arrive`, having spent `mins`. Order matters — routeVia breaks ties on the
+   first exit listed, and ELEV before ELEV_E is what every shipped price was
+   measured against. */
+const EXITS = [
+  { from:'office1', to:'ground',  at:'ELEV',   arrive:'ELEV',   act:'elevator', mins:LIFT_MIN },
+  { from:'ground',  to:'office1', at:'ELEV',   arrive:'ELEV',   act:'elevator', mins:LIFT_MIN },
+  { from:'office1', to:'ground',  at:'ELEV_E', arrive:'ELEV_E', act:'elevator', mins:LIFT_MIN },
+  { from:'ground',  to:'office1', at:'ELEV_E', arrive:'ELEV_E', act:'elevator', mins:LIFT_MIN }
+];
+/* every exit that is actually built: both ends have to exist on their maps */
+function exitsFrom(mapId){
+  return EXITS.filter(e => e.from === mapId &&
+    FLOOR_POS[e.from] && FLOOR_POS[e.from][e.at] &&
+    FLOOR_POS[e.to] && FLOOR_POS[e.to][e.arrive]);
 }
-/* near(L) = tiles from where you are now to lift L on THIS floor.
-   Returns the tiles for the whole trip, by the cheapest shaft. */
-function crossTiles(near, anchor){
-  const h = floorOf(anchor);
-  if (!h) return null;
+/* Kept as names because the whole file and half the self-tests speak them.
+   LIFTS is now derived: the connector anchors, in the order EXITS lists them. */
+const LIFTS = EXITS.filter(e => e.act === 'elevator')
+  .map(e => e.at).filter((v, i, a) => a.indexOf(v) === i);
+function liftsOn(mapId){
+  const out = [];
+  for (const e of EXITS)
+    if ((e.from === mapId || e.to === mapId) && FLOOR_POS[mapId]){
+      const n = e.from === mapId ? e.at : e.arrive;
+      if (FLOOR_POS[mapId][n] && out.indexOf(n) < 0) out.push(n);
+    }
+  return out;
+}
+/* THE CHEAPEST WAY THERE, ACROSS ANY NUMBER OF MAPS.
+   near(a) = tiles from where you are now to anchor `a` on the map you are
+   standing on — the caller owns that, because only the caller knows whether
+   "where you are" is a position on the loaded map or an anchor on one that is
+   not loaded. Everything past the first hop is measured with FLOOR_DIST.
+   Returns { tiles, hops, first } — the walking, the number of exits used, and
+   the anchor of the FIRST one, which is what the arrow has to point at.
+   Dijkstra over (map, the anchor you arrived at); `null` for the start. */
+function routeVia(fromMap, near, anchor){
+  const home = floorOf(anchor);
+  if (!home) return null;
+  const K = (m, a) => m + '\u0000' + (a || '');
+  const dist = {}, hops = {}, first = {}, at = {}, seen = {};
+  const s = K(fromMap, null);
+  dist[s] = 0; hops[s] = 0; first[s] = null; at[s] = { map:fromMap, a:null };
+  for (;;){
+    let k = null, d = Infinity;
+    for (const kk in dist) if (!seen[kk] && dist[kk] < d){ d = dist[kk]; k = kk; }
+    if (k === null) break;
+    seen[k] = 1;
+    const here = at[k];
+    for (const e of exitsFrom(here.map)){
+      const step = here.a === null ? near(e.at) : floorDist(here.map, here.a, e.at);
+      if (step === null || step === undefined) continue;
+      const nk = K(e.to, e.arrive), nd = d + step;
+      /* strictly cheaper only, so the FIRST exit listed wins a tie — which is
+         what keeps ELEV ahead of ELEV_E exactly as the old loop did */
+      if (dist[nk] === undefined || nd < dist[nk]){
+        dist[nk] = nd; hops[nk] = hops[k] + 1;
+        first[nk] = first[k] === null ? e.at : first[k];
+        at[nk] = { map:e.to, a:e.arrive };
+      }
+    }
+  }
   let best = null;
-  for (const L of liftsOn(h)){
-    const a = near(L), b = floorDist(h, L, anchor);
-    if (a === null || a === undefined || b === null || b === undefined) continue;
-    if (best === null || a + b < best) best = a + b;
+  for (const k in dist){
+    const h = at[k];
+    if (h.map !== home) continue;
+    const last = h.a === null ? near(anchor) : floorDist(h.map, h.a, anchor);
+    if (last === null || last === undefined) continue;
+    const tiles = dist[k] + last, n = hops[k];
+    /* compare in MINUTES, because routes of different length are not
+       comparable in tiles. With every route the same length — which is every
+       route in a two-floor building — this is identical to comparing tiles. */
+    const cost = Math.max(3, Math.round(tiles * WALK_MIN_PER_TILE)) + n * LIFT_MIN;
+    if (best === null || cost < best.cost)
+      best = { tiles, hops:n, first:first[k], cost };
   }
   return best;
+}
+/* near(L) = tiles from where you are now to connector L on THIS map.
+   Returns { tiles, hops, first } for the whole trip, by the cheapest route. */
+function crossTiles(near, anchor){
+  return routeVia(W2.id, near, anchor);
 }
 /* The far half of a cross-floor errand: the lift on the destination floor to
    the anchor itself. Fixed per anchor, so it is the same for every seed.
@@ -6919,6 +6996,9 @@ function tilesFromLift(anchor){
   const h = floorOf(anchor);
   if (!h) return null;
   let best = null;
+  /* where anything arriving on that map is put down — the arrival end of every
+     exit into it, which for a lift is the same name at both ends and for a
+     door need not be */
   for (const L of liftsOn(h)){
     const v = floorDist(h, L, anchor);
     if (v !== null && v !== undefined && (best === null || v < best)) best = v;
@@ -6929,16 +7009,12 @@ function tilesFromLift(anchor){
    same choice crossTiles makes, named rather than summed, so the arrow and the
    price agree. */
 function bestLiftTo(anchor, from){
-  const h = floorOf(anchor);
-  let best = null, bd = Infinity;
-  for (const L of LIFTS){
-    if (!anchorPos(L)) continue;
-    const near = tilesBetween(from, L);
-    const far = h ? floorDist(h, L, anchor) : 0;
-    if (near === null || far === null || far === undefined) continue;
-    if (near + far < bd){ bd = near + far; best = L; }
-  }
-  return best;
+  /* ASK THE ROUTER, do not re-derive it. This was a second copy of the same
+     minimisation, and a second copy of a price is a price that can disagree
+     with itself — which on this screen means an amber arrow pointing at one
+     shaft while the SLA was worked out through the other. */
+  const r = routeVia(W2.id, L => tilesBetween(from, L), anchor);
+  return r ? r.first : null;
 }
 /* Which lift you are standing at. takeLift needs it: arriving at the far end
    of the other floor because you happened to use the second shaft is the whole
@@ -6964,9 +7040,9 @@ function tilesBetween(from, anchor){
 }
 function walkCost(anchor, from){
   if (isOffFloor(anchor)){
-    const n = crossTiles(L => tilesBetween(from, L), anchor);
-    if (n !== null)
-      return Math.max(3, Math.round(n * WALK_MIN_PER_TILE)) + LIFT_MIN;
+    const r = crossTiles(L => tilesBetween(from, L), anchor);
+    /* r.hops, not one lift: a destination two maps away costs two rides */
+    if (r) return Math.max(3, Math.round(r.tiles * WALK_MIN_PER_TILE)) + r.hops * LIFT_MIN;
     return WALK_FALLBACK + LIFT_MIN;
   }
   const n = tilesBetween(from, anchor);
@@ -7023,12 +7099,12 @@ function walkLegs(steps, si, fromPos){
         m = n === null ? WALK_FALLBACK : Math.max(3, Math.round(n * WALK_MIN_PER_TILE));
       }
     } else {
-      const n = crossTiles(L => (floor === W2.id)
+      const r = routeVia(floor, L => (floor === W2.id)
         ? (atPos ? tilesBetween(atPos, L) : deskToLift(L))
         : (atName ? floorDist(floor, atName, L) : 0), g);
-      m = n === null
+      m = !r
         ? WALK_FALLBACK + LIFT_MIN
-        : Math.max(3, Math.round(n * WALK_MIN_PER_TILE)) + LIFT_MIN;
+        : Math.max(3, Math.round(r.tiles * WALK_MIN_PER_TILE)) + r.hops * LIFT_MIN;
       floor = home; at = null;
       crossed.push(g);
     }
