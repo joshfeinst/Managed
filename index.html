@@ -7205,7 +7205,12 @@ function rollDay(){
      back) without a minigame on top. */
   const first = run.day === 1;
   const load = first ? .55 : 1;
-  const n = Math.max(3, Math.round(role.queue.ratePerHr * 8 * load * (0.85 + R('world')*0.3)));
+  /* THE DAY'S OWN LENGTH, NOT AN EIGHT SOMEBODY TYPED. This was `* 8` — the
+     last unlinked copy of the shift length in the file, and the same class of
+     bug as the three expressions that said nine while the prose said eight.
+     It is the same number today; it is only the same number by hand. */
+  const n = Math.max(3, Math.round(role.queue.ratePerHr * dayHours() * load
+                                   * (0.85 + R('world')*0.3)));
   const arrivals = [];
   /* 23 tickets a day out of a 27-template pool used to deal 15 distinct ones —
      the same template up to five times, and four LITERALLY IDENTICAL lines a
@@ -14327,6 +14332,32 @@ function selfTest(runSim){
            !!hr && +hr[1] === want && +hr[2] === 0,
            (m2 ? 'note says ' + m2[1] : 'no note') + ', clocking off reads "' +
            shown.trim() + '" and should read ' + want + ':00');
+      }
+      /* ...AND THE QUEUE FILLS THE DAY THE CLOCK ACTUALLY RUNS. The arrival
+         roll was `ratePerHr * 8` — the last unlinked copy of the shift length
+         in the file, and the same class as the three `+ 9` expressions above.
+         A day lengthened to nine hours would have kept dealing eight hours of
+         work, and every bar on the ladder is bisected against that count. The
+         roll's own jitter is 0.85–1.15, so this asks that every seed lands
+         inside the band ratePerHr and dayHours() predict — a shift length the
+         roll does not read puts seeds outside it. */
+      {
+        const savedRunH = run;
+        const rung = 0, rate = ROLES[rung].queue.ratePerHr;
+        const lo = Math.round(rate * dayHours() * 0.85);
+        const hi = Math.round(rate * dayHours() * 1.15);
+        const out = [];
+        for (let k = 0; k < 24; k++){
+          QUIET = true; rngInit('HOURS-' + k); runInit('HOURS-' + k);
+          run.rung = rung; run.day = 2;                 // day one is a half load
+          rollDay();
+          const n2 = run.plan.arrivals.length;
+          if (n2 < lo || n2 > hi) out.push('seed ' + k + ': ' + n2);
+        }
+        run = savedRunH;
+        ok('the queue fills the day the clock actually runs', !out.length,
+           'want ' + lo + '-' + hi + ' arrivals at ' + rate + '/hr x ' +
+           dayHours() + 'h' + (out.length ? ' · ' + out.slice(0,4).join(' ') : ''));
       }
       /* ...and the cup lasts as long as the machine says it does. */
       {
