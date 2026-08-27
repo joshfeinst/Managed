@@ -3409,7 +3409,12 @@ const DIALOGUE = {
   /* first morning */
   'i.day1': { who:'linda', t:[
     'You must be the intern. Badge photo is unflattering — that is normal, it is the camera and also the lighting and also us.',
-    'Your desk is the one with the green screen, far end of the pit. The amber arrow points at it. Follow the amber arrow; it is the closest thing to a mentor you get.',
+    /* THE FIRST INSTRUCTION IN THE GAME AND IT WAS WRONG TWICE. clockIn sits
+       you AT your desk on the first morning, and run.marker is only ever set
+       by a ticket's goto step — so a new player was told their desk was
+       somewhere else and to follow an arrow that was not on the screen, while
+       standing on the desk with nothing pointing anywhere. */
+    'You are sitting at it: green screen, far end of the pit. When a job wants you somewhere else an amber arrow turns up and points at it — follow that. It is the closest thing to a mentor you get.',
     'Tickets land in your queue all day. Open it at your terminal, or hit TAB from anywhere — which is what everyone actually does.',
     'The SLA clock starts when the ticket lands, not when you notice it. That is the entire job, philosophically.',
     'You will not clear the queue. Nobody clears the queue. Bill did once in 2019 and we still talk about it, mostly to explain that it was a reporting error.',
@@ -15872,6 +15877,28 @@ function selfTest(runSim){
         seen.add(a[0] + ',' + a[1]);
       }
       ok('every rung has a desk you can actually stand on', !bad.length, bad.join(' '));
+      /* AND YOU START THE MORNING SITTING AT IT, WITH NOTHING POINTING
+         ANYWHERE. Linda's first speech used to say the amber arrow pointed at
+         your desk; clockIn spawns you on it and run.marker is only ever set by
+         a ticket's goto step, so on the first morning of a career there is no
+         arrow and nowhere to walk. */
+      {
+        const savedRunK = run;
+        QUIET = true; rngInit('DESK-TEST');
+        const off = [];
+        for (let r = 0; r < ROLES.length; r++){
+          runInit('DESK-TEST'); run.rung = r; run.day = 1;
+          rollDay(); clockIn();
+          const a = anchorPos(ROLES[r].deskAnchor);
+          if (!a || player.tx !== a[0] || player.ty !== a[1])
+            off.push(ROLES[r].id + ': starts at ' + player.tx + ',' + player.ty +
+                     ' not ' + (a ? a.join(',') : '?'));
+          if (run.marker) off.push(ROLES[r].id + ': an arrow is already pointing somewhere');
+        }
+        run = savedRunK; G.state = 'title'; show(null); hudShow(false);
+        ok('you start the morning sitting at your own desk, with no arrow up',
+           !off.length, off.slice(0,3).join(' · '));
+      }
       ok('and the desk moves as you climb', seen.size >= 6,
          seen.size + ' distinct desks across ' + ROLES.length + ' rungs');
       /* and every one of them is reachable from the door */
