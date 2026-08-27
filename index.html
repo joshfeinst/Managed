@@ -7261,9 +7261,21 @@ const GATE_DEBT = {
      of the ladder works now; the top is still shut, because achievable
      performance FALLS as a career runs on — burnout compounds and the nights
      give back less — so a rung reached on day 12 is played by a worse player
-     than the same rung would be on day 3. That is the next problem. */
-  tight: { intern:3, t1:3, t2:4, t3:5, project:5, procure:4,
-           relmgr:4, solarch:2, vcio:2 },
+     than the same rung would be on day 3. That is the next problem.
+
+     RE-RECORDED 2026-08-27, and the tool's own instruction is what asks for it:
+     when the total comes in under budget it prints "Lower GATE_DEBT_BUDGET and
+     the rows that moved." It came in at 23 against 50. Seven rungs improved --
+     t2 4->0, t3 5->2, project 5->1, procure 4->1, relmgr 4->3, and the loose
+     column fell on six -- and one row went UP: solarch 2->3.
+     That one is sample granularity, not decay. It reads 3/12 on the build
+     before this session's stakes change as well, so nothing here caused it,
+     and measured at 32 seeds instead of 12 solarch clears 28/32 = 87.5% of
+     flawless seeds with 5/32 sloppy, which gate.js calls healthy and bars.js
+     agrees with. At n=12 one seed is 8.3 points; these rows cannot resolve
+     finer than that, and the total is the number that means something. */
+  tight: { intern:3, t1:3, t2:0, t3:2, project:1, procure:1,
+           relmgr:3, solarch:3, vcio:2 },
   /* seeds out of 12 on which SLOPPY play clears it anyway.
      THIS COLUMN WENT UP, 2026-08-26, and it is not the regression it looks
      like. It was zero on every rung because the bars were so high that
@@ -7274,8 +7286,8 @@ const GATE_DEBT = {
      now backs into a promotion on 1-4 seeds in 12. That is the real number and
      it may only fall from here.
      vCIO's 4/12 is the worst of them and the one to fix first. */
-  loose: { intern:1, t1:1, t2:1, t3:1, project:2, procure:3,
-           relmgr:2, solarch:4, vcio:3 }
+  loose: { intern:0, t1:1, t2:1, t3:0, project:1, procure:1,
+           relmgr:0, solarch:0, vcio:1 }
 };
 /* 45. The loose column is one seed in twelve on eight rungs of nine — bad
    triage almost never promotes now, where a week ago it did so on up to four
@@ -7318,7 +7330,7 @@ const GATE_DEBT = {
    Procurement is now the narrowest rung on the ladder at 8 points and the one
    rung bars.js still calls misplaced. It has already had its chaff; the gap is
    structural. It is the named next job. */
-const GATE_DEBT_BUDGET = 50;      /* the on-site visit, 2026-08-26 */
+const GATE_DEBT_BUDGET = 23;      /* re-recorded from measurement, 2026-08-27 */
 /* How many POINTS short of its own bar flawless play falls at the intern gate.
    19 on 2026-08-25 21:0x, the first measurement ever taken with the bot walking
    at a player's speed. Every earlier number in this file — GATE_DEBT above,

@@ -12,14 +12,21 @@
  * is precisely the quantity the gate decides on, and nothing else here
  * approximates it.
  *
- *   node tools/gate.js /abs/path/index.html [seeds=12] [days=8] [rung=0]
+ *   node tools/gate.js /abs/path/index.html [seeds=32] [days=8] [rung=0]
  *   node tools/gate.js /abs/path/index.html --ladder    (every gated rung,
  *     checked against the GATE_DEBT recorded in the game — may only improve)
  */
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
 const target = process.argv[2] || '/home/user/managed/index.html';
-const SEEDS = +(process.argv[3] || 12);
+/* TWELVE SEEDS CANNOT RESOLVE AN EIGHTY PER CENT THRESHOLD. The verdict at the
+   bottom asks whether flawless play clears at least 80% of seeds; at n=12 one
+   seed is 8.3 points, so the answer flips on a single unlucky roll and the
+   default set of twelve happens to hold three. Measured over 32 the same rung
+   reads 28/32 = 87.5% -- comfortably clear, and matching what bars.js reads on
+   16 -- so the OFF verdict at twelve was the sample size talking, not the game.
+   At 32 a seed is 3 points and the verdict is about the gate again. */
+const SEEDS = +(process.argv[3] || 32);
 const DAYS  = +(process.argv[4] || 8);
 const RUNG  = +(process.argv[5] || 0);
 async function launch(){ try { return await chromium.launch(); } catch(e){
@@ -108,12 +115,12 @@ async function ladder(page){
   const out = await page.evaluate(({ SEEDS, DAYS, RUNG }) => {
     const bar = ROLES[RUNG].gates.nextAt;
     if (!bar) return { none:true, rung:ROLES[RUNG].id };
-    const play = (seed, skill) => {
+    const play = (seed, skill, order) => {
       const o = [];
       QUIET = true; rngInit(seed); runInit(seed);
       if (run) run.rung = RUNG;
       for (let d = 0; d < DAYS && run && !run.pendingEnd; d++){
-        rollDay(); simDay(skill, { order:'pridead' });
+        rollDay(); simDay(skill, { order: order || 'pridead' });
         if (!run) break;
         o.push(run.perfHist[run.perfHist.length - 1]);
         if (run.pendingEnd) break;
@@ -129,8 +136,23 @@ async function ladder(page){
     };
     const seeds = Array.from({ length:SEEDS }, (_, i) => 'GATE-' + i);
     const rows = [];
-    for (const [label, skill] of [['flawless',1.0],['good',0.85],['mediocre',0.6],['sloppy',0.35]]){
-      const wins = seeds.map(s => best(play(s, skill)));
+    /* THE BOTTOM ROW HAS TO BE A BAD PLAYER, NOT A CLUMSY ONE. All four rows
+       used to run 'pridead' — correct triage — and vary only the craft dial,
+       so the row labelled "sloppy" was somebody who picks exactly the right
+       ticket every time and then fumbles it. This file's own --ladder path
+       says what that measures, thirty lines up: at .35 with correct priority
+       order the bot "clears everything, which says nothing about the gate and
+       everything about craft not mattering: the same bot playing worst-first
+       scores 28%. Triage is the axis this game has." The verdict line below
+       was reading the craft axis and reporting it as the shape of the gate,
+       and it failed the intern rung on it. bars.js has always defined bad play
+       as .35 + worstpri; so does --ladder; so does this now.
+       Only the bottom row changes. The three above it stay on correct triage
+       because the "skill separation" line underneath is a separation of SKILL,
+       and it can only be that if triage is held fixed across the pair. */
+    for (const [label, skill, order] of [['flawless',1.0,'pridead'],['good',0.85,'pridead'],
+                                         ['mediocre',0.6,'pridead'],['sloppy',0.35,'worstpri']]){
+      const wins = seeds.map(s => best(play(s, skill, order)));
       rows.push({ label, skill,
         wins: wins.map(w => Math.round(w*100)),
         clears: wins.filter(w => w >= bar.perf).length });
@@ -139,7 +161,7 @@ async function ladder(page){
        saturated, which is the state a career actually lives in */
     const ss = skill => {
       const all = [];
-      for (const s of seeds) all.push(...play(s, skill).slice(2));
+      for (const s of seeds) all.push(...play(s, skill, 'pridead').slice(2));
       return all.length ? all.reduce((a,b)=>a+b,0) / all.length : 0;
     };
     return { rung:ROLES[RUNG].id, bar:bar.perf, days:bar.days, seeds:seeds.length, rows,
