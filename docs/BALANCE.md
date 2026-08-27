@@ -2383,14 +2383,19 @@ thresholds.
 | rung | bar | flawless p50 | sloppy p50 | good clears | bad clears |
 |---|---|---|---|---|---|
 | intern | 73% | 78% | 57% | 78% | 3% |
-| T1 | 65% | 70% | 53% | 73% | 5% |
-| T2 | 60% | 65% | 44% | 70% | 3% |
+| T1 | 65% | 69% | 53% | 73% | 5% |
+| T2 | 60% | 65% | 45% | 63% | 8% |
 | T3 | 56% | 62% | 45% | 70% | 10% |
 | Project Team | 54% | 64% | 49% | 88% | 23% |
 | Procurement | 52% | 57% | 43% | 78% | 5% |
 | Relationship Mgr | 51% | 60% | 39% | 90% | 15% |
 | Solutions Architect | 55% | 60% | 47% | 75% | 15% |
 | vCIO | 54% | 64% | 46% | 85% | 18% |
+
+T2 gave up some headroom — 70/3 to 63/8 — when it stopped sharing a desk with
+T3 and moved four tiles west along the pit, which re-prices every walk that
+rung is dealt. Still healthy, and the handbook's promise that the desk moves
+on every promotion is worth more than three points of clearance.
 
 **Zero rungs misplaced** — every rung clears the harness's own definition of
 healthy (good triage above 60%, bad triage below 30%). This is the first pass
