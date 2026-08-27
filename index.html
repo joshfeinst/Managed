@@ -1813,9 +1813,16 @@ const DIALOGUE = {
   'x.exp.a':   { who:'sys', t:['Your expense claim has been rejected. A receipt is missing.',
     'The claim is for four pounds twenty. You have now spent nine minutes on it.'] },
   'x.exp.b':   { who:'sys', t:['There is a form. There is always a form.'],
+    /* GIVING UP WAS PAID FOR THE WORK. "Write it off" carried the same
+        bonus:1 as filling the form in properly, for one minute against seven
+        and less stress — strictly better on every axis the game scores, on a
+        node whose on-screen tip says there is no right answer. And the
+        reply-all was pure downside beside it, so two of the three options were
+        dead. Writing off your own money is not the job done; sending the
+        reply-all is a genuine pleasure that costs you standing. */
     opts:[ {t:'Resubmit with the receipt, properly', fx:{time:7, bonus:1, stress:2}},
-           {t:'Write it off and never claim parking again', fx:{time:1, stress:1, bonus:1}},
-           {t:'Reply-all to Finance about the cost of processing it', fx:{time:4, rep:-1, stress:3}} ] },
+           {t:'Write it off and never claim parking again', fx:{time:1, stress:1}},
+           {t:'Reply-all to Finance about the cost of processing it', fx:{time:4, rep:-1, stress:-2}} ] },
   'x.cal.a':   { who:'sys', t:['A recurring meeting appears in your calendar every Tuesday.',
     'It has no agenda. The organiser left in 2022. Six people still attend it, and every one of them thinks somebody else needs it.'] },
   'x.cal.b':   { who:'sys', t:['You are the most senior person in the invite.'],
@@ -2463,9 +2470,15 @@ const DIALOGUE = {
   'q.golf.a': { who:'sys', t:['The distributor account manager would like to take you to a golf day. There is a goodie bag.',
     'You are, at this moment, deciding between their kit and somebody else\'s.'] },
   'q.golf.b': { who:'linda', t:['Whatever you do, put it in writing that you did it.'],
-    opts:[ {t:'Decline while the tender is live, and say why', fx:{time:5, rep:4, bonus:1}},
+    /* DECLINING WAS FREE. It beat recusing yourself on time AND reputation
+        with no cost of its own, and going was slower, worse for your name and
+        MORE stressful than staying at your desk — nobody would pick either of
+        the other two. Saying no to a client's host while their tender is live
+        is the uncomfortable one, and a day of golf is, unavoidably, a nice
+        day out. That is what makes it worth refusing. */
+    opts:[ {t:'Decline while the tender is live, and say why', fx:{time:5, rep:4, bonus:1, stress:3}},
            {t:'Go, declare it, and let somebody else score the tender', fx:{time:7, rep:2, bonus:1}},
-           {t:'Go. It is only golf.', fx:{time:6, rep:-4, stress:5}} ] },
+           {t:'Go. It is only golf.', fx:{time:6, rep:-4, stress:-2}} ] },
   /* ------------------------ PROJECT TEAM (rung 4) ------------------------- */
   /* --- dates, not fires. The register at this rung is different from the
          helpdesk's: nothing is broken, everyone is being reasonable, and it is
@@ -3694,8 +3707,12 @@ const DIALOGUE = {
   'e.thermo': { who:'sys', t:['The thermostat war has entered a new phase. Someone has brought in a space heater. Brenda has noticed.'] },
   'e.audit':  { who:'linda', t:['Surprise: the client wants our documentation. All of it. The documentation is, generously, aspirational.'] },
   'e.recruiter':{ who:'sys', t:['A recruiter messages you about an "exciting opportunity" at an MSP exactly like this one, for the same money.'],
+    /* FOUR POINTS OF STRESS FOR NOTHING. Reading it cost no time, no
+        reputation and nothing else, which made it strictly the best move on
+        the board. Twice, in the bathroom, is not free: it is a quarter of an
+        hour of the shift you do not get back. */
     opts:[ {t:'Ignore it like a professional', fx:{stress:1}},
-           {t:'Read the whole thing twice in the bathroom', fx:{stress:-4}},
+           {t:'Read the whole thing twice in the bathroom', fx:{time:4, stress:-4}},
            {t:'Reply asking the salary band', fx:{stress:-2, rep:-1}} ] },
   'e.onboard':{ who:'linda', t:['New starter today. Nobody told anybody. They are in reception with a lanyard and a hopeful expression.'] },
   'e.sales':  { who:'mackenzie', t:['Quick one — I may have told Riverbend we already do that. We do do that, right? Broadly? I have put it in writing.'],
@@ -12718,6 +12735,42 @@ function selfTest(runSim){
     for (const id in EVENTS) if (!DIALOGUE[EVENTS[id].scene]) bad.push(id);
     ok('every NPC and event has its dialogue', !bad.length, bad.join(' '));
     ok('the ladder has all 10 rungs', ROLES.length === 10);
+    /* "THERE IS NO RIGHT ANSWER, ONLY CONSEQUENCES." That sentence is printed
+       under every choice the game ever offers, so it is a claim about all 356
+       of them — and on three it was false. An option that is at least as good
+       as every sibling on every axis the game scores, and better on one, is a
+       right answer: x.exp.b paid the same quality bonus for writing the claim
+       off as for filling the form in, at a seventh of the time; q.golf.b let
+       you decline faster AND cleaner than recusing yourself; e.recruiter gave
+       four points of stress relief for no time, no reputation and no cost of
+       any kind. Two of those nodes also had a third option that nothing could
+       justify picking.
+       Both halves are checked, because the lazy way to satisfy the first is
+       to flatten a node until its options are mechanically identical — which
+       is not a choice either, it is three ways of pressing the same button. */
+    {
+      const ax = o => [ (o.fx && o.fx.bonus)  || 0,  (o.fx && o.fx.rep)  || 0,
+                       -((o.fx && o.fx.stress) || 0), -((o.fx && o.fx.time) || 0) ];
+      const dominant = [], flat = [];
+      let choices = 0;
+      for (const id in DIALOGUE){
+        const node = DIALOGUE[id];
+        if (!node.opts || node.opts.length < 2) continue;
+        choices++;
+        if (new Set(node.opts.map(o => ax(o).join(','))).size === 1){ flat.push(id); continue; }
+        for (const a of node.opts){
+          const A = ax(a);
+          const rules = node.opts.every(b => b === a ||
+            (A.every((v, i) => v >= ax(b)[i]) && A.some((v, i) => v > ax(b)[i])));
+          if (rules){ dominant.push(id + ' "' + a.t.slice(0, 40) + '"'); break; }
+        }
+      }
+      ok('no choice in the game has a right answer',
+         choices > 300 && !dominant.length && !flat.length,
+         choices + ' choices' +
+         (dominant.length ? ' · dominant: ' + dominant.slice(0,3).join(', ') : '') +
+         (flat.length ? ' · identical options: ' + flat.slice(0,3).join(' ') : ''));
+    }
     const elig0 = Object.keys(TICKETS).filter(id => TICKETS[id].tiers[0] <= 0 && 0 <= TICKETS[id].tiers[1]);
     ok('the intern queue has enough variety', elig0.length >= 12, elig0.length + ' templates');
     ok('jargon rounds each offer 3 options', JARGON.every(j => j.no.length === 2 && j.ok));
