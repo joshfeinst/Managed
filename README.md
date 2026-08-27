@@ -180,7 +180,7 @@ were invisible to the ones that came before them.
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 419 in-game self-tests |
+| `verify.js` | boots it and runs the 424 in-game self-tests |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
 | `mouseonly.js` | plays from the title screen to a worked ticket without pressing a single key, because the handbook's first line promises the mouse can |
 | `touch.js` | plays it on a 390x844 phone with taps alone, in both orientations, measures what a finger can reach, and plays all twelve boards to a result |

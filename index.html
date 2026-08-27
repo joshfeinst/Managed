@@ -3476,7 +3476,9 @@ const DIALOGUE = {
            {t:'Send the person whose account it actually is', fx:{time:14, rep:-2, stress:4}} ] },
   'o.nowt.a':  { who:'client', t:['{client} insists this needs a site visit.',
     'It does not need a site visit. It needs somebody to open a laptop and look at a setting, and they have refused to do that twice, politely, in writing.'] },
-  'o.nowt.b':  { who:'sys', t:['Three hours of your day against a relationship that has been fine for six years.'],
+  /* It said THREE HOURS and charged sixty-four minutes. Events already fill
+     their length from the number they charge, for exactly this reason. */
+  'o.nowt.b':  { who:'sys', t:['An hour in the car against a relationship that has been fine for six years.'],
     opts:[ {t:'Go, and make it worth the drive while you are there', fx:{time:64, rep:4, bonus:1, stress:4}},
            {t:'Offer a video call at a time that suits them', fx:{time:24, rep:2, bonus:1, stress:5}},
            {t:'Explain again why it does not need a visit', fx:{time:11, rep:-3, stress:7}} ] },
@@ -5310,7 +5312,12 @@ const TICKETS = {
   'onsite-they-asked-for-you': { tiers:[5,9], weight:1, slaMult:1.9, pri:3, stress:7,
     title:'{client} has asked for you personally. Not the team. You.',
     steps:[{say:'o.you.a'},{goto:'YOURCAR'},{choice:'o.you.b'},{say:'o.you.c'}] },
-  'onsite-nothing-is-wrong': { tiers:[3,7], weight:1, slaMult:1.9, pri:2, stress:5,
+  /* slaMult 1.9 -> 3.0. The "go, and make it worth the drive" option costs 64
+     minutes and the routine multiplier left a 53-minute window, so the option
+     with rep 4 and the bonus on it came back late every time, at all five
+     rungs. This is a client asking for a visit they do not need: backlog is
+     what it is, and the window now holds the drive it offers you. */
+  'onsite-nothing-is-wrong': { tiers:[3,7], weight:1, slaMult:3.0, pri:2, stress:5,
     title:'{client} insists it needs a visit. It does not need a visit.',
     steps:[{say:'o.nowt.a'},{choice:'o.nowt.b'},{say:'o.nowt.c'}] },
   'onsite-the-new-office': { tiers:[4,8], weight:1, slaMult:2.0, pri:3, stress:8,
@@ -7625,6 +7632,26 @@ function deskToLift(lift){
   const desk = role && anchorPos(role.deskAnchor || 'TERMINAL');
   return desk ? tilesBetween(desk, lift || 'ELEV') : null;
 }
+/* THE ROW IS ANSWERING "CAN I STILL FINISH THIS?", SO IT HAS TO COUNT THE
+   FORK. ticketWork prices a choice at a flat 7 on purpose — it is the day's
+   pricing model and the option's own fx.time is billed separately — but
+   workLeft has two consumers that are asking a different question: the queue
+   row's "start in Nm / too late" column, and the grace a ticket in hand gets
+   before it breaches. Both want the minutes still to be spent, and the fork is
+   most of them: the option a player is steered towards averages 15.5 minutes
+   against the flat 7 the column budgeted. Measured, the column understated the
+   remaining work on 285 of 337 templates, by 8 minutes on average and by up to
+   61 on the onsite drives — a row that said "start in 30m" on a job that
+   needed fifty more than it had. It cannot know which fork you will take, so
+   it prices the average of what is on offer, which is the honest expectation
+   and the number the day charges over a career. */
+function forkCost(id){
+  const n = DIALOGUE[id];
+  if (!n || !n.opts || !n.opts.length) return TALK.choice;
+  let sum = 0;
+  for (const o of n.opts) sum += (o.fx && o.fx.time) || 0;
+  return TALK.choice + sum / n.opts.length;
+}
 function workLeft(t){
   const steps = TICKETS[t.id].steps;
   const here = (typeof player !== 'undefined' && player) ? [player.tx, player.ty] : null;
@@ -7632,7 +7659,7 @@ function workLeft(t){
   for (let i = t.si; i < steps.length; i++){
     const st = steps[i];
     if (st.game) m += 14;
-    else if (st.choice) m += 7;
+    else if (st.choice) m += forkCost(st.choice);
     else if (st.say) m += 4 * ((DIALOGUE[st.say] && DIALOGUE[st.say].t.length) || 1);
   }
   return m;
@@ -8021,8 +8048,8 @@ function arrivalsTick(){
     const a = P2.arrivals[P2.ai++];
     const T = TICKETS[a.id];
     run.queue.push({ uid:a.uid, id:a.id, title:a.title, fills:a.fills, at:a.at,
-      deadline:a.at + a.sla, sla:a.sla, stress:a.stress, si:0, bonus:0, gameScores:[],
-      from:T.from || null });
+      deadline:a.at + a.sla, sla:a.sla, stress:a.stress, si:0, bonus:0, spent:0,
+      gameScores:[], from:T.from || null });
     run.stress = Math.min(100, run.stress + 1);
     sfx('ticket');
     toast('NEW TICKET — ' + a.title.toUpperCase(), 'amber', 2600);
@@ -8768,9 +8795,19 @@ function resolveTicket(t){
      the work itself is not negotiable and every template demands a different
      amount of it. Picking a ticket up when it lands and working it straight
      through scores full marks on any template; the clock you are racing is the
-     one you spend LETTING IT WAIT, which is the decision the day is about. */
+     one you spend LETTING IT WAIT, which is the decision the day is about.
+
+     THE MINUTES THE OPTIONS CHARGED ARE NOT MINUTES YOU LET IT WAIT. This
+     read the raw clock, so every minute an option cost came off promptness —
+     and the expensive option is the one with the rep and the bonus on it.
+     Measured across the 1,189 (ticket, rung) pairs the game can deal: playing
+     the best option every time scored full marks on 609 of them; playing the
+     CHEAPEST option every time scored full marks on 1,174. The sentence above
+     was false in the direction that mattered, and the fastest way to a good
+     promptness score was to duck the work. t.spent is what the forks charged,
+     and it is credited back. */
   const slack = Math.max(1, t.sla - ticketWork(TICKETS[t.id]));
-  const r = clamp((t.deadline - run.clock) / slack, 0, 1);
+  const r = clamp((t.deadline - run.clock + (t.spent || 0)) / slack, 0, 1);
   const gameAvg = t.gameScores.length
     ? t.gameScores.reduce((a,b)=>a+b,0) / t.gameScores.length : .75;
   /* Promptness SATURATES. Grading on raw SLA-remaining paid you to skim the
@@ -9384,7 +9421,7 @@ function serializeRun(){
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
     queue: queue.map(t => ({ uid:t.uid, id:t.id, title:t.title, fills:t.fills, at:t.at,
       deadline:t.deadline, sla:t.sla, stress:t.stress, si:t.si, bonus:t.bonus,
-      gameScores:t.gameScores, from:t.from, gameCap:t.gameCap,
+      spent:t.spent || 0, gameScores:t.gameScores, from:t.from, gameCap:t.gameCap,
       paidStep: t.paidStep === undefined ? null : t.paidStep })),
     /* WHICH BUILDING YOU WERE IN. The save stored a position and not a map,
        and resumeRun unconditionally loaded office1, so SAVE & QUIT in the post
@@ -9602,6 +9639,14 @@ function applyFx(fx, ticket){
   }
   if (fx.rep) run.rep = Math.max(0, run.rep + fx.rep);
   if (fx.time) run.clock += fx.time;               // the day shrinks; that was the price
+  /* AND THE TICKET REMEMBERS WHAT IT COST YOU. An option's fx.time is the one
+     charge the balance model deliberately does not price — TALK says so three
+     hundred lines up: the option you pick carries its own time and that IS the
+     real bill. It is a bill against the DAY. resolveTicket was also charging
+     it against this ticket's promptness, which made doing the job properly the
+     slow answer twice over. It is credited back there; this is where the
+     number comes from. */
+  if (fx.time && ticket) ticket.spent = (ticket.spent || 0) + fx.time;
   if (fx.bonus && ticket) ticket.bonus += fx.bonus;
 }
 function dlgFinish(){
@@ -13746,6 +13791,161 @@ function selfTest(runSim){
       ok('every ticket leaves time to notice it, at every rung that deals it',
          worst >= MIN_SLACK, 'tightest is ' + worstId + ' at ' + Math.round(worst) + ' min');
       run = null;
+    }
+    /* WORKING IT STRAIGHT THROUGH SCORES FULL MARKS, HOWEVER YOU PLAY IT.
+       resolveTicket has always said so in as many words. It was not true: the
+       promptness term read the raw clock, and an option's fx.time is charged
+       to that clock, so every minute the honest answer cost came off the score
+       for being prompt. The expensive option is the one carrying the rep and
+       the bonus, so the game paid you to duck the work twice.
+
+       Picked up the instant it lands and worked straight through, taking the
+       MOST EXPENSIVE fork every time — which is the strongest form of the
+       claim — every ticket at every rung it is dealt at must come back with
+       full promptness. Driven through the shipped resolveTicket and read off
+       run.speedSum, not recomputed here, so the formula itself is what is
+       under test. */
+    {
+      const savedRunP = run;
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1');
+      const dear = id => {
+        const n = DIALOGUE[id];
+        if (!n || !n.opts || !n.opts.length) return 0;
+        return Math.max.apply(null, n.opts.map(o => (o.fx && o.fx.time) || 0));
+      };
+      let worstR = 2, worstK = '';
+      for (const id in TICKETS){
+        const T = TICKETS[id];
+        for (let r = T.tiers[0]; r <= T.tiers[1] && r < ROLES.length; r++){
+          run.day = 2; run.rung = r;
+          const a = makeArrival(id, 0, ROLES[r]);
+          let spent = 0, clock = walkLegs(T.steps, 0, null).mins;
+          for (const st of T.steps){
+            clock += stepCost(st);
+            if (st.choice){ const d = dear(st.choice); spent += d; clock += d; }
+          }
+          const t = { uid:9000, id, title:a.title, fills:a.fills, at:0,
+                      deadline:a.sla, sla:a.sla, stress:a.stress,
+                      si:T.steps.length, bonus:0, spent, gameScores:[], from:null };
+          run.queue = [t]; run.active = t; run.clock = clock;
+          run.speedSum = 0;
+          resolveTicket(t);
+          if (run.speedSum < worstR){ worstR = run.speedSum; worstK = id + '@' + ROLES[r].id; }
+        }
+      }
+      ok('a ticket worked the moment it lands scores full marks, whatever you chose',
+         worstR >= 0.999, 'worst is ' + worstK + ' at ' + Math.round(worstR * 100) + '%');
+      /* AND THE MIRROR, BECAUSE "CREDIT IT ALL BACK" ALSO PASSES THE ABOVE.
+         Pinning promptness at 1 satisfies every claim in the paragraph over
+         this test and deletes the decision the whole game is about. Letting a
+         ticket sit past its slack has to cost it. */
+      {
+        const T = TICKETS['printer-jam'] || TICKETS[Object.keys(TICKETS)[0]];
+        const pid = TICKETS['printer-jam'] ? 'printer-jam' : Object.keys(TICKETS)[0];
+        run.day = 2; run.rung = T.tiers[0];
+        const a = makeArrival(pid, 0, ROLES[T.tiers[0]]);
+        const mk = () => ({ uid:9001, id:pid, title:a.title, fills:a.fills, at:0,
+                            deadline:a.sla, sla:a.sla, stress:a.stress,
+                            si:T.steps.length, bonus:0, spent:0, gameScores:[], from:null });
+        const at = t => { run.queue = [t]; run.active = t; run.speedSum = 0;
+                          resolveTicket(t); return run.speedSum; };
+        const t1 = mk(); run.clock = 0;               const early = at(t1);
+        const t2 = mk(); run.clock = a.sla - 1;       const late  = at(t2);
+        ok('and one you left until the last minute does not',
+           early >= 0.999 && late <= 0.2,
+           'straight away ' + Math.round(early*100) + '%, left to the wire ' +
+           Math.round(late*100) + '%');
+      }
+      run = savedRunP;
+    }
+    /* AND THE ROW NEVER PROMISES A TICKET IS CHEAPER THAN THE CHEAPEST WAY OF
+       DOING IT. workLeft drives the queue row's "start in Nm / too late"
+       column and the grace a ticket in hand gets before it breaches, and it
+       priced a choice at a flat seven minutes while the sim charges TALK.choice
+       plus whatever the option costs. Measured before the fix, the column
+       understated the remaining work on 285 of 337 templates — by 8 minutes on
+       average and by 61 on the onsite drives, a row reading "start in 30m" on
+       a job that needed fifty more minutes than it had. */
+    {
+      const savedRunW = run;
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.rung = 0; loadMap('office1');
+      const cheapest = id => {
+        const n = DIALOGUE[id];
+        if (!n || !n.opts || !n.opts.length) return 0;
+        return Math.min.apply(null, n.opts.map(o => (o.fx && o.fx.time) || 0));
+      };
+      const under = [];
+      /* the same standing position workLeft measures from, or the two walks
+         disagree by a tile and the guard reports a bug it invented */
+      const hereW = (typeof player !== 'undefined' && player) ? [player.tx, player.ty] : null;
+      for (const id in TICKETS){
+        const T = TICKETS[id];
+        let floorMin = walkLegs(T.steps, 0, hereW).mins;
+        for (const st of T.steps){
+          floorMin += stepCost(st);
+          if (st.choice) floorMin += cheapest(st.choice);
+        }
+        const says = workLeft({ id, si:0 });
+        if (says < floorMin - 0.001) under.push(id + ' says ' + Math.round(says) +
+                                                ', cheapest is ' + Math.round(floorMin));
+      }
+      ok('the queue row never promises a ticket is cheaper than it can be done',
+         !under.length, under.length + ': ' + under.slice(0,3).join(' · '));
+      /* AND THE MIRROR AGAIN: an estimate that is too BIG marks every row "too
+         late" the moment it lands, which is the same column lying the other
+         way. A ticket at its full window is never already lost. */
+      const born = [];
+      for (const id in TICKETS){
+        const T = TICKETS[id];
+        for (let r = T.tiers[0]; r <= T.tiers[1] && r < ROLES.length; r++){
+          run.day = 2; run.rung = r;
+          const a = makeArrival(id, 0, ROLES[r]);
+          const need = workLeft({ id, si:0 });
+          if (need >= a.sla) born.push(id + '@' + ROLES[r].id + ' needs ' +
+                                       Math.round(need) + ' of ' + a.sla);
+        }
+      }
+      ok('and no ticket arrives already marked too late to start',
+         !born.length, born.length + ': ' + born.slice(0,3).join(' · '));
+      run = savedRunW;
+    }
+    /* AND NO TICKET OFFERS A FORK IT HAS NOT LEFT TIME FOR. onsite-nothing-is-
+       wrong dangled a sixty-four minute drive — the option with rep 4 and the
+       bonus on it — inside a fifty-three minute window, at all five rungs it
+       was dealt at. Picked up the instant it landed and driven straight there,
+       it came back twenty-five minutes late every time. An option the game
+       steers you towards and then guarantees to punish is not a choice. */
+    {
+      const savedRunO = run;
+      QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1');
+      const dearest = id => {
+        const n = DIALOGUE[id];
+        if (!n || !n.opts || !n.opts.length) return 0;
+        return Math.max.apply(null, n.opts.map(o => (o.fx && o.fx.time) || 0));
+      };
+      const tooBig = [];
+      for (const id in TICKETS){
+        const T = TICKETS[id];
+        for (let r = T.tiers[0]; r <= T.tiers[1] && r < ROLES.length; r++){
+          run.day = 2; run.rung = r;
+          /* the walk is priced from THIS rung's desk, so it belongs inside the
+             loop — every desk on the ladder is somewhere else in the building */
+          let most = walkLegs(T.steps, 0, null).mins;
+          for (const st of T.steps){
+            most += stepCost(st);
+            if (st.choice) most += dearest(st.choice);
+          }
+          const a = makeArrival(id, 0, ROLES[r]);
+          if (most > a.sla) tooBig.push(id + '@' + ROLES[r].id + ' ' +
+                                        Math.round(most) + ' in ' + a.sla);
+        }
+      }
+      ok('no ticket offers a choice it has not left time for',
+         !tooBig.length, tooBig.length + ': ' + tooBig.slice(0,3).join(' · '));
+      run = savedRunO;
     }
     /* Every meeting must be announced before it happens, and named. An event
        that arrives out of nothing and eats half an hour is a cost you cannot
