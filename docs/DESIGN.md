@@ -32,6 +32,20 @@ board against acing them is 10.5 points, and the best triage rule against the
 worst is 23.3. Hands are worth having; they will not save a day you triaged
 badly.
 
+### How far apart good and bad triage sit, by rung
+
+`tools/bars.js` measures each rung's separation as flawless p50 minus sloppy
+p50, in points of day score. All nine are healthy — good triage clears at least
+60% of seeds and bad triage no more than 30% — but they are not equal:
+**Project Team is the narrowest rung at 18 points**, and **Procurement is the
+widest at 30**. A narrow rung is one where the day is closest to fitting, so
+there is least to decide.
+
+That pair of names is checked: `bars.js` re-reads this paragraph and fails if
+either rung stops being the one it says, which is how a sentence like this one
+stops being true six weeks after somebody writes it. It replaced a roadmap line
+naming a rung that had not been narrowest for two content passes.
+
 Every number in this file and in the README is re-derived from the built game by
 `tools/claims.js`, which fails if either document drifts from what the game
 does. The long-form record of how the balance got here — every sweep, every
@@ -52,7 +66,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 478 in-game self-tests |
+| `verify.js` | boots it and runs the 484 in-game self-tests |
 | `claims.js` | re-derives every number the README and this file state from the built game |
 | `dead.js` | finds data, state, functions and dialogue that are written and never read |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |

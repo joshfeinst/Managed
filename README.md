@@ -118,6 +118,11 @@ Some other things worth knowing:
 - Stress climbs all day and makes hands-on work harder. That's what the kitchen
   is for. The fourth cup of coffee is a trap.
 - Stress mostly resets overnight. Burnout doesn't. That's the run.
+- Once burnout has you frayed, the evening card offers you a day of annual
+  leave, twice a career. It hands back a real chunk of burnout and costs you a
+  day, every point of goodwill you were saving for the promotion bar, and a
+  first morning back with the queue that built up while you were gone. It buys
+  you time, not progress, and that is the trade.
 
 Clock out and you face the Daily Performance Review. Promotions are judged on
 your rolling average over recent days at your current rung, not on one heroic
@@ -137,9 +142,11 @@ Things we want to build next, roughly in the order they'd make the game better.
 sites are the obvious next place: the dreaded on-site visit, a server room that
 isn't yours, a drive that eats half a day and can't be interrupted.
 
-**Relationship Manager needs content.** It's the weakest rung on the ladder —
-good triage separates from bad by fewer points there than anywhere else. It
-wants tickets and scenes of its own rather than another pass at its bar.
+**More depth per rung.** Every rung is healthy now, but Project Team is the one
+where triaging well and triaging badly are closest together, and the ladder is
+long enough that a rung wants more than one shape of day. Which rung is
+narrowest is measured rather than guessed — see
+[`docs/DESIGN.md`](docs/DESIGN.md).
 
 **A career leaderboard.** The same job posting ID deals the same career to
 everyone, so the comparison is already fair. Post a finished career, see how
@@ -152,6 +159,7 @@ to spend a career's reputation on.
 **More boards.** Every rung has one signature minigame; the good ones could
 carry two or three, and the ladder is long enough that repetition shows.
 
-**Somewhere for burnout to go.** Burnout only ever accumulates. A holiday you
-have to actually take — and the guilt of booking it — is the missing piece of
-the run's arc.
+**More to spend a day on.** Annual leave is the one thing you can spend a day of
+a career on. There should be others: a training course that makes a board
+easier for the rest of the run, a day shadowing someone senior, a Friday
+afternoon spent on the documentation nobody has read since 2019.

@@ -336,8 +336,36 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   console.log('  "suggested bar" is flawless p25 (good triage clears ~75% there);');
   console.log('  the number after it is what share of SLOPPY seeds also clear it —');
   console.log('  if that is not low, no bar fixes the rung and the rung needs content.');
+  /* AND THE DOCUMENT HAS TO NAME THE RIGHT RUNGS. docs/DESIGN.md says which
+     rung is narrowest and which is widest, and a sentence like that is true on
+     the day it is written and then quietly stops being. The README carried one
+     naming Relationship Manager as the weakest rung for two content passes
+     after Project Team took the title. These numbers are already here, so the
+     claim is checked here rather than believed. */
+  const doc = path.join(path.dirname(path.resolve(target)), 'docs', 'DESIGN.md');
+  if (fs.existsSync(doc)){
+    const md = fs.readFileSync(doc, 'utf8').replace(/\s+/g, ' ');
+    const gaps = rows0(out).map(r => ({ id:r.id, gap:(r.tp50 - r.lp50) * 100 }));
+    const lo = gaps.reduce((a, b) => b.gap < a.gap ? b : a);
+    const hi = gaps.reduce((a, b) => b.gap > a.gap ? b : a);
+    const said = (re, what) => { const m = re.exec(md);
+      if (!m) return '  docs/DESIGN.md no longer names the ' + what + ' rung';
+      const name = m[1].toLowerCase().replace(/[^a-z]/g, '');
+      const want = (what === 'narrowest' ? lo : hi);
+      const alias = { projectteam:'project', procurement:'procure',
+                      relationshipmanager:'relmgr', solutionsarchitect:'solarch' };
+      const got = alias[name] || name;
+      return got === want.id && Math.abs(+m[2] - want.gap) <= 2 ? ''
+        : '  docs/DESIGN.md says the ' + what + ' rung is ' + m[1] + ' at ' + m[2] +
+          '; measured it is ' + want.id + ' at ' + want.gap.toFixed(0);
+    };
+    const wrong = [ said(/\*\*([A-Za-z ]+?) is the narrowest rung at (\d+) points\*\*/, 'narrowest'),
+                    said(/\*\*([A-Za-z ]+?) is the widest at (\d+)\*\*/, 'widest') ].filter(Boolean);
+    if (wrong.length){ bad += wrong.length; console.log('\n' + wrong.join('\n')); }
+    else console.log('\n  docs/DESIGN.md names the right narrowest and widest rungs.');
+  }
   console.log(bad ? '\n' + bad + ' RUNG(S) MISPLACED' : '\nALL BARS WELL PLACED');
   await browser.close();
-  process.exit(0);
+  process.exit(bad ? 1 : 0);
 })();
 function rows0(x){ return x; }

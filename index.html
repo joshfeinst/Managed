@@ -7103,6 +7103,35 @@ const G = { state:'boot', screenId:'s-boot', textSpeed:1, faults:0, tests:null, 
 const BURN = { entropy:1.1, thresh:60, rate:.35, sleepDebt:2.6, freeCups:2,
                crashStress:4, night:.40, weekend:.22, weekendRelief:4, promoRelief:6,
                frayed:68, wrecked:86, cup:15, sleepless:.22 };
+/* ANNUAL LEAVE, THE ONE DECISION THE BURNOUT ECONOMY DID NOT HAVE.
+   Burnout is the run-ender and it only ever came down by amounts nobody chose:
+   four points for a weekend, six for a promotion, both automatic. So the
+   accumulator the whole roguelite is built on had no player input at all --
+   you watched it climb and that was the game.
+   Booking leave costs a day of the career, hands back `relief`, and the day you
+   come back is `backlog` times as busy, because nobody covered it. It is
+   offered from BURN.frayed, the point the game already calls frayed, so the
+   card appears the evening you are officially in trouble rather than as a tax
+   you pay every Friday. Twice a career.
+
+   WHAT IT IS WORTH, MEASURED, because a mechanic nobody can price is a
+   mechanic nobody should ship. Forty players, good triage, taking leave every
+   time it is offered against never taking it: careers to win 7.2 -> 5.8, both
+   cohorts on this build. That is the feature working -- leave turns a career
+   that ends at vCIO into one that reaches Director -- and it is why the cost
+   has to be real.
+
+   Two levers were tried and one of them does nothing, which is worth writing
+   down. Goodwill at the moment leave is offered has a median of 175, so the 55
+   is genuinely paid; raising it to 95 moved careers-to-win not at all, because
+   repHelp() is capped and the extra forty only came off the bank. And raising
+   offerAt does not make leave rarer, only later: burnout is monotonic and ends
+   the run at 100, so it crosses every threshold below that on the way. It was
+   offered 1.85 times a career at 45 and 1.95 at 68.
+
+   So the price is a day, a brutal day back, and every point of goodwill you
+   were going to lean on at the gate. Leave buys TIME, not PROGRESS. */
+const LEAVE = { relief:22, backlog:1.4, perCareer:2, offerAt:BURN.frayed, repCost:55 };
 /* Share of a day's arrivals you may let burn before it counts against you.
    The day deliberately holds more work than fits: triage IS the job, and the
    first casualties are expected rather than punished. */
@@ -7704,12 +7733,45 @@ function runInit(seed){
           stress:20, coffee:0, crashes:[], burnout:0, rep:meta.certs.length ? 1 : 0,
           queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[], pendingScenes:[], seen:{},
           scores:[], breaches:0, resolved:0, aces:0, daysAtTop:0, satOn:{}, promoted:false,
-          burned:[], earned:0, stakesDone:0, rungSince:0, warned:{}, queueDays:0 };
+          burned:[], earned:0, stakesDone:0, rungSince:0, warned:{}, queueDays:0,
+          leaveTaken:0, backlog:1 };
   run.rep += metaFx('rep');
 }
 function newRun(seed){
   runInit(seed);
   startCommute();
+}
+/* Offered on the evening card, and only when it is already going badly: the
+   point is a decision late in a career, not a routine you set up on day two.
+   Split from takeLeave so the review screen and the headless career bots ask
+   the same question -- a mechanic no harness can exercise is a mechanic whose
+   balance nobody knows, and this file has been bitten by exactly that twice. */
+function canTakeLeave(){
+  return !!run && !run.pendingEnd &&
+         (run.leaveTaken || 0) < LEAVE.perCareer &&
+         run.burnout >= LEAVE.offerAt;
+}
+function takeLeave(){
+  if (!canTakeLeave()) return false;
+  run.leaveTaken = (run.leaveTaken || 0) + 1;
+  run.burnout = Math.max(0, run.burnout - LEAVE.relief);
+  run.backlog = LEAVE.backlog;
+  /* AND IT COSTS GOODWILL, WHICH IS THE WHOLE POINT OF THE TRADE. Measured
+     without this, booking leave took careers-to-win from 7.2 to 5.3 across 40
+     players: the extra days it buys bank more reputation than the day off
+     costs, so a mechanic meant to be a hard choice was simply free value taken
+     twice a career. Goodwill lowers your promotion bar tonight AND banks at
+     half into the next career, so charging it here means leave buys you TIME
+     and not PROGRESS -- you survive the career you are in, and you do not get
+     further up the ladder for having done it. Which is also what booking
+     leave in the middle of a migration actually costs you. */
+  run.rep = Math.max(0, run.rep - LEAVE.repCost);
+  /* The day off is a day. It scores nothing, because you were not there to be
+     scored -- no perfHist entry, so a promotion streak is not broken by a week
+     you were not assessed in, which is both fair and how it actually works. */
+  run.day++;
+  slog('ANNUAL LEAVE — one day, and the queue kept its own counsel');
+  return true;
 }
 function metaHasPerk(p){ return PERKS[p].need.runs !== undefined && meta.runsPlayed >= PERKS[p].need.runs; }
 
@@ -7765,7 +7827,10 @@ function rollDay(){
      hand-picked one that teaches the loop (read it, walk somewhere, come
      back) without a minigame on top. */
   const first = run.day === 1;
-  const load = first ? .55 : 1;
+  /* A day back off leave is heavier, because the queue did not take the day
+     off. Consumed here so it lands on exactly one day and cannot compound. */
+  const load = first ? .55 : (run.backlog || 1);
+  run.backlog = 1;
   /* THE DAY'S OWN LENGTH, NOT AN EIGHT SOMEBODY TYPED. This was `* 8` — the
      last unlinked copy of the shift length in the file, and the same class of
      bug as the three expressions that said nine while the prose said eight.
@@ -9953,6 +10018,13 @@ function reviewScreen(dayPerf, eod, promo, ending){
     mkBtn(act, 'EXIT INTERVIEW ▶', () => careerOver(ending));
   } else {
     mkBtn(act, 'NEXT DAY ▶', () => startCommute());
+    /* The only thing in the game that spends a day to buy burnout back. It
+       appears when burnout is past LEAVE.offerAt and you have leave left, so
+       most careers never see it and a bad one sees it twice. */
+    if (canTakeLeave())
+      mkBtn(act, 'BOOK A DAY OFF (' + (LEAVE.perCareer - (run.leaveTaken || 0)) + ' LEFT)',
+            () => { takeLeave(); toast('LEAVE BOOKED. IT WILL STILL BE THERE.', 'ok', 3000);
+                    startCommute(); }, true);
     mkBtn(act, 'SAVE & QUIT', () => { saveGame(); toTitle(); }, true);
   }
 }
@@ -10165,6 +10237,7 @@ function serializeRun(){
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
     introDone: !!run.introDone, seen: run.seen || {}, burnLog: run.burnLog || [],
     reviewCard: run.reviewCard || null,
+    leaveTaken: run.leaveTaken || 0, backlog: run.backlog || 1,
     /* Both were memory-only, and both detonated on resume: a missing warned
        threw a TypeError per tick for the 12 minutes before every calendar
        event of every CONTINUEd career (input dead, FAULT banners), and a
@@ -18379,6 +18452,63 @@ function selfTest(runSim){
       ok('burnout math: an 80-stress evening costs ' + want.toFixed(2) + ' burnout',
          run && Math.abs((run.burnout - b0) - want) < 1e-9,
          run ? 'got ' + (run.burnout - b0).toFixed(2) : 'career ended');
+    }
+    /* ANNUAL LEAVE: the one thing that spends a day to buy burnout back.
+       Three things have to hold or it is either a cheat or a decoration: it
+       gives back exactly what LEAVE says and costs exactly one day, the queue
+       you skipped is waiting when you come back, and it runs out. The backlog
+       is the half that keeps it honest -- without it, two free burnout resets
+       per career make the accumulator the run is built on optional. */
+    {
+      const keepRun = run;
+      rngInit('LEAVE'); runInit('LEAVE');
+      run.burnout = 70; run.day = 4;
+      const b0 = run.burnout, d0 = run.day;
+      const first = takeLeave();
+      ok('leave: a day off gives back what LEAVE.relief says, and costs a day',
+         first && Math.abs((b0 - run.burnout) - LEAVE.relief) < 1e-9 && run.day === d0 + 1,
+         'burnout ' + b0 + ' -> ' + run.burnout + ', day ' + d0 + ' -> ' + run.day);
+      /* the day you come back is heavier, and only that day */
+      rollDay(); const back = run.plan.arrivals.length;
+      rollDay(); const after = run.plan.arrivals.length;
+      rngInit('LEAVE'); runInit('LEAVE'); run.day = 5;
+      rollDay(); const normal = run.plan.arrivals.length;
+      ok('leave: the queue did not take the day off',
+         back > normal, back + ' tickets back off leave against ' + normal + ' normally');
+      ok('...and the backlog lands on one day, not for ever',
+         after <= normal + 1, 'the day after deals ' + after + ' against ' + normal);
+      /* and it runs out */
+      rngInit('LEAVE'); runInit('LEAVE'); run.burnout = 90;
+      let took = 0;
+      for (let i = 0; i < LEAVE.perCareer + 3; i++) if (takeLeave()) took++;
+      ok('leave: there is only so much of it',
+         took === LEAVE.perCareer && !canTakeLeave(),
+         'took ' + took + ' of ' + LEAVE.perCareer);
+      /* never offered to somebody who does not need it */
+      rngInit('LEAVE'); runInit('LEAVE'); run.burnout = LEAVE.offerAt - 1;
+      const early = canTakeLeave();
+      run.burnout = LEAVE.offerAt;
+      const due = canTakeLeave();
+      ok('leave: offered when it is going wrong and not before',
+         !early && due, 'at ' + (LEAVE.offerAt - 1) + ': ' + early + ', at ' + LEAVE.offerAt + ': ' + due);
+      /* and the evening card is the only place it is offered, so if the button
+         is not on it the mechanic does not exist for anybody playing the game */
+      {
+        const wasHidden = document.getElementById('s-review').hidden;
+        rngInit('LEAVE'); runInit('LEAVE'); run.burnout = LEAVE.offerAt + 5;
+        reviewScreen(.5, {}, false, null);
+        const withLeave = [...document.querySelectorAll('#r-actions button')]
+                            .filter(b => /DAY OFF/.test(b.textContent));
+        run.leaveTaken = LEAVE.perCareer;
+        reviewScreen(.5, {}, false, null);
+        const spent = [...document.querySelectorAll('#r-actions button')]
+                        .filter(b => /DAY OFF/.test(b.textContent));
+        document.getElementById('s-review').hidden = wasHidden;
+        ok('leave: the evening card offers it, and stops when it is spent',
+           withLeave.length === 1 && !withLeave[0].disabled && spent.length === 0,
+           'with leave left: ' + withLeave.length + ' button(s), spent: ' + spent.length);
+      }
+      run = keepRun;
     }
     /* a coffee still pending at 17:00 is charged, not forgiven */
     {

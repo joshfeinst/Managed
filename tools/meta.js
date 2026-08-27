@@ -18,6 +18,11 @@ const SKILL=+(process.argv[5]||0.85);
      node tools/meta.js <file> [players=40] [maxCareers=14] [skill=.85]
                                [order=pridead] [pick=best]                */
 const ORDER=process.argv[6]||'pridead', PICK=process.argv[7]||'best';
+/* Does the player book leave when the evening card offers it? A mechanic no
+   harness can exercise is a mechanic whose balance nobody knows. Off by
+   default so every number recorded before annual leave existed still
+   reproduces; pass 'leave' to ask the other question. */
+const TAKELEAVE = process.argv[8] === 'leave';
 async function launch(){ try { return await chromium.launch(); } catch(e){
   const base='/opt/pw-browsers';
   for (const d of fs.readdirSync(base).filter(x=>x.startsWith('chromium'))){
@@ -29,7 +34,7 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   p.on('pageerror',e=>console.log('PAGEERROR',e.message));
   await p.goto('file://'+target);
   await p.waitForFunction(()=>typeof G!=='undefined'&&typeof simDay==='function');
-  const out=await p.evaluate(({PLAYERS,MAXCAREERS,SKILL,ORDER,PICK})=>{
+  const out=await p.evaluate(({PLAYERS,MAXCAREERS,SKILL,ORDER,PICK,TAKELEAVE})=>{
     SAVE_SUSPEND=true; QUIET=true; A.sfxVol=0;
     const players=[];
     for (let pl=0; pl<PLAYERS; pl++){
@@ -43,6 +48,7 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
         while (run && g++<80){
           startCommute(); if (!run) break;
           simDay(SKILL,{order:ORDER,pick:PICK}); if (!run) break;
+          if (TAKELEAVE && typeof canTakeLeave === 'function' && canTakeLeave()) takeLeave();
           if (run.pendingEnd){ ending=run.pendingEnd; const d=run.day, r=run.rung;
             startCommute(); careers.push({start:startRung,end:r,days:d,ending}); break; }
         }
@@ -71,7 +77,7 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
     }
     SAVE_SUSPEND=false; QUIET=false;
     return players;
-  },{PLAYERS,MAXCAREERS,SKILL,ORDER,PICK});
+  },{PLAYERS,MAXCAREERS,SKILL,ORDER,PICK,TAKELEAVE});
   const NAMES=['intern','T1','T2','T3','project','procure','relmgr','solarch','vCIO','DIRECTOR'];
   out.forEach((pl,i)=>{
     const arc = pl.careers.map(c=>`${NAMES[c.start]}->${NAMES[c.end]}(${c.days}d,${c.ending[0]})`).join(' · ');

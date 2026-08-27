@@ -2762,3 +2762,43 @@ strategy table was **not** self-deriving and `claims.js` caught all five of its
 now-stale numbers: protect-the-big-ones 72.0 → 74.2, order-of-arrival 57.4 →
 59.9, hands 8.2 → 10.5, judgement 21.2 → 23.3, and the gap between the two
 winning rules two → four points.
+
+## Annual leave: the decision the burnout economy did not have (2026-08-27)
+
+Burnout is the run-ender and it only ever came down by amounts nobody chose —
+four points for a weekend, six for a promotion, both automatic. The accumulator
+the whole roguelite is built on had no player input at all.
+
+Leave is offered on the evening card from `BURN.frayed`, twice a career. It
+hands back 22 burnout, costs a day, costs 55 goodwill, and the morning you come
+back deals a 1.4x queue because nobody covered it.
+
+`meta.js` learned to take it (`... 40 14 0.85 pridead best leave`), because a
+mechanic no harness can exercise is a mechanic whose balance nobody knows — the
+same hole this file recorded in the harness a few hours earlier. Forty players,
+good triage, both cohorts on the shipped build:
+
+| | careers to win |
+|---|---|
+| never books leave | 7.2 |
+| books it every time it is offered | **5.8** |
+
+That is the feature working: leave turns a career that ends at vCIO into one
+that reaches Director. It is also why the cost has to be real.
+
+**Two levers were tried and one of them does nothing.** Goodwill at the moment
+leave is offered has a median of 175 across 37 offers, so the 55 is genuinely
+paid — but raising it to 95 moved careers-to-win not at all (6.0 → 6.0),
+because `repHelp()` is capped and the extra forty only came off the bank.
+
+**And raising `offerAt` does not make leave rarer, only later.** Burnout is
+monotonic and ends the run at 100, so it crosses every threshold below that on
+the way: 1.85 offers per career at 45, 1.95 at 68. The gate controls *when* the
+card appears, not *whether*. It is tied to `BURN.frayed` now, so the offer lands
+the evening the game already calls you frayed.
+
+Five invariants, each proven red on a mutation: relief and day cost exactly what
+`LEAVE` says; the queue you skipped is waiting (backlog 1.0 fails it); the
+backlog lands on one day only (not clearing it fails it); it runs out
+(`perCareer:99` fails it); and the evening card actually offers the button
+(removing it fails it).
