@@ -1850,6 +1850,43 @@ function chatPick(id, day, count, n){
 /* Node: { who:npcId|'client'|'sys', t:[lines], opts:[{t, fx:{stress,rep,time,
    bonus}, next}], next } — no opts and no next ends the scene. Lines and
    option text may use {token} fills resolved at ticket build. */
+
+/* WHERE THE FUTILE OPTION IS THE JOKE.
+   applyFx moves exactly four things — time, rep, stress, bonus — and an option
+   carries nothing else, so those four are the whole of what a choice does. An
+   option beaten on all four at once is not a decision; it is a trap. Usually
+   that is deliberate and it is the best writing in the game: "Attend. Somebody
+   must know what it is for", "Take the call — you never know", "Reply all with
+   a detailed rebuttal", "Send the procurement form. All nine pages." The
+   option's own text is the warning, and picking it anyway is the point.
+
+   tools/audit.js has reported these since it was written and could never tell
+   the deliberate ones from the accidental ones, so it printed sixty rows,
+   called itself "a REPORT, not a defect list", and asked to be read by hand.
+   Nobody can read sixty rows every build. This is the list, so the machine can.
+
+   The accidental shape is the opposite of the joke: the THOROUGH option — trace
+   it first, label the socket, go and look at the building, sit with the user —
+   costing more time and more stress and returning nothing extra, which teaches
+   that care is never worth paying for while the rest of the game says the
+   opposite. Nine of those were found and re-priced on 2026-08-27, each given a
+   real payoff on one axis so it became a trade instead of a pure loss.
+
+   The self-test asserts this set EXACTLY, both ways. A new dominated option
+   fails until somebody either fixes it or decides in writing that it is a joke,
+   and a node listed here that stops being dominated fails too, so the list
+   cannot rot into a blanket exemption. */
+const FUTILE_BY_DESIGN = [
+  'd.legacy.b', 'd.sign.b', 'e.bday', 'e.r.saveplan', 'h.brk.b', 'h.line.b',
+  'h.mbx.b', 'j.dog.b', 'j.name.b', 'p.addr.b', 'p.cut.b', 'pa.stat.b',
+  'pw.dom.b', 'q.amz.b', 'q.budg.b', 'q.inv.b', 'q.marg.b', 'q.true.b',
+  'q.wrong.b', 'r.esc.b', 'r.lunch.b', 't.mon4.b', 't.phish.b', 't.scope.b',
+  't.therm.b', 't1.cfo.b', 't1.icon.b', 't1.rev.b', 't1.self.b', 't1.vm.b',
+  't2.dl.b', 't2.gnd.b', 't2.lic.b', 't2.unfix.b', 't3.mon.b', 't3.old.b',
+  't3.subnet.b', 't9.derek.b', 'v.2021.b', 'x.cal.b', 'x.lic.b', 'x.off.b',
+  'x.own.b', 'x.slide.b', 'x.ven.b'
+];
+
 const DIALOGUE = {
   /* --------------------------- Director dialogue -------------------------- */
   /* ----- senior chaff: the tickets you are allowed to let burn ----------- */
@@ -1979,7 +2016,7 @@ const DIALOGUE = {
   't9.hire.b':  { who:'sys', t:['You can hire the safe one, or the one who is going to be a problem in the good way.'],
     opts:[ {t:'Hire the one who is you, and pay them', fx:{time:7, rep:3, bonus:1, stress:3}},
            {t:'Hire the safest CV', fx:{time:2, stress:1}},
-           {t:'Push back on "unpaid" before hiring anyone', fx:{time:8, rep:3, bonus:1, stress:6}} ] },
+           {t:'Push back on "unpaid" before hiring anyone', fx:{time:8, rep:5, bonus:1, stress:6}} ] },
 
   /* ---------------------------- T2 dialogue ------------------------------ */
   't2.dl.a':   { who:'client', t:['Someone replied-all to "All Staff". Someone else replied-all asking people to stop replying all.',
@@ -2168,7 +2205,7 @@ const DIALOGUE = {
   'v.bench.a': { who:'client', t:['How does our spend compare to companies like us? The board would like a percentile.',
     'Every benchmark you can buy is written by someone who sells to the people being benchmarked.'] },
   'v.bench.b': { who:'sys', t:['You can give them the percentile, or the thing the percentile hides: which of their peers has had an outage this year.'],
-    opts:[ {t:'Give both, and lead with what the number cannot tell them', fx:{time:8, rep:5, bonus:1}},
+    opts:[ {t:'Give both, and lead with what the number cannot tell them', fx:{time:11, rep:5, bonus:1}},
            {t:'Buy the benchmark and present it straight', fx:{time:4, rep:1, stress:4}},
            {t:'Build a peer comparison from what we actually know', fx:{time:8, rep:4, bonus:1, stress:3}} ] },
   'v.quit.a': { who:'sys', t:['Their best engineer resigned on Tuesday. No counter-offer was made. Nobody will say why.',
@@ -2267,7 +2304,7 @@ const DIALOGUE = {
   'a.slide.b': { who:'sys', t:['Everything true about this estate needs six diagrams. Everything the board needs is four boxes and an arrow.'],
     opts:[ {t:'Four boxes, one arrow, and a second slide for the questions', fx:{time:6, rep:5, bonus:1}},
            {t:'Send the real diagram — they asked for the architecture', fx:{time:3, rep:-3, stress:6}},
-           {t:'Four boxes, and be in the room to narrate it', fx:{time:7, rep:4, bonus:1, stress:2}} ] },
+           {t:'Four boxes, and be in the room to narrate it', fx:{time:7, rep:4, bonus:2, stress:2}} ] },
   /* -------------------- RELATIONSHIP MANAGER (rung 6) ---------------------- */
   'v.pack.a': { who:'sys', t:['The board pack goes out Friday. There are nine questions on the standing agenda.',
     'Six of them you can answer with something true. The other three you can answer with something true about a different subject, which is not the same thing, and everyone in that room has been in a lot of rooms.'] },
@@ -2577,7 +2614,7 @@ const DIALOGUE = {
   'p.customs.a':{ who:'sys', t:['Nineteen switches are in customs. The paperwork has the wrong commodity code.',
     'Go-live is a week on Monday. The client has already told their staff.'] },
   'p.customs.b':{ who:'sys', t:['Customs is not a supplier and cannot be chased into caring.'],
-    opts:[ {t:'Get the code corrected and a broker on it today', fx:{time:18, rep:4, bonus:1, stress:5}},
+    opts:[ {t:'Get the code corrected and a broker on it today', fx:{time:18, rep:5, bonus:1, stress:5}},
            {t:'Source nineteen switches locally at a worse price', fx:{time:14, rep:2, bonus:1, stress:6}},
            {t:'Stage the go-live so the first floor lands on time', fx:{time:16, rep:4, bonus:1, stress:4}} ] },
   't.back.a': { who:'sys', t:['First day. Not your first day in this industry, which everyone keeps saying as though it were reassuring.',
@@ -3068,7 +3105,7 @@ const DIALOGUE = {
     'No name in the CMDB, no owner, no open ports worth having. Eleven small machines being quietly alive.'] },
   'pw.decom.b': { who:'brenda', t:['If you turn one off and it mattered, that is a Monday I have to be part of.'],
     opts:[ {t:'Shut them down and leave them racked for thirty days', fx:{time:20, rep:4, bonus:1}},
-           {t:'Trace what talks to them first, all eleven', fx:{time:26, rep:4, bonus:1, stress:4}},
+           {t:'Trace what talks to them first, all eleven', fx:{time:26, rep:4, bonus:2, stress:4}},
            {t:'Pull the power. Nothing has asked for them in a year.', fx:{time:6, rep:-3, stress:10}} ] },
   'pw.decom.c': { who:'sys', t:['Whatever you decide, somebody in three years reads the note you leave and has to act on it.'],
     opts:[ {t:'Write down what each one was and who could not be found', fx:{time:16, rep:3, bonus:1}},
@@ -3158,7 +3195,7 @@ const DIALOGUE = {
   't2.rst.b':  { who:'sys', t:['The backup is there. Restoring it over the live folder is how you make today much worse.'],
     opts:[ {t:'Restore beside it and let them pick', fx:{time:12, rep:2, bonus:1}},
            {t:'Restore over the top — it is what they asked for', fx:{time:5, rep:-2, stress:6}},
-           {t:'Restore beside it and delete the decoys afterwards', fx:{time:18, rep:1, bonus:1, stress:3}} ] },
+           {t:'Restore beside it and delete the decoys afterwards', fx:{time:18, rep:3, bonus:1, stress:3}} ] },
   't2.gnd.a':  { who:'mackenzie', t:['New CFO saw GANDALF in a report and found it unprofessional. Can we rename the server?',
     'Forty things point at that name. Thirty-nine of them are undocumented.'] },
   't2.gnd.b':  { who:'sys', t:['Renaming it is one command and about three weeks of consequences.'],
@@ -3295,7 +3332,7 @@ const DIALOGUE = {
     'There are two comms cabinets on it. One of them is drawn in a corridor.'],
     opts:[ {t:'Draw it properly and get it signed before anyone orders cable', fx:{time:21, rep:4, bonus:1, stress:3}},
            {t:'Work from the whiteboard photo and adjust on the day', fx:{time:8, rep:-2, stress:10}},
-           {t:'Go and look at the building yourself', fx:{time:26, rep:3, bonus:1, stress:4}} ] },
+           {t:'Go and look at the building yourself', fx:{time:26, rep:3, bonus:2, stress:4}} ] },
   'pit.start.a':{ who:'linda', t:['There is a new starter on Monday. I found out because their manager asked where the laptop was going to be.',
     'HR raised it three weeks ago, in a system we do not have a login to, which they say we do.',
     'Their name is on a spreadsheet. Their start date is on a different spreadsheet.'] },
@@ -3348,7 +3385,7 @@ const DIALOGUE = {
   't3.inter.b':{ who:'sys', t:['You cannot fix what will not happen while you are watching.'],
     opts:[ {t:'Instrument it and wait for it to happen to itself', fx:{time:20, rep:3, bonus:1, stress:3}},
            {t:'Close it as not reproducible', fx:{time:3, rep:-2}},
-           {t:'Sit with the user for an hour', fx:{time:24, rep:2, bonus:1, stress:4}} ] },
+           {t:'Sit with the user for an hour', fx:{time:24, rep:2, bonus:2, stress:4}} ] },
   't3.mon.a':  { who:'client', t:['Site 3 only breaks on Mondays. Only in the morning. Only sometimes.'] },
   't3.mon.b':  { who:'sys', t:['A backup job, a router, and a cleaner who unplugs one thing to hoover. Two of those are on a schedule.'],
     opts:[ {t:'Correlate the schedules and prove it', fx:{time:19, rep:3, bonus:1, stress:3}},
@@ -3395,7 +3432,7 @@ const DIALOGUE = {
   't1.phones.c':{ who:'sys', t:['Plugged in. Dial tone. The building is saved.'],
     opts:[ {t:'Tell them exactly what it was', fx:{time:5, rep:2, bonus:1}},
            {t:'"Network event. Resolved."', fx:{stress:1, bonus:1}},
-           {t:'Label the socket so it cannot happen again', fx:{time:9, rep:1, bonus:1, stress:2}} ] },
+           {t:'Label the socket so it cannot happen again', fx:{time:9, rep:3, bonus:1, stress:2}} ] },
   't1.onb.a':   { who:'mackenzie', t:['New starter! Monday. Well — today. In forty minutes.',
     'HR sent a seating chart instead of a form. I have forwarded it. That is my part done.'] },
   't1.onb.b':   { who:'sys', t:['You have a desk number and a first name. You need an account, a laptop and a phone.'],
@@ -13443,6 +13480,39 @@ function selfTest(runSim){
          choices + ' choices' +
          (dominant.length ? ' · dominant: ' + dominant.slice(0,3).join(', ') : '') +
          (flat.length ? ' · identical options: ' + flat.slice(0,3).join(' ') : ''));
+      /* AND NO DEAD OPTION EXCEPT THE ONES THAT ARE THE JOKE. The check above
+         asks whether any option beats ALL its siblings; this asks the other
+         question, whether any option is beaten by ANY of them, which is the
+         one that leaves a line of text nobody has a reason to pick. Most of
+         those are deliberate and are the best writing in the game — see
+         FUTILE_BY_DESIGN, where the whole argument lives. The accidental shape
+         is the thorough option costing more on every axis and returning
+         nothing, which teaches that care is never worth paying for.
+         Set equality, both directions: a new dead option fails until somebody
+         fixes it or writes it into the list, and a listed node that stops being
+         dead fails too, so the list cannot quietly become a blanket exemption
+         covering choices nobody has looked at. */
+      {
+        const dead = new Set();
+        for (const id in DIALOGUE){
+          const opts = DIALOGUE[id].opts;
+          if (!opts || opts.length < 2) continue;
+          for (const a of opts)
+            if (opts.some(b => b !== a &&
+                  ax(b).every((v, i) => v >= ax(a)[i]) &&
+                  ax(b).some((v, i) => v >  ax(a)[i]))) { dead.add(id); break; }
+        }
+        const named = new Set(FUTILE_BY_DESIGN);
+        const surprise = [...dead].filter(id => !named.has(id));
+        const cured    = [...named].filter(id => !dead.has(id));
+        ok('every dead option in the game is one that is meant to be dead',
+           !surprise.length,
+           surprise.length + ' unexplained: ' + surprise.slice(0, 4).join(' '));
+        ok('...and nothing is excused that is not dead any more',
+           !cured.length && named.size > 30,
+           cured.length + ' stale in FUTILE_BY_DESIGN: ' + cured.slice(0, 4).join(' ') +
+           ' · list holds ' + named.size);
+      }
     }
     const elig0 = Object.keys(TICKETS).filter(id => TICKETS[id].tiers[0] <= 0 && 0 <= TICKETS[id].tiers[1]);
     ok('the intern queue has enough variety', elig0.length >= 12, elig0.length + ' templates');

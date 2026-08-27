@@ -20,7 +20,15 @@ const path = require('path'), fs = require('fs');
 const { chromium } = require('playwright');
 
 const target = process.argv[2] || '/home/user/managed/index.html';
-const readme = process.argv[3] || path.join(path.dirname(path.resolve(target)), 'README.md');
+/* THE PROSE MOVED AND THE CLAIMS MOVED WITH IT. README.md is the player's
+   document -- what the game is, how to play it, what a day is like -- and the
+   measured design numbers now live in docs/DESIGN.md, which is where somebody
+   who wants to know how it works goes. A claim is a claim wherever it is
+   written, so this reads both and checks the pair. Pass a path to check just
+   one of them. */
+const docsOf = t => { const dir = path.dirname(path.resolve(t));
+  return [path.join(dir, 'README.md'), path.join(dir, 'docs', 'DESIGN.md')]; };
+const sources = process.argv[3] ? [process.argv[3]] : docsOf(target);
 
 const WORDS = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9,
                 ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15,
@@ -42,7 +50,9 @@ async function launch(){
 }
 
 (async () => {
-  const md = fs.readFileSync(readme, 'utf8').replace(/\s+/g, ' ');
+  const md = sources.filter(f => fs.existsSync(f))
+                    .map(f => fs.readFileSync(f, 'utf8')).join('\n\n')
+                    .replace(/\s+/g, ' ');
   const browser = await launch();
   const page = await browser.newPage();
   const errs = [];
@@ -110,7 +120,7 @@ async function launch(){
   const checks = [];
   const claim = (name, re, check) => {
     const m = md.match(re);
-    if (!m) return checks.push({ name, ok:false, why:'the README no longer says this' });
+    if (!m) return checks.push({ name, ok:false, why:'neither README.md nor docs/DESIGN.md says this any more' });
     const r = check(m);
     checks.push({ name, ok:r.ok, why:r.why });
   };
@@ -200,7 +210,7 @@ async function launch(){
       return { ok: !bad.length, why: bad.length ? bad.join(', ')
                : said.join('/') + ' vs ' + M.paceMins.map(x => x.toFixed(1)).join('/') }; });
 
-  console.log('README CLAIMS, RE-DERIVED FROM THE GAME\n');
+  console.log('DOCUMENTED CLAIMS, RE-DERIVED FROM THE GAME — README.md + docs/DESIGN.md\n');
   for (const p of M.per)
     console.log('  ' + p.id.padEnd(9) + String(p.arr.toFixed(1)).padStart(5) + ' arrive  ' +
                 String(p.res.toFixed(1)).padStart(5) + ' worked  ' +
@@ -215,6 +225,6 @@ async function launch(){
   console.log('');
   console.log(bad || errs.length
     ? bad + ' CLAIM(S) THE GAME DOES NOT BACK'
-    : 'EVERY NUMBER ON THE README IS ONE THE GAME PRODUCES');
+    : 'EVERY NUMBER IN THE DOCS IS ONE THE GAME PRODUCES');
   process.exit(bad || errs.length ? 1 : 0);
 })();
