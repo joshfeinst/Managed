@@ -6916,6 +6916,13 @@ const COFFEE_MAX = 4;          // cups the machine will give you in one day
    the balance model disagreeing about the same mechanic by one step, with a
    comment over each of them stating the other's number. */
 const COFFEE_CRASH = 90;
+/* THE HOUR THE SHIFT STARTS. Three places turned run.clock into a wall-clock
+   time with `+ 9` written into each of them, and the options screen said "the
+   same eight hours" in prose beside a DAY_MIN of 480. Same shape as the four
+   copies of ninety above: nothing wrong today and nothing holding it that
+   way. */
+const DAY_START_HOUR = 9;
+function dayHours(){ return Math.round(DAY_MIN / 60); }
 const EVENT_WARN = 12;         // minutes of notice a meeting gives you
 const DUCK_DEBT = .55;         // burnout per point of stress dodged rather than spent
 /* what the calendar invite is actually called */
@@ -7023,7 +7030,7 @@ const SLOG = [];
 let SLOG_TOTAL = 0;
 function slog(msg){
   if (typeof run === 'undefined' || !run) return;
-  const h = Math.floor(run.clock/60) + 9, m = Math.floor(run.clock % 60);
+  const h = Math.floor(run.clock/60) + DAY_START_HOUR, m = Math.floor(run.clock % 60);
   SLOG.push('D' + run.day + ' ' + (h > 12 ? h-12 : h) + ':' + (m<10?'0':'') + m +
             (h >= 12 ? 'p' : 'a') + '  ' + msg);
   SLOG_TOTAL++;
@@ -8174,7 +8181,7 @@ function eventsTick(){
     const away = next.at - run.clock;
     if (away <= EVENT_WARN && away > 0 && !(run.warned = run.warned || {})[next.id]){
       run.warned[next.id] = 1;
-      const h = Math.floor(next.at/60) + 9, mm = Math.floor(next.at % 60);
+      const h = Math.floor(next.at/60) + DAY_START_HOUR, mm = Math.floor(next.at % 60);
       toast('CALENDAR: ' + (EV_NAMES[next.id] || next.id).toUpperCase() + ' AT ' +
             (h > 12 ? h-12 : h) + ':' + (mm<10?'0':'') + mm + (h >= 12 ? 'PM' : 'AM') +
             ' — ' + Math.round(away) + ' MIN', 'corp', 2800);
@@ -11849,7 +11856,7 @@ function hudShow(on){
 }
 function hudUpdate(){
   if (!run) return;
-  const h = Math.floor(run.clock/60) + 9;
+  const h = Math.floor(run.clock/60) + DAY_START_HOUR;
   const m = Math.floor(run.clock % 60);
   const hh = h > 12 ? h - 12 : h;
   document.getElementById('h-clock').innerHTML = '<b>' + hh + ':' + (m<10?'0':'') + m + '</b> ' + (h >= 12 ? 'PM' : 'AM');
@@ -12123,7 +12130,8 @@ function paintPace(){
   const b = document.getElementById('o-pace'), n = document.getElementById('o-pace-note');
   if (b) b.textContent = pace().label;
   if (n) n.textContent = pace().blurb +
-    ' The shift is the same eight hours at every pace \u2014 same tickets, same deadlines, same score. Only how fast those hours pass in the real world changes.';
+    ' The shift is the same ' + numWord(dayHours()) + ' hours at every pace \u2014 ' +
+    'same tickets, same deadlines, same score. Only how fast those hours pass in the real world changes.';
 }
 function pauseGame(){
   if (G.modal){
@@ -14195,6 +14203,26 @@ function selfTest(runSim){
       QUIET = true;
       ok('the cup the machine warns you about is the cup your hands shake on',
          !rows.length && run.coffee === COFFEE_MAX, rows.join(' · ') || 'ok');
+      /* ...and the options screen counts the same hours the clock does. The
+         shift note said "eight hours" in prose beside a DAY_MIN of 480 and a
+         start hour written into three separate expressions as `+ 9`. */
+      {
+        paintPace();
+        const note = (document.getElementById('o-pace-note') || {}).textContent || '';
+        const m2 = /same (\w+) hours at every pace/.exec(note);
+        run.clock = DAY_MIN; hudUpdate();
+        const shown = (document.getElementById('h-clock') || {}).textContent || '';
+        /* the HOUR, parsed — a substring test passes for the wrong reason:
+           "4:59 PM" contains a 5 */
+        const hr = /(\d+):(\d\d)/.exec(shown);
+        const endHour = DAY_START_HOUR + dayHours();
+        const want = endHour > 12 ? endHour - 12 : endHour;
+        ok('the options screen counts the same hours the clock does',
+           !!m2 && NUM_WORDS.indexOf(m2[1]) === dayHours() &&
+           !!hr && +hr[1] === want && +hr[2] === 0,
+           (m2 ? 'note says ' + m2[1] : 'no note') + ', clocking off reads "' +
+           shown.trim() + '" and should read ' + want + ':00');
+      }
       /* ...and the cup lasts as long as the machine says it does. */
       {
         run.coffee = 0; run.stress = 50; run.crashes = []; run.clock = 100;
