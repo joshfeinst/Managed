@@ -831,6 +831,33 @@ function bakeAtlas(){
   T(16, g=>{ Rt(g,2,0,12,15,'#191d24'); Rt(g,2,0,12,1,'#2a3038');
     for (let y=2;y<14;y+=3){ Rt(g,3,y,10,2,'#0d1015'); Rt(g,11,y,1,1,Math.random()<.5?'#39d7ff':'#4ade80'); }
     Rt(g,3,14,10,1,'#0a0c10'); });
+  /* ------------------------------ OUTSIDE ---------------------------------
+     The first tiles in the game that are not carpet, lino or a server room
+     floor. Slots 33-37 of forty; 0-32 were the building. */
+  /* 33 tarmac, with the white line of a bay down its left edge */
+  T(33, g=>{ Rt(g,0,0,16,16,'#3f434a');
+    for (let i=0;i<9;i++) Rt(g,(i*7.1)%16,(i*4.7)%16,1,1,'#474b53');
+    Rt(g,0,0,1,16,'#c9c4b8'); });
+  /* 34 a car, seen from above. Roof, windscreen, the suggestion of mirrors. */
+  T(34, g=>{ Rt(g,0,0,16,16,'#3f434a'); Rt(g,0,0,1,16,'#c9c4b8');
+    Rt(g,3,1,10,14,'#2f6f6a'); Rt(g,3,1,10,1,'#3d8781'); Rt(g,3,14,10,1,'#245450');
+    Rt(g,4,3,8,3,'#1b2830'); Rt(g,4,10,8,3,'#1b2830');
+    Rt(g,4,6,8,4,'#38817b'); Rt(g,2,5,1,2,'#1b2830'); Rt(g,13,5,1,2,'#1b2830');
+    Rt(g,5,1,6,1,'#4a9a93'); });
+  /* 35 the verge. Mown, and yellower than anything indoors. */
+  T(35, g=>{ Rt(g,0,0,16,16,'#4e5c39');
+    for (let i=0;i<11;i++) Rt(g,(i*5.3)%16,(i*3.9)%16,1,1,'#59683f');
+    for (let i=0;i<4;i++) Rt(g,(i*4.1+2)%16,(i*6.7+3)%16,1,2,'#63734a'); });
+  /* 36 the barrier arm and its post */
+  T(36, g=>{ Rt(g,0,0,16,16,'#3f434a');
+    Rt(g,6,6,4,10,'#8d867a'); Rt(g,6,6,4,1,'#a29b8d');
+    Rt(g,1,4,14,2,'#d9c17a'); Rt(g,3,4,2,2,'#d64541'); Rt(g,8,4,2,2,'#d64541');
+    Rt(g,12,4,2,2,'#d64541'); });
+  /* 37 the bins, and the one everybody actually uses */
+  T(37, g=>{ Rt(g,0,0,16,16,'#3f434a');
+    Rt(g,1,4,6,11,'#2e4d33'); Rt(g,1,4,6,2,'#3b6141'); Rt(g,2,2,4,2,'#2a462f');
+    Rt(g,8,5,6,10,'#4a3a2e'); Rt(g,8,5,6,2,'#5d4a3a'); Rt(g,9,3,4,2,'#3d3025');
+    Rt(g,12,10,3,4,'#8d867a'); Rt(g,12,10,3,1,'#a29b8d'); });
   /* 32 the post room pile — everything anybody has ever ordered, in a heap */
   T(32, g=>{ Rt(g,1,7,7,8,'#8a6a45'); Rt(g,1,7,7,1,'#a07f55'); Rt(g,4,7,1,8,'#6d5236');
     Rt(g,8,9,7,6,'#7d6040'); Rt(g,8,9,7,1,'#96754e'); Rt(g,11,9,1,6,'#63492f');
@@ -1116,6 +1143,9 @@ const ANCHOR_NAMES = {
      Nothing sends you to a window today, so nothing had printed the raw
      anchor at anybody yet. */
   WINDOW:'THE CORNER WINDOW',
+  DOORS:'THE FRONT DOORS — OUTSIDE', FIREEXIT:'THE FIRE DOOR — OUTSIDE',
+  FIREDOOR:'THE FIRE DOOR', VISITOR:'THE VISITOR BAYS', YOURCAR:'YOUR CAR',
+  SMOKERS:'THE BINS', BARRIER:'THE BARRIER',
   CONF:'THE CONFERENCE ROOM', KITCHEN:'THE KITCHEN', KITCHEN2:'THE KITCHEN',
   /* Two floors, two receptions, and the queue row only ever shows a name —
      so the one upstairs says which floor it is on. */
@@ -1131,7 +1161,41 @@ const ANCHOR_NAMES = {
   n5:"NOOR'S DESK", n6:"BRENDA'S DESK", n7:"MACKENZIE'S DESK",
   n8:"LINDA'S OFFICE", n9:'THE HALLWAY'
 };
-const MAPS = { office1: {
+const MAPS = { carpark: {
+  /* THE FIRST MAP THAT IS NOT INDOORS. The building shipped with two doors at
+     the bottom of the ground floor that opened onto a solid wall — the front
+     doors, with nothing behind them — while five onsite tickets narrated a
+     ninety-minute drive and elevatorLine() held a line about the car park
+     that no player could reach. This is what was on the other side.
+
+     Two ways in, because one is not enough: the front doors put you out by
+     reception, which is a long way from anybody's desk, and the fire door at
+     the east end is four tiles from the east lift. Without the second one the
+     cheapest car park anchor costs a Solutions Architect more than the whole
+     cross-floor budget and no senior rung could be sent outside at all. */
+  name:'PROACTIVE IT PARTNERS — THE CAR PARK',
+  map:[
+    '########XX###########################X######',
+    '#---P------------------------------b-------#',
+    '#ZZZZZ-ZZZ--Z-ZZZZZZ-ZZZZZZ-ZZ-ZZZ-ZZZZZ-ZZ#',
+    '#------------------------------------------#',
+    '#ZZZZZ-ZZZZZZ-ZZ--ZZ-ZZZZZZ-ZZZZZZ-ZZZZZ-ZZ#',
+    '#------------------------------------------#',
+    '#ZZZZZ-ZZZZZZ-ZZZZZZ-ZZZ-ZZ-ZZZZZZ-ZZZ-Z-ZZ#',
+    '#------------------------------------------#',
+    '#ZZZZZ-Z--ZZZ-ZZZZZZ-ZZZZZZ-ZZZZZZ--ZZZZ-ZZ#',
+    '#------------------------------------------#',
+    '#ZZZZZ-ZZZZZ--ZZZZZZ-ZZZZZZ-Z-ZZZZ-ZZZZZ-ZZ#',
+    '#------------------------------------------#',
+    '#gggggggggggggggggggggggggggggggggggggggggg#',
+    '#gggggggggggggggggggggggggggggggggggggggggg#',
+    '#gggggggggggggggggggggggggggggggggggggggggg#',
+    '#GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG!G#',
+    '############################################'
+  ],
+  anchors:{ DOORS:[8,1], FIREEXIT:[37,1], VISITOR:[10,2],
+            YOURCAR:[16,4], SMOKERS:[34,1], BARRIER:[41,14] }
+}, office1: {
   name:'PROACTIVE IT PARTNERS — FLOOR 2',
   map:[
     '##########wwwww#wwwwwowwwww#wwwww#wwwwYwwww#',
@@ -1217,8 +1281,8 @@ ground: {
     '#,,,,,,,,,,...........#.........#..tt..tt..#',
     '#,,f,,,,f,,....dq.....#.hhhhhhh.#..cc..cc..#',
     '#,,,,,,,,,,...........#.........#...f...vv.#',
-    '########DD##################################',
-    '############################################',
+    '########XX###########################X######',
+    '############################################'
   ],
   /* THREE ROOMS NOBODY COULD BE SENT TO. The store room, the canteen and the
      accounts office were built, furnished and unreachable: with one lift at
@@ -1227,7 +1291,7 @@ ground: {
      The second shaft fixed the arithmetic; these are the names that make the
      rooms part of the job. */
   anchors:{ RECEPTION:[5,6], POST:[17,10], MEET_A:[12,2], MEET_B:[23,3],
-            FRONT:[8,15], STORES:[27,15], CANTEEN:[37,12], ACCOUNTS:[35,4] }
+            FRONT:[8,15], FIREDOOR:[37,15], STORES:[27,15], CANTEEN:[37,12], ACCOUNTS:[35,4] }
 }};
 
 /* meta-progression (slice: one cert + one perk visible, more later) */
@@ -5541,7 +5605,14 @@ const LEGEND = {
   't':{o:19}, 'k':{o:21}, 'A':{o:22, act:'arcade', anchor:'ARCADE'},
   'C':{o:23, act:'cooler', anchor:'COOLER'}, 'F':{o:24},
   'U':{o:25, act:'couch'}, 'N':{o:26}, 'H':{o:30, act:'shelf', anchor:'SHELF'},
-  'D':{f:8}, 'P':{f:-1, spawn:true}
+  'D':{f:8}, 'P':{f:-1, spawn:true},
+  /* ------------------------------ OUTSIDE ---------------------------------
+     'X' is a door you can walk THROUGH, which plain 'D' is not and must never
+     become: every internal doorway on both floors is a 'D', and arming them
+     all would put an exit on the kitchen. Same art, an act on top. */
+  'X':{f:8, act:'outside'},
+  '-':{f:33}, 'g':{f:35},
+  'Z':{o:34}, 'b':{o:37, act:'bins'}, '!':{o:36, act:'barrier'}
 };
 const W2 = { W:0, H:0, base:null, obj:null, solid:null, act:null, anchors:{}, name:'', id:'' };
 const cellIx = (x,y) => y*W2.W + x;
@@ -5582,7 +5653,12 @@ function loadMap(id){
     /* floors */
     if (L.spawn){ W2.base[c] = 255; autoFloor.push(c); W2.spawn = [x,y]; continue; }
     W2.base[c] = L.f;
-    if (L.door) W2.act[c] = 'door';
+    /* WAS `if (L.door) W2.act[c] = 'door'`. No glyph in the file ever set
+       `door`, so the branch had never fired and `case 'door': break;` in
+       interact() was unreachable — the hook for walking out of the building,
+       built and never connected. Floors take an act the same way objects do
+       now, and the act says what it is. */
+    if (L.act) W2.act[c] = L.act;
   }
   /* resolve auto floors from any resolved walkable neighbour (2 passes) */
   for (let pass=0; pass<3; pass++)
@@ -6127,6 +6203,8 @@ const MEETING_GAP = 12;
    this is the whole reason going downstairs is a decision rather than a free
    look at some scenery. */
 const LIFT_MIN = 4;
+/* You push a door and you are through. A lift you wait for. */
+const DOOR_MIN = 2;
 const OTHER_FLOOR = { office1:'ground', ground:'office1' };
 /* What one step of the starter checklist done out of order costs. Set from
    tools/boards.js: at a flat 1/steps the careless run — straight down the
@@ -6912,7 +6990,16 @@ const EXITS = [
   { from:'office1', to:'ground',  at:'ELEV',   arrive:'ELEV',   act:'elevator', mins:LIFT_MIN },
   { from:'ground',  to:'office1', at:'ELEV',   arrive:'ELEV',   act:'elevator', mins:LIFT_MIN },
   { from:'office1', to:'ground',  at:'ELEV_E', arrive:'ELEV_E', act:'elevator', mins:LIFT_MIN },
-  { from:'ground',  to:'office1', at:'ELEV_E', arrive:'ELEV_E', act:'elevator', mins:LIFT_MIN }
+  { from:'ground',  to:'office1', at:'ELEV_E', arrive:'ELEV_E', act:'elevator', mins:LIFT_MIN },
+  /* OUTSIDE. A door is not a lift: you push it and you are through, so it
+     costs DOOR_MIN rather than LIFT_MIN, and the two ends have different
+     names because the tile you stand on to leave is not the tile you arrive
+     on. Two of them, because the front doors are a long way from every desk
+     in the building and the fire door is four tiles from the east lift. */
+  { from:'ground',  to:'carpark', at:'FRONT',    arrive:'DOORS',    act:'outside', mins:DOOR_MIN },
+  { from:'carpark', to:'ground',  at:'DOORS',    arrive:'FRONT',    act:'outside', mins:DOOR_MIN },
+  { from:'ground',  to:'carpark', at:'FIREDOOR', arrive:'FIREEXIT', act:'outside', mins:DOOR_MIN },
+  { from:'carpark', to:'ground',  at:'FIREEXIT', arrive:'FIREDOOR', act:'outside', mins:DOOR_MIN }
 ];
 /* every exit that is actually built: both ends have to exist on their maps */
 function exitsFrom(mapId){
@@ -7800,6 +7887,20 @@ function smalltalk(e){
    Indexed by how many times you have touched the thing today, so a curious
    player gets a run of them rather than a repeat. */
 const PROP_LINES = {
+  bins: [
+    'THE CIGARETTE BIN IS THE ONLY THING OUT HERE THAT GETS EMPTIED ON A SCHEDULE.',
+    'SOMEBODY HAS PUT A MONITOR IN THE GENERAL WASTE. IT HAS A WEEE LABEL ON IT.',
+    'THE RECYCLING IS FULL OF BOXES FROM AN ORDER NOBODY WILL ADMIT TO PLACING.',
+    'A PRINTER. IN THE BIN. UPRIGHT, AS THOUGH IT MIGHT STILL BE USED.',
+    'THIS IS WHERE THE OUTAGE GETS DISCUSSED HONESTLY, TWENTY MINUTES BEFORE THE CALL.'
+  ],
+  barrier: [
+    'THE BARRIER TAKES A FOB. THE FOB IS ISSUED BY A COMPANY THAT IS NOT YOUR COMPANY.',
+    'IT HAS BEEN STUCK UP SINCE THURSDAY. NOBODY HAS REPORTED IT. EVERYBODY HAS NOTICED.',
+    'THERE IS A SIGN: PARKING FOR PERMIT HOLDERS ONLY. THERE ARE NO PERMITS.',
+    'THE INTERCOM RINGS A DESK ON THE GROUND FLOOR THAT WAS TAKEN OUT IN APRIL.',
+    'ELEVEN SPACES ARE LEASED. TWENTY-SIX PEOPLE WORK HERE. IT HAS NEVER BEEN A PROBLEM, WHICH IS ITS OWN KIND OF ANSWER.'
+  ],
   arcade: [
     'AGENT 360 — GOLDENSHARE. HIGH SCORE: "DRK". OF COURSE IT IS.',
     'SECOND PLACE IS "ASS", SET IN 2019, AND NOBODY WILL ADMIT TO IT.',
@@ -7881,17 +7982,27 @@ const PROP_LINES = {
    You always start and end a day upstairs (startCommute and endDay both load
    office1), so the floor never has to survive a save; it is a thing you do
    inside a working day and come back from. */
-function takeLift(){
-  const to = OTHER_FLOOR[W2.id];
-  if (!to || !MAPS[to] || !run || G.state !== 'work'){
+function takeLift(){ takeExit('elevator'); }
+/* ONE TRANSITION, ANY KIND OF EXIT. This was takeLift(), which read a
+   two-entry OTHER_FLOOR table and could only ever express "the other floor".
+   It takes the exit you are standing at instead — whichever map that leads
+   to, and whatever it costs. */
+function takeExit(act){
+  const here = [player.tx, player.ty];
+  let use = null, bd = Infinity;
+  for (const e of exitsFrom(W2.id)){
+    if (e.act !== act) continue;
+    const p = anchorPos(e.at); if (!p) continue;
+    const d = Math.abs(here[0]-p[0]) + Math.abs(here[1]-p[1]);
+    if (d < bd){ bd = d; use = e; }
+  }
+  if (!use || !MAPS[use.to] || !run || G.state !== 'work'){
     toast(elevatorLine(), 'corp', 2400); return;
   }
-  /* you come out where you went in: the east shaft on one floor opens on the
-     east shaft on the other, which is the only reason a second one helps */
-  const by = nearestLift();
-  run.clock += LIFT_MIN;
+  const to = use.to;
+  run.clock += use.mins;
   loadMap(to);
-  spawnPeople(run.clock, anchorPos(by) || anchorPos('ELEV'));
+  spawnPeople(run.clock, anchorPos(use.arrive) || anchorPos('ELEV'));
   /* SNAP THE CAMERA, or you arrive looking at wherever you were standing on
      the other floor. The floors are different heights, so the old scroll
      position is not merely wrong, it is off the end of the shorter one: the
@@ -7900,10 +8011,10 @@ function takeLift(){
   cam.x = clamp(player.tx*TILE - VW/2, 0, Math.max(0, W2.W*TILE - VW));
   cam.y = clamp(player.ty*TILE - VH/2, 0, Math.max(0, W2.H*TILE - VH));
   clearInput();
-  slog('lift to ' + to + ' (-' + LIFT_MIN + ' min)');
+  slog(act + ' to ' + to + ' (-' + use.mins + ' min)');
   sfx('door');
-  toast(W2.name.replace(/^.*—\s*/, '') + ' · ' + LIFT_MIN + ' MINUTES OF YOUR DAY' +
-        (to === 'ground' ? '' : ' · BACK WHERE THE WORK IS'), 'corp', 2600);
+  toast(W2.name.replace(/^.*—\s*/, '') + ' · ' + use.mins + ' MINUTES OF YOUR DAY' +
+        (to === 'office1' ? ' · BACK WHERE THE WORK IS' : ''), 'corp', 2600);
 }
 function elevatorLine(){
   const r = run.rung;
@@ -7957,7 +8068,9 @@ function interact(act){
     case 'rack': toast(propLine('rack'), 'corp', 2600); break;
     case 'shelf': toast(propLine('shelf'), 'corp', 2600); break;
     case 'elevator': takeLift(); break;
-    case 'door': break;
+    case 'outside':  takeExit('outside'); break;
+    case 'bins':     toast(propLine('bins'), 'corp', 2600); break;
+    case 'barrier':  toast(propLine('barrier'), 'corp', 2800); break;
   }
 }
 /* DERIVED, NEVER STORED. gateWin and gateAvg used to be computed once in
@@ -12570,10 +12683,33 @@ function selfTest(runSim){
       const savedRun = run, savedState = G.state, savedMap = W2.id;
       rngInit('LIFTS'); runInit('LIFTS'); rollDay();
       loadMap('office1'); spawnPeople(); G.state = 'work';
+      /* WAS "both floors have both lifts", which asked every map for every
+         lift. Right for two floors joined by two shafts, wrong the moment a
+         map is reached by a door instead — the car park has no lift and never
+         will. What actually has to hold is that every exit is BUILT at both
+         ends, and that no map is stranded. */
       const missing = [];
-      for (const f of Object.keys(MAPS))
-        for (const L of LIFTS) if (!(FLOOR_POS[f] && FLOOR_POS[f][L])) missing.push(f + '.' + L);
-      ok('level: both floors have both lifts', !missing.length, missing.join(' '));
+      for (const e of EXITS){
+        if (!(FLOOR_POS[e.from] && FLOOR_POS[e.from][e.at]))
+          missing.push(e.from + ' has no ' + e.at);
+        if (!(FLOOR_POS[e.to] && FLOOR_POS[e.to][e.arrive]))
+          missing.push(e.to + ' has no ' + e.arrive);
+      }
+      ok('level: every exit is built at both ends', !missing.length, missing.join(' · '));
+      {
+        /* and you can get from anywhere to anywhere */
+        const maps = Object.keys(MAPS), stranded = [];
+        for (const from of maps){
+          const seen = { [from]:1 }, q = [from];
+          while (q.length){
+            const m = q.pop();
+            for (const e of exitsFrom(m)) if (!seen[e.to]){ seen[e.to] = 1; q.push(e.to); }
+          }
+          for (const to of maps) if (!seen[to]) stranded.push(from + ' -> ' + to);
+        }
+        ok('...and every floor can be reached from every other',
+           !stranded.length, stranded.join(' '));
+      }
 
       /* ride each one and come out at its own counterpart */
       const rides = [];
@@ -12627,8 +12763,13 @@ function selfTest(runSim){
         const sent = new Set();
         for (const id in TICKETS)
           for (const st of TICKETS[id].steps || []) if (st.goto) sent.add(st.goto);
+        /* Every CONNECTOR is excused, not just the lifts: the fire door is a
+           way out of the ground floor exactly as the shafts are, and a way
+           out is how you get somewhere rather than somewhere to get. */
+        const conn = new Set();
+        for (const e of EXITS){ conn.add(e.at); conn.add(e.arrive); }
         const idle = Object.keys(FLOOR_POS.ground || {})
-          .filter(a => LIFTS.indexOf(a) < 0 && !sent.has(a));
+          .filter(a => !conn.has(a) && !sent.has(a));
         ok('level: every room on the ground floor is somewhere a ticket sends you',
            !idle.length, idle.join(' '));
         /* and every rung has something to go down there FOR */
