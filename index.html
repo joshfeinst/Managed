@@ -12582,6 +12582,40 @@ function selfTest(runSim){
     const p1 = JSON.stringify(run.plan);
     rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
     ok('determinism: one seed, one day', JSON.stringify(run.plan) === p1);
+    /* ...AND ONE SEED, ONE CAREER. The run-setup screen says "the same ID
+       always produces the same career. Share it." — the seed is the whole
+       social feature and the leaderboard it is aimed at. This guard checked
+       ONE DAY'S PLAN, which is the part that cannot drift; what can is state
+       that outlives a re-seed, and that only ever shows up on day two or
+       later. Eight days, played twice, compared on every day's arrivals, its
+       calendar, and the score, stress and burnout it ended on. */
+    {
+      const savedRunD = run;
+      const career = () => {
+        const out = [];
+        rngInit('SHARE-ME'); runInit('SHARE-ME');
+        for (let d = 0; d < 8 && run && !run.pendingEnd; d++){
+          rollDay();
+          out.push(run.day + ':' + run.rung + ':' + JSON.stringify(run.plan));
+          simDay(0.8, { order:'pridead' });
+          if (!run) break;
+          out.push(run.perfHist[run.perfHist.length-1].toFixed(6) + ' ' +
+                   run.stress.toFixed(4) + ' ' + run.burnout.toFixed(4));
+          if (run.pendingEnd) break;
+          startCommute();
+        }
+        run = null;
+        return out;
+      };
+      const one = career(), two = career();
+      let at = 0;
+      while (at < one.length && at < two.length && one[at] === two[at]) at++;
+      const same = one.length === two.length && at === one.length;
+      ok('determinism: one seed, one career',
+         same, same ? one.length + ' steps' :
+         'diverges at step ' + at + ' of ' + one.length);
+      run = savedRunD;
+    }
 
     /* stream isolation: extra npc rolls cannot reshape the day */
     rngInit('JOB-TEST'); runInit('JOB-TEST');
