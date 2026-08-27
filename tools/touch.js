@@ -187,10 +187,18 @@ const MIN_TAP = 44;
   step('every control is big enough for a finger', !small.length,
        small.length ? small.slice(0, 4).join(', ') + (small.length > 4 ? ' +' + (small.length-4) : '') : '');
 
-  /* a ticket can land while this is running and open a scene over the panel;
-     clear it first, or the close button is measured through a dialogue box */
-  for (let i = 0; i < 20 && await page.evaluate(() => typeof dlg !== 'undefined' && !!dlg); i++)
-    await tapEl('#d-opts .opt') || await tapEl('#dlg');
+  /* A ticket can land WHILE this is being measured and open a scene over the
+     panel, so the close button gets tapped through a dialogue box and a
+     working control is reported broken. Clearing the dialogue first was not
+     enough — the next arrival can land between the clear and the tap, and it
+     did, intermittently, once the senior pools grew. Stop the day dealing for
+     the length of this one check: the button, the tap and the panel are all
+     still the real ones, and nothing can walk in front of them. */
+  await page.evaluate(() => {
+    if (run && run.plan) run.plan.arrivals = [];
+    if (typeof G !== 'undefined' && G.modal) closeModalToWork();
+  });
+  await page.waitForTimeout(200);
   if (!(await qOpen())) await tapEl('#h-queue-btn, [data-act="queue"]');
   if (await qOpen()) await tapEl('#tix header .x');
   step('the queue closes with a tap', !(await qOpen()));

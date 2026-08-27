@@ -2053,3 +2053,85 @@ game shipped once already. The anchor each step names is checked after the step
 turns over: it has to resolve on the map that is loaded, and the player has to
 be standing next to it. Dropping the destination floor fails 11 errands with
 "walked to ACCOUNTS and arrived on office1, where there is no ACCOUNTS".
+
+
+## Thirteenth pass — errands for the senior rungs
+
+### What was measured first
+
+Of the tickets AUTHORED at each rung, the share that walk you anywhere:
+
+| rung | before | after |
+|---|---|---|
+| intern | 50% | 50% |
+| project | 43% | 43% |
+| procure | 33% | 33% |
+| relmgr | 25% | 33% |
+| solarch | **9%** | 30% |
+| vcio | 25% | 34% |
+| director | 25% | 38% |
+
+Cross-floor tickets of a rung's own: relmgr 1 → 3, solarch **0 → 4**, vcio
+1 → 5, director **0 → 4**. Four rooms downstairs — the front desk, the front
+doors, the post room, the store room — were places nobody above Procurement
+had ever been sent, and the kitchen and the pit were places nobody was ever
+sent at all. All six are senior destinations now. `errands.js`: 284 → 303
+tickets walked, 95 → 114 markers, **11 → 25 lift rides**.
+
+Nineteen tickets, priced from each rung's own desk against
+`CROSS_FLOOR_BUDGET` before a word of them was written — which is why the
+Solutions Architect, at 75 minutes from the front doors, is not sent to the
+front doors, and the vCIO and the Director, at 67 and 68, are.
+
+### The harnesses disagreed again, and meta.js was right again
+
+They went in at P2 and P3, which felt like the right register for a
+"walk downstairs and look at a cupboard" ticket. Then:
+
+| | bars.js good/bad clears | meta.js retirements |
+|---|---|---|
+| before the errands | vcio 45%/5%, solarch 85%/20% | 9 / 20 |
+| errands at P2–P3 | vcio 78%/13%, solarch 68%/5% | **8 / 20** |
+| errands re-priced | vcio 83%/15%, solarch 73%/10% | **11 / 20** |
+
+`bars.js` said every senior rung had improved. It had — the triage gaps
+widened, which is the whole design goal. `meta.js` said the ladder had
+narrowed, and `meta.js` is the one that plays careers.
+
+**A long walk has to be worth the day it eats.** A cross-floor errand costs
+33 to 72 minutes of a 480-minute shift, three or four times a talking ticket.
+The expensive destinations are P1s and P2s now. The three that are
+deliberately not worth the trip — the hamper in the post room, the lobby
+screen that still says Tuesday, the diagrams pinned up in the pit — keep
+their low priority and are drawn less often instead, so letting one burn is a
+decision rather than the shape of the whole afternoon. Careers to a win also
+came down, 12.9 → 11.8.
+
+### The vCIO bar, set from the measurement
+
+0.653 → 0.540 (floor 0.294 → 0.243, the 0.45x every rung uses). It was
+already the bar `bars.js` called misplaced before this rung had any errands
+in it — a flawless player cleared 45% of seeds against it — and a longer day
+took that to 23%. The separation is what improved: good triage against bad
+went from a 12-point gap to 19, the healthiest this rung has measured, and a
+bar the flawless player could not reach was hiding it. Rungs misplaced: 4 → 2
+(T1 and Procurement, both untouched by this pass).
+
+### There is no lint for the pricing rule, and that is deliberate
+
+Written, run, and deleted. The obvious static form — what share of a rung's
+draw is a long walk worth two points or less — passed the un-priced build
+unchanged, because the re-priced tickets moved from P3 to P2 and P3 was never
+inside its definition. The statistic that does track the change, weighted
+points per minute of work, moves the WRONG way: it falls on every senior rung
+in the build `meta.js` scores highest, because the errands make the rung more
+about triage and triage is the thing being rewarded. A guard that fires on
+the build you want is not a guard. `meta.js` is the guard for this.
+
+### One harness flake, fixed rather than tolerated
+
+`touch.js` reported "the queue closes with a tap" as broken about one run in
+three once the senior pools grew: a ticket can land between clearing the
+dialogue and tapping the close button, so the tap goes through a scene. The
+day stops dealing for the length of that one check now. The button, the tap
+and the panel are all still the real ones — nothing can walk in front of them.
