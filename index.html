@@ -7853,6 +7853,12 @@ function startCommute(){
      evening — on day three, naming tickets that no longer existed. A tester
      called that block the best screen in the game and then caught it lying. */
   run.burnLog = [];
+  /* AND THIS ONE WAS THE SAME BUG AGAIN, ONE LINE LOWER. rollDay counts the
+     meetings that would not fit the rung's calendar budget into run.cancelled
+     and nothing ever zeroed it, so by Friday it held the week. It also held it
+     in private: nothing in the game read the number at all. Both halves are
+     fixed — it is per-day now, and the morning card says it. */
+  run.cancelled = 0;
   run.speedSum = 0; run.qualSum = 0; run.qualN = 0;
   run.coffee = 0; run.crashes = []; run.satOn = {}; run.pendingEvents = [];
   rollDay();
@@ -7888,6 +7894,16 @@ function presentCommute(){
        arrived as an unheralded text card — you finished a day like any other
        and the game told you it was over. It gets a morning now. */
     (lastDayAtTop() ? '<dt>Today</dt><dd>your last one, if you want it to be</dd>' : '') +
+    /* THE BEST PART OF ANYONE'S WEEK, WHICH NOBODY COULD SEE. The handbook
+       promises that the meetings which will not fit get cancelled, and the
+       roller does exactly that — on seven days in ten across the ladder, and
+       2.7 times a day at vCIO — and then said nothing about it to anybody.
+       A joke the game makes and never tells. */
+    (run.cancelled
+      ? '<dt>Calendar</dt><dd>' + (run.cancelled === 1
+          ? 'one meeting did not fit and has been cancelled'
+          : numWord(run.cancelled) + ' meetings did not fit and have been cancelled') + '</dd>'
+      : '') +
     '<dt>Job posting</dt><dd>' + run.seed + '</dd>';
   document.getElementById('r-note').textContent = run.day === 1
     ? 'Orientation is a PDF nobody sent you. Your badge photo is already unflattering. Good luck in there.'
@@ -13910,6 +13926,36 @@ function selfTest(runSim){
       ok('and no ticket arrives already marked too late to start',
          !born.length, born.length + ': ' + born.slice(0,3).join(' · '));
       run = savedRunW;
+    }
+    /* THE CANCELLED MEETINGS ARE TODAY'S, AND THE MORNING SAYS SO. The
+       handbook promises that meetings which will not fit the rung's calendar
+       get cancelled — "the best part of anyone's week" — and the roller does
+       it on seven days in ten. run.cancelled counted them, nothing read it,
+       and startCommute never zeroed it, so it quietly held the whole career.
+       Ten mornings at the rung that cancels most: the card has to name one
+       day's worth, and the number on it has to be the one the roller made. */
+    {
+      const savedRunC = run;
+      QUIET = true; rngInit('CANCEL-TEST'); runInit('CANCEL-TEST');
+      run.rung = 8; loadMap('office1');
+      let named = 0, saidTotal = 0, worst = 0;
+      for (let d = 1; d <= 10; d++){
+        run.day = d; run.pendingEnd = null;
+        startCommute();
+        const html = document.getElementById('r-stats').innerHTML;
+        const m = /(\w+) meetings? did not fit/.exec(html);
+        worst = Math.max(worst, run.cancelled || 0);
+        if (run.cancelled){
+          if (m) named++;
+          const said = m ? (m[1] === 'one' ? 1 : NUM_WORDS.indexOf(m[1])) : -1;
+          if (said === run.cancelled) saidTotal++;
+        } else if (m) named = -99;                    // said it when nothing was cancelled
+      }
+      ok("the morning names the meetings that did not fit, and only today's",
+         named > 0 && named === saidTotal && worst <= 12,
+         named + ' mornings named them, ' + saidTotal + ' with the right number, ' +
+         'biggest single morning ' + worst);
+      run = savedRunC; G.state = 'title'; show(null);
     }
     /* AND NO TICKET OFFERS A FORK IT HAS NOT LEFT TIME FOR. onsite-nothing-is-
        wrong dangled a sixty-four minute drive — the option with rep 4 and the
