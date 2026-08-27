@@ -6937,36 +6937,45 @@ const GATE_DEBT_BUDGET = 50;      /* the on-site visit, 2026-08-26 */
    corrected model, which is a pass of its own.
    This may only go down. */
 const GATE_REACH = 19;
-/* Why the INTERN bar is 0.70 and not the 0.76 it shipped at. The original
-   sweep, over 6 seeds, put it here because at 76% a flawless player could not
-   promote on a third of postings — five human testers played roughly twenty
-   days between them and none ever promoted — while below 68% the gate stopped
-   meaning anything.
+/* Why the INTERN bar is 0.73. It shipped at 0.76, was cut to 0.70 because at
+   76% a flawless player could not promote on a third of postings — five human
+   testers played roughly twenty days between them and none ever promoted —
+   and sits at 0.73 today.
 
-   RE-MEASURED 2026-08-25 08:15 on the current build, 24 seeds x 8 days,
-   scoring the best 3-day window each career reached (tools/gate.js, which is
-   now the thing that measures this so the table cannot rot in a comment
-   again):
+   THIS NOTE HAD ROTTED, INSIDE THE PARAGRAPH PROMISING IT COULD NOT. Its
+   heading said the bar was 0.70, and the table under it was captioned "at the
+   70% bar", while the game had shipped 0.73 for some time. A measurement
+   recorded against a number the build no longer has is worse than no
+   measurement: it reads as evidence. tools/stale.js exists because of this
+   comment, and fails if a comment quotes a balance number the game does not
+   hold.
 
-     profile            share of seeds that promote at the 70% bar
-     flawless  1.00                88%   (21/24)
-     good      0.85                83%   (20/24)
-     mediocre  0.60                42%   (10/24)
-     sloppy    0.35                25%   ( 6/24)
+   RE-MEASURED on the current build at the bar it actually ships, 24 seeds x 8
+   days, scoring the best 3-day window each career reaches (tools/gate.js —
+   `node tools/gate.js <abs path> 24 8 0`):
 
-   The gradient is real and monotone, and the original 6-seed table is not what
-   it said: it claimed flawless 100% and sloppy 0%, and the truth on this build
-   is 88% and 25%. BOTH ENDS ARE SOFTER THAN THE RECORD. A flawless player
-   misses the promotion on about one posting in eight, and a genuinely sloppy
-   one backs into it on one in four.
+     profile            share of seeds that promote at the 73% bar
+     flawless  1.00                75%   (18/24)
+     good      0.85                79%   (19/24)
+     mediocre  0.60                46%   (11/24)
+     sloppy    0.35                 8%   ( 2/24)
 
-   THE BAR IS NOT BEING MOVED FOR THIS. It has already been moved twice on bot
-   evidence, in a sweep whose definition of craft (`gameScores.push(skill ±
-   jitter)`) is exactly the assumption two human testers falsified. Moving it a
-   third time before something human-shaped has played the fixed build would be
-   tuning on broken evidence for the third time. The number above is recorded
-   so that whoever does move it is moving it against a measurement instead of
-   against a comment. */
+   Two things in that table are worth saying out loud. The bottom end is much
+   harder than the 70% record claimed — a sloppy intern backs into the
+   promotion on one posting in twelve now, not one in four — and the top end is
+   softer: a flawless player misses it on one in four. And flawless and good
+   are inverted by a single seed, which is stream divergence rather than a
+   scoring fault: craft changes stress, stress changes the day, and the two
+   profiles stop being dealt the same afternoon.
+
+   THE BAR IS STILL NOT BEING MOVED FOR THIS. It has already been moved twice
+   on bot evidence, in a sweep whose definition of craft (`skill ± jitter`,
+   which simDay still uses) is exactly the assumption two human testers
+   falsified. bars.js calls intern well placed on the shipped build — good
+   triage clears 69% of seeds, bad triage 0% — and gate.js calling the shape
+   off is a stricter reading of the same ladder, not a contradiction of it.
+   The table is recorded so that whoever does move it is moving it against a
+   measurement instead of against a comment. */
 /* Reputation used to be a write-only currency: ten dialogue options bought
    nothing but rep, rep did nothing until the career was already over, and so
    every one of those options was strictly worse than the alternative. Being
@@ -9528,7 +9537,7 @@ function careerOver(kind){
   const texts = {
     burnout: ['BURNED OUT', 'You typed "per my last email" into the microwave and hit START. Security walked you out gently — they\'ve seen it before. Day ' + savedRun.day + ', ' + ROLES[savedRun.rung].title + '.'],
     /* Linda cannot restructure you out of a building where she reports to you.
-       firedBelow is live at rung 9 — it is 0.38 — so this line CAN fire at
+       firedBelow is live at rung 9 — it is 0.31 — so this line CAN fire at
        Director, and when it did it fired the wrong person. Above the helpdesk
        nobody is let go; the word is different and so is who says it. */
     fired:   savedRun.rung >= 9
