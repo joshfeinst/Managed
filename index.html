@@ -3433,7 +3433,11 @@ const DIALOGUE = {
     'Your first ticket. Open the queue (TAB), pick it, and do what it says — the arrow will point wherever you need to be.'] },
   'i.firstbreach': { who:'raj', t:[
     'Relax. You just breached one. Everybody does, every day — the queue is built to arrive faster than one person can work it.',
-    'The review does not count your first few. What it counts is WHICH ones. Burn a P4 and nobody notices. Burn a P1 and Linda notices, and Linda has a spreadsheet.'] },
+    /* said "does not count your first few". FORGIVEN is .25 — the allowance
+       charges you a quarter, on purpose, so that WHICH one you drop still
+       matters inside it. The line was teaching the opposite on the first
+       breach of a career. */
+    'The review charges you a quarter for your first few. What it charges in full is WHICH ones. Burn a P4 and nobody notices. Burn a P1 and Linda notices, and Linda has a spreadsheet.'] },
 
   't.vip.a':  { who:'client', t:['{client}: the owner cannot get email on his boat. He is on the boat. He would like this solved from the boat.'] },
   't.vip.b':  { who:'sys', t:['Marina wifi. It is marina wifi. It has always been marina wifi.'],
@@ -9250,8 +9254,16 @@ function reviewScreen(dayPerf, eod, promo, ending){
       '. Closing one P1 beats closing ' + numWord(p4sBeaten()) + ' P4s. That is the whole job.</span></dd>' : '') +
     '<dt>Tickets resolved</dt><dd>' + run.resolved + ' (' + run.aces + ' aced)</dd>' +
     '<dt>SLA breaches</dt><dd style="color:' + (run.breaches ? 'var(--alert)' : 'var(--ok)') + '">' +
+      /* NOT "WRITTEN OFF". FORGIVEN is .25 and the record over it says why:
+         "a breach inside the allowance is DISCOUNTED, not free. A hard
+         write-off made the first few casualties worth exactly zero, so which
+         one you dropped was worth nothing at all until you crossed a cliff
+         nobody can see." The screen then told the player the thing that
+         record exists to stop them believing — and so did Raj, on the first
+         one of their career. Dropping two P1s inside the allowance costs
+         three and a half points, not nothing. */
       run.breaches + (ls && run.breaches
-        ? ' — ' + ls.forgiven + ' written off as triage' +
+        ? ' — ' + ls.forgiven + ' charged at a quarter' +
           (ls.costly ? ', ' + ls.costly + ' held against you' +
             (ls.worstPri ? ' (worst: a P' + ls.worstPri + ')' : '')
                       : ', none held against you')
@@ -17905,6 +17917,12 @@ function selfTest(runSim){
       endDay();
       const brStats = document.getElementById('r-stats').innerHTML;
       const row = (brStats.match(/SLA breaches<\/dt><dd[^>]*>([^<]*)/) || [])[1] || '';
+      /* AND THE ROW MAY NOT CALL A DISCOUNT A WRITE-OFF. FORGIVEN is .25;
+         the row said "written off as triage", which is the exact belief the
+         record over that constant exists to prevent. */
+      ok('review: the breach row does not call the discount a write-off',
+         FORGIVEN === 0 ? /written off/.test(row) : !/written off/.test(row),
+         'FORGIVEN is ' + FORGIVEN + ' and the row says "' + row.trim() + '"');
       ok('review: a day past tolerance really does hold some against you',
          /\d+ held against you/.test(row), row || '(no breach row)');
       ok('review: and the breach row names the priority it lost',
