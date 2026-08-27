@@ -6959,8 +6959,21 @@ function objectiveText(){
        given — offered them a key and nothing else. Clicking the green screen
        opens the queue from the tile you are standing on, which is where this
        line is only ever read. */
-    return atTerminal() ? 'THIS IS YOUR DESK — CLICK THE GREEN SCREEN, OR PRESS TAB. NOTHING IN IT YET.'
-                        : 'FIND YOUR DESK — FOLLOW THE AMBER ARROW';
+    /* AND SAY WHAT THE WAIT IS FOR. "NOTHING IN IT YET" is true and it is the
+       whole of what the player is told while they sit there — an empty room
+       and an empty queue, with no reason given and no idea how long. Naming
+       the hour turns it into a wait with an end on it, and the office is full
+       of people the game has written six lines each for. */
+    /* DERIVED, because the first draft of this line said "about twenty past"
+       while the same commit moved the ticket to ten past — the exact class of
+       bug this file has a tool for, written into it by hand, in the sentence
+       announcing the fix. It reads DAY1_OPENER now and cannot drift from it. */
+    const h = DAY_START_HOUR + Math.floor(DAY1_OPENER / 60);
+    const opener = ((h > 12 ? h - 12 : h) + ':' +
+                    String(DAY1_OPENER % 60).padStart(2, '0'));
+    return atTerminal()
+      ? 'THIS IS YOUR DESK. THE FIRST ONE LANDS AT ' + opener + ' — GO AND MEET SOMEBODY.'
+      : 'FIND YOUR DESK — FOLLOW THE AMBER ARROW';
   }
   if (run.queue.length){
     /* IT NAMED A MACHINE THAT IS NOT ALWAYS THERE, AND CALLED IT YOURS. This
@@ -7350,6 +7363,18 @@ const ACTIVE_GRACE = 10;       // minutes a ticket you are actively working may 
 const ACTIVE_GRACE_MAX = 26;   // ...and the most that grace can ever be worth
 const DAY_OVERRUN = 20;        // how far past 17:00 a meeting can hold the day open
 const MIN_SLACK = 18;          // minutes you always get to notice a ticket exists
+/* WHEN THE FIRST TICKET OF A CAREER LANDS, measured against when a player is
+   actually sitting down. It was 20, chosen so nothing arrived "before they have
+   found the desk" — and tools/playday.js, following the arrow the way a person
+   does, is at the desk by 9:04. That left sixteen minutes of the first morning,
+   a fifth of the first hour, with the banner reading "NOTHING IN IT YET" eight
+   times in a row. It is the first thing the game ever asks you to do and the
+   reward for doing it was a wait.
+   Ten gives a player who beelines a few minutes to look around, and a player
+   who wanders still gets the desk lesson before the queue takes the banner
+   over. DAY1_DESK is the measurement it is set against, not a guess. */
+const DAY1_DESK = 4;           // minute a player following the arrow reaches the desk
+const DAY1_OPENER = 10;        // ...and the minute the first ticket lands
 const ACE = .95;               // what actually counts as a job well done
 const COFFEE_MAX = 4;          // cups the machine will give you in one day
 /* HOW LONG A CUP LASTS. This was the literal 90 in FOUR places — the crash the
@@ -7664,7 +7689,7 @@ function rollDay(){
     arrivals.sort((a,b)=>a.at-b.at);
     if (TICKETS[opener1]){
       seen[opener1] = (seen[opener1] || 0) + 1;
-      arrivals.unshift(makeArrival(opener1, 20, role));
+      arrivals.unshift(makeArrival(opener1, DAY1_OPENER, role));
     }
   }
   /* THE LAST DAY DEALS THE BIG MIGRATION. It was a weighted draw like any
@@ -15200,6 +15225,31 @@ function selfTest(runSim){
       run = savedRunB2;
       ok('the banner never names a control that is not on this floor',
          !off.length, off.join(' · '));
+      /* AND THE HOUR IT PROMISES IS THE HOUR THE TICKET LANDS. The day-one
+         line tells a new player when their first ticket arrives, which is the
+         only number the game gives them before it gives them work. The first
+         draft of it said "about twenty past" in the same commit that moved the
+         opener to ten past. It is derived from DAY1_OPENER now; this checks
+         that what reaches the screen agrees with what rollDay deals. */
+      {
+        const savedRunB4 = run;
+        QUIET = true; rngInit('OPENER'); runInit('OPENER');
+        run.rung = 0; run.day = 1; rollDay();
+        const firstAt = run.plan.arrivals.slice().sort((a,b)=>a.at-b.at)[0].at;
+        run.taughtQueue = false; run.queue = [];
+        loadMap('office1'); spawnPeople();
+        const at = anchorPos('TERMINAL');
+        if (at){ player.tx = at[0]; player.ty = at[1]; }
+        const line = objectiveText();
+        const said = /LANDS AT (\d+):(\d\d)/.exec(line);
+        const wantH = DAY_START_HOUR + Math.floor(DAY1_OPENER / 60);
+        run = savedRunB4;
+        ok('the first morning promises the hour it actually delivers',
+           !!said && +said[1] === (wantH > 12 ? wantH - 12 : wantH) &&
+           +said[2] === DAY1_OPENER % 60 && firstAt === DAY1_OPENER,
+           (said ? 'line says ' + said[1] + ':' + said[2] : 'line names no time: "' +
+            line.slice(0, 60) + '"') + ', rollDay deals the first at minute ' + firstAt);
+      }
       /* AND NEVER RECOMMENDS A CUP THE GAME HAS ALREADY WARNED YOU OFF. On an
          empty queue the same always-on line said "GET A COFFEE" at every cup
          count: at four the machine refuses it outright, and at two the coffee

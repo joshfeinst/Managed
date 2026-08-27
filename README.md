@@ -97,10 +97,9 @@ hurts.
 Measured across 16 seeds and six days each, with every board played perfectly
 so that only the triage rule differs, the two strategies that work are
 *protect the big ones* (72.0%) and *close what you can actually finish*
-(67.7%) — four points apart, so protecting the big ones is the better rule and
-finishing what you start is a defensible second, which is the point. Two
-things lose you the most: doing the least important thing first
-(51.2%), and **working the queue in the order it arrived** (55.7%). Going in
+(69.8%) — two points apart, so there is no single right answer, which is the
+point. Two things lose you the most: doing the least important thing first
+(51.2%), and **working the queue in the order it arrived** (57.4%). Going in
 order costs you nearly as much as choosing badly, and it feels like diligence
 the whole time you are doing it.
 
@@ -196,7 +195,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 469 in-game self-tests |
+| `verify.js` | boots it and runs the 470 in-game self-tests |
 | `claims.js` | re-derives every number this README states from the built game |
 | `dead.js` | finds data, state, functions and dialogue that are written and never read |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |

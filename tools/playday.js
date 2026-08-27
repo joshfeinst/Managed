@@ -28,6 +28,15 @@ const BUDGET = +(process.argv[3] || 240) * 1000;
   const tixOpen  = () => S.page.evaluate(() => getComputedStyle(document.getElementById('tix')).display !== 'none');
   /* the objective line and the marker toast are the game's instructions */
   const objLine  = async () => (await S.read()).find(t => /ARROW|PRESS|TAKE THE LIFT|WAITING|QUEUE CLEAR|YOUR DESK/i.test(t)) || '';
+  /* THE CLOCK BELONGS ON EVERY BEAT. Without it the log says the banner read
+     "NOTHING IN IT YET" for fifteen beats and cannot say whether that was
+     fifteen seconds or an hour of the player's morning — which is exactly the
+     question a beat log exists to answer. */
+  const clockNow = async () => {
+    const r = await S.read();
+    const i = r.findIndex(t => /^\d+:\d\d$/.test(t));
+    return i < 0 ? '--:--' : r[i] + (/^(AM|PM)$/.test(r[i+1] || '') ? r[i+1] : '');
+  };
   const amber    = () => S.page.evaluate(() => {
     const c = document.getElementById('view');
     const g = c.getContext('2d', { willReadFrequently:true });
@@ -109,7 +118,7 @@ const BUDGET = +(process.argv[3] || 240) * 1000;
 
     const obj = await objLine();
     if (obj !== lastObj){
-      say('  [' + step + '] ' + obj);
+      say('  [' + step + '] ' + (await clockNow()).padEnd(8) + obj);
       lastObj = obj; stuck = 0;
     } else stuck++;
 
