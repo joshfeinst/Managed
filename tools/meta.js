@@ -36,8 +36,26 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
         }
         if (ending==='timeout' && run){ careers.push({start:startRung,end:run.rung,days:run.day,ending}); run=null; }
         if (ending==='retired') retired=true;
+        /* STUDY BETWEEN CAREERS, WHICH THIS HARNESS NEVER DID. It started every
+           player on certs:[] and left them there, so the reputation banked at
+           the end of each career — 780 of it over six careers — was never spent
+           on anything, and the meta-progression has never once been part of the
+           model this project calls its harness of record. That mattered most
+           when the shelf cost 31 in total: a real player held every certificate
+           from career two onward and was permanently playing an easier game
+           than any number here described.
+           A player buys what they can afford, cheapest first, and keeps buying
+           while anything is still in reach. */
+        for (;;){
+          const afford = Object.keys(CERTS)
+            .filter(k => !meta.certs.includes(k) && CERTS[k].cost.rep <= meta.rep)
+            .sort((a,b) => CERTS[a].cost.rep - CERTS[b].cost.rep);
+          if (!afford.length) break;
+          meta.certs.push(afford[0]); meta.rep -= CERTS[afford[0]].cost.rep;
+        }
       }
-      players.push({ careers, retired, bestRung: meta.best.rung, runs: meta.runsPlayed });
+      players.push({ careers, retired, bestRung: meta.best.rung, runs: meta.runsPlayed,
+                     certs: (meta.certs||[]).length, repLeft: meta.rep });
     }
     SAVE_SUSPEND=false; QUIET=false;
     return players;

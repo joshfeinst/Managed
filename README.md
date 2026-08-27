@@ -164,9 +164,14 @@ bar.
 Then multiplayer to a degree: a shared career leaderboard, where the same seed
 deals the same tickets and you compare whose career went better. Ghosts later.
 And more meta-progression — LinkedIn connections, and other MSPs willing to hire
-you. There are four certifications to bank reputation against now, and three
+you. There are eight certifications to bank reputation against now, and three
 perks that arrive on their own as the careers add up; there should be more of
 both.
+
+The shelf costs 1,355 reputation and a good career banks about 161, so it takes
+most of a playthrough to clear and you cannot hold everything at once. It used
+to cost 31 in total, which one career paid for five times over — the whole
+progression was finished before the second career began.
 
 ## Under the hood
 
@@ -191,7 +196,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 468 in-game self-tests |
+| `verify.js` | boots it and runs the 469 in-game self-tests |
 | `claims.js` | re-derives every number this README states from the built game |
 | `dead.js` | finds data, state, functions and dialogue that are written and never read |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |

@@ -2609,3 +2609,62 @@ whose entire meaning is the number in front of it, and nothing checked it. It
 does now — at ±0.75 rather than the ±1.5 the percentage claims use, because a
 number spelled as a word can only be an integer, and a looser window let "two"
 pass against a measured 3.5.
+
+---
+
+## The harness of record had never studied
+
+Two findings, and the second one recontextualises every career number in this
+document.
+
+### The certificate shelf cost a fifth of one career
+
+Twelve careers driven end to end through the real systems, taking the best
+dialogue option every time: **the median career banks 161 reputation**. The
+whole shelf — four certificates — cost **31**.
+
+So the meta-progression was over before the second career started. Every row on
+the study screen read STUDY from then on, and `LOCKED: CISSP (13 REP)` implied
+a scarcity that never existed for a single day. A currency with one thing to buy
+and five times too much income is not a progression; it is a number going up in
+the corner.
+
+Reputation itself is fine, and worth saying so: it answers to **choices, not
+craft**. Best dialogue options bank 161, worst bank 0, and skill barely moves it
+(161 flawless against 157 mediocre). That is the design — it is the social axis,
+not the competence one.
+
+The shelf is eight certificates costing 1,355 now, priced against the
+measurement: about eight careers of good play against the ten a career takes to
+reach retirement. `REP_PER_CAREER = 161` is recorded in the source beside it so
+the pricing can be re-derived rather than re-guessed.
+
+### `meta.js` never bought one
+
+The harness this project calls its harness of record initialised every player on
+`certs:[]` and left them there. Instrumented over six careers, its player banks
+**780 reputation and spends none of it**.
+
+That means **every "careers to win" number ever recorded here is for a player
+who never studies** — and it mattered most under the old prices, where a real
+player held all four certificates from career two onward and was permanently
+playing an easier game than any number in this file described.
+
+It studies now: after each career it buys what it can afford, cheapest first,
+while anything is still in reach. Same 40 seeds:
+
+| | reaches retirement | careers to win |
+|---|---|---|
+| old shelf (4 certs, 31 rep), studying | 40/40 | **5.8** |
+| new shelf (8 certs, 1355 rep), studying | 40/40 | **7.4** |
+| either shelf, never studying (every number before today) | 35/40 | 9.9 |
+
+The re-pricing moves the *played* game from 5.8 back toward the 9.9 that was
+always being reported. Both shelves retire 40 of 40 once you actually study,
+which is what a meta-progression is for — the difference is whether it takes one
+career or most of a playthrough to get there.
+
+**Still unmodelled, deliberately**: `bars.js` also holds no certificates. For bar
+*placement* that is arguably right — a bar should be set for a player who has not
+bought help — but it should be a stated choice rather than an accident, and it is
+stated here now.
