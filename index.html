@@ -11194,6 +11194,9 @@ const GAMES = {
        the board now, and a test reads it. */
     return { kind:'keep', hand, fair:solvable(hand), cur:0, left:picks, picks,
       c:START, t:START, m:START, goal:GOAL, played:[],
+      /* where you started, so the score can be about what you DID. See the
+         note on this.score below. */
+      c0:START, t0:START, m0:START,
       flash:0, flashTxt:'', flashOk:false, click:null,
       obj:'THREE PEOPLE. ' + picks + ' MOVES. NOBODY GETS EVERYTHING.',
       hint:'UP/DOWN A MOVE · E PLAYS IT · YOU CANNOT UNPLAY ONE',
@@ -11220,9 +11223,26 @@ const GAMES = {
             else if (this.t === lo) this.t = this.goal; else this.m = this.goal;
           }
           /* smooth partial credit: three met is the win, and getting two of
-             them comfortably home still beats abandoning one entirely */
-          const v = x => clamp((x - 3) / (this.goal - 3), 0, 1);
-          this.score = (v(this.c) + v(this.t) + v(this.m)) / 3;
+             them comfortably home still beats abandoning one entirely. */
+          /* BUT NOT CREDIT FOR THE CHAIR YOU SAT DOWN IN. The meters start at
+             5 against a goal of 6, and the ramp was anchored at 3 — so
+             v(5) = 2/3 and the OPENING POSITION, before a single move, was
+             already worth 66.7%. Random play banked 69.9%, and adding up the
+             three numbers on each move and playing the biggest — without once
+             reading who it helps or hurts — banked 81.0%. The card promises a
+             three-way squeeze where "a hand that gets all three home always
+             exists, and it is never the comfortable one"; the board was
+             handing out two thirds of its marks to a player who never touched
+             it. The shape of the credit is unchanged; it is measured from
+             where you were put down, so it is a score for what you did. */
+          /* Each meter is worth the ground you made up between where you
+             found it and the line: 0 for leaving it alone, 1 for getting it
+             home, and a meter you drove backwards costs at most one meter's
+             worth, so wrecking one party cannot wipe out two you got home. */
+          const u = (x, from) =>
+            clamp((x - from) / Math.max(.001, this.goal - from), -1, 1);
+          this.score = clamp((u(this.c, this.c0) + u(this.t, this.t0) +
+                              u(this.m, this.m0)) / 3, 0, 1);
           this.finished = true; return;
         }
         const live = () => this.hand.filter(h => !h.done).length;
@@ -15473,6 +15493,36 @@ function selfTest(runSim){
       ok('and pleasing the client is never how you do it',
          clientFirstWins === 0,
          'client-first play got everybody home on ' + clientFirstWins + '/' + n + ' hands');
+      /* AND YOU ARE NOT PAID FOR THE CHAIR YOU SAT DOWN IN. The meters open
+         at 5 against a goal of 6 and the credit ramp was anchored at 3, so
+         the OPENING POSITION scored 66.7% before a move was played: random
+         play banked 69.9%, and adding up the three numbers on each move and
+         playing the biggest — never once reading who it helps — banked 81.0%,
+         on a board whose card calls it a squeeze that "is never the
+         comfortable one". Anchoring the ramp at where you were put down takes
+         those to 0.0 / 28.0 / 46.7.
+         Three points are pinned, not one, because the obvious over-correction
+         is to make it pass/fail — which also scores the opening at zero, and
+         throws away the partial credit the board is written around: getting
+         two of them comfortably home is meant to beat abandoning one. */
+      {
+        const mk = (c, t, m) => {
+          rngInit('KP-SCORE'); const g = GAMES.keep.init(2);
+          g.c = c; g.t = t; g.m = m; g.left = 0; g.flash = 0;
+          for (let i = 0; i < 50 && !g.finished; i++) g.step(1);
+          return g.score;
+        };
+        rngInit('KP-SCORE'); const probe = GAMES.keep.init(2);
+        const G0 = probe.goal, S0 = probe.c0;
+        const sat    = mk(S0, S0, S0);              // walked away without playing
+        const home   = mk(G0, G0, G0);              // all three past the line
+        const twoOf3 = mk(G0, G0, 3);               // two home, one abandoned
+        ok('the keep board pays for what you did, not where you started',
+           sat === 0 && home === 1 && twoOf3 > 0 && twoOf3 < 1,
+           'sat still ' + (sat*100).toFixed(1) + '% · all three home ' +
+           (home*100).toFixed(1) + '% · two home one abandoned ' +
+           (twoOf3*100).toFixed(1) + '%');
+      }
       MG = savedMG4;
     }
     /* THE DIAGRAM rests on one thing: you are never given enough outage
