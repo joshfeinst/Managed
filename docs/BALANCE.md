@@ -2333,3 +2333,45 @@ was to raise the ladder back to its own method. Built and measured at 40 seeds:
 Both readings are healthy by `bars.js`, and `bars.js` is not the harness of
 record. Thirteen fewer players in forty reach retirement for no gain in
 separation. **Not shipped.**
+
+### The ace: measured, and left alone
+
+`ACE = .95` is what earns a ticket "CSAT 5★" on the toast and a tally on the
+evening card. Its record says it was raised from `.80` because at that level a
+player "aced four tickets in five; it meant nothing". Measured now, over 16
+seeds and six days at every profile:
+
+| threshold | flawless | competent | sloppy |
+|---|---|---|---|
+| 0.95 (shipped) | 72% | 40% | 38% |
+| 0.98 | 68% | 39% | 37% |
+| 0.99 | 62% | 38% | 37% |
+| 0.999 | 56% | 38% | 36% |
+
+So it is back where it was — and **no threshold fixes it**, which is the
+finding. The per-ticket score saturates by construction: a ticket is graded out
+of what it offers, so a bot with perfect hands, perfect promptness and the
+best option taken scores exactly 1.00 on almost everything, and there is
+nothing above 1.00 to separate it from itself. Raising the bar to 0.999 costs
+the flawless player sixteen points of ace rate and the sloppy one two.
+
+This is also why the sloppy profile aces 38%: `simDay`'s default `botPick` is
+option 0 — the do-it-properly one — for every profile, so the deliberately-bad
+bot is bad at triage and bad with its hands and still makes every choice
+correctly. That is deliberate (it keeps the two profiles comparable on the one
+axis under test) and it means the ace rate is not a reading of play quality at
+all.
+
+A human's craft term will not be 1.00, which is where the separation actually
+lives. **No change shipped.** Written down so the next pass does not re-derive
+the same table.
+
+### And the bot lost its hands a cup early
+
+The same off-by-one cup as the coffee toast, in the half of the file every
+bar is bisected against. `simDay` docked 0.08 of craft from `run.coffee >=
+BURN.freeCups` — cup two — under a comment that said "cup four", against a
+game that makes the work harder from cup three. Lifted into `botJitter()` and
+held against `gameDiff()` by a test: same three conditions, same thresholds,
+one step of difficulty per 0.08 of craft, swept over every cup and both stress
+thresholds.

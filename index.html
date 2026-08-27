@@ -12157,6 +12157,19 @@ let SAVE_SUSPEND = false;               // the self test must never touch the re
    player needs to be able to make them well or badly on purpose — 'best' takes
    the option that buys quality (bonus, then reputation, then calm), 'worst'
    takes the one that ducks the work. An index still means that literal option. */
+/* WHAT THE BOT'S HANDS LOSE, AND IT HAS TO BE THE SAME THREE THINGS THE
+   PLAYER'S DO. This lived inline in simDay as a comment saying "cup four" over
+   a test for `run.coffee >= BURN.freeCups`, which is cup TWO, against a game
+   that made the work harder from cup three. Every bar on this ladder was
+   bisected against a bot being charged for a cup the player drank for free.
+   One step of difficulty is worth about .08 of craft to this model, so the two
+   are held against each other by a test now: same three conditions, same
+   thresholds, one step each. */
+function botJitter(){
+  return (run.coffee > BURN.freeCups ? .08 : 0)
+       + (run.stress > BURN.frayed   ? .08 : 0)
+       + (run.stress > BURN.wrecked  ? .08 : 0);
+}
 function botPick(node, policy){
   if (!node || !node.opts || !node.opts.length) return null;
   const p = policy && policy.pick;
@@ -12277,12 +12290,7 @@ function simDay(skill, policy){
       }
       else if (st.game){
         run.clock += stepCost(st);
-        /* mirrors the real penalties: cup four, and hands that have stopped
-           cooperating. Without both the sim overstates craft all afternoon. */
-        const jitter = (run.coffee >= BURN.freeCups ? .08 : 0)
-                     + (run.stress > BURN.frayed ? .08 : 0)
-                     + (run.stress > BURN.wrecked ? .08 : 0);
-        t.gameScores.push(clamp(skill - jitter + Rr('game', -.08, .08), 0, 1));
+        t.gameScores.push(clamp(skill - botJitter() + Rr('game', -.08, .08), 0, 1));
       }
       t.si++;
       arrivalsTick(); crashTick(); slaTick();
@@ -14014,6 +14022,32 @@ function selfTest(runSim){
       ok('the cup the machine warns you about is the cup your hands shake on',
          !rows.length && run.coffee === COFFEE_MAX, rows.join(' · ') || 'ok');
       run = savedRunJ;
+    }
+    /* AND THE BOT LOSES ITS HANDS ON THE SAME CUP AND THE SAME NERVES.
+       Every bar on this ladder is bisected against simDay, so the headless
+       model of "your hands have stopped cooperating" has to be the game's.
+       It was not: the sim docked craft from BURN.freeCups (cup two) under a
+       comment that said cup four, while openGame made the work harder from
+       cup three. Sweep every cup and both stress thresholds and require the
+       same number of steps out of each. */
+    {
+      const savedRunB = run;
+      QUIET = true; rngInit('JITTER-TEST'); runInit('JITTER-TEST');
+      run.rung = 0; loadMap('office1');
+      const off = [];
+      for (let cup = 0; cup <= COFFEE_MAX; cup++){
+        for (const st of [0, BURN.frayed + 1, BURN.wrecked + 1]){
+          run.coffee = cup; run.stress = st;
+          const steps = gameDiff(2) - 2;
+          const hands = Math.round(botJitter() / 0.08);
+          if (steps !== hands)
+            off.push('cup ' + cup + ' stress ' + st + ': the game adds ' + steps +
+                     ', the bot loses ' + hands);
+        }
+      }
+      ok('the bot loses its hands on the cup the player does',
+         !off.length, off.slice(0,3).join(' · '));
+      run = savedRunB;
     }
     /* THE CANCELLED MEETINGS ARE TODAY'S, AND THE MORNING SAYS SO. The
        handbook promises that meetings which will not fit the rung's calendar

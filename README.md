@@ -183,7 +183,7 @@ were invisible to the ones that came before them.
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 428 in-game self-tests |
+| `verify.js` | boots it and runs the 429 in-game self-tests |
 | `claims.js` | re-derives every number this README states from the built game |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
 | `mouseonly.js` | plays from the title screen to a worked ticket without pressing a single key, because the handbook's first line promises the mouse can |
