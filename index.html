@@ -14224,6 +14224,36 @@ function selfTest(runSim){
       ok('on the diagram board a false mark really does cost more than a miss',
          !wrong.length, [...new Set(wrong)].slice(0,3).join(' · '));
     }
+    /* EVERY BOARD, AT EVERY DIFFICULTY THE GAME CAN ACTUALLY REACH IT WITH.
+       Twenty-odd guards in this suite deal their board at init(2) and then say
+       "always". The number a ticket authors is not the number openGame passes:
+       the A+ certificate takes one off, frayed hands add one and wrecked hands
+       another, so a board written at diff 3 is dealt at 5 to a player having a
+       bad afternoon, and at 2 to one holding a certificate. Nothing had ever
+       built one outside the middle of that range. */
+    {
+      const dealtAt = {};
+      for (const id in TICKETS)
+        for (const st of TICKETS[id].steps || [])
+          if (st.game) (dealtAt[st.game] = dealtAt[st.game] || new Set()).add(st.diff || 1);
+      const broke = [];
+      for (const gid in GAMES){
+        const ds = [...(dealtAt[gid] || new Set([1]))];
+        const lo = Math.max(1, Math.min.apply(null, ds) - 1);   // the certificate
+        const hi = Math.max.apply(null, ds) + 2;                // jitters, then wrecked
+        for (let d = lo; d <= hi; d++)
+          for (let i = 0; i < 40; i++){
+            rngInit('RANGE-' + gid + '-' + d + '-' + i);
+            try {
+              const g = GAMES[gid].init(d);
+              if (!g || typeof g !== 'object') broke.push(gid + ' at ' + d + ': dealt nothing');
+              else if (g.fair === false) broke.push(gid + ' at ' + d + ': unwinnable');
+            } catch (e){ broke.push(gid + ' at ' + d + ': ' + e.message); break; }
+          }
+      }
+      ok('every board deals at every difficulty the day can reach it with',
+         !broke.length, [...new Set(broke)].slice(0,3).join(' · '));
+    }
     /* AND THE TWO BOARDS THAT PROMISE A SOLUTION EXISTS ALWAYS DEAL ONE.
        "A hand that gets all three home always exists" and "a rota that works
        without you always exists" are printed on the cards; both deals retry
