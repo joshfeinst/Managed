@@ -10381,9 +10381,19 @@ const GAME_BRIEF = {
        four or five questions and a concede costs the whole of one, which is
        twice what the extra .12 for a bluff costs. The comparison it is making
        is right and is guarded; the size was not. */
-    watch: 'Every wrong card is TRUE — about something else. Citing one is worse ' +
-           'than conceding: a concede costs you the question, and a bluff costs ' +
-           'you the question and then some.'
+    /* A CONCEDE DOES NOT ALWAYS COST YOU THE QUESTION, AND SAYING SO SENT
+       PLAYERS THE WRONG WAY. Measured over 960 questions, 39.8% of them have
+       nothing in your hand that answers them — and on those, conceding scores
+       the full mark, because admitting it is the right answer. The card said
+       flatly that a concede costs you the question, which reads as "you lose
+       either way, so you may as well try a card": the worst available line on
+       two questions in five, since a bluff there scores nothing AND takes 0.12
+       off the board. Three outcomes, three different prices, and the card now
+       names all three. */
+    watch: 'Every wrong card is TRUE — about something else. When nothing in your ' +
+           'hand answers the question, saying so is the right answer and costs you ' +
+           'nothing; conceding one you could have answered costs you most of it; ' +
+           'and a bluff costs you the question and then some.'
   },
   weekend: {
     what: 'More weekend work than the weekend holds. Give every job to somebody ' +
@@ -12781,6 +12791,52 @@ function selfTest(runSim){
       }
       ok('a ticket that names a priority is dealt that priority',
          !wrong.length, wrong.slice(0, 3).join(' · '));
+    }
+    /* THE PAPER CARD PRICES THREE OUTCOMES, SO ALL THREE HAVE TO BE PRICED
+       THAT WAY. Driven on the real board: a question with nothing in your hand
+       to answer it, conceded, must score exactly what a correct citation
+       scores — because admitting it IS the answer — while conceding one you
+       held the card for must score strictly less, and bluffing strictly less
+       again. The card used to say "a concede costs you the question" with no
+       qualification, which is false on the 39.8% of questions that cannot be
+       answered, and reads as "you lose either way, so try a card" — the worst
+       available line exactly there. */
+    {
+      const savedMGp = MG;
+      const play = (want, act) => {
+        for (let d = 1; d <= 5; d++)
+          for (let k = 0; k < 30; k++){
+            rngInit('PAPER-PRICE-' + d + '-' + k);
+            const g = GAMES.paper.init(d);
+            g.forgive = 0;
+            const at = g.qs.findIndex(q => want ? !!q.ev : !q.ev);
+            if (at < 0) continue;
+            g.at = at;
+            const before = g.credit, bluffBefore = g.bluffed;
+            act(g);
+            return { gain: g.credit - before, bluffed: g.bluffed - bluffBefore };
+          }
+        return null;
+      };
+      const cited   = play(true,  g => { const q = g.qs[g.at];
+                        g.cur = g.hand.findIndex(h => !h.used && h.t === q.ev); g.cite(); });
+      const conceOK = play(false, g => g.concede());     // nothing answers it
+      const conceBad= play(true,  g => g.concede());     // you had the card
+      const bluff   = play(false, g => { g.cur = g.hand.findIndex(h => !h.used); g.cite(); });
+      const card = (GAME_BRIEF.paper.watch || '');
+      const prices = cited && conceOK && conceBad && bluff;
+      ok('the paper card prices a concede the way the board does',
+         !!prices &&
+         conceOK.gain === cited.gain &&                  // admitting it is the answer
+         conceBad.gain < conceOK.gain &&                 // and holding the card was not
+         bluff.gain < conceBad.gain && bluff.bluffed === 1 &&
+         !/a concede costs you the question/i.test(card) &&
+         /costs you nothing/i.test(card),
+         prices ? 'cite ' + cited.gain + ' · concede-unanswerable ' + conceOK.gain +
+                  ' · concede-answerable ' + conceBad.gain + ' · bluff ' + bluff.gain +
+                  ' (+' + bluff.bluffed + ' bluff)'
+                : 'could not deal one of the four cases');
+      MG = savedMGp;
     }
     /* AND NOTHING A TICKET CAN SHOW YOU STILL HAS A BRACE IN IT. DRIVEN, NOT
        DERIVED: this makes a real arrival for every template and runs the real
