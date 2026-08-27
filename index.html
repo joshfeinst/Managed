@@ -10122,8 +10122,8 @@ const GAME_BRIEF = {
       ['', 'a step done out of order tells you why, and costs you']
     ],
     watch: 'The mailbox needs the licence, and the licence needs the account. ' +
-           'The checklist puts the mailbox third. It has always put the mailbox ' +
-           'third.'
+           'The checklist puts the mailbox first. It has always put the mailbox ' +
+           'first.'
   },
   script: {
     what: 'A live call. They keep talking whatever you say. On the right is the ' +
@@ -10487,8 +10487,12 @@ const GAMES = {
      Every other board in the game is a matching, a judgement or a selection.
      This one is a SEQUENCE, which is the shape of the work: you cannot make a
      mailbox before the licence exists, and the checklist puts the mailbox
-     third. Nobody has fixed the checklist because everybody who has done it
-     twice already knows. */
+     FIRST — the printed order is [2,6,0,5,1,4,3], so the paper fails on its
+     own opening line. This note and the player's card both said THIRD, which
+     is where the mailbox belongs and not where the paper puts it; the card is
+     the one hint the board gives and it described a different checklist.
+     Nobody has fixed the checklist because everybody who has done it twice
+     already knows. */
   starter: { init(diff){
     const STEPS = [
       { id:'acct',  t:'Create the account',            needs:[],
@@ -14137,6 +14141,23 @@ function selfTest(runSim){
       ok('and the crash only mentions jitters when you have some',
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
+    }
+    /* AND THE STARTER CARD KNOWS WHERE THE CHECKLIST PUTS THE MAILBOX. It
+       said THIRD — which is where the mailbox BELONGS in the dependency order,
+       and not where the printed checklist puts it. The printed order is
+       [2,6,0,5,1,4,3], so the paper opens with the mailbox and fails on its
+       own first line. That card is the one hint the board gives and it was
+       describing a different checklist. */
+    {
+      rngInit('STARTER-CARD');
+      const W2 = ['zeroth','first','second','third','fourth','fifth','sixth','seventh'];
+      const m = /puts the mailbox (\w+)/.exec(GAME_BRIEF.starter.watch || '');
+      const said = m ? W2.indexOf(m[1]) : -1;
+      const g = GAMES.starter.init(3);
+      const at = g.steps.findIndex(st => st.id === 'mbx') + 1;
+      ok('the starter card knows where the checklist puts the mailbox',
+         said === at, m ? 'card says ' + m[1] + ', the paper puts it ' +
+                          (W2[at] || at) : 'the card no longer says');
     }
     /* THE DIAGRAM CARD SAYS A FALSE MARK COSTS MORE THAN A MISS, SO IT MUST.
        It did not: a miss cost 1/spofs and a false mark a flat .25, so the
