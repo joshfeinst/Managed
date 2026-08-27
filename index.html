@@ -2889,6 +2889,86 @@ const DIALOGUE = {
     opts:[ {t:'Reconcile the list against payroll before you move anything', fx:{time:22, rep:4, bonus:1}},
            {t:'Move all three hundred and raise the forty-one afterwards', fx:{time:8, rep:-1, stress:8}},
            {t:'Move the leavers to an archive and tell them what you did', fx:{time:16, rep:3, bonus:1, stress:4}} ] },
+  /* -------------- PROJECT TEAM: TEN THINGS WORTH DROPPING -----------------
+     Project Team deals 1.8 P4s a day out of twelve arrivals — 15%, against
+     20-28% at every other rung. That is the whole reason bad triage does not
+     lose there: a player working the worst priority first runs out of
+     droppable work after two tickets and spends the rest of the day on P3s
+     and P2s, which are worth having. The rung had nothing to lose.
+     So these are the things that are worth nothing and take all afternoon.
+     Every one is a P4 of forty to eighty minutes: project administration that
+     consumes a day and protects nobody. A good triager lets every one of them
+     burn for a point apiece. That is the decision the rung was missing. */
+  'pa.raid.a': { who:'sys', t:['The RAID log has not been touched since kickoff. There are four risks on it, all green, all written by somebody who has left.',
+    'None of the things that have actually gone wrong on this project are on it. They were discussed, at length, in a channel.'] },
+  'pa.raid.b': { who:'sys', t:['Nobody has ever read this document. It is asked for at every gate and read at none of them.'],
+    opts:[ {t:'Rewrite it against what is actually happening and take it to the gate', fx:{time:16, rep:4, bonus:1, stress:6}},
+           {t:'Update the four and add the two that would embarrass somebody', fx:{time:9, rep:2, bonus:1, stress:4}},
+           {t:'Change the dates and leave them green', fx:{time:3, rep:-3, stress:-2}} ] },
+
+  'pa.stat.a': { who:'sys', t:['The weekly status report goes to forty-one people. The open rate, which you can see, is four.',
+    'Two of the four are you and the person who asks for it.'] },
+  'pa.stat.b': { who:'sys', t:['You could write it properly, or you could write it for the four, or you could write what last week said with the date moved.'],
+    opts:[ {t:'Cut it to the four things that changed and send it to the four people', fx:{time:14, rep:4, bonus:1, stress:5}},
+           {t:'Write it properly, all of it, because somebody will read it in an audit', fx:{time:20, rep:3, bonus:1, stress:7}},
+           {t:'Last week\'s, with the date moved', fx:{time:3, rep:-3, stress:-2}} ] },
+
+  'pa.plan.a': { who:'sys', t:['The plan in the tool and the plan in the spreadsheet disagree by eleven days.',
+    'Everybody is working to the spreadsheet. The tool is what the client sees.'] },
+  'pa.plan.b': { who:'sys', t:['One of them is a lie to somebody. Which one depends entirely on who you tell.'],
+    opts:[ {t:'Make the tool true and tell the client the eleven days before they find them', fx:{time:18, rep:5, bonus:1, stress:8}},
+           {t:'Bring the spreadsheet into the tool and let the dates speak for themselves', fx:{time:12, rep:2, bonus:1, stress:5}},
+           {t:'Move the tool to match the spreadsheet quietly and say nothing', fx:{time:4, rep:-4, stress:-2}} ] },
+
+  'pa.less.a': { who:'sys', t:['A lessons-learned workshop has been booked for a project that finished in April.',
+    'Of the nine people who worked on it, two are still here and one of them is you.'] },
+  'pa.less.b': { who:'sys', t:['The lessons are known. They have been known since March. Writing them down is not the same as anybody acting on them, and everyone in the room knows that too.'],
+    opts:[ {t:'Run it honestly, name the two decisions that cost the money, and publish it', fx:{time:17, rep:5, bonus:1, stress:8}},
+           {t:'Run it in twenty minutes with the two of you and write the three that matter', fx:{time:10, rep:2, bonus:1, stress:4}},
+           {t:'Cancel it. Nobody will chase a workshop for a finished project.', fx:{time:3, rep:-2, stress:-3}} ] },
+
+  'pa.ben.a': { who:'yvonne', t:['Finance would like the benefits realisation for the 2022 programme. The one that was going to save four hundred thousand.',
+    'I have looked. It saved something. I cannot tell you what, and neither can the person who signed the case.'] },
+  'pa.ben.b': { who:'sys', t:['The honest number is smaller than the promise and larger than nothing, and producing it takes a day nobody has costed.'],
+    opts:[ {t:'Work out the real number and present it beside the promise', fx:{time:19, rep:5, bonus:1, stress:9}},
+           {t:'Give them what can be evidenced and say plainly what cannot', fx:{time:12, rep:3, bonus:1, stress:5}},
+           {t:'Send the original business case. It has a number on it.', fx:{time:3, rep:-4, stress:-1}} ] },
+
+  'pa.base.a': { who:'mackenzie', t:['We need to re-baseline. Again. It has slipped twice and the third slip is the one people start counting.',
+    'Re-baselining does not move the work. It moves the line you measure the work against, which is a different thing that looks the same on a slide.'] },
+  'pa.base.b': { who:'sys', t:['A third baseline makes the first two disappear, which is either honest housekeeping or the opposite, depending on the paragraph you put with it.'],
+    opts:[ {t:'Re-baseline once, keep the original line on the chart, and explain the gap', fx:{time:16, rep:5, bonus:1, stress:7}},
+           {t:'Refuse the re-baseline and report against the date you gave', fx:{time:11, rep:3, bonus:1, stress:9}},
+           {t:'Re-baseline and drop the old line off the chart', fx:{time:4, rep:-4, stress:-2}} ] },
+
+  'pa.stak.a': { who:'sys', t:['The gate needs a stakeholder map. The template has four quadrants and space for twelve names.',
+    'This project has one stakeholder. He is in the building today and has never been asked what he wants.'] },
+  'pa.stak.b': { who:'sys', t:['You can fill the template, or you can go and ask him, and only one of those two changes anything about the project.'],
+    opts:[ {t:'Go and ask him what good looks like, then fill the template from that', fx:{time:18, rep:5, bonus:1, stress:5}},
+           {t:'Fill it honestly with one name and a note saying why it is one name', fx:{time:9, rep:3, bonus:1, stress:3}},
+           {t:'Put twelve names in it. The template wants twelve names.', fx:{time:4, rep:-3, stress:-2}} ] },
+
+  'pa.sign.a': { who:'sys', t:['The design was agreed in a room in February. Everyone remembers agreeing. Nobody signed anything.',
+    'The gate will not open without a signature, and the person whose signature it is has been in workshops since Tuesday.'] },
+  'pa.sign.b': { who:'linda', t:['You can chase this for a week or you can put it in front of him in a corridor. I have seen both work and only one of them this month.'],
+    opts:[ {t:'Write the one-page version and put it in front of him in person', fx:{time:15, rep:4, bonus:1, stress:6}},
+           {t:'Send it with a deadline and escalate on the day it passes', fx:{time:10, rep:2, bonus:1, stress:5}},
+           {t:'Record it as verbally agreed and move on. Everyone remembers.', fx:{time:3, rep:-4, stress:-1}} ] },
+
+  'pa.chg.a': { who:'sys', t:['A change request has been raised for a change that was made in March and has been live since.',
+    'The form asks for the impact assessment, the rollback plan, and the approval date. All three would be works of fiction.'] },
+  'pa.chg.b': { who:'sys', t:['The process wants the paperwork to precede the change. The change is four months old and has not fallen over once.'],
+    opts:[ {t:'Raise it as a retrospective change, say so on the form, and fix the process', fx:{time:17, rep:5, bonus:1, stress:7}},
+           {t:'Document what was actually done and date it honestly', fx:{time:10, rep:3, bonus:1, stress:4}},
+           {t:'Backdate the form. It is one field and nobody checks.', fx:{time:3, rep:-5, stress:-2}} ] },
+
+  'pa.mbx.a': { who:'sys', t:['The project mailbox has nine hundred unread and no owner. It was set up so the client "had somewhere to write to".',
+    'They have been writing to it. For six weeks. Some of it is about the project.'] },
+  'pa.mbx.b': { who:'sys', t:['Somewhere in nine hundred emails is the one where they told you about the date, and if it is there then the slip is yours.'],
+    opts:[ {t:'Read it properly, answer what needs answering, and give it an owner', fx:{time:20, rep:5, bonus:1, stress:8}},
+           {t:'Search it for the date, answer that, and route the rest to the desk', fx:{time:12, rep:2, bonus:1, stress:5}},
+           {t:'Set up a forward to the service desk and mark all as read', fx:{time:3, rep:-4, stress:-2}} ] },
+
   'pw.mbx.c': { who:'kayla', t:['On Monday the desk gets three hundred people who cannot find their mail.',
     'I would like to know that before Monday and not at nine on Monday.'],
     opts:[ {t:'Write the one-page card and put it on every desk on Friday', fx:{time:18, rep:4, bonus:1}},
@@ -4959,6 +5039,49 @@ const TICKETS = {
     title:'Cutover weekend at {client}. One weekend, four things that need it.',
     steps:[{say:'pw.wk.a'},{goto:'SERVERS'},{game:'weekend',diff:2},{choice:'pw.wk.b'},
            {goto:'TERMINAL'},{choice:'pw.wk.c'}] },
+  /* TEN THINGS WORTH DROPPING. The last pass fixed this rung by making its day
+     oversubscribed — fourteen heavy tickets took it from 1.02 to 1.22 — and
+     that held. What drifted back is the other half of triage: the rung deals
+     1.8 P4s a day out of twelve arrivals, 15% against 20-28% everywhere else,
+     so a player working the worst priority first runs out of droppable work
+     after two tickets and spends the rest of the day on P3s and P2s, which are
+     worth having. Bad triage could not lose here because there was nothing to
+     lose. These are P4s of forty to eighty minutes: project administration
+     that eats an afternoon and protects nobody, worth one point apiece. */
+  'the-raid-log': { tiers:[4,5], weight:3, slaMult:2.6, pri:1, stress:5,
+    title:'The RAID log has four risks on it, all green, all written by a leaver',
+    steps:[{say:'pa.raid.a'},{goto:'TERMINAL'},{game:'paper',diff:2},{choice:'pa.raid.b'}] },
+  'weekly-status-nobody-reads': { tiers:[4,5], weight:3, slaMult:2.8, pri:1, stress:4,
+    title:'The weekly status report goes to forty-one people and four open it',
+    steps:[{say:'pa.stat.a'},{goto:'PRINTER'},{choice:'pa.stat.b'},{goto:'TERMINAL'},{choice:'pa.stat.b'}] },
+  'the-plan-and-the-spreadsheet': { tiers:[4,5], weight:3, slaMult:2.4, pri:1, stress:6,
+    title:'The plan in the tool and the plan in the spreadsheet disagree by eleven days',
+    steps:[{say:'pa.plan.a'},{goto:'CONF'},{game:'diagram',diff:2},{choice:'pa.plan.b'}] },
+  'lessons-learned-in-april': { tiers:[4,5], weight:3, slaMult:2.9, pri:1, stress:5,
+    title:'A lessons-learned workshop for a project that finished in April',
+    steps:[{say:'pa.less.a'},{goto:'CONF'},{choice:'pa.less.b'},{goto:'TERMINAL'},{choice:'pa.less.b'}] },
+  'benefits-realisation-2022': { tiers:[4,6], weight:3, slaMult:2.5, pri:1, stress:6,
+    title:'Finance want the benefits realisation for the programme that saved four hundred thousand',
+    steps:[{say:'pa.ben.a'},{goto:'ACCOUNTS'},{game:'quote',diff:2},{choice:'pa.ben.b'}] },
+  're-baseline-the-third-time': { tiers:[4,5], weight:3, slaMult:2.3, pri:1, stress:7,
+    title:'Re-baseline the dates. It has slipped twice and nobody counts the first two.',
+    steps:[{say:'pa.base.a'},{goto:'CONF'},{game:'jargon',diff:2},{choice:'pa.base.b'}] },
+  'stakeholder-map-of-one': { tiers:[4,5], weight:3, slaMult:2.7, pri:1, stress:4,
+    title:'The gate needs a stakeholder map. This project has one stakeholder.',
+    steps:[{say:'pa.stak.a'},{goto:'LOBBY'},{choice:'pa.stak.b'},{goto:'TERMINAL'},{choice:'pa.stak.b'}] },
+  'sign-off-everyone-remembers': { tiers:[4,6], weight:3, slaMult:2.2, pri:1, stress:6,
+    title:'Everyone remembers agreeing it in February. Nobody signed anything.',
+    steps:[{say:'pa.sign.a'},{goto:'n8'},{choice:'pa.sign.b'},{goto:'TERMINAL'},{choice:'pa.sign.b'}] },
+  'change-request-for-march': { tiers:[4,5], weight:3, slaMult:2.5, pri:1, stress:6,
+    title:'A change request for a change made in March that has been live since',
+    /* NOT starter — caught by the guard written for exactly this an hour
+       earlier. The form wants an impact assessment, a rollback plan and an
+       approval date, all three of which would be works of fiction: that is
+       "answer it with a fact, or say you cannot", which is paper. */
+    steps:[{say:'pa.chg.a'},{goto:'TERMINAL'},{game:'paper',diff:2},{choice:'pa.chg.b'}] },
+  'the-project-mailbox': { tiers:[4,5], weight:3, slaMult:2.4, pri:1, stress:7,
+    title:'The project mailbox has nine hundred unread and no owner',
+    steps:[{say:'pa.mbx.a'},{goto:'TERMINAL'},{game:'blast',diff:2},{choice:'pa.mbx.b'}] },
   'three-hundred-mailboxes': { tiers:[4,4], weight:3, slaMult:1.8, pri:3, stress:6,
     title:'Three hundred mailboxes move Saturday. Forty-one belong to leavers.',
     /* NOT THE STARTER BOARD. It was dealt one, and the starter card opens "A
