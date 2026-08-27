@@ -14297,6 +14297,29 @@ function selfTest(runSim){
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
     }
+    /* THE SALARY ON THE POSTING IS THE SALARY THE JOB PAYS. Nine of them are
+       written into the posting as prose — "Project Engineer (£72,000, 'no two
+       days the same')" — and nine are in ROLES[].pay, and until tonight only
+       one of the two was ever on a screen. Now the morning card says the pay
+       as well, so the same number reaches the player from two independent
+       copies: the exact shape that had the coffee jitters a cup out and the
+       crash delay written down four times. */
+    {
+      const off = [];
+      for (let r = 0; r < ROLES.length; r++){
+        const post = (JOB_POSTING[r] || {}).pos || '';
+        const m2 = /\u00a3([\d,]+)/.exec(post);
+        const said = m2 ? +m2[1].replace(/,/g, '') : 0;
+        const pay = ROLES[r].pay || 0;
+        if (!pay){
+          if (!/unpaid/i.test(post)) off.push(ROLES[r].id + ': pays nothing and does not say so');
+        } else if (said !== pay){
+          off.push(ROLES[r].id + ': posting says ' + (said || 'no figure') + ', the job pays ' + pay);
+        }
+      }
+      ok('the salary on the posting is the salary the job pays',
+         !off.length, off.slice(0,3).join(' · '));
+    }
     /* NOTHING YOU CAN SEE ON DAY ONE MAY CLAIM WHAT THE LADDER GIVES YOU
        LATER. The commute card at rung 8 says "there is a space with your name
        on it NOW" — a promotion perk, and one of the few times the office
