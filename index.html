@@ -6629,7 +6629,19 @@ function objectiveText(){
     return head + (atTerminal() ? ' — CLICK THE GREEN SCREEN, OR PRESS TAB'
                                 : ' — TAB, OR QUEUE, TOP RIGHT');
   }
-  return 'QUEUE CLEAR — TALK TO PEOPLE, GET A COFFEE, BREATHE';
+  /* AND DO NOT SEND THEM FOR A CUP THE GAME HAS ALREADY WARNED THEM OFF.
+     This read "TALK TO PEOPLE, GET A COFFEE, BREATHE" at every cup count. On
+     the fourth the machine refuses outright — YOUR HANDS ARE ALREADY
+     VIBRATING — so the one line that is always on screen was pointing at a
+     locked door. Worse on the second: the coffee toast for cup two says ONE
+     MORE AND YOUR HANDS START SHAKING, and this line then recommended exactly
+     that, a cup that buys 15 stress with jitters for the rest of the day and
+     sleep debt that never comes off. It offers the cup only while the cup is
+     still free. Nothing else here names a machine, because this line is read
+     on three floors and only one of them has a kitchen. */
+  return 'QUEUE CLEAR — TALK TO PEOPLE, ' +
+         (run.coffee < BURN.freeCups ? 'GET A COFFEE, ' : '') +
+         'BREATHE. IT WILL NOT LAST.';
 }
 const DIRV = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
 function faceCell(){
@@ -14446,6 +14458,26 @@ function selfTest(runSim){
       run = savedRunB2;
       ok('the banner never names a control that is not on this floor',
          !off.length, off.join(' · '));
+      /* AND NEVER RECOMMENDS A CUP THE GAME HAS ALREADY WARNED YOU OFF. On an
+         empty queue the same always-on line said "GET A COFFEE" at every cup
+         count: at four the machine refuses it outright, and at two the coffee
+         toast has just said ONE MORE AND YOUR HANDS START SHAKING — so the
+         banner was recommending, in the same breath, the cup that starts the
+         jitters and the sleep debt. It offers the cup only while it is free.
+         Checking only the refusal is the obvious half-fix and stays red. */
+      const savedRunB3 = run;
+      QUIET = true; rngInit('BANNER2'); runInit('BANNER2'); rollDay();
+      run.taughtQueue = true; run.queue = [];
+      loadMap('office1'); spawnPeople();
+      const pushy = [];
+      for (let c = 0; c <= COFFEE_MAX; c++){
+        run.coffee = c;
+        if (/COFFEE/.test(objectiveText()) && c >= BURN.freeCups)
+          pushy.push('cup ' + c + ' of ' + COFFEE_MAX);
+      }
+      run = savedRunB3;
+      ok('and never sends you for a cup that costs you the day', !pushy.length,
+         pushy.length ? pushy.join(' · ') : 'free until ' + BURN.freeCups);
     }
     /* THE QUEUE ROW COUNTS THE END OF THE DAY, NOT JUST THE SLA. The slack
        column is the one number a player triages the afternoon on, and it was
