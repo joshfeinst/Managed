@@ -1433,9 +1433,17 @@ const NPCS = {
     look:{skin:3,hair:6,shirt:'#3a7d5c',hairLong:true},
     sched:[[0,'n3'],[160,'COOLER'],[180,'n3']],
     talk:'sm.kayla' },
+  /* AT THEIR OWN DESK FOR MORE THAN THE LAST HOUR OF THE DAY. This read
+     LOBBY, CONF, HALLE, and then n7 from 16:00 — sixty minutes in four hundred
+     and eighty — while the map calls n7 MACKENZIE'S DESK and two tickets walk
+     you there to be met by Mackenzie. Seven days out of eight you arrived at
+     an empty chair and had a conversation with somebody standing in a corridor
+     three rooms away. The wandering survives, because an account executive who
+     is at their desk all day is not one; it is just no longer where they
+     spend the smallest part of the day. */
   mackenzie: { name:'MACKENZIE', role:'Account Executive · has promised things',
     look:{skin:3,hair:2,shirt:'#7a4e8a',tie:'#d9c17a',hairLong:true},
-    sched:[[0,'LOBBY'],[120,'CONF'],[240,'HALLE'],[420,'n7']],
+    sched:[[0,'n7'],[95,'LOBBY'],[150,'CONF'],[235,'n7'],[330,'HALLE'],[380,'n7']],
     talk:'sm.mack' },
   brenda:    { name:'BRENDA', role:'Office Manager · thermostat sovereign',
     look:{skin:0,hair:3,shirt:'#a53f38',hairLong:true,glasses:true},
@@ -13600,6 +13608,53 @@ function selfTest(runSim){
         }
         ok('content: the person at the desk is the person whose desk it is',
            !wrongDesk.length, wrongDesk.slice(0,3).join(' · '));
+
+        /* ...AND THEY HAVE TO BE THERE WHEN YOU ARRIVE. The guard above reads
+           sched[0] — where somebody STARTS the day — which is blind in exactly
+           the case that was wrong. Mackenzie's schedule ran LOBBY, CONF,
+           HALLE, then n7 from four o'clock: sixty minutes of four hundred and
+           eighty at the desk the map names after them, and two tickets walking
+           you to it. Seven arrivals in eight found an empty chair and then had
+           a conversation with somebody standing in a corridor three rooms
+           away. If the job sends you to a named desk, its owner has to be
+           sitting at it more often than not. */
+        const ghost = [];
+        {
+          const sent = new Set();
+          for (const id in TICKETS)
+            for (const st of TICKETS[id].steps)
+              if (st.goto && /^n[1-9]$/.test(st.goto)) sent.add(st.goto);
+          for (const a2 of sent){
+            const p2 = anchorPos(a2);
+            if (!p2) continue;                     // not on this floor: another guard's job
+            let best = 0, who = '(nobody)';
+            for (const nid in NPCS){
+              const N = NPCS[nid];
+              if (!(N.sched || []).some(x => x[1] === a2)) continue;
+              let there = 0;
+              for (let m = 0; m < DAY_MIN; m += 5){
+                const at = schedAnchor(N, m);
+                if (at && at[0] === p2[0] && at[1] === p2[1]) there += 5;
+              }
+              if (there > best){ best = there; who = NPCS[nid].name; }
+            }
+            if (best < DAY_MIN / 2)
+              ghost.push((ANCHOR_NAMES[a2] || a2) + ': ' + who + ' is there ' +
+                         Math.round(100 * best / DAY_MIN) + '% of the day');
+          }
+        }
+        ok('content: and they are at it when the job sends you there',
+           !ghost.length, ghost.slice(0,3).join(' · '));
+        /* The cheap way to satisfy that is to nail everybody to their chair,
+           and an office where nobody moves is a diorama. Everyone goes
+           somewhere. */
+        const nailed = [];
+        for (const nid in NPCS){
+          const anchors = new Set((NPCS[nid].sched || []).map(x => x[1]));
+          if (anchors.size < 2) nailed.push(NPCS[nid].name);
+        }
+        ok('content: and nobody sits at their desk the whole day',
+           !nailed.length, nailed.join(' '));
 
         /* EVERY PLACE THE JOB CAN SEND YOU HAS A NAME. n5 had none — nothing
            had ever sent anybody to it — so the first ticket that did would
