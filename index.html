@@ -8787,7 +8787,16 @@ function renderQueue(){
        late to finish — work spent for nothing. The column answers the question
        the player is actually asking: how long can this keep waiting? */
     const left = Math.round(t.deadline - run.clock);
-    const slack = Math.round(left - workLeft(t));
+    /* AND THE DAY ENDS AT FIVE, WHATEVER THE SLA SAYS. This column exists to
+       answer "how long can this keep waiting?" and it answered as though the
+       afternoon were infinite: a ticket with a window running into tomorrow
+       read as comfortable at twenty past four and then burned at seventeen
+       hundred with everything else still open. Measured across 2,254 rows read
+       through the afternoons of 120 days, one row in eight was called
+       comfortable when it could not be finished before the day ended, and the
+       worst overstated the room by more than four hours. Whichever runs out
+       first is the one that decides. */
+    const slack = Math.round(Math.min(left, DAY_MIN - run.clock) - workLeft(t));
     const sla = row.querySelector('.sla');
     sla.textContent = left <= 0 ? 'BREACHING'
                     : slack <= 0 ? 'too late · ' + left + 'm'
@@ -14182,6 +14191,39 @@ function selfTest(runSim){
       ok('and the crash only mentions jitters when you have some',
          !crashSaid.length, crashSaid.join(' · '));
       run = savedRunJ;
+    }
+    /* THE QUEUE ROW COUNTS THE END OF THE DAY, NOT JUST THE SLA. The slack
+       column is the one number a player triages the afternoon on, and it was
+       computed against the deadline alone — so a ticket whose window runs into
+       tomorrow read as comfortable at twenty past four and burned at five with
+       everything else. Two rows rendered at 16:20 through the real
+       renderQueue: one short enough to finish, one that is not. */
+    {
+      const savedRunQ = run;
+      QUIET = true; rngInit('FIVEPM'); runInit('FIVEPM'); rollDay();
+      run.rung = 0; loadMap('office1'); spawnPeople();
+      const mk = (id, uid) => ({ uid, id, title:'row ' + uid, fills:{}, at:0,
+        deadline: DAY_MIN + 600, sla: DAY_MIN + 600, stress:3, si:0, bonus:0,
+        spent:0, gameScores:[], from:null });
+      /* the longest and the shortest thing the intern can be dealt */
+      const ids = Object.keys(TICKETS).filter(i => TICKETS[i].tiers[0] <= 0 && 0 <= TICKETS[i].tiers[1]);
+      ids.sort((a3, b3) => ticketWork(TICKETS[a3]) - ticketWork(TICKETS[b3]));
+      run.queue = [mk(ids[0], 8001), mk(ids[ids.length-1], 8002)];
+      run.clock = DAY_MIN - 40;                       // 16:20
+      G.state = 'modal'; G.modal = { kind:'tix', sel:0 };
+      renderQueue();
+      const cell = uid => {
+        const rowEl = [...document.querySelectorAll('#tix-list .row')]
+          .find(r => (r.textContent || '').indexOf('#' + (10000 + uid)) >= 0);
+        return rowEl ? (rowEl.querySelector('.sla').textContent || '') : '(no row)';
+      };
+      const shortSays = cell(8001), longSays = cell(8002);
+      const longNeeds = workLeft({ id: ids[ids.length-1], si:0 });
+      ok('the queue row counts the end of the day, not just the SLA',
+         longNeeds > 40 && /too late/.test(longSays) && !/too late/.test(shortSays),
+         'the ' + Math.round(longNeeds) + '-minute one says "' + longSays +
+         '" at 16:20, the short one says "' + shortSays + '"');
+      G.state = 'work'; G.modal = null; run = savedRunQ;
     }
     /* AND THE STARTER CARD KNOWS WHERE THE CHECKLIST PUTS THE MAILBOX. It
        said THIRD — which is where the mailbox BELONGS in the dependency order,
