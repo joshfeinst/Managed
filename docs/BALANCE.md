@@ -2135,3 +2135,92 @@ three once the senior pools grew: a ticket can land between clearing the
 dialogue and tapping the close button, so the tap goes through a scene. The
 day stops dealing for the length of that one check now. The button, the tap
 and the panel are all still the real ones — nothing can walk in front of them.
+
+## Fourteenth pass — the building is a graph, and the front doors open
+
+### The router was a pair, and its failure mode was silent
+
+The cross-floor model composed exactly one hop and required that hop to be a
+connector present *by the same anchor name on both maps*. Two floors joined by
+two shafts is the only shape that fits. Anything else fails without a sound:
+`liftsOn()` returns `[]` for a map with no lift, the loop body never runs,
+`crossTiles` returns `null`, and `walkCost`'s null branch hands back
+`WALK_FALLBACK + LIFT_MIN` — **a flat eighteen minutes from every desk at every
+rung**, which is the exact flat-price bug the subsystem was written to kill.
+Nothing throws and no test fails.
+
+`EXITS` is the graph now: leave map `from` at anchor `at`, arrive on map `to`
+at anchor `arrive`, having spent `mins`. `routeVia()` is Dijkstra over
+`(map, the anchor you arrived at)`. Routes of different length are not
+comparable in tiles, so it compares **minutes**; with every route the same
+length — which is every route in a two-floor building — that is identical to
+comparing tiles, and ties still break on the first exit listed, keeping ELEV
+ahead of ELEV_E exactly as the old loop did.
+
+**Proven by snapshot, not by argument.** 1850 prices captured before the
+refactor: `walkCost` and `tilesFromLift` for every anchor from every rung's
+desk on both maps, plus `ticketWork` and the leg breakdown for all 490
+ticket/rung pairs. After: every `walkCost` identical, every `tilesFromLift`
+identical, all 490 ticket prices identical. One column moved — `bestLiftTo`,
+on 280 rows, every one of them "named a lift → null", because it used to
+answer which shaft to take to a destination that needs no shaft.
+
+### Two ways out, because one is not enough
+
+The front doors have opened onto a solid wall since the first build. Measured,
+the cheapest car park anchor *through them* costs a Solutions Architect 79
+minutes of a 78-minute budget, so no senior rung could have been sent outside
+at all. A fire door at the east end of the ground floor is four tiles from the
+east lift:
+
+| anchor | through the front doors | through the fire door |
+|---|---|---|
+| the arrival tile | 55–79 | **38–56** |
+
+Destinations were then placed against that. YOUR CAR moved from `[16,4]` to
+`[35,8]` because the first bay cost a Relationship Manager 84 minutes; at the
+new one the worst rung on the ladder pays 72. The bins moved to the fire exit
+— which is where people actually smoke — bringing that anchor from 86 to 70.
+The front doors themselves (79 at solarch) and the visitor bays (83) are simply
+not written for that rung.
+
+A door costs `DOOR_MIN` 2 rather than `LIFT_MIN` 4. You push it and you are
+through; a lift you wait for.
+
+### The arrow had to learn the route, and the key matters
+
+`run.markerLift` held a single lift name. The car park is two hops from every
+desk, so the arrow pointed at the lift, you rode it, and on the far side it
+pointed at the lift again. The fix is an exit chain — but **an ordered list is
+not enough**: the east lift is on the route out of `office1` *and* is a way out
+of `ground`, so a list-and-first-match arrow sent the player bouncing between
+floors forever. That is not hypothetical; it is what the round-trip self-test
+did until the chain became a map → exit dictionary.
+
+### Four tests were asking the right question for a two-floor building
+
+- *"both floors have both lifts"* → **"every exit is built at both ends"**, plus
+  "every floor can be reached from every other". The car park has no lift.
+- the ground-floor room lint excused `LIFTS`; it excuses every **connector**
+  now, because the fire door is a way out exactly as the shafts are.
+- the cross-floor round trip forced the player onto ELEV and called
+  `takeLift()` **once** — testing the first half of the journey and asserting
+  the whole of it. It walks the route now, however many hops it takes.
+- `tools/errands.js` had the same assumption and reported all seventeen car
+  park tickets broken with "rode the lift six times and never arrived", because
+  on the ground floor the nearest lift goes back up.
+
+Two guards caught my own mistakes before they shipped: "every tile the atlas
+bakes is a tile some floor uses" fired on all five new car park tiles before
+they had a map to sit on, and `tools/levels.js` found that the car park's own
+doors had no act — you could walk out and not back in — and that a bin was
+walled into a corner with nothing beside it.
+
+### And five lines nobody could read
+
+`takeLift()` reached `elevatorLine()` only when the destination map was
+missing, and with both floors always present that was never. Four rung-flavoured
+lines and a fifth about the car park, written, asserted upon by a green
+self-test, and unreadable in play. `TOAST_LOG` records what the game actually
+said, so the new guard drives eight real trips and reads the log back rather
+than asking a helper what it would have returned.
