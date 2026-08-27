@@ -10272,8 +10272,19 @@ const GAME_BRIEF = {
       ['CLICK', 'or click a prefix to take it'],
       ['', 'blocks are spent in order and never come back']
     ],
+    /* WHAT THE BOARD DOES, NOT A TRAP IT DOES NOT SET. This said "One size
+       too generous fits fine and starves the last site on the list", which is
+       wrong twice. Measured over 200 boards at every difficulty: allocating
+       one size up is marked wrong the moment you press E, on 171 of the 171
+       boards where there is a size up to pick — it does not fit fine, it
+       costs you that site immediately. And it starves nobody: the plan is
+       drawn to be solvable, not to spend the /24 exactly, so only 6 boards in
+       200 leave no slack at all and the leftover runs as high as 216
+       addresses. The one hint on the card told the player the penalty was
+       deferred and survivable when it is neither. */
     watch: 'A /28 holds 14, not 16 — the network and the broadcast are not yours. ' +
-           'One size too generous fits fine and starves the last site on the list.'
+           'One size too generous is marked wrong the moment you allocate it, ' +
+           'however much of the /24 is still going spare.'
   },
   quote: {
     what: 'Finance have given you a number and it is not enough. Every line has ' +
@@ -14616,6 +14627,39 @@ function selfTest(runSim){
       ok('the starter card knows where the checklist puts the mailbox',
          said === at, m ? 'card says ' + m[1] + ', the paper puts it ' +
                           (W2[at] || at) : 'the card no longer says');
+    }
+    /* AND THE SUBNET CARD DESCRIBES THE PENALTY THIS BOARD ACTUALLY APPLIES.
+       Its one hint promised a deferred trap — "one size too generous fits
+       fine and starves the last site on the list" — and the board does the
+       opposite: `good` requires the EXACT prefix, so a generous block is
+       marked wrong on the spot, and the plan is drawn solvable rather than
+       exact, so it starves nobody. Both halves are measured here rather than
+       read off the source, and the card is held to both. */
+    {
+      let tried = 0, wrongNow = 0, starved = 0, exact = 0, boards = 0;
+      for (let d = 1; d <= 5; d++)
+        for (let k = 0; k < 12; k++){
+          rngInit('SUBCARD-' + d + '-' + k);
+          const g = GAMES.subnet.init(d); boards++;
+          if (g.sites.reduce((a, st) => a + st.want.size, 0) === 256) exact++;
+          const ix = SUBNET_PREFIXES.indexOf(g.sites[0].want);
+          if (ix <= 0) continue;                 // no size up to be generous with
+          tried++;
+          g.cur = ix - 1; g.take();              // one size too generous
+          if (g.sites[0].ok === false) wrongNow++;
+          for (let i = 1; i < g.sites.length; i++){
+            g.cur = SUBNET_PREFIXES.indexOf(g.sites[i].want);
+            const was = g.ran; g.take();
+            if (g.ran && !was){ starved++; break; }
+          }
+        }
+      const card = GAME_BRIEF.subnet.watch || '';
+      ok('the subnet card describes the penalty the board applies',
+         tried > 0 && wrongNow === tried && starved === 0 &&
+         !/fits fine|starves/i.test(card) && /marked wrong|costs you the site/i.test(card),
+         'too generous: wrong on the spot ' + wrongNow + '/' + tried +
+         ', starves a later site ' + starved + '/' + tried +
+         ', /24 spent exactly on ' + exact + '/' + boards + ' boards');
     }
     /* THE DIAGRAM CARD SAYS A FALSE MARK COSTS MORE THAN A MISS, SO IT MUST.
        It did not: a miss cost 1/spofs and a false mark a flat .25, so the
