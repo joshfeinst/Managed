@@ -7840,8 +7840,17 @@ function makeArrival(id, at, role){
   const need = (T.title.match(/\{(\w+)\}/g) || []).map(s => fillKey(s.slice(1,-1)));
   for (const st of T.steps){
     const node = DIALOGUE[st.say || st.choice];
-    if (node) for (const line of node.t)
-      for (const m of (line.match(/\{(\w+)\}/g) || [])) need.push(fillKey(m.slice(1,-1)));
+    if (!node) continue;
+    /* THE OPTIONS ARE READ TOO. This walked node.t and stopped, but openDlg
+       runs fill() over every option text as well — so a token an author put
+       only in a choice was never resolved and reached the player as the
+       literal "{user}". Nothing did it today, by luck rather than by rule;
+       the identical bug has already shipped once in scenes, five lines across
+       four of them, including "{Client} has a new starter" on the morning of
+       a promotion. */
+    const lines = node.t.concat((node.opts || []).map(o => o.t));
+    for (const line of lines)
+      for (const m of (String(line).match(/\{(\w+)\}/g) || [])) need.push(fillKey(m.slice(1,-1)));
   }
   for (const tok of new Set(need)){
     const pool = (T.fills && T.fills[tok]) || FILLS[tok];
@@ -12772,6 +12781,39 @@ function selfTest(runSim){
       }
       ok('a ticket that names a priority is dealt that priority',
          !wrong.length, wrong.slice(0, 3).join(' · '));
+    }
+    /* AND NOTHING A TICKET CAN SHOW YOU STILL HAS A BRACE IN IT. DRIVEN, NOT
+       DERIVED: this makes a real arrival for every template and runs the real
+       fill() over everything that arrival can put on screen — the title, every
+       line, and every option — rather than re-implementing makeArrival's token
+       hunt in the test, where the two could drift apart and agree with each
+       other while both were wrong. That is not hypothetical: makeArrival
+       walked node.t and not node.opts, so a token written into a choice was
+       never resolved, and the same bug has already shipped once in scenes. */
+    {
+      const savedRunF = run;
+      QUIET = true; rngInit('FILL-DRIVE'); runInit('FILL-DRIVE');
+      const raw = [];
+      for (const tid in TICKETS){
+        let a = null;
+        try { a = makeArrival(tid, 0, ROLES[TICKETS[tid].tiers[0]] || ROLES[0]); }
+        catch (_) { raw.push(tid + ' (could not be dealt)'); continue; }
+        const seen = [fill(TICKETS[tid].title, a.fills)];
+        for (const st of TICKETS[tid].steps || []){
+          const nd = DIALOGUE[st.say || st.choice];
+          if (!nd) continue;
+          for (const l of nd.t) seen.push(fill(l, a.fills));
+          for (const o of nd.opts || []) seen.push(fill(o.t, a.fills));
+        }
+        for (const line of seen)
+          if (/\{\w+\}/.test(line)){
+            raw.push(tid + ' :: "' + line.slice(0, 60) + '"');
+            break;
+          }
+      }
+      run = savedRunF;
+      ok('no ticket can put an unresolved {token} on the screen',
+         !raw.length, raw.slice(0, 3).join(' · '));
     }
     /* "every ticket fits its SLA at every rung that deals it" stood here and
        could not fail — see the notice-window guard in the sim block, which is
