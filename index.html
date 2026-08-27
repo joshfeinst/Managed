@@ -5039,7 +5039,9 @@ const TICKETS = {
     steps:[{say:'q.three.a'},{game:'quote',diff:1},{choice:'q.three.b'}] },
   'lead-time-fourteen-weeks': { tiers:[5,8], weight:4, slaMult:1.6, pri:4, stress:9,
     title:'The switch is fourteen weeks. The project needs it in nine days.',
-    steps:[{say:'q.lead.a'},{choice:'q.lead.b'}] },
+    /* every way of having it sooner has a price, and one of the lines is
+       marked must-keep */
+    steps:[{say:'q.lead.a'},{game:'quote',diff:3},{choice:'q.lead.b'}] },
   'po-signed-by-nobody': { tiers:[5,7], weight:3, slaMult:1.9, pri:3, stress:8,
     title:'The PO needs a signature from someone who is "in workshops all week"',
     steps:[{say:'q.po.a'},{goto:'n8'},{choice:'q.po.b'}] },
@@ -5063,7 +5065,8 @@ const TICKETS = {
     steps:[{say:'q.marg.a'},{choice:'q.marg.b'}] },
   'invoice-disputed-line': { tiers:[5,8], weight:3, slaMult:2.1, pri:2, stress:7,
     title:'{client} is disputing one line of a fourteen-line invoice. It is the smallest line.',
-    steps:[{say:'q.inv.a'},{choice:'q.inv.b'}] },
+    /* a disputed line is defended with evidence or conceded, which is paper */
+    steps:[{say:'q.inv.a'},{game:'paper',diff:2},{choice:'q.inv.b'}] },
   'stock-held-at-customs': { tiers:[5,8], weight:2, slaMult:2.4, pri:2, stress:6,
     title:'The order is in the country. The order is not leaving the airport.',
     steps:[{say:'q.cust.a'},{choice:'q.cust.b'}] },
@@ -5072,7 +5075,9 @@ const TICKETS = {
     steps:[{say:'q.asset.a'},{goto:'SHELF'},{game:'pw',diff:2},{choice:'q.asset.b'}] },
   'end-of-life-notice': { tiers:[5,8], weight:2, slaMult:2.6, pri:1, stress:5,
     title:'End-of-life notice for a thing every client is running',
-    steps:[{say:'q.eol.a'},{choice:'q.eol.b'}] },
+    /* "every client is running it" is a blast radius, and it is the question
+       the ticket opens with */
+    steps:[{say:'q.eol.a'},{game:'blast',diff:2},{choice:'q.eol.b'}] },
   'supplier-golf-day': { tiers:[5,8], weight:2, slaMult:2.7, pri:1, stress:3,
     title:'A supplier would like to take you golfing. You do not play golf.',
     steps:[{say:'q.golf.a'},{choice:'q.golf.b'}] },
@@ -5095,7 +5100,9 @@ const TICKETS = {
     steps:[{say:'r.sla.a'},{game:'jargon',diff:3},{choice:'r.sla.b'}] },
   'they-want-that-engineer': { tiers:[6,8], weight:3, slaMult:1.9, pri:3, stress:7,
     title:'{client} wants "the good one" on every ticket from now on',
-    steps:[{say:'r.eng.a'},{choice:'r.eng.b'}] },
+    /* one name on every job is a rota that does not close: the weekend board
+       is the one that makes you find out who else can actually do it */
+    steps:[{say:'r.eng.a'},{game:'weekend',diff:3},{choice:'r.eng.b'}] },
   'price-rise-letter': { tiers:[6,8], weight:4, slaMult:1.8, pri:4, stress:10,
     title:'You must tell nine clients about a price rise you did not set',
     steps:[{say:'r.price.a'},{choice:'r.price.b'}] },
@@ -5104,10 +5111,13 @@ const TICKETS = {
     steps:[{say:'r.ref.a'},{choice:'r.ref.b'}] },
   'new-it-manager-hired': { tiers:[6,8], weight:3, slaMult:2.0, pri:3, stress:8,
     title:'{client} has hired an IT manager. He has Opinions about MSPs.',
-    steps:[{say:'r.newit.a'},{choice:'r.newit.b'}] },
+    /* the Opinions arrive as sentences made entirely of words */
+    steps:[{say:'r.newit.a'},{game:'jargon',diff:3},{choice:'r.newit.b'}] },
   'the-thing-we-never-did': { tiers:[6,8], weight:3, slaMult:1.9, pri:3, stress:10,
     title:'They are asking about the backup review we have invoiced for twice',
-    steps:[{say:'r.never.a'},{choice:'r.never.b'}] },
+    /* the paper board is "answer it with a fact, or say you cannot" — and on
+       this one you cannot, which is the whole ticket */
+    steps:[{say:'r.never.a'},{game:'paper',diff:3},{choice:'r.never.b'}] },
   'lunch-with-an-agenda': { tiers:[6,8], weight:2, slaMult:2.5, pri:2, stress:5,
     title:'Lunch with {client}. There is an agenda. Lunches do not have agendas.',
     steps:[{say:'r.lunch.a'},{goto:'YOURCAR'},{choice:'r.lunch.b'}] },
