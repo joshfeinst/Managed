@@ -181,6 +181,13 @@ The headless harnesses are in `tools/`: run `npm i playwright`, then pass each
 one the path to `index.html`. They exist because most of this game's real bugs
 were invisible to the ones that came before them.
 
+In a Claude Code on the web session that install is done for you —
+`.claude/hooks/session-start.sh` runs at session start, puts playwright in the
+repo, and checks the checkout against the remote. It is there because a
+restored container twice came back holding a checkout months behind origin
+with the fetch refspec missing, which makes `origin/main` a fossil and every
+`git status` a confident lie.
+
 | | |
 |---|---|
 | `verify.js` | boots it and runs the 468 in-game self-tests |
