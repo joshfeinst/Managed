@@ -103,18 +103,24 @@ Some other things worth knowing:
   three things you decide to do about it.
 - The first time you meet a minigame it opens on a card explaining what it is,
   which keys do what, and what costs you marks. H brings it back later.
-- Every rung has its own boards, and they are the rung. The intern patches
-  racks, triages passwords and translates meetings. T1 takes calls where the
-  script and the caller disagree. T2 gets the change you can make instantly,
-  where the only question is who it lands on. The Project Team carves one /24
-  into sites and finds out that a block one size too generous starves the last
-  one on the list. Procurement gets a budget that will not stretch and three
-  lines it is not allowed to cheapen. The Relationship Manager gets a client,
-  a team and a margin who cannot all be satisfied by the same sentence. The
-  Solutions Architect gets the as-built drawing and three outage windows to
-  test it with. The vCIO gets a board paper where some questions have no answer
-  and saying so is the right move. The Director decides whose Saturday it is.
-  None of them are on a stopwatch; take as long as you like and be right.
+- Every rung has a board of its own, and it is the rung. The intern gets a pile
+  that landed on the newest desk overnight and has to know whose each thing is —
+  and that some of it is genuinely theirs. T1 writes the ticket up after the
+  call, where everything the caller said is true and only four lines of it are
+  any use to whoever picks it up. T2 picks the restore point, which is always
+  the latest one that is both complete and old enough, and the nightly job that
+  emails SUCCESS while copying nothing is in every list. T3 gets three symptoms
+  that are one cause, and fewer opens than there are log lines. The Project Team
+  carves one /24 into sites and finds out that a block one size too generous
+  starves the last one on the list. Procurement gets a budget that will not
+  stretch and three lines it is not allowed to cheapen. The Relationship Manager
+  gets a client, a team and a margin who cannot all be satisfied by the same
+  sentence. The Solutions Architect gets the as-built drawing and three outage
+  windows to test it with. The vCIO gets a board paper where some questions have
+  no answer and saying so is the right move. The Director decides whose Saturday
+  it is. Sixteen boards in all; the four everybody shares are the rack, the
+  password queue, the meeting translator and the live call. None of them are on
+  a stopwatch; take as long as you like and be right.
 - Skill at the minigames matters. Judgement about what to work on matters more.
 - Stopping to talk to someone costs you nothing. Neither does clicking away
   mid-conversation; you come back to the line you were on.
@@ -141,17 +147,26 @@ set.
 
 Things we want to build next, roughly in the order they'd make the game better.
 
+**A second board for the rungs a career lives on.** Every one of the ten now has
+a board written for it, which was the hole; the next one is that a career does
+not spend ten equal stretches. It spends most of its days somewhere in the
+middle of the ladder, and the rung you sit at longest is the one that runs out
+of shapes first. Which rung's day is closest to fitting — the one with least to
+decide — is measured rather than guessed, and it moves: see
+[`docs/DESIGN.md`](docs/DESIGN.md).
+
+**The office an intern learns should change.** WHO ACTUALLY OWNS THIS is six
+people and what each of them deals with, and it is the same six on your first
+morning and your last. It should move: somebody who has just started and does
+not know what they do yet, somebody who left in June whose name is still on the
+rota, a contractor who is only here on Thursdays. Learning the office is the
+board; an office that never changes is a board you finish learning.
+
 **More than one client site.** There is one now — Unit 4 on the estate, with a
 comms cupboard that has a mop in it — and four tickets that drive you out to
 it. One site means every visit is the same building. A handful of them, each
 with its own layout and its own guy, is what makes the drive a place rather
 than a corridor.
-
-**More depth per rung.** Every rung is healthy now, but Project Team is the one
-where triaging well and triaging badly are closest together, and the ladder is
-long enough that a rung wants more than one shape of day. Which rung is
-narrowest is measured rather than guessed — see
-[`docs/DESIGN.md`](docs/DESIGN.md).
 
 **A career leaderboard.** The same job posting ID deals the same career to
 everyone, so the comparison is already fair. Post a finished career, see how
@@ -160,9 +175,6 @@ other people's went on the seed you just played. Ghost runs after that.
 **More meta between careers.** LinkedIn connections that actually do something,
 rival MSPs willing to headhunt you mid-run, and more certifications and perks
 to spend a career's reputation on.
-
-**More boards.** Every rung has one signature minigame; the good ones could
-carry two or three, and the ladder is long enough that repetition shows.
 
 **More to spend a day on.** Annual leave is the one thing you can spend a day of
 a career on. There should be others: a training course that makes a board

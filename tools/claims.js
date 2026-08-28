@@ -89,6 +89,24 @@ async function launch(){
       maps: Object.keys(MAPS).length,
       budgets: [WALK_BUDGET, CROSS_FLOOR_BUDGET, OFF_SITE_BUDGET],
       paceMins: PACES.map(p => DAY_MIN / p.rate / 60),
+      /* WHICH BOARD EACH RUNG ACTUALLY OWNS. docs/DESIGN.md prints a
+         ten-row table naming a board against every rung, which is exactly the
+         kind of sentence that is true the week it is written. The rung that
+         owns a board is the rung with most of it available; re-derive it. */
+      owns: ROLES.map((R, r) => {
+        const avail = g => Object.keys(TICKETS).filter(id =>
+          TICKETS[id].tiers[0] <= r && r <= TICKETS[id].tiers[1] &&
+          TICKETS[id].steps.some(st => st.game === g)).length;
+        /* a board this rung sees more of than any other rung does */
+        const mine = Object.keys(GAMES).filter(g =>
+          avail(g) > 0 && ROLES.every((_, x) => x === r || (() => {
+            const at = y => Object.keys(TICKETS).filter(id =>
+              TICKETS[id].tiers[0] <= y && y <= TICKETS[id].tiers[1] &&
+              TICKETS[id].steps.some(st => st.game === g)).length;
+            return at(x) < avail(g); })()));
+        return { id:R.id, title:R.title, mine, titles: mine.map(g => MG_TITLES[g] || g) };
+      }),
+      boards: Object.keys(GAMES).length,
       tests: (typeof selfTest === 'function') ? null : null
     };
   });
@@ -122,7 +140,16 @@ async function launch(){
   await browser.close();
 
   const checks = [];
-  const claim = (name, re, check) => {
+  /* `all` collects every match rather than the first, for a claim that is a
+     TABLE rather than a sentence — ten rows naming ten boards is ten claims. */
+  const claim = (name, re, check, all) => {
+    if (all){
+      const ms = [...md.matchAll(re)];
+      if (!ms.length) return checks.push({ name, ok:false,
+        why:'neither README.md nor docs/DESIGN.md says this any more' });
+      const r = check(ms);
+      return checks.push({ name, ok:r.ok, why:r.why });
+    }
     const m = md.match(re);
     if (!m) return checks.push({ name, ok:false, why:'neither README.md nor docs/DESIGN.md says this any more' });
     const r = check(m);
@@ -206,6 +233,33 @@ async function launch(){
              why: 'triage ' + (T.pridead - T.worstpri).toFixed(1) +
                   ' vs hands ' + (T.pridead - T.noHands).toFixed(1) }));
 
+  /* THE ONE-BOARD-PER-RUNG TABLE. Ten rows, each naming a rung and the board
+     it owns, in a document whose whole point is that its numbers are derived.
+     A row that names a board the rung no longer owns is the same failure as a
+     stale percentage and is harder to spot, because it reads like design. */
+  claim('the board each rung owns',
+    /\|\s*(Intern|T1|T2|T3|Project Team|Procurement|Relationship Manager|Solutions Architect|vCIO|Director)\s*\|\s*([A-Z][A-Z '’]+?)\s*\|/g,
+    ms => {
+      const wrong = [];
+      for (const m of ms){
+        const said = m[2].trim();
+        const row = M.owns.find(o => o.title.toUpperCase().replace(/[^A-Z0-9]/g,'') ===
+          m[1].toUpperCase().replace(/[^A-Z0-9]/g,'')) ||
+          M.owns.find(o => o.title.toUpperCase().startsWith(m[1].toUpperCase().slice(0,4)));
+        if (!row){ wrong.push(m[1] + ': no such rung'); continue; }
+        if (!row.titles.includes(said)) wrong.push(m[1] + ' owns ' +
+          (row.titles.join(' + ') || 'nothing') + ', the table says ' + said);
+      }
+      /* There was a "and no two rows name the same board" clause here. It can
+         never fire: owning a board means having strictly more of it available
+         than every other rung, so two rungs cannot own one. A check that
+         cannot go red is worse than no check, because it reads like coverage.
+         The row COUNT is the part that can go wrong — a row quietly dropped
+         when a rung is added or a board moves. */
+      return { ok: ms.length === 10 && !wrong.length,
+               why: wrong.length ? wrong.slice(0,3).join('; ')
+                                 : ms.length + ' rows, each naming its rung\'s own board' };
+    }, true);
   claim('how many maps there are', /## (\w+) maps, three kinds of trip/,
     m => { const said = WORDS[m[1].toLowerCase()] || +m[1];
            return { ok: said === M.maps,

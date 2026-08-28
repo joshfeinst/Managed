@@ -33,6 +33,36 @@ roll goes through a seeded PRNG in one of six named streams, so an extra NPC
 roll can never shift ticket content and a job posting ID deals the same career
 twice.
 
+## One board per rung
+
+Sixteen minigames. Four are the connective tissue that everybody meets — the
+patch rack, the password queue, the meeting translator and the new-starter
+checklist — plus the live call and the blast radius, which start at T1 and T2
+and stay. The other ten are one each, and the rung they belong to is the rung
+that sees most of them:
+
+| rung | its board | the judgement |
+|---|---|---|
+| Intern | WHO ACTUALLY OWNS THIS | whose is this, and which of it is genuinely yours |
+| T1 | THE TICKET YOU LEAVE BEHIND | which four of the eleven true things the caller said are any use tomorrow |
+| T2 | WHICH RESTORE POINT | the latest one that is both complete and old enough |
+| T3 | WHAT ACTUALLY HAPPENED | which line is a cause and which are the four things it caused |
+| Project Team | THE ADDRESS PLAN | one /24, in order, smallest block that holds each site |
+| Procurement | THE SHORTFALL | a budget that will not stretch and three lines you may not cheapen |
+| Relationship Manager | KEEPING EVERYBODY | a client, a team and a margin, and fewer moves than grievances |
+| Solutions Architect | THE DIAGRAM | which boxes take something else down with them, on fewer tests than boxes |
+| vCIO | THE BOARD PAPER | which questions your facts answer, and which have no answer at all |
+| Director | WHOSE SATURDAY | more weekend than the weekend holds |
+
+The suite holds that as an invariant in two halves, because the obvious half is
+not enough: a rung must deal its own board off its OWN tickets, *and* be the
+rung with most of it available. The first half alone passes on a ladder where
+every rung deals every board, which is very nearly what this was — measured
+when the second half went in, the vCIO could be dealt more of Procurement's
+board than Procurement, more of the Relationship Manager's than the
+Relationship Manager, and more of the Solutions Architect's than the Solutions
+Architect. A signature is a peak, not a presence.
+
 ## What the day is actually scored on
 
 Measured across 16 seeds and six days each, with every board played perfectly so
@@ -90,12 +120,12 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 533 in-game self-tests |
+| `verify.js` | boots it and runs the 534 in-game self-tests |
 | `claims.js` | re-derives every number the README and this file state from the built game |
 | `dead.js` | finds data, state, functions and dialogue that are written and never read |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
 | `mouseonly.js` | plays from the title screen to a worked ticket without pressing a single key, because the handbook's first line promises the mouse can |
-| `touch.js` | plays it on a 390x844 phone with taps alone, in both orientations, measures what a finger can reach, and plays all twelve boards to a result |
+| `touch.js` | plays it on a 390x844 phone with taps alone, in both orientations, measures what a finger can reach, and plays all sixteen boards to a result |
 | `levels.js` | reads each map as a LEVEL: is every door a way through or a way out, is the floor one connected region, can every act be stood next to, is every legend glyph placed. It finds which acts are exits by probing — using one and seeing whether the map changed |
 | `errands.js` | walks every ticket in the game — deals it, follows every marker it puts down, takes the lift when the marker is downstairs, and requires the ticket to close |
 | `playday.js` | plays past the first ticket — follows markers, answers dialogue, leaves boards it cannot solve |
