@@ -372,9 +372,79 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
     if (wrong.length){ docDrift = wrong.length; console.log('\n' + wrong.join('\n')); }
     else console.log('\n  docs/DESIGN.md names the right narrowest and widest rungs.');
   }
+  /* ---- WHERE THE EVENING PUTS A REAL DAY -------------------------------
+     Everything above measures the PROMOTION bar. This measures the other
+     number the same two profiles decide: the band the review screen prints.
+
+     They are not the same question and were quietly using the same answer.
+     The evening bands a day on its position between the floor they fire you
+     under and the bar they promote you over -- but a promotion bar is cleared
+     by the best three-day window of a career, not by a day, and how far a
+     single flawless day sits from it varies enormously by rung. Measured, the
+     median flawless day sat at 1.26 of that span at intern and 0.64 at
+     Director: the same play reading EXCEEDS EXPECTATIONS in the pit and
+     DEVELOPING (HR WORD FOR STRUGGLING) in the corner office. Director was
+     worst because it is the one rung with no promotion bar to derive a
+     yardstick from, so the code invented one out of its firing floor.
+
+     REVIEW_TOP is the measured median instead, and this is what re-measures
+     it. It lives here rather than in the F4 suite because it needs sixteen
+     seeds a rung to be stable -- at five the procure median swung a whole
+     band -- and a flaky self test is worse than none. */
+  const bands = await page.evaluate(({ SEEDS }) => {
+    SAVE_SUSPEND = true; QUIET = true;
+    const med = a => { a = a.slice().sort((x,y) => x-y); return a[a.length >> 1]; };
+    const play = (seed, skill, rung, order, pick, days) => {
+      QUIET = true; rngInit(seed); runInit(seed);
+      if (run) run.rung = rung;
+      const o = [];
+      for (let d = 0; d < days && run && !run.pendingEnd; d++){
+        rollDay(); simDay(skill, { order, pick }); if (!run) break;
+        o.push(run.perfHist[run.perfHist.length - 1]);
+        if (run.pendingEnd) break;
+        run.rung = rung; startCommute(); run.rung = rung;
+      }
+      run = null; return o;
+    };
+    const out = [];
+    for (let rung = 0; rung < ROLES.length; rung++){
+      const F = [], S = [];
+      for (let s = 0; s < SEEDS; s++){
+        F.push(...play('EVE-F' + s, 1.0,  rung, 'pridead',  'best',  7).slice(1));
+        S.push(...play('EVE-S' + s, 0.35, rung, 'worstpri', 'worst', 7).slice(1));
+      }
+      if (!F.length || !S.length) continue;
+      const f = med(F), g = med(S);
+      out.push({ id: ROLES[rung].id, top: REVIEW_TOP[rung],
+                 fPerf: f, fAt: reviewAt(f, rung), fBand: reviewBand(f, rung),
+                 sAt: reviewAt(g, rung), sBand: reviewBand(g, rung), n: F.length });
+    }
+    return out;
+  }, { SEEDS: 16 });
+
+  console.log('\nWHAT THE EVENING SAYS ABOUT A REAL DAY\n');
+  console.log('  rung        REVIEW_TOP  flawless perf   span  band        sloppy span  band');
+  let eve = 0;
+  for (const r of bands){
+    /* a good day has to read as one and a bad day as one, or the words on the
+       screen mean something different at every desk */
+    const bad = r.fAt < 0.70 || r.sAt >= 0.70;
+    /* and REVIEW_TOP is a measurement, so it has to still match the thing it
+       measured -- 15% either way before it counts as drift */
+    const drift = Math.abs(r.fPerf - r.top) / Math.max(0.01, r.top) > 0.15;
+    if (bad || drift) eve++;
+    console.log('  ' + (bad || drift ? '! ' : '  ') + r.id.padEnd(10) +
+      r.top.toFixed(3).padStart(9) + r.fPerf.toFixed(3).padStart(14) +
+      r.fAt.toFixed(2).padStart(8) + '  ' + r.fBand.padEnd(8) +
+      r.sAt.toFixed(2).padStart(9) + '  ' + r.sBand +
+      (drift ? '   REVIEW_TOP drifted, re-record it' : ''));
+  }
+  console.log(eve ? '\n' + eve + ' RUNG(S) WHOSE EVENING MISREPORTS THE DAY'
+                  : '\n  a good day reads as one and a bad day as one, at every desk');
+
   console.log(bad ? '\n' + bad + ' RUNG(S) MISPLACED' : '\nALL BARS WELL PLACED');
   if (docDrift) console.log(docDrift + ' STALE CLAIM(S) IN docs/DESIGN.md');
   await browser.close();
-  process.exit(bad || docDrift ? 1 : 0);
+  process.exit(bad || docDrift || eve ? 1 : 0);
 })();
 function rows0(x){ return x; }

@@ -10572,10 +10572,35 @@ const REVIEW_LINES = {
    actually judged on is the bar in front of them, so that is what the evening
    is measured against now, and the same words mean the same thing all the way
    up the ladder. */
+/* WHAT A GOOD DAY ACTUALLY SCORES, AT EACH DESK, MEASURED.
+   The evening used to band itself against the PROMOTION bar, and a promotion
+   bar is not a day: it is a threshold cleared by the best three-day window of
+   a career, and how far a single flawless day sits from it varies enormously
+   by rung. Measured over 24 seeds x 8 days per rung with the flawless profile
+   (skill 1.0, priority-then-deadline triage, best option at every fork), the
+   median day landed at 1.26 of the old span at intern and 0.64 at Director --
+   so the same play read EXCEEDS EXPECTATIONS in the pit and DEVELOPING (HR
+   WORD FOR STRUGGLING) in the corner office, on the rung a whole career is
+   spent reaching. The Director's number was the worst of it for a second
+   reason: every rung 0-8 has firedBelow set at 0.45 x its own promotion bar,
+   so reconstructing the bar back out of the floor was exact for them, and
+   Director has no promotion bar and a floor somebody typed. The reconstruction
+   invented 0.31/0.45 = 0.689 -- a harder bar than T1's, on the rung with the
+   fewest and heaviest tickets in the game.
+
+   These are the measured medians themselves, so a flawless day sits at 1.00 at
+   every desk by construction and the words mean one thing everywhere, which is
+   the whole point of banding off a span. Re-measure them when the ladder or
+   the pricing moves; the self test below fails if they drift.
+
+              intern    t1     t2     t3   project procure relmgr solarch vcio  director */
+/* Director is the noisiest of the ten -- its careers are the shortest, so it
+   yields the fewest days per seed -- and three samples put it at 0.551, 0.567
+   and 0.631. This is the sixty-seed one. */
+const REVIEW_TOP = [0.833, 0.738, 0.656, 0.488, 0.490, 0.464, 0.474, 0.523, 0.500, 0.567];
 function reviewBar(rung){
+  if (REVIEW_TOP[rung] !== undefined) return REVIEW_TOP[rung];
   const G = ROLES[rung].gates;
-  /* the top rung has nothing to be promoted to, so its bar is reconstructed
-     from the floor by the ratio the whole ladder uses */
   return G.nextAt ? G.nextAt.perf : clamp(G.firedBelow / 0.45, 0, 1);
 }
 /* ...and the yardstick is the SPAN, not the bar itself. Banding straight off
@@ -10585,11 +10610,16 @@ function reviewBar(rung){
    told a player who had done everything right that the day got away from them
    around eleven.
 
-   What the evening is actually reporting is where today sat between the two
-   numbers that decide your career — the floor they fire you under and the bar
-   they promote you over. Measured across the ladder, a flawless day lands at
-   80-90% of that span and a sloppy one at 29-54%, which is what these
-   fractions are cut to. */
+   What the evening reports is where today sat between the floor they fire you
+   under and REVIEW_TOP — what a flawless day at this desk actually scores,
+   measured. It used to be the floor and the PROMOTION bar, and this paragraph
+   used to claim that put a flawless day at 80-90% of the span and a sloppy one
+   at 29-54%. Re-measured over 16 seeds x 7 days at every rung, it did neither:
+   flawless ran 0.69 to 1.22 and sloppy -0.20 to 0.09, so the same play read
+   EXCEEDS EXPECTATIONS at one desk and DEVELOPING (HR WORD FOR STRUGGLING) at
+   another. Against REVIEW_TOP it runs 0.86 to 1.33 and -0.25 to 0.07: a good
+   day reads as one and a bad day as one, everywhere. tools/bars.js re-measures
+   both and fails if either drifts. */
 const REVIEW_BANDS = { great: 1.00, good: 0.70, poor: 0.40 };
 /* 0 is the floor they fire you under, 1 is the bar they promote you over.
    Everything the evening says about the day is a reading of this one number,
