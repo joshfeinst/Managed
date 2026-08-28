@@ -76,14 +76,23 @@ body.panelopen #obj, body.screenopen #obj{display:none !important}
 /* Narrow enough and the words go before the numbers do: a coloured bar next to
    a ☕ still reads, a clipped one does not, and a HUD that wraps onto a second
    row prints itself across the panels the game draws between y26 and y240 —
-   which is the other way to lose it. It shrinks to stay on one line. */
-@media (max-width:760px){
-  #hud{font-size:clamp(8px,1.6vh,12px); gap:2px 6px; padding:4px 6px}
-  #hud .grp{gap:7px}
-  #hud .grp:last-child .lab{display:none}
-  #hud .meter{width:34px; height:7px}
-  #hud #h-pause, #hud #h-queue-btn{padding:3px 5px; letter-spacing:0; font-size:.62em}
-}
+   which is the other way to lose it. It shrinks to stay on one line.
+
+   IT USED TO ASK THE WINDOW, AND THE HUD DOES NOT LIVE IN THE WINDOW. It is
+   absolutely positioned inside #frame, and fit() sizes the frame from
+   min(w/480, h/270) — so a wide, short window (a laptop with the browser
+   chrome open, a phone on its side, a snapped half-screen) scales off the
+   HEIGHT and leaves a 480-wide frame inside a 1600-wide window. `max-width:
+   760px` never fired, the full-size row was squeezed into a third of the
+   space it was measured for, and it wrapped onto the second line this rule
+   exists to prevent. The measurement that matters is the frame's, so the
+   frame answers for it: frameNarrow(), called from fit(). */
+#frame.narrow #hud{font-size:clamp(8px,1.6vh,12px); gap:2px 6px; padding:4px 6px}
+#frame.narrow #hud .grp{gap:7px}
+#frame.narrow #hud .grp:last-child .lab{display:none}
+#frame.narrow #hud .meter{width:34px; height:7px}
+#frame.narrow #hud #h-pause, #frame.narrow #hud #h-queue-btn{
+  padding:3px 5px; letter-spacing:0; font-size:.62em}
 #hud .lab{color:var(--dim); font-size:.78em; letter-spacing:.08em; text-transform:uppercase}
 #hud b{font-weight:700}
 #hud .meter{display:inline-block; width:58px; height:8px; background:#252b33; border:1px solid #3a424d; vertical-align:middle}
@@ -15077,7 +15086,7 @@ function selfTest(runSim){
         {
           const fr = document.getElementById('frame'), hudBox = document.getElementById('hud');
           const keptW = fr.style.width, keptDisp = hudBox.style.display;
-          fr.style.width = '400px'; hudShow(true); hudUpdate();
+          fr.style.width = '400px'; frameNarrow(400); hudShow(true); hudUpdate();
           const box = hudBox.getBoundingClientRect(), lost = [];
           for (const el of hudBox.querySelectorAll('.grp > *')){
             const q = el.getBoundingClientRect();
@@ -15085,7 +15094,7 @@ function selfTest(runSim){
               lost.push((el.id || (el.textContent || '').trim()).slice(0, 12) +
                         (q.width ? ' +' + Math.round(q.right - box.right) + 'px' : ' (0 wide)'));
           }
-          fr.style.width = keptW; hudBox.style.display = keptDisp; hudUpdate();
+          fr.style.width = keptW; hudBox.style.display = keptDisp; fit(); hudUpdate();
           ok('ui: nothing in the HUD is cut off on a narrow window',
              !lost.length, lost.join(', '));
         }
@@ -23047,6 +23056,16 @@ function fit(){
   if (s >= 1) s = Math.floor(s * 4) / 4;
   view.style.width = Math.floor(VW*s)+'px';
   view.style.height = Math.floor(VH*s)+'px';
+  frameNarrow(Math.floor(VW*s));
+}
+/* The HUD's space is the frame, not the window — see the .narrow rules in the
+   stylesheet. One function so the CSS and the thing that triggers it cannot
+   drift, and so the suite can squeeze the frame and get the real behaviour
+   instead of a class it set itself. */
+const HUD_NARROW = 760;
+function frameNarrow(px){
+  const f = document.getElementById('frame');
+  if (f) f.classList.toggle('narrow', px < HUD_NARROW);
 }
 addEventListener('resize', fit);
 

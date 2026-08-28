@@ -249,6 +249,75 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
     else console.log('  small window ' + w + 'x' + h + ': ok');
     await p.evaluate(()=>{ clearToasts(); if (G.modal) closeModalToWork(); });
   }
+  /* WIDE AND SHORT, WHICH IS THE SHAPE THE HUD'S OWN RULE COULD NOT SEE. The
+     HUD shrinks to stay on one line, and the rule that shrinks it used to ask
+     the WINDOW's width. The HUD is not in the window — it is absolutely
+     positioned inside #frame, and fit() sizes the frame from
+     min(w/480, h/270). So a wide, short window scales off the HEIGHT: a
+     1600x430 browser gets a 720-wide frame, `max-width:760px` never fires
+     because the window is 1600, and the full-size row is squeezed into a
+     third of the space it was measured for and wraps onto a second line —
+     straight across the panels the game draws beneath it.
+
+     A laptop with the bookmarks bar and a terminal open is this shape. So is
+     a phone on its side, and so is a snapped half-screen. Every one of them
+     rendered a two-row HUD and no test in this repo was looking. */
+  for (const [w, h] of [[1600,430],[1440,400],[1100,380],[2000,500]]){
+    await p.setViewportSize({ width:w, height:h });
+    await p.waitForTimeout(350);
+    /* AND IN THE WIDEST STATE THE HUD CAN BE IN, not the narrowest. A fresh
+       intern with an empty queue reads INTERN / QUEUE 0 and fits anywhere;
+       the row that has to fit is a Solutions Architect in the afternoon with
+       a breaching double-digit queue, which is 690px of content. Measured on
+       the intern this whole check passed against the bug it exists for. */
+    await p.evaluate(()=>{
+      if (G.modal) closeModalToWork();
+      QUIET = true; SAVE_SUSPEND = true;
+      newRun('HUDWIDE');
+      run.rung = ROLES.reduce((best, r, i) => r.title.length > ROLES[best].title.length ? i : best, 0);
+      run.clock = 225; run.coffee = 4;
+      G.state = 'work'; show(null); fit(); hudShow(true); hudUpdate();
+      const q = document.getElementById('h-queue');
+      q.textContent = 'QUEUE 12 · 3 LATE'; q.classList.add('breach');
+    });
+    await p.waitForTimeout(250);
+    const r = await p.evaluate(() => {
+      const hud = document.getElementById('hud'), fr = document.getElementById('frame');
+      const box = hud.getBoundingClientRect(), fb = fr.getBoundingClientRect();
+      /* MEASURE THE GROUPS, NOT THE SPANS. #frame zeroes line-height so the
+         canvas has no inline gap under it, and the HUD's text spans inherit
+         that: every one of them reports height 0 while its text renders
+         perfectly well. A check that filtered on height was quietly measuring
+         two meters and two buttons. The .grp flex boxes have real heights. */
+      const grps = [...hud.querySelectorAll('.grp')].map(el => el.getBoundingClientRect());
+      const cy = grps.map(b => b.top + b.height / 2);
+      const spread = cy.length > 1 ? Math.max(...cy) - Math.min(...cy) : 0;
+      const items = [...hud.querySelectorAll('.grp > *')].map(el => el.getBoundingClientRect())
+                    .filter(b => b.width > 0);
+      const clipped = items.filter(b => b.right > box.right + .5 || b.left < box.left - .5).length;
+      return { frame: Math.round(fb.width), win: window.innerWidth,
+               narrow: fr.classList.contains('narrow'), groups: grps.length,
+               hud: Math.round(box.width), need: Math.round(grps.reduce((a,g)=>a+g.width, 0)),
+               role: (document.getElementById('h-role')||{}).textContent || '?',
+               spread: Math.round(spread), clipped, n: items.length };
+    });
+    /* Two groups justified apart across one row sit at the same height; a HUD
+       that has wrapped puts the second one a full row lower. */
+    const oneLine = r.groups === 2 && r.spread <= 2 && !r.clipped && r.n >= 8 && r.need <= r.hud;
+    if (!oneLine){ bad++;
+      console.log('  wide+short ' + w + 'x' + h + ': FAIL — ' +
+        (r.n < 8 ? 'only ' + r.n + ' HUD items measured — the check is not looking at the HUD'
+         : r.need > r.hud ? 'needs ' + r.need + 'px of a ' + r.hud + 'px row — ' +
+                            (r.need - r.hud) + 'px over'
+         : r.clipped ? r.clipped + ' item(s) clipped'
+         : 'the HUD has wrapped: its two groups are ' + r.spread + 'px apart vertically') +
+        ' at ' + r.role + ' in a ' + r.frame + 'px frame (window ' + r.win +
+        ', .narrow ' + r.narrow + ')'); }
+    else console.log('  wide+short ' + w + 'x' + h + ': ok — ' + r.role + ', ' + r.n +
+      ' items needing ' + r.need + ' of ' + r.hud + 'px, one line in a ' + r.frame +
+      'px frame (window ' + r.win + ')');
+  }
+
   await p.setViewportSize({ width:960, height:540 });
   await p.waitForTimeout(300);
 
