@@ -11257,8 +11257,19 @@ function abandonScore(g){
   }
   if (g.kind === 'quote'){
     /* nothing is committed until submit, so an abandoned quote is worth what
-       the board currently reads — not what it might have become */
-    if (g.total() > g.budget) return .15;
+       the board currently reads — not what it might have become.
+       BUT THE BOARD OPENS OVER BUDGET, BECAUSE THAT IS THE BOARD. Every line
+       starts at ADEQUATE and the whole job is cutting until it fits, so
+       `total > budget` is true on the very first frame, before the player has
+       touched anything -- and this returned .15 for it. Open THE SHORTFALL,
+       press Escape or F4 or alt-tab, and the ticket's board score was capped
+       at fifteen percent, permanently, for a board that finishes at
+       ninety-nine. Measured: ceiling .150 against a best finish of .988, the
+       only board in the twelve whose ceiling sat BELOW what it can be played
+       to. The rule this is reaching for is that you cannot walk out of a quote
+       you have made a mess of and come back clean, so it wants a quote you
+       have actually changed. */
+    if (g.touched && g.total() > g.budget) return .15;
     return clamp(g.rows.reduce((a, r) => a + quoteLineValue(r), 0) /
                  Math.max(.001, g.best), 0, 1);
   }
@@ -12445,7 +12456,7 @@ const GAMES = {
         }
         if (press.up)   this.cur = (this.cur + this.rows.length - 1) % this.rows.length;
         if (press.down) this.cur = (this.cur + 1) % this.rows.length;
-        const set = t => { this.rows[this.cur].pick = t; sfx('ui'); };
+        const set = t => { this.rows[this.cur].pick = t; this.touched = true; sfx('ui'); };
         if (press.one) set(0); if (press.two) set(1); if (press.three) set(2);
         let go = press.use;
         if (this.click){
@@ -21663,6 +21674,43 @@ function selfTest(runSim){
       const unreachable = Object.keys(FILLS).filter(k => !used[k]);
       ok('content: every fill pool is reachable by some token',
          !unreachable.length, unreachable.join(' ') + ' — nothing emits it');
+    }
+
+    /* NO BOARD'S ABANDON CEILING SITS BELOW WHAT THE BOARD CAN BE PLAYED TO.
+       Leaving a minigame caps the ticket's board score at abandonScore(), and
+       that is meant to be the best it could STILL finish at -- a ceiling. THE
+       SHORTFALL's returned .15 the moment it opened, because it tests whether
+       the quote is over budget and the board opens over budget on purpose:
+       every line starts at ADEQUATE and the job is cutting until it fits. So
+       pressing Escape, or F4, or alt-tabbing, before touching a thing capped
+       that ticket at fifteen percent for good, on a board that finishes at
+       ninety-nine. A ceiling below the floor is not a ceiling. */
+    {
+      const under = [];
+      for (const id in GAMES){
+        rngInit('CEIL-' + id); runInit('CEIL-' + id); rollDay();
+        openGame(id, 2, () => {});
+        if (!MG) continue;
+        MG.brief = null;
+        const ceiling = abandonScore(MG);
+        let best = 0;
+        for (let k = 0; k < 400 && MG && !MG.finished; k++){
+          clearInput();
+          const t = k % 6;
+          if      (t === 0) press.down  = true; else if (t === 1) press.use   = true;
+          else if (t === 2) press.one   = true; else if (t === 3) press.two   = true;
+          else if (t === 4) press.three = true; else              press.four  = true;
+          try { MG.step(1/30); } catch(_){}
+          clearInput();
+        }
+        if (MG && MG.finished && MG.score !== undefined) best = MG.score;
+        if (ceiling < best - 0.001)
+          under.push(id + ' caps at ' + ceiling.toFixed(2) + ' a board that plays to ' + best.toFixed(2));
+        closeModalToWork();
+      }
+      ok('boards: walking out of a board never caps it below what it can be played to',
+         !under.length, under.join(' · '));
+      run = null; G.state = 'title';
     }
 
     /* BOTH BONUS DECISIONS ON A TICKET COUNT. ticketOffers ran a single
