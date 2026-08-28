@@ -127,6 +127,31 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
           g.done[st.id] = 1;
         }
       },
+      /* --- the pit's four --- */
+      ask: {
+        /* one choice per item; the driver moves the counters the way step()
+           would, because these boards score on state and not on keystrokes */
+        perfect:  g => { g.right++; g.at++; },
+        careless: g => { if (g.rounds[g.at].opts[0].who === g.rounds[g.at].want) g.right++; g.at++; },
+        random:   g => { const j = Ri('game', 4);
+          if (g.rounds[g.at].opts[j].who === g.rounds[g.at].want) g.right++; g.at++; }
+      },
+      notes: {
+        perfect:  g => { g.lines.forEach(l => l.on = l.keep); g.commit(); },
+        careless: g => { g.lines.forEach(l => l.on = true); g.commit(); },
+        random:   g => { g.lines.forEach(l => l.on = Ri('game', 2) === 0); g.commit(); }
+      },
+      restore: {
+        perfect:  g => { g.cur = g.want ? g.pts.indexOf(g.want) : 0; g.pick(); },
+        /* the first one on the list, which is the newest and usually too new */
+        careless: g => { g.cur = 0; g.pick(); },
+        random:   g => { g.cur = Ri('game', g.pts.length); g.pick(); }
+      },
+      logs: {
+        perfect:  g => { g.cur = g.rows.findIndex(r => r.cause); g.mark(); },
+        careless: g => { g.cur = 0; g.mark(); },
+        random:   g => { g.cur = Ri('game', g.rows.length); g.mark(); }
+      },
       jargon: {
         perfect:  g => { g.right++; g.at++; },
         careless: g => { if (g.rounds[g.at].opts[0].ok) g.right++; g.at++; },   // always the first
@@ -272,6 +297,28 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
                  { n:'up the sheet backwards', f: g => {
                      const st = g.steps.slice().reverse().find(x => !g.done[x.id]); if (!st) return;
                      if (!g.canDo(st)) g.wrong++; g.done[st.id] = 1; } } ],
+      ask:     [ { n:'always keep it', f: g => {
+                     if (g.rounds[g.at].want === 'you') g.right++; g.at++; } },
+                 { n:'never keep it', f: g => {
+                     const r = g.rounds[g.at];
+                     if (r.opts[0].who === r.want && r.want !== 'you') g.right++; g.at++; } },
+                 { n:'always the first name', f: g => {
+                     if (g.rounds[g.at].opts[0].who === g.rounds[g.at].want) g.right++; g.at++; } } ],
+      notes:   [ { n:'keep everything', f: g => { g.lines.forEach(l => l.on = true); g.commit(); } },
+                 { n:'keep nothing',    f: g => { g.commit(); } },
+                 { n:'keep the longest half', f: g => {
+                     const byLen = g.lines.slice().sort((a,b) => b.t.length - a.t.length);
+                     byLen.slice(0, Math.ceil(g.lines.length/2)).forEach(l => l.on = true);
+                     g.commit(); } } ],
+      restore: [ { n:'always the newest', f: g => { g.cur = 0; g.pick(); } },
+                 { n:'always the oldest', f: g => { g.cur = g.pts.length - 1; g.pick(); } },
+                 { n:'always the newest COMPLETE one', f: g => {
+                     const i = g.pts.findIndex(x => x.ok); g.cur = i < 0 ? 0 : i; g.pick(); } } ],
+      logs:    [ { n:'always the top line',    f: g => { g.cur = 0; g.mark(); } },
+                 { n:'always the bottom line', f: g => { g.cur = g.rows.length - 1; g.mark(); } },
+                 { n:'always the longest line', f: g => {
+                     const L = g.rows.map(r => r.t.length);
+                     g.cur = L.indexOf(Math.max.apply(null, L)); g.mark(); } } ],
       jargon:  [ { n:'always the longest', f: g => {
                      const o = g.rounds[g.at].opts, L = o.map(x => x.t.length);
                      if (o[L.indexOf(Math.max.apply(null, L))].ok) g.right++; g.at++; } },

@@ -134,7 +134,11 @@ const OPEN_OPTS  = `const n = Object.keys(DIALOGUE).find(k => DIALOGUE[k].opts &
            and reported "no declared rects" — covered by name, tested by none */
         const n = (g.rows && g.rows.length) || (g.tasks && g.tasks.length) ||
                   (g.hand && g.hand.length) || (g.sites && g.sites.length) ||
-                  (g.qs && g.qs.length) || (g.steps && g.steps.length) || 0;
+                  (g.qs && g.qs.length) || (g.steps && g.steps.length) ||
+                  /* and the pit's four: the write-up's lines and the restore
+                     points, which reported "no declared rects" while declaring
+                     rowRect — the same hole `steps` fell down */
+                  (g.lines && g.lines.length) || (g.pts && g.pts.length) || 0;
         /* the rack's ports were two literals inside step() until the pointer
            invariant went in; now they are named, so they are testable */
         if (g.leftRect)  for (let i = 0; i < Math.min(g.n || 0, 3); i++)
@@ -181,7 +185,11 @@ const OPEN_OPTS  = `const n = Object.keys(DIALOGUE).find(k => DIALOGUE[k].opts &
       if (MG.brief) MG.brief = null;
       const rs = rects(MG);
       for (const [label, x, y, w, h] of rs){
-        if (!MG || MG.finished || MG.submitted || MG.applied) break;
+        /* EVERY WAY A BOARD SAYS IT IS OVER. `done` was missing, so WHICH
+           RESTORE POINT — one decision, taken on the first click, and then a
+           board that correctly ignores everything after it — reported its
+           remaining rows dead for doing exactly the right thing. */
+        if (!MG || MG.finished || MG.submitted || MG.applied || MG.done) break;
         clearInput(); MG.step(1/30);
         /* A click that lands on what is already selected changes nothing and
            is perfectly alive, so park the cursor somewhere else first. */

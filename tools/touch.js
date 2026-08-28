@@ -248,7 +248,13 @@ const MIN_TAP = 44;
         const n = (g.rows && g.rows.length) || (g.tasks && g.tasks.length) ||
                   (g.hand && g.hand.length) || (g.sites && g.sites.length) ||
                   (g.qs && g.qs.length) || (g.steps && g.steps.length) ||
-                  (g.items && g.items.length) || 0;
+                  (g.items && g.items.length) ||
+                  /* the pit's four. This list is written out in three places
+                     — here, tools/keys.js, and the pointer invariant in the
+                     suite — and all three had drifted apart before: a board
+                     whose rows live under a name none of them knows declares
+                     rowRect and gets tested by nobody. */
+                  (g.lines && g.lines.length) || (g.pts && g.pts.length) || 0;
         const pick = [], act = [], btn = [];
         if (g.leftRect) for (let i = 0; i < (g.n||0); i++) pick.push(g.leftRect(i));
         if (g.rowRect)  for (let i = 0; i < n; i++) pick.push(g.rowRect(i));

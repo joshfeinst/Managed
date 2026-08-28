@@ -2744,6 +2744,23 @@ const DIALOGUE = {
            {t:'Send flowers and wait to meet the replacement', fx:{time:5, rep:1, stress:5}},
            {t:'Ask them to introduce you to the successor personally', fx:{time:10, rep:4, bonus:1, stress:2}} ] },
   /* ------------------------- PROCUREMENT (rung 5) -------------------------- */
+  /* One more of Procurement's own, and one more of the Relationship Manager's,
+     because a signature board has to PEAK on the rung it belongs to and both
+     of these were tied with the rung above. Adding the rung's own work is the
+     honest way to fix that; taking the neighbours' away is the other one, and
+     it makes a smaller game. */
+  'q.renew.a': { who:'mackenzie', t:['Four renewals land in the same fortnight and every one of them auto-renews if nobody signs anything.',
+    'Two are worth having. One is worth arguing about. One is for a thing we turned off in 2021 and have paid for since.'] },
+  'q.renew.b': { who:'sys', t:['Whatever you cut, somebody finds out in March and it is a conversation then rather than now.'],
+    opts:[ {t:'Cut the dead one, renegotiate the arguable one, sign the two', fx:{time:13, rep:5, bonus:1, stress:5}},
+           {t:'Sign all four and diarise a proper review before the next round', fx:{time:7, rep:2, bonus:1, stress:3}},
+           {t:'Let all four auto-renew. It is the same money as last year.', fx:{time:2, rep:-6, stress:9}} ] },
+  'r.threat.a': { who:'derek', t:['They have not said the word tender. They have said "we are looking at our options", which is the word tender.',
+    'They are not unhappy with the work. They are unhappy with the last four months of the work, which is a different thing and worse.'] },
+  'r.threat.b': { who:'sys', t:['You have three moves before the meeting and they have about nine grievances.'],
+    opts:[ {t:'Name the four months out loud and put a date on each fix', fx:{time:14, rep:6, bonus:1, stress:7}},
+           {t:'Bring the numbers and let them lead the conversation', fx:{time:9, rep:3, bonus:1, stress:5}},
+           {t:'Take them to lunch and do not mention any of it', fx:{time:5, rep:-6, stress:10}} ] },
   'q.three.a': { who:'mackenzie', t:['Policy says three comparable quotes over eight thousand. We have one quote and two suppliers who have read the email.',
     'The one quote is from the supplier Derek plays golf with.'] },
   'q.three.b': { who:'sys', t:['You can chase, you can go single-source with a written justification, or you can build two quotes that were never going to win.'],
@@ -3846,6 +3863,51 @@ const DIALOGUE = {
   't.shadow.a':{ who:'raj', t:['Headset on. Rule one: they are never lying, they are just wrong. Rule two: mute button. Cherish it.'] },
   't.shadow.b':{ who:'raj', t:['Hear that? They said "nothing was changed". Drink. I mean — note that down.'] },
   't.tags.a': { who:'sys', t:['Fourteen laptops. Fourteen asset tags. Tag 7 goes on slightly crooked and it will haunt you.'] },
+
+  /* ---- the pit's four new boards: intern, T1, T2, T3 ---- */
+  't.sort.a': { who:'linda', t:['This is the pile. It is the pile because everything that arrives without a name on it arrives on the newest desk, which is yours.',
+    'Most of it is not yours. Some of it is. Nobody is going to tell you which is which and that is, genuinely, the job this month.'] },
+  't.sort.b': { who:'sys', t:['The ones you sent on will be somebody else\'s by lunchtime. The ones you kept are still yours.'],
+    opts:[ {t:'Write down who took what, so the next pile is faster', fx:{time:8, rep:4, bonus:1, stress:2}},
+           {t:'Get through it and move on', fx:{time:4, rep:1}},
+           {t:'Send the whole pile to Linda and let her sort it', fx:{time:2, rep:-5, stress:7}} ] },
+  't.sort2.a': { who:'raj', t:['Somebody has forwarded me a mailbox problem and an aircon fault this week. I do neither of those things.',
+    'It is not that I mind. It is that they sat in my inbox for two days being nobody\'s.'] },
+  't.pile.a': { who:'derek', t:['There is a stack of things on your desk that came in overnight and none of them have been triaged.',
+    'I am not going to look at them. I am going to ask you at eleven what is in them.'] },
+
+  't.note.a': { who:'sys', t:['Call\'s over. Four minutes, which is good, and now the part that actually takes the time.',
+    'Whoever picks this up tomorrow has what you type and nothing else. Nobody is ringing back to ask.'] },
+  't.note.b': { who:'kayla', t:['I have opened eleven of your tickets this week and I could work six of them.'],
+    opts:[ {t:'Go back through the other five and put the detail in', fx:{time:11, rep:5, bonus:1, stress:3}},
+           {t:'Agree a shape for the write-up and use it from now on', fx:{time:7, rep:4, bonus:1, stress:2}},
+           {t:'Say the detail is in the call recording', fx:{time:2, rep:-5, stress:8}} ] },
+  't.note2.a': { who:'sys', t:['Second-line have bounced this one back. The note on it reads, in full, "user says it is broken".',
+    'You wrote that. It was a Tuesday and there were nine in the queue and it was true.'] },
+  't.note3.a': { who:'linda', t:['The client has asked why they explained the same fault three times to three people.',
+    'They did. It is in the ticket three times, in three different sets of words, because nobody wrote it down properly the first time.'] },
+
+  't.rest.a': { who:'brenda', t:['They want it back. They always want it back. The question is never whether, it is from when.',
+    'Read what the jobs actually did, not what the email said they did. The email says SUCCESS every morning.'] },
+  't.rest.b': { who:'sys', t:['It is back. Somebody is now working out what they did between the restore point and now.'],
+    opts:[ {t:'Tell them exactly what window was lost, before they find out', fx:{time:9, rep:5, bonus:1, stress:3}},
+           {t:'Restore it and write the incident up properly', fx:{time:7, rep:3, bonus:1, stress:2}},
+           {t:'Say it is all back and hope the gap is nobody\'s', fx:{time:2, rep:-6, stress:9}} ] },
+  't.rest2.a': { who:'sys', t:['The backup job has been green in the report and empty on the disk since March.',
+    'Nobody looked, because it was green. That is what green is for.'] },
+  't.rest3.a': { who:'derek', t:['{client} deleted a folder and would like it back as it was on Tuesday. Not Monday. Tuesday.',
+    'They are very clear about Tuesday and cannot tell you what time on Tuesday.'] },
+
+  't.log.a': { who:'kayla', t:['Three tickets, three symptoms, three people who are each certain theirs is the real one.',
+    'They are all the same thing. I cannot see which, which is why it is on your desk and not mine.'] },
+  't.log.b': { who:'sys', t:['One line. Everything else on the board happened because of it.'],
+    opts:[ {t:'Write the cause up so the next person finds it in a minute', fx:{time:10, rep:5, bonus:1, stress:3}},
+           {t:'Fix it and close all three tickets against the one cause', fx:{time:7, rep:4, bonus:1, stress:2}},
+           {t:'Fix it and close the three separately. It is three tickets.', fx:{time:4, rep:-3, stress:6}} ] },
+  't.log2.a': { who:'raj', t:['The post-incident review is Thursday and the timeline currently starts at the moment somebody noticed.',
+    'That is forty minutes after it started. Everybody in that room will read the forty minutes as the outage.'] },
+  't.log3.a': { who:'sys', t:['Second-line escalated this at 09:40 with the words "the network is down". The network is not down.',
+    'Something under it is, and every alert since has been that thing, wearing a different hat.'] },
   't.fax.a':  { who:'client', t:['{client}: THE FAX MACHINE IS DOWN. Their entire order flow is faxes. In this economy.'] },
   't.fax.b':  { who:'sys', t:['You nurse the fax machine back to life. It is older than you. It will outlive everyone.'] },
   't.kid.a':  { who:'client', t:['The CEO\'s kid\'s laptop is here. It has 47 toolbars and a browser that opens to a casino.'],
@@ -4973,7 +5035,7 @@ const TICKETS = {
      can sign, and the harder it gets to admit which part of it was nonsense.
      These are the tickets you are allowed to let burn. Finding out that you
      are allowed is the lesson of the rung. */
-  'the-board-pack': { tiers:[8,9], weight:4, slaMult:1.8, pri:4, stress:11,
+  'the-board-pack': { tiers:[8,8], weight:4, slaMult:1.8, pri:4, stress:11,
     title:'The board pack is due and three of the questions have no answer',
     steps:[{say:'v.pack.a'},{game:'paper',diff:2},{choice:'v.pack.b'}] },
   'the-number-you-gave-in-may': { tiers:[8,9], weight:3, slaMult:2.0, pri:3, stress:10,
@@ -5000,19 +5062,22 @@ const TICKETS = {
   'diagram-of-a-dead-system': { tiers:[7,9], weight:3, slaMult:2.5, pri:1, stress:3,
     title:'Somebody needs a diagram of a system decommissioned in 2022',
     steps:[{say:'k.dead.a'},{choice:'k.dead.b'}] },
-  'as-built-is-a-rumour': { tiers:[7,9], weight:4, slaMult:2.0, pri:3, stress:9,
+  'as-built-is-a-rumour': { tiers:[7,8], weight:4, slaMult:2.0, pri:3, stress:9,
     title:'{client} want the as-built diagram. There is a diagram.',
     steps:[{say:'a.built.a'},{game:'diagram',diff:2},{choice:'a.built.b'}] },
-  'resilience-on-paper': { tiers:[7,9], weight:3, slaMult:1.9, pri:4, stress:10,
+  'resilience-on-paper': { tiers:[7,8], weight:3, slaMult:1.9, pri:4, stress:10,
     title:'The design says resilient. Nobody has ever pulled a cable to check.',
     steps:[{say:'a.resil.a'},{game:'diagram',diff:3},{choice:'a.resil.b'}] },
-  'the-quarterly-review': { tiers:[6,9], weight:4, slaMult:2.1, pri:3, stress:9,
+  'looking-at-our-options': { tiers:[6,6], weight:4, slaMult:2.0, pri:4, stress:10, from:'derek',
+    title:'{client} are "looking at our options", which is the word tender',
+    steps:[{say:'r.threat.a'},{game:'keep',diff:3},{choice:'r.threat.b'}] },
+  'the-quarterly-review': { tiers:[6,7], weight:4, slaMult:2.1, pri:3, stress:9,
     title:'{client}\'s QBR is at two and the numbers are the numbers',
     steps:[{say:'r.qbr2.a'},{game:'keep',diff:2},{choice:'r.qbr2.b'}] },
-  'both-sides-are-right': { tiers:[6,9], weight:3, slaMult:2.2, pri:2, stress:9,
+  'both-sides-are-right': { tiers:[6,7], weight:3, slaMult:2.2, pri:2, stress:9,
     title:'Your engineer and their finance director are both right',
     steps:[{say:'r.both.a'},{game:'keep',diff:3},{choice:'r.both.b'}] },
-  'the-budget-round': { tiers:[5,9], weight:4, slaMult:2.1, pri:3, stress:8,
+  'the-budget-round': { tiers:[5,7], weight:4, slaMult:2.1, pri:3, stress:8,
     title:'Next year\'s IT budget, and it is smaller than this year\'s',
     steps:[{say:'q.budg.a'},{game:'quote',diff:2},{choice:'q.budg.b'}] },
   'expenses-rejected': { tiers:[5,9], weight:4, slaMult:2.4, pri:1, stress:3,
@@ -5595,7 +5660,10 @@ const TICKETS = {
      written for it before anyone checked, with the same premise in different
      words and a colliding scene id, so the new scene was dead the moment it
      was saved and both tickets showed this one. */
-  'quote-three-suppliers': { tiers:[5,8], weight:4, slaMult:1.8, pri:4, stress:8,
+  'four-renewals-one-fortnight': { tiers:[5,5], weight:4, slaMult:2.2, pri:3, stress:8, from:'mackenzie',
+    title:'Four renewals in a fortnight, and all four auto-renew',
+    steps:[{say:'q.renew.a'},{game:'quote',diff:2},{choice:'q.renew.b'}] },
+  'quote-three-suppliers': { tiers:[5,7], weight:4, slaMult:1.8, pri:4, stress:8,
     title:'Three comparable quotes needed. Two suppliers have stopped replying.',
     steps:[{say:'q.three.a'},{game:'quote',diff:1},{choice:'q.three.b'}] },
   'lead-time-fourteen-weeks': { tiers:[5,8], weight:4, slaMult:1.6, pri:4, stress:9,
@@ -5873,11 +5941,11 @@ const TICKETS = {
     title:'The printer that serves Legal has been "slow" since the move',
     steps:[{say:'big.legal.a'},{goto:'PRINTER'},{choice:'big.legal.b'},
            {goto:'SERVERS'},{game:'cable',diff:2},{choice:'big.legal.c'}] },
-  'dr-evidence-for-the-auditor': { tiers:[5,8], weight:3, slaMult:1.7, pri:4, stress:11,
+  'dr-evidence-for-the-auditor': { tiers:[5,7], weight:3, slaMult:1.7, pri:4, stress:11,
     title:'Auditor wants DR test evidence. The last test was 2021.',
     steps:[{say:'big.dr.a'},{goto:'SERVERS'},{game:'keep',diff:3},{choice:'big.dr.b'},
            {goto:'CONF'},{choice:'big.dr.c'}] },
-  'office-move-fifty-desks': { tiers:[5,8], weight:4, slaMult:2.2, pri:1, stress:8,
+  'office-move-fifty-desks': { tiers:[5,7], weight:4, slaMult:2.2, pri:1, stress:8,
     title:'{client} is moving offices in three weeks and would like a plan',
     steps:[{say:'big.move.a'},{goto:'CONF'},{choice:'big.move.b'},
            {goto:'SHELF'},{game:'diagram',diff:2},{choice:'big.move.c'}] },
@@ -5926,6 +5994,55 @@ const TICKETS = {
   'asset-tags': { tiers:[0,0], weight:2, slaMult:3.2, pri:1, stress:2, from:'linda',
     title:'Asset-tag 14 new laptops',
     steps:[{goto:'SHELF'},{say:'t.tags.a'}] },
+
+  /* ================= THE FOUR RUNGS OF THE PIT, EACH WITH A JOB ============
+     Nine tickets, four boards, and the point of every one of them is that the
+     rung above does not do this. WHO ACTUALLY OWNS THIS is the intern's — the
+     one skill you have before you have any others. THE TICKET YOU LEAVE
+     BEHIND is T1's, because a T1's real output is not the call. WHICH RESTORE
+     POINT is T2's, the first rung that puts something back instead of passing
+     it on. WHAT ACTUALLY HAPPENED is T3's, the rung the others escalate TO.
+     Tiers are tight on purpose: a board that runs the length of the ladder is
+     not a signature, and the pit had five of those and nothing else. */
+  'the-pile-on-your-desk': { tiers:[0,1], weight:4, slaMult:2.4, pri:2, stress:4, from:'linda',
+    title:'Everything that arrived overnight without a name on it',
+    steps:[{say:'t.sort.a'},{game:'ask',diff:1},{choice:'t.sort.b'}] },
+  'raj-got-a-mailbox-ticket': { tiers:[0,0], weight:3, slaMult:2.4, pri:2, stress:5, from:'raj',
+    title:'RAJ has been sent two things that are not RAJ\'s',
+    steps:[{say:'t.sort2.a'},{goto:'n2'},{game:'ask',diff:2},{say:'t.sort.b'}] },
+  'triage-before-eleven': { tiers:[0,0], weight:3, slaMult:1.9, pri:3, stress:6, from:'derek',
+    title:'DEREK will ask at eleven what is in the overnight stack',
+    steps:[{say:'t.pile.a'},{game:'ask',diff:2},{choice:'t.sort.b'}] },
+
+  'write-it-up-properly': { tiers:[1,2], weight:4, slaMult:2.4, pri:2, stress:5,
+    title:'{User} rang about a file. Now write the ticket.',
+    steps:[{say:'t.note.a'},{game:'notes',diff:1},{choice:'t.note.b'}] },
+  'bounced-back-from-second-line': { tiers:[1,1], weight:3, slaMult:1.9, pri:3, stress:7, from:'kayla',
+    title:'Second-line have bounced five of yours back unworkable',
+    steps:[{say:'t.note2.a'},{game:'notes',diff:2},{choice:'t.note.b'}] },
+  'explained-it-three-times': { tiers:[1,3], weight:2, slaMult:1.9, pri:3, stress:8, from:'linda',
+    title:'{client} has explained the same fault to three people',
+    steps:[{say:'t.note3.a'},{game:'notes',diff:2},{choice:'t.note.b'}] },
+
+  'they-want-tuesday-back': { tiers:[2,3], weight:4, slaMult:1.9, pri:3, stress:7, from:'derek',
+    title:'{client} would like the folder back as it was on Tuesday',
+    steps:[{say:'t.rest3.a'},{game:'restore',diff:1},{choice:'t.rest.b'}] },
+  'green-since-march': { tiers:[2,2], weight:3, slaMult:2.4, pri:3, stress:8, from:'brenda',
+    title:'The nightly job has been green and empty since March',
+    steps:[{say:'t.rest2.a'},{goto:'SERVERS'},{game:'restore',diff:2},{choice:'t.rest.b'}] },
+  'restore-from-when': { tiers:[2,4], weight:3, slaMult:1.9, pri:4, stress:9, from:'brenda',
+    title:'{client} need it back and cannot say from when',
+    steps:[{say:'t.rest.a'},{game:'restore',diff:2},{choice:'t.rest.b'}] },
+
+  'three-tickets-one-cause': { tiers:[3,4], weight:4, slaMult:1.9, pri:4, stress:9, from:'kayla',
+    title:'Three tickets this morning, and they are one ticket',
+    steps:[{say:'t.log.a'},{game:'logs',diff:1},{choice:'t.log.b'}] },
+  'the-timeline-starts-too-late': { tiers:[3,3], weight:3, slaMult:2.4, pri:2, stress:7, from:'raj',
+    title:'Thursday\'s review has a timeline that starts 40 minutes late',
+    steps:[{say:'t.log2.a'},{game:'logs',diff:2},{choice:'t.log.b'}] },
+  'the-network-is-not-down': { tiers:[3,5], weight:3, slaMult:1.5, pri:4, stress:10,
+    title:'Escalated as "the network is down". The network is not down.',
+    steps:[{say:'t.log3.a'},{goto:'SERVERS'},{game:'logs',diff:2},{choice:'t.log.b'}] },
   'fax-machine': { tiers:[0,8], weight:2, slaMult:1.9, pri:3, stress:7,
     title:'{client}: THE FAX MACHINE (yes, still)',
     steps:[{say:'t.fax.a'},{game:'cable',diff:2},{say:'t.fax.b'}] },
@@ -6086,7 +6203,7 @@ const TICKETS = {
   'site-nobody-knew-you-were-coming': { tiers:[4,8], weight:1, slaMult:2.4, pri:2, stress:6,
     title:'You are expected at {client} at eleven. They are not expecting you.',
     steps:[{say:'site.desk.a'},{goto:'SITEDESK'},{choice:'site.desk.b'}] },
-  'site-have-a-look-at-the-wifi': { tiers:[4,9], weight:1, slaMult:2.4, pri:3, stress:8,
+  'site-have-a-look-at-the-wifi': { tiers:[4,7], weight:1, slaMult:2.4, pri:3, stress:8,
     title:'{client} would like somebody to "have a look at the wifi"',
     steps:[{say:'site.floor.a'},{goto:'SITEFLOOR'},{game:'diagram',diff:2},{choice:'site.floor.b'}] },
   'site-eleven-laptops-or-four': { tiers:[4,8], weight:1, slaMult:2.4, pri:3, stress:6,
@@ -11375,6 +11492,29 @@ function quoteLineValue(r){
 function abandonScore(g){
   if (!g) return 0;
   if (g.kind === 'cable') return cableScore(g);
+  if (g.kind === 'ask'){
+    /* the best it could still finish at: everything left routed right. The
+       ones already sent to the wrong desk stay sent. */
+    const left = g.rounds.length - g.at;
+    return g.rounds.length ? (g.right + left) / g.rounds.length : 1;
+  }
+  if (g.kind === 'notes'){
+    /* nothing is committed until the ticket is saved, so an abandoned one is
+       worth what is on it — with the lines not yet marked counted as marks
+       that could still be made, and the padding already there standing */
+    const kept = g.lines.filter(l => l.on);
+    const padded = Math.max(0, kept.filter(l => !l.keep).length - (g.forgive || 0));
+    return clamp(1 - padded * g.cost, 0, 1);
+  }
+  if (g.kind === 'restore'){
+    /* one decision, and until it is made the board is still worth full marks:
+       walking away before choosing has cost nothing but the minutes */
+    return g.done ? (g.score ?? 0) : 1;
+  }
+  if (g.kind === 'logs'){
+    /* the same, less whatever the opens already spent are worth */
+    return g.done ? (g.score ?? 0) : clamp(1 - g.used * .07, .6, 1);
+  }
   if (g.kind === 'pw'){
     const left = g.items.length - g.at;
     return g.items.length ? (g.right + left) / g.items.length : 1;
@@ -11661,6 +11801,214 @@ const WK_TASKS = [
   { t:'Write the rollback and mean it',  s:'SERVERS',    w:1 },
   { t:'Answer the phone on Sunday',      s:'THE CLIENT', w:1 }
 ];
+/* ================= THE FOUR BOARDS THE HELPDESK NEVER HAD =================
+   Rungs four to nine each got a board written for the job. The bottom four
+   shared five boards between them and were dealt them in almost the same
+   proportions, so an intern's afternoon and a T3's were the same afternoon in
+   a different chair — measured, the pit's whole board vocabulary was cable,
+   passwords, jargon and the checklist, and the only thing that changed on the
+   way up was how many of each. The rung you are on is the thing this game is
+   about, and for four of the ten rungs it made no difference to the work.
+
+   One each, and each one is the thing that rung is actually FOR.
+   ========================================================================= */
+
+/* ---- WHO ACTUALLY OWNS THIS (intern) ----
+   The one skill an intern has that nobody teaches: not knowing the answer,
+   but knowing whose answer it is. Everything lands on the newest desk first
+   and most of it is not yours. The trap is the fourth option — some of it IS
+   yours, and an intern who routes everything away has learned the wrong
+   lesson and is about to be found out.
+   `who` is a person in NPCS (so the directory is the office you walk past)
+   and 'you' means it is genuinely yours. */
+const ASK_DIR = {
+  raj:    'networks, switches, anything with a cable in it',
+  brenda: 'servers, backups, the things that run overnight',
+  kayla:  'accounts, licences, who is allowed what',
+  derek:  'clients, money, promises somebody made',
+  marcus: 'the building — doors, lifts, aircon, the riser',
+  linda:  'people, escalations, anything a client has shouted about'
+};
+const ASK_ITEMS = [
+  { t:'A switch port in the comms room is dark and the desk on it is dark too.', who:'raj' },
+  { t:'Last night’s backup job emailed SUCCESS and copied nothing.', who:'brenda' },
+  { t:'Somebody who left in June can still open the finance folder.', who:'kayla' },
+  { t:'The client says they were promised the new laptops by Friday.', who:'derek' },
+  { t:'The server room is at twenty-nine degrees and climbing.', who:'marcus' },
+  { t:'A client has rung twice this morning and used the word "unacceptable".', who:'linda' },
+  { t:'The wifi drops every time the lift moves. It has always done this.', who:'raj' },
+  { t:'A mailbox is full and the person is on holiday for another week.', who:'kayla' },
+  { t:'The overnight sync has been failing since March. Nobody opened the alert.', who:'brenda' },
+  { t:'The invoice has a line on it for a service we turned off in January.', who:'derek' },
+  { t:'The door on the second floor stopped taking anybody’s badge at nine.', who:'marcus' },
+  { t:'Somebody wants to know why their ticket has been open eleven days.', who:'linda' },
+  /* the ones that are actually yours, which is the point of the board */
+  { t:'A monitor is off. The user has checked "everything except the plug".', who:'you' },
+  { t:'A new starter needs the standard software on a machine that is already built.', who:'you' },
+  { t:'Somebody wants their printer set as the default. Again.', who:'you' },
+  { t:'The meeting room needs a laptop and an adaptor in it before eleven.', who:'you' },
+  { t:'A password reset for a user who is stood in front of you with their pass.', who:'you' },
+  { t:'The label printer is out of labels and the labels are in the cupboard.', who:'you' }
+];
+
+/* ---- THE TICKET YOU LEAVE BEHIND (T1) ----
+   The call is over in four minutes and the ticket outlives it by a week. A T1
+   is measured on calls closed and remembered for the ones they wrote up
+   badly: whoever picks this up has only what you typed, and half of what the
+   caller said was them thinking out loud.
+   `keep` is a fact the next person cannot work without. Everything else is
+   true, was said, and belongs nowhere. */
+const NOTE_CALLS = [
+  { sub:'Excel will not open a file on the share',
+    lines:[
+      { t:'Error: locked for editing by another user.', keep:true },
+      { t:'It started this morning; it was fine yesterday afternoon.', keep:true },
+      { t:'File: BUDGET FINAL v7 (2) FINAL.xlsx', keep:true },
+      { t:'Two other people on her floor have the same thing.', keep:true },
+      { t:'She has a lot on this week, there is a board thing on Thursday, and she really does not need this on top of it.' },
+      { t:'She thinks it might be because of the update, or possibly the other update, the one before that one.' },
+      { t:'Her son does something with computers.' }
+    ] },
+  { sub:'Laptop is slow',
+    lines:[
+      { t:'It takes eleven minutes from the lid opening to the desktop.', keep:true },
+      { t:'Asset tag DT-0442, the Dell with the sticker.', keep:true },
+      { t:'It got worse after the new security software went on.', keep:true },
+      { t:'It has never been fast, if he is honest, not since the day he got it, and he did say so at the time.' },
+      { t:'He has switched it off and on. He has switched it off and on twice.', keep:true },
+      { t:'He would like a Mac. His brother-in-law has one and has never had a single problem with it.' },
+      { t:'The one in the other office is much better.' }
+    ] },
+  { sub:'Cannot get on the wifi in the meeting room',
+    lines:[
+      { t:'Connects, then "no internet" after a minute.', keep:true },
+      { t:'Only in room 3. Room 2 is fine, and so is her desk.', keep:true },
+      { t:'It is an iPhone, and her laptop does it too.', keep:true },
+      { t:'It has been like this since they moved the desks.', keep:true },
+      { t:'She has been meaning to mention it for weeks and kept forgetting because it only matters in there.' },
+      { t:'The last IT company said it was the walls, which she has never entirely believed, because the walls have not moved.' },
+      { t:'She has a meeting in there at two.' }
+    ] },
+  { sub:'Emails going to the wrong place',
+    lines:[
+      { t:'Supplier mail is landing in Junk.', keep:true },
+      { t:'It began on Tuesday, which is when they changed their address.', keep:true },
+      { t:'He has already marked six of them as not junk and they keep going.', keep:true },
+      { t:'The sender is accounts@ at the new domain, not the old one.', keep:true },
+      { t:'He gets a lot of email, several hundred a day, and he is not going to be able to go through it all.' },
+      { t:'He does not really use folders, he just searches for things, which has always worked fine until now.' },
+      { t:'Somebody told him Outlook does this.' }
+    ] },
+  { sub:'The shared printer has stopped',
+    lines:[
+      { t:'OFFLINE on every machine on that floor.', keep:true },
+      { t:'The panel on the printer itself says READY.', keep:true },
+      { t:'It stopped some time over the weekend.', keep:true },
+      { t:'It is the big one by the kitchen, not the one in the corner.', keep:true },
+      { t:'Somebody has put a note on it. The note says PLEASE, underlined twice, and is not signed.' },
+      { t:'They have all been walking round to the corner one, which is slow, and there is now a queue at it.' },
+      { t:'It is always this printer.' }
+    ] }
+];
+
+/* ---- WHICH RESTORE POINT (T2) ----
+   The first rung that puts something BACK rather than passing it on. Every
+   restore is the same two questions in a different order: how far back do you
+   have to go, and what does going that far cost the people who have worked
+   since. The right point is the latest one that is both COMPLETE and before
+   the thing went wrong — and the nightly job that has been emailing SUCCESS
+   while copying nothing is in every one of these lists, because it is in
+   every one of these lists in real life.
+   Points are generated: `bad` is when it broke, and a point qualifies if it
+   is complete and at or before that. */
+const RESTORE_JOBS = [
+  { what:'the finance share',   unit:'hours of everybody’s work',
+    broke:'somebody ran a tidy-up script against the live folder' },
+  { what:'the CRM database',    unit:'hours of calls logged',
+    broke:'an import ran twice and doubled every contact' },
+  { what:'a leaver’s mailbox', unit:'hours',
+    broke:'the account was deleted before the export finished' },
+  { what:'the file server',     unit:'hours of everybody’s work',
+    broke:'the array lost two disks inside an hour' },
+  { what:'the intranet',        unit:'hours of edits',
+    broke:'an update rolled the site back to the template' }
+];
+const RESTORE_FLAWS = [
+  { tag:'INCOMPLETE',   note:'ran, then stopped at 40%' },
+  { tag:'VERIFY FAILED',note:'wrote, could not read it back' },
+  { tag:'EMPTY',        note:'SUCCESS in the email, 0 bytes on the disk' },
+  { tag:'STILL RUNNING',note:'started last night and has not finished' }
+];
+
+/* ---- WHAT ACTUALLY HAPPENED (T3) ----
+   The rung the others escalate TO. By the time this reaches you, three people
+   have reported three different symptoms and all three are downstream of one
+   line in one log. Mark the CAUSE — the first thing that is not a consequence
+   of something above it.
+   You get a few OPENs to read a line's detail, and fewer than there are lines,
+   which is the job: you never get to read everything before somebody asks. */
+const LOG_INCIDENTS = [
+  { title:'Nobody can log in, and the ones already in are fine',
+    cause:{ t:'ad01  ntp: clock stepped 6m14s backward', why:'Kerberos will not issue a ticket across a five-minute skew. Everything under this line is that.' },
+    after:[
+      { t:'ad01  kdc: pre-authentication failed (clock skew)', why:'The skew, reported as a login failure.' },
+      { t:'vpn   auth: 41 failures in 90 seconds', why:'Everyone reconnecting into the same broken clock.' },
+      { t:'sql01 login failed for user APP\\svc-crm', why:'The service account, failing the same way.' },
+      { t:'web01 500 - could not open a session', why:'The site, failing because SQL did.' }
+    ],
+    before:[
+      { t:'ad01  backup: nightly job completed', why:'It completed. It has completed every night for a year.' },
+      { t:'sw03  port gi1/0/14 up', why:'A desk came back after somebody kicked the cable. Unrelated.' }
+    ] },
+  { title:'The website is up, the orders are not arriving',
+    cause:{ t:'fw01  policy 12 changed: ANY->DB now DENY', why:'Somebody tightened a rule at 14:02. Everything under this is the application being told no.' },
+    after:[
+      { t:'web01 db connect timeout after 30s', why:'The site, meeting the new rule.' },
+      { t:'app02 queue depth 8,400 and climbing', why:'Orders piling up behind a database it cannot reach.' },
+      { t:'mon   ALERT: orders/min = 0', why:'The monitoring noticing, last, as usual.' },
+      { t:'web01 worker pool exhausted', why:'Every worker stuck waiting on the same timeout.' }
+    ],
+    before:[
+      { t:'web01 deploy 4.7.1 completed', why:'The deploy everybody blamed. It went out at 09:40 and worked all morning.' },
+      { t:'fw01  interface eth2 counters cleared', why:'Somebody looking at the firewall. Reading is not changing.' }
+    ] },
+  { title:'Three clients report the same outage, one does not',
+    cause:{ t:'core1 bgp: session to upstream A down (hold timer)', why:'One of the two upstreams went away. The client who is fine is the one on B.' },
+    after:[
+      { t:'core1 route table: 41,900 prefixes withdrawn', why:'What losing that session means.' },
+      { t:'edge2 latency to 8.8.8.8 up 14ms -> 380ms', why:'Everything now going the long way round.' },
+      { t:'mon   ALERT: 3 sites unreachable', why:'Three sites, all behind upstream A.' },
+      { t:'core1 cpu 94% (soft reconvergence)', why:'The router doing the maths again.' }
+    ],
+    before:[
+      { t:'core1 config saved by admin', why:'A save, not a change. The change was two weeks ago.' },
+      { t:'edge2 dhcp pool 62% used', why:'Normal, and nobody has ever looked at it.' }
+    ] },
+  { title:'The finance team say everything is slow. Nobody else does.',
+    cause:{ t:'san01 disk group 2 rebuilding (est 9h)', why:'A disk failed at 06:10 and the array is rebuilding underneath the volume finance sit on.' },
+    after:[
+      { t:'esx04 datastore FIN-01 latency 4ms -> 220ms', why:'The volume on top of the rebuild.' },
+      { t:'sql02 waits: PAGEIOLATCH_SH 18,400ms', why:'The database waiting on that disk.' },
+      { t:'app05 report timed out after 120s', why:'The report waiting on the database.' },
+      { t:'mon   ALERT: FIN app response > 30s', why:'Finance, noticing.' }
+    ],
+    before:[
+      { t:'esx04 vmotion completed: 2 guests', why:'Routine, and it moved the wrong two if you are looking for someone to blame.' },
+      { t:'sql02 index maintenance completed 04:12', why:'It finished two hours before any of this.' }
+    ] },
+  { title:'Email works. Email attachments do not.',
+    cause:{ t:'mx01  av engine update 9.4.2 applied 03:10', why:'A scanner update at three in the morning. It is holding every attachment for a scan that never returns.' },
+    after:[
+      { t:'mx01  queue: 2,100 messages deferred (scanning)', why:'The queue behind the scanner.' },
+      { t:'mx01  smtp 451 4.7.1 try again later', why:'What the sender is being told.' },
+      { t:'mon   ALERT: mail queue > 500', why:'The threshold, crossed hours after it mattered.' },
+      { t:'hd    12 tickets: "email not arriving"', why:'Twelve people reporting one thing.' }
+    ],
+    before:[
+      { t:'mx01  certificate renewed, 90 days', why:'Renewed on schedule. It is always blamed and it is never this.' },
+      { t:'dns01 zone transfer to ns2 ok', why:'Working exactly as it should.' }
+    ] }
+];
 /* --------------------------- how to play each one -------------------------
    A minigame that opens straight into a live board with a six-pixel hint bar
    is a game assuming you have already played it. Every one of these now opens
@@ -11671,6 +12019,60 @@ const WK_TASKS = [
 
    `keys` is [binding, what it does]; a binding of '' is a plain note. */
 const GAME_BRIEF = {
+  ask: {
+    what: 'Everything lands on the newest desk first and most of it is not ' +
+          'yours. Read what it is, and send it to whoever it actually belongs ' +
+          'to — or keep it, because some of these you can do.',
+    keys: [
+      ['1 / 2 / 3', 'send it to that person'],
+      ['4', 'keep it — it is yours'],
+      ['CLICK', 'or click any of the four']
+    ],
+    watch: 'The line under each name is what they actually deal with. Sending ' +
+           'it upstairs when it was yours costs exactly what keeping something ' +
+           'that was not does — it comes back tomorrow, still with your name on it.'
+  },
+  notes: {
+    what: 'The call is over. Whoever picks this up next has only what you type ' +
+          'now. Mark the lines they cannot work without and leave the rest.',
+    keys: [
+      ['UP / DOWN', 'move down the call'],
+      ['E or SPACE', 'keep this line, or drop it again'],
+      ['1', 'save the ticket and go'],
+      ['CLICK', 'or click a line, and the button']
+    ],
+    watch: 'Everything on this board is true and was said. That is the whole ' +
+           'judgement. Padding it costs the same as missing a line: a ticket ' +
+           'nobody reads is worth less than a short one.'
+  },
+  restore: {
+    what: 'Something needs putting back, and you are told the hour it broke. ' +
+          'Each restore point says how old it is and whether the job that made ' +
+          'it actually finished. Pick one.',
+    keys: [
+      ['UP / DOWN', 'move down the points'],
+      ['E or SPACE', 'restore from the highlighted one'],
+      ['CLICK', 'or click a point']
+    ],
+    watch: 'The one you want is the LATEST that is both COMPLETE and old ' +
+           'enough. Going further back is not safer — it is the same fix and ' +
+           'more of somebody\'s day thrown away. A point that never wrote ' +
+           'anything is worth nothing at all, whatever the email said.'
+  },
+  logs: {
+    what: 'Lines from several systems around one incident, out of order. All ' +
+          'but one of them happened BECAUSE of another. Mark the one that ' +
+          'did not.',
+    keys: [
+      ['UP / DOWN', 'move down the lines'],
+      ['2', 'open the highlighted line and read what it means'],
+      ['E or SPACE', 'mark it as the cause'],
+      ['CLICK', 'or click a line, then a button']
+    ],
+    watch: 'You get fewer opens than there are lines, and the ones you do not ' +
+           'spend are worth marks. Reading everything and then being right is ' +
+           'not the same skill as knowing where to look.'
+  },
   cable: {
     what: 'Somebody re-patched this rack from memory. Every cable on the left ' +
           'belongs in exactly one port on the right. Put them all back.',
@@ -13390,6 +13792,305 @@ const GAMES = {
               ' · MEMBER HOPS CARRY IT · DENIED AND STALE DO NOT',
               240, 236, '#8b93a0', 6, 'center');
       } };
+  }},
+
+  /* --------------- WHO ACTUALLY OWNS THIS (the intern's board) -------------
+     One choice per item and the fourth option is always YOU. An intern who
+     sends everything upstairs scores the same as one who keeps everything:
+     both have stopped reading. Routing wrong costs a round; keeping something
+     that is not yours costs the same, because it will be back tomorrow with
+     your name still on it. */
+  ask: { init(diff){
+    const names = Object.keys(ASK_DIR);
+    const rounds = [], used = new Set();
+    const k = Math.min(2 + diff, ASK_ITEMS.length);
+    while (rounds.length < k){
+      const i = Ri('game', ASK_ITEMS.length);
+      if (used.has(i)) continue;
+      used.add(i);
+      const It = ASK_ITEMS[i];
+      /* three colleagues and yourself, always — so the shape of the board
+         never tells you which kind of item this is */
+      const others = names.filter(n => n !== It.who);
+      const pick = [];
+      while (pick.length < 3){
+        const j = Ri('game', others.length);
+        if (!pick.includes(others[j])) pick.push(others[j]);
+      }
+      if (It.who !== 'you'){ pick[Ri('game', 3)] = It.who; }
+      const opts = pick.map(n => ({ who:n, t:n.toUpperCase(), sub:ASK_DIR[n] }))
+                       .concat([{ who:'you', t:'KEEP IT', sub:'you can actually do this one' }]);
+      rounds.push({ t:It.t, opts, want:It.who });
+    }
+    return { kind:'ask', rounds, at:0, right:0, flash:0, ok:false, click:null,
+      hint:'WHOSE IS THIS? · 1 – 4 OR CLICK',
+      optRect(i){ return [76, 124 + i*26, 328, 22]; },
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.at >= this.rounds.length){
+          if (this.flash <= 0){ this.score = this.right / this.rounds.length; this.finished = true; }
+          return;
+        }
+        let pick = press.one ? 0 : press.two ? 1 : press.three ? 2 : press.four ? 3 : -1;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (let i = 0; i < 4; i++) if (inRect(pt, ...this.optRect(i))) pick = i;
+        }
+        if (pick >= 0){
+          const r = this.rounds[this.at];
+          this.ok = r.opts[pick].who === r.want;
+          this.said = r.opts[pick].who;
+          if (this.ok){ this.right++; sfx('ui'); }
+          else if (this.forgive){ this.forgive--; this.right++; this.ok = true; sfx('ui'); }
+          else sfx('err');
+          this.flash = .8; this.at++;
+        }
+      },
+      draw(){
+        mgPanel('WHO ACTUALLY OWNS THIS', this.hint);
+        if (this.at < this.rounds.length){
+          const r = this.rounds[this.at];
+          txt('IT LANDED ON YOU. ' + (this.at + 1) + ' OF ' + this.rounds.length, 70, 76, '#8d8778', 6);
+          wrapTxt(r.t, 240, 94, 336, '#e8e4da', 7);
+          r.opts.forEach((o, i) => {
+            const [rx, ry, rw, rh] = this.optRect(i);
+            ctx.fillStyle = o.who === 'you' ? '#171d18' : '#161b21';
+            ctx.fillRect(rx, ry, rw, rh);
+            ctx.strokeStyle = '#343b44'; ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
+            txt((i+1) + '.', rx + 8, ry + 9, '#2f7fbe', 7);
+            txt(fitPx(o.t, 82, 7), rx + 22, ry + 9, '#e8e4da', 7);
+            txt(fitPx(o.sub, 208, 6), rx + 112, ry + 16, '#8d8778', 6);
+          });
+        } else txt('IT ALL WENT SOMEWHERE.', 240, 130, '#4ade80', 8, 'center');
+        if (this.flash > 0 && this.at > 0)
+          txt(this.ok ? 'THAT IS THEIRS'
+                      : this.said === 'you' ? 'THAT ONE IS NOT YOURS — IT WILL BE BACK'
+                                            : 'IT COMES BACK TOMORROW, STILL YOURS',
+              240, 232, this.ok ? '#4ade80' : '#d64541', 6, 'center');
+      } };
+  }},
+
+  /* ------------- THE TICKET YOU LEAVE BEHIND (the T1 board) ---------------
+     The call takes four minutes and the ticket outlives it by a week. Mark the
+     lines the next person cannot work without and leave the rest — everything
+     on this board is true and was said, which is exactly why the judgement is
+     a judgement. Padding it costs more than missing a line, because a ticket
+     nobody reads is worth less than a short one. */
+  notes: { init(diff){
+    const C = NOTE_CALLS[Ri('game', NOTE_CALLS.length)];
+    const lines = C.lines.map((l, i) => ({ t:l.t, keep:!!l.keep, on:false, i }));
+    for (let i = lines.length - 1; i > 0; i--){
+      const j = Ri('game', i + 1); [lines[i], lines[j]] = [lines[j], lines[i]];
+    }
+    return { kind:'notes', sub:C.sub, lines, cur:0, sent:false, flash:0, click:null,
+      /* difficulty buys nothing here except the size of the mistake: the board
+         is the same judgement every time and the diff scales what a wrong mark
+         costs, so a harder ticket is not a longer one */
+      cost: .18 + .04 * diff,
+      hint:'MARK WHAT THE NEXT PERSON NEEDS · UP/DOWN · E MARK · 1 SAVE',
+      rowRect(i){ return [72, 92 + i*17, 336, 15]; },
+      btns:[{ k:'save', cap:'1 — SAVE THE TICKET', x:240, y:216, w:150, h:16 }],
+      commit(){
+        const kept = this.lines.filter(l => l.on);
+        const need = this.lines.filter(l => l.keep);
+        const missed = need.filter(l => !l.on).length;
+        const padded = Math.max(0, kept.filter(l => !l.keep).length - (this.forgive || 0));
+        this.missed = missed; this.padded = padded;
+        this.score = clamp(1 - (missed + padded) * this.cost, 0, 1);
+        this.sent = true; this.finished = true; sfx('ui');
+      },
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.sent) return;
+        if (press.up)   this.cur = (this.cur + this.lines.length - 1) % this.lines.length;
+        if (press.down) this.cur = (this.cur + 1) % this.lines.length;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (const b of this.btns)
+            if (inRect(pt, b.x - b.w/2, b.y, b.w, b.h)){ this.commit(); return; }
+          for (let i = 0; i < this.lines.length; i++)
+            if (inRect(pt, ...this.rowRect(i))){ this.cur = i; this.lines[i].on = !this.lines[i].on; sfx('ui'); }
+        }
+        if (press.use){ this.lines[this.cur].on = !this.lines[this.cur].on; sfx('ui'); }
+        if (press.one) this.commit();
+      },
+      draw(){
+        mgPanel('THE TICKET YOU LEAVE BEHIND', this.hint);
+        txt(fitPx('CALL: ' + this.sub, 336, 6), 72, 78, '#8d8778', 6);
+        this.lines.forEach((l, i) => {
+          const [rx, ry, rw, rh] = this.rowRect(i);
+          ctx.fillStyle = l.on ? '#16241b' : '#161b21'; ctx.fillRect(rx, ry, rw, rh);
+          ctx.strokeStyle = i === this.cur ? '#ffb02e' : '#343b44';
+          ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
+          txt(l.on ? '■' : '□', rx + 8, ry + 10, l.on ? '#4ade80' : '#5c646e', 7);
+          txt(fitPx(l.t, 300, 6), rx + 20, ry + 10, l.on ? '#e8e4da' : '#9aa3b0', 6);
+        });
+        txt(this.lines.filter(l => l.on).length + ' OF ' + this.lines.length + ' KEPT',
+            72, 227, '#8d8778', 6);
+      } };
+  }},
+
+  /* ------------------ WHICH RESTORE POINT (the T2 board) ------------------
+     The first rung that puts something BACK. Every restore is two questions in
+     one: how far do you have to go, and what does going that far cost the
+     people who have worked since. The answer is the LATEST point that is both
+     complete and at or before the moment it broke — going further back is not
+     safer, it is the same fix and more of somebody's day thrown away. */
+  restore: { init(diff){
+    const J = RESTORE_JOBS[Ri('game', RESTORE_JOBS.length)];
+    const n = 5 + Math.min(2, diff);
+    /* points every three hours, newest first; the break lands between two */
+    const pts = [];
+    for (let i = 0; i < n; i++) pts.push({ age: 3 * (i + 1), ok:true, tag:'', note:'verified' });
+    const brokeAt = 2 + Ri('game', n - 2) * 3 + Ri('game', 3);   // hours ago
+    /* at least one silent failure, and it is never the oldest — the oldest
+       always works, or the board would have no answer */
+    const flaws = 1 + Ri('game', 2);
+    for (let f = 0; f < flaws; f++){
+      const i = Ri('game', n - 1);
+      const F = RESTORE_FLAWS[Ri('game', RESTORE_FLAWS.length)];
+      pts[i].ok = false; pts[i].tag = F.tag; pts[i].note = F.note;
+    }
+    const usable = pts.filter(p => p.ok && p.age >= brokeAt);
+    const want = usable.length ? usable.reduce((a, p) => p.age < a.age ? p : a) : null;
+    return { kind:'restore', job:J, pts, brokeAt, want, cur:0, at:0, done:false,
+      flash:0, ok:false, click:null,
+      hint:'PICK A POINT · UP/DOWN · E RESTORE FROM IT',
+      rowRect(i){ return [76, 112 + i*17, 328, 15]; },
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.done){ if (this.flash <= 0) this.finished = true; return; }
+        if (press.up)   this.cur = (this.cur + this.pts.length - 1) % this.pts.length;
+        if (press.down) this.cur = (this.cur + 1) % this.pts.length;
+        let go = press.use;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          for (let i = 0; i < this.pts.length; i++)
+            if (inRect(pt, ...this.rowRect(i))){ this.cur = i; go = true; }
+        }
+        if (go) this.pick();
+      },
+      /* the decision, as one named call, so a driver can make it without
+         pretending to be a keyboard — every other board in this table has one */
+      pick(){
+        {
+          const p = this.pts[this.cur];
+          this.chose = p;
+          /* right, or as right as it gets: the exact point scores full, a
+             complete older one scores what it cost in thrown-away work, and a
+             point that cannot restore at all scores nothing */
+          if (!this.want || (p.ok && p.age === this.want.age)){ this.score = 1; this.ok = true; }
+          else if (!p.ok){ this.score = 0; this.ok = false; }
+          else if (p.age < this.brokeAt){ this.score = 0; this.ok = false; }   // still broken
+          else this.score = clamp(1 - (p.age - this.want.age) * .12, .15, 1), this.ok = false;
+          if (!this.ok && this.forgive){ this.forgive--; this.score = 1; this.ok = true; }
+          sfx(this.ok ? 'ui' : 'err');
+          this.done = true; this.flash = 1.2;
+        }
+      },
+      draw(){
+        mgPanel('WHICH RESTORE POINT', this.hint);
+        txt(fitPx('RESTORING ' + this.job.what.toUpperCase(), 336, 6), 72, 76, '#8d8778', 6);
+        wrapTxt('It broke ' + this.brokeAt + ' hours ago: ' + this.job.broke + '.',
+                240, 92, 336, '#e8e4da', 6);
+        this.pts.forEach((p, i) => {
+          const [rx, ry, rw, rh] = this.rowRect(i);
+          ctx.fillStyle = '#161b21'; ctx.fillRect(rx, ry, rw, rh);
+          ctx.strokeStyle = i === this.cur ? '#ffb02e' : '#343b44';
+          ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
+          txt(('-' + p.age + 'H').padStart(5), rx + 8, ry + 10, '#c9c4b8', 6);
+          txt(p.ok ? 'COMPLETE' : p.tag, rx + 46, ry + 10, p.ok ? '#4ade80' : '#d64541', 6);
+          txt(fitPx(p.note, 200, 6), rx + 118, ry + 10, '#8d8778', 6);
+        });
+        if (this.flash > 0 && this.done)
+          txt(this.ok ? 'BACK, AND NOBODY LOST A DAY'
+                      : !this.chose.ok ? 'THAT ONE NEVER WROTE ANYTHING'
+                      : this.chose.age < this.brokeAt ? 'THAT IS AFTER IT BROKE — IT IS STILL BROKEN'
+                      : 'IT WORKS. YOU ALSO THREW AWAY ' +
+                        (this.chose.age - this.want.age) + ' ' + this.job.unit,
+              240, 232, this.ok ? '#4ade80' : '#d64541', 6, 'center');
+        else txt('THE LATEST ONE THAT IS COMPLETE AND OLD ENOUGH', 240, 232, '#8b93a0', 6, 'center');
+      } };
+  }},
+
+  /* ---------------- WHAT ACTUALLY HAPPENED (the T3 board) -----------------
+     The rung the others escalate TO. Three people have reported three
+     symptoms and all three are downstream of one line. Mark the CAUSE. You
+     may OPEN a line to read what it means, and you get fewer opens than there
+     are lines — you never get to read everything before somebody asks. */
+  logs: { init(diff){
+    const I = LOG_INCIDENTS[Ri('game', LOG_INCIDENTS.length)];
+    const rows = [{ t:I.cause.t, why:I.cause.why, cause:true }]
+      .concat(I.after.map(x => ({ t:x.t, why:x.why })))
+      .concat(I.before.map(x => ({ t:x.t, why:x.why })));
+    for (let i = rows.length - 1; i > 0; i--){
+      const j = Ri('game', i + 1); [rows[i], rows[j]] = [rows[j], rows[i]];
+    }
+    rows.forEach((r, i) => { r.open = false; r.i = i; });
+    return { kind:'logs', title:I.title, rows, cur:0, opens: Math.max(1, 4 - diff),
+      used:0, done:false, flash:0, ok:false, click:null,
+      hint:'MARK THE CAUSE · UP/DOWN · 2 OPEN A LINE · E MARK IT',
+      rowRect(i){ return [70, 104 + i*15, 340, 13]; },
+      btns:[{ k:'open', cap:'2 — OPEN THIS LINE', x:158, y:214, w:130, h:15 },
+            { k:'mark', cap:'E — THIS IS THE CAUSE', x:318, y:214, w:140, h:15 }],
+      step(dt){
+        this.flash = Math.max(0, this.flash - dt);
+        if (this.done){ if (this.flash <= 0) this.finished = true; return; }
+        if (press.up)   this.cur = (this.cur + this.rows.length - 1) % this.rows.length;
+        if (press.down) this.cur = (this.cur + 1) % this.rows.length;
+        /* OPEN is its own key so a mis-tap cannot spend one: the two actions
+           on this board are worth different things and must not share E. */
+        let mark = press.use, open = press.two;
+        if (this.click){
+          const pt = this.click; this.click = null;
+          let onBtn = false;
+          for (const b of this.btns)
+            if (inRect(pt, b.x - b.w/2, b.y, b.w, b.h)){
+              onBtn = true; if (b.k === 'open') open = true; else mark = true; }
+          if (!onBtn) for (let i = 0; i < this.rows.length; i++)
+            if (inRect(pt, ...this.rowRect(i))) this.cur = i;
+        }
+        if (open){
+          if (!this.rows[this.cur].open && this.used < this.opens){
+            this.rows[this.cur].open = true; this.used++; sfx('ui');
+          } else if (this.used >= this.opens && !this.rows[this.cur].open){
+            this.flash = .8; this.noMore = true; sfx('err');
+          }
+        }
+        if (mark) this.mark();
+      },
+      mark(){
+        {
+          this.ok = !!this.rows[this.cur].cause;
+          if (!this.ok && this.forgive){ this.forgive--; this.ok = true; }
+          /* one answer, and the opens you did not need are worth something:
+             reading every line and then picking right is not the same skill */
+          this.score = this.ok ? clamp(1 - this.used * .07, .6, 1) : 0;
+          sfx(this.ok ? 'ui' : 'err');
+          this.done = true; this.flash = 1.2; this.marked = this.rows[this.cur];
+        }
+      },
+      draw(){
+        mgPanel('WHAT ACTUALLY HAPPENED', this.hint);
+        wrapTxt(this.title, 240, 76, 336, '#e8e4da', 7);
+        txt('OPENS LEFT ' + (this.opens - this.used), 70, 96, '#8d8778', 6);
+        this.rows.forEach((r, i) => {
+          const [rx, ry, rw, rh] = this.rowRect(i);
+          ctx.fillStyle = '#161b21'; ctx.fillRect(rx, ry, rw, rh);
+          ctx.strokeStyle = i === this.cur ? '#ffb02e' : '#343b44';
+          ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
+          txt(fitPx(r.t, 200, 6), rx + 8, ry + 9, '#c9c4b8', 6);
+          if (r.open) txt(fitPx(r.why, 122, 6), rx + 214, ry + 9, '#8d8778', 6);
+        });
+        if (this.flash > 0 && this.done)
+          txt(this.ok ? 'THAT IS THE ONE. EVERYTHING ELSE WAS THAT.'
+                      : 'THAT IS A SYMPTOM. SOMETHING ABOVE IT DID THAT.',
+              240, 232, this.ok ? '#4ade80' : '#d64541', 6, 'center');
+        else if (this.flash > 0 && this.noMore)
+          txt('NO OPENS LEFT — DECIDE ON WHAT YOU HAVE', 240, 232, '#d64541', 6, 'center');
+        else
+          txt('EVERY OTHER LINE HAPPENED BECAUSE OF ONE OF THEM', 240, 232, '#8b93a0', 6, 'center');
+      } };
   }}
 };
 
@@ -13462,7 +14163,11 @@ const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
                     keep:'KEEPING EVERYBODY',
                     diagram:'THE DIAGRAM',
                     paper:'THE BOARD PAPER',
-                    weekend:'WHOSE SATURDAY' };
+                    weekend:'WHOSE SATURDAY',
+                    ask:'WHO ACTUALLY OWNS THIS',
+                    notes:'THE TICKET YOU LEAVE BEHIND',
+                    restore:'WHICH RESTORE POINT',
+                    logs:'WHAT ACTUALLY HAPPENED' };
 /* THE BUTTONS FIVE BOARDS DECLARED AND NOBODY DREW. Every board's `btns` are
    hit-tested -- THE ADDRESS PLAN's E ALLOCATE, the quote's SUBMIT, the
    diagram's MARK and TEST and SUBMIT, the board paper's I CANNOT DEFEND THAT,
@@ -18256,7 +18961,8 @@ function selfTest(runSim){
       const sizeOf = g => (g.rows && g.rows.length) || (g.tasks && g.tasks.length) ||
                   (g.hand && g.hand.length) || (g.sites && g.sites.length) ||
                   (g.qs && g.qs.length) || (g.steps && g.steps.length) ||
-                  (g.items && g.items.length) || 0;
+                  (g.items && g.items.length) || (g.lines && g.lines.length) ||
+                  (g.pts && g.pts.length) || 0;
       const picksOf = g => {
         const l = [];
         if (g.leftRect) for (let i = 0; i < (g.n || 0); i++) l.push(g.leftRect(i));
@@ -18321,7 +19027,15 @@ function selfTest(runSim){
        not the same thing at all, and would satisfy any check that only asks
        whether the board is reachable. */
     {
-      const SIGNATURE = { 4:'subnet', 5:'quote', 6:'keep', 7:'diagram',
+      /* THE PIT HAD NO SIGNATURE AT ALL. Six boards were written one per rung
+         for four to nine and this check was written with them; the bottom four
+         rungs shared five boards between them in almost the same proportions,
+         so an intern's afternoon and a T3's were the same afternoon in a
+         different chair. The rung you are on is what this game is about and
+         for four of the ten it made no difference to the work. One each now,
+         and each one is the thing that rung is actually for. */
+      const SIGNATURE = { 0:'ask', 1:'notes', 2:'restore', 3:'logs',
+                          4:'subnet', 5:'quote', 6:'keep', 7:'diagram',
                           8:'paper', 9:'weekend' };
       const orphan = [];
       for (const r in SIGNATURE){
@@ -18333,6 +19047,49 @@ function selfTest(runSim){
       }
       ok('each rung deals its own signature board off its own tickets',
          !orphan.length, orphan.join(' '));
+      /* AND NO TWO RUNGS DO THE SAME JOB. A signature board that every rung
+         also sees is not a signature — the check above would pass happily on
+         a ladder where all ten rungs deal all twelve boards, which is very
+         nearly what the pit was. A rung's signature has to be something the
+         rung actually meets and the rung two above it does not. */
+      {
+        const seenAt = (rung, board) => Object.keys(TICKETS).some(id =>
+          TICKETS[id].tiers[0] <= rung && rung <= TICKETS[id].tiers[1] &&
+          TICKETS[id].steps.some(st => st.game === board));
+        /* AND THE RUNG IT BELONGS TO IS THE RUNG THAT SEES MOST OF IT. The
+           check above passes on a ladder where every rung deals every board,
+           which is very nearly what this one was: measured when this invariant
+           was written, the vCIO could be dealt MORE of Procurement's board
+           than Procurement, more of the Relationship Manager's than the
+           Relationship Manager, and more of the Solutions Architect's than the
+           Solutions Architect. The rung before the top had the widest
+           vocabulary in the game and no voice of its own. A signature is a
+           peak, not a presence. */
+        const avail = (rung, board) => Object.keys(TICKETS).filter(id =>
+          TICKETS[id].tiers[0] <= rung && rung <= TICKETS[id].tiers[1] &&
+          TICKETS[id].steps.some(st => st.game === board)).length;
+        const flat = [];
+        for (const r in SIGNATURE){
+          const rung = +r, board = SIGNATURE[r], mine = avail(rung, board);
+          const higher = ROLES.map((R, i) => i).filter(i => i !== rung && avail(i, board) >= mine);
+          if (higher.length) flat.push(board + ' (' + ROLES[rung].id + ' ' + mine + ') matched at ' +
+            higher.map(i => ROLES[i].id + ' ' + avail(i, board)).join(', '));
+        }
+        ok('and the rung it belongs to is the rung that sees most of it',
+           !flat.length, flat.slice(0,3).join('; ') ||
+           Object.keys(SIGNATURE).map(r => SIGNATURE[r] + ':' + avail(+r, SIGNATURE[r])).join(' '));
+        /* And the mix a rung sees is its own mix. Two adjacent rungs share
+           most of a vocabulary and should; two rungs three apart doing the
+           same set of boards is the ladder not moving. */
+        const mixAt = rung => Object.keys(GAMES).filter(g => seenAt(rung, g)).join(',');
+        const twins = [];
+        for (let a = 0; a < ROLES.length; a++)
+          for (let b = a + 3; b < ROLES.length; b++)
+            if (mixAt(a) === mixAt(b)) twins.push(ROLES[a].id + '=' + ROLES[b].id);
+        ok('no two distant rungs meet the same set of boards', !twins.length,
+           twins.slice(0,3).join(' ') || ROLES.map((R,i) =>
+             R.id + ':' + mixAt(i).split(',').length).join(' '));
+      }
     }
     /* THE BUILDING IS IN BRITAIN AND HAS TO SOUND LIKE IT. Found by taking a
        screenshot rather than by reading the file: the office called the same
