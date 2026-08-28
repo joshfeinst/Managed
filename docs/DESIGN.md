@@ -89,6 +89,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 | `errands.js` | walks every ticket in the game — deals it, follows every marker it puts down, takes the lift when the marker is downstairs, and requires the ticket to close |
 | `playday.js` | plays past the first ticket — follows markers, answers dialogue, leaves boards it cannot solve |
 | `liftride.js` | takes a downstairs ticket and rides the lift with real clicks and keys |
+| `driveout.js` | the same for the whole journey off the premises — lift, fire door, car — clicking only what the objective points at, because every other proof the drive works was a unit-level probe calling the pieces |
 | `visual.js` | screenshots every screen and board at four window sizes, asserting no text is invisible — clipped where it cannot be scrolled to, or painted over where it sits |
 | `stakes.js` | sweeps what a ticket is worth by priority and reports how far it separates good triage from bad, against the table the game is actually holding |
 | `stale.js` | checks every balance number quoted in a source comment against the one the game holds |
