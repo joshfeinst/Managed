@@ -9478,8 +9478,13 @@ const PROP_LINES = {
    It goes now.
 
    You always start and end a day upstairs (startCommute and endDay both load
-   office1), so the floor never has to survive a save; it is a thing you do
-   inside a working day and come back from. */
+   office1), so this said the floor never has to survive a save. IT DOES NOW,
+   and it already did before this sentence was read again: serializeRun stores
+   `map` and `px/py`, and resumeRun puts you back on the floor you were
+   standing on. It matters more than it used to. Quitting on floor two and
+   resuming at your desk costs you a walk; quitting at the client site and
+   resuming at your desk would cost you a drive you had already paid twenty-six
+   minutes for, with the day's clock still holding the charge. */
 function takeLift(){ takeExit('elevator'); }
 /* ONE TRANSITION, ANY KIND OF EXIT. This was takeLift(), which read a
    two-entry OTHER_FLOOR table and could only ever express "the other floor".
@@ -13969,6 +13974,32 @@ function selfTest(runSim){
     const s2 = serializeRun();
     ok('save: serialize -> resume -> serialize is identity',
        JSON.stringify(s1) === JSON.stringify(s2));
+    /* AND IT PUTS YOU BACK WHERE YOU WERE, ON EVERY MAP THERE IS. The identity
+       check above runs on office1 and would pass on a resume that always loaded
+       office1, because that is where it started. Quitting upstairs and resuming
+       at your desk costs a walk; quitting at the client site and resuming at
+       your desk would cost a drive the day's clock has already charged you
+       twenty-six minutes for. Every map, from a real position on it. */
+    {
+      const keepRun = run, wrong = [];
+      for (const mid in MAPS){
+        rngInit('SAVEMAP'); runInit('SAVEMAP'); rollDay();
+        loadMap(mid);
+        const spot = Object.keys(W2.anchors)[0];
+        spawnPeople(120, anchorPos(spot));
+        run.clock = 120;
+        const was = { map:W2.id, x:player.tx, y:player.ty };
+        const snap = JSON.parse(JSON.stringify(serializeRun()));
+        loadMap('office1');                       // somewhere else entirely
+        resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: snap });
+        if (W2.id !== was.map || player.tx !== was.x || player.ty !== was.y)
+          wrong.push(mid + ': came back on ' + W2.id + ' at ' + player.tx + ',' + player.ty +
+                     ' rather than ' + was.map + ' at ' + was.x + ',' + was.y);
+      }
+      run = keepRun;
+      ok('save: and you come back standing where you left, on any map',
+         !wrong.length, wrong.slice(0, 2).join(' · '));
+    }
 
     /* migrations: garbage and the future are both survivable */
     let mig = 'ok';
