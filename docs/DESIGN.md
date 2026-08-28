@@ -54,9 +54,16 @@ badly.
 `tools/bars.js` measures each rung's separation as flawless p50 minus sloppy
 p50, in points of day score. All nine are healthy — good triage clears at least
 60% of seeds and bad triage no more than 30% — but they are not equal:
-**T3 Helpdesk is the narrowest rung at 17 points**, and **Procurement is the
+**T1 Helpdesk is the narrowest rung at 19 points**, and **Intern is the
 widest at 28**. A narrow rung is one where the day is closest to fitting, so
 there is least to decide.
+
+The pair moved when the pit got its own four boards. T1's day is now the one
+closest to fitting — it is the rung with a script to follow and the fewest
+decisions that are really yours — and the Intern's is the widest, because the
+intern's own board is a routing decision and getting it wrong is the whole
+day. That is the right way round for a ladder whose first promotion is
+supposed to feel like being handed a rulebook.
 
 That pair of names is checked: `bars.js` re-reads this paragraph and fails if
 either rung stops being the one it says, which is how a sentence like this one
