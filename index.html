@@ -11592,8 +11592,7 @@ const GAME_BRIEF = {
     ],
     watch: 'A box only counts as honest while it is still true. Once they have ' +
            'told you they restarted it, asking is a lie: QA ticks it, the caller ' +
-           'hears it, and it costs you. Half the marks are the script, half are ' +
-           'getting them off the phone.'
+           'hears it, and it costs you.'
   },
   subnet: {
     what: 'One /24 to carve into sites, in order. Each site tells you how many ' +
@@ -11686,9 +11685,8 @@ const GAME_BRIEF = {
        off the board. Three outcomes, three different prices, and the card now
        names all three. */
     watch: 'Every wrong card is TRUE — about something else. When nothing in your ' +
-           'hand answers the question, saying so is the right answer and costs you ' +
-           'nothing; conceding one you could have answered costs you most of it; ' +
-           'and a bluff costs you the question and then some.'
+           'hand answers the question, saying so costs you nothing. Conceding one ' +
+           'you could have answered costs you most of it, and a bluff costs more.'
   },
   weekend: {
     what: 'More weekend work than the weekend holds. Give every job to somebody ' +
@@ -11832,7 +11830,11 @@ const GAMES = {
         txt('MISTAKES ' + this.mistakes + (this.forgive ? ' (1 FORGIVEN)' : ''),
             140, 216, this.mistakes ? '#d64541' : '#8b93a0', 6, 'center');
         /* no par, no countdown: accuracy is the whole score here */
-        txt('TAKE YOUR TIME — ACCURACY IS THE SCORE',
+        /* 'TAKE YOUR TIME — ACCURACY IS THE SCORE' measures 228 pixels in the
+           font that ships, centred at 340, so it ran from x226 to x454 on a
+           panel whose right edge is 420. It fitted only in the monospace
+           fallback the harness had been measuring in. */
+        txt('ACCURACY IS THE SCORE',
             340, 216, '#8b93a0', 6, 'center');
         if (this.buzz > 0){
           ctx.strokeStyle = 'rgba(214,69,65,' + (this.buzz*2).toFixed(2) + ')';
@@ -11886,13 +11888,17 @@ const GAMES = {
            to fit — a hand-written copy drifts and then the game marks you
            against something nobody told you */
         const pol = wrapPx(PW_RULES, ' · ', 336, 6);
-        pol.forEach((l, i) => txt(l, 240, 68 + i*9, '#8b93a0', 6, 'center'));
+        pol.forEach((l, i) => txt(l, 240, 66 + i*9, '#8b93a0', 6, 'center'));
+        /* the policy is authored text and wraps to however many lines it wraps
+           to; the box under it was at a fixed y and the last line landed on
+           the password inside it */
+        const pwTop = Math.max(100, 66 + pol.length*9 + 6);
         if (this.at < this.items.length){
           const it = this.items[this.at];
-          ctx.fillStyle = '#10141a'; ctx.fillRect(140, 100, 200, 34);
-          ctx.strokeStyle = '#343b44'; ctx.strokeRect(140.5, 100.5, 199, 33);
-          txt(it.pw, 240, 122, '#ffb02e', 10, 'center');
-          txt('RESET REQUEST ' + (this.at+1) + ' OF ' + this.items.length, 240, 150, '#8b93a0', 6, 'center');
+          ctx.fillStyle = '#10141a'; ctx.fillRect(140, pwTop, 200, 34);
+          ctx.strokeStyle = '#343b44'; ctx.strokeRect(140.5, pwTop + .5, 199, 33);
+          txt(it.pw, 240, pwTop + 22, '#ffb02e', 10, 'center');
+          txt('RESET REQUEST ' + (this.at+1) + ' OF ' + this.items.length, 240, pwTop + 50, '#8b93a0', 6, 'center');
         } else txt('FILED. HR HAS BEEN CCED FOR NO REASON.', 240, 120, '#4ade80', 7, 'center');
         if (this.flash > 0) txt(this.flashTxt.toUpperCase(), 240, 176, this.flashTxt==='CORRECT' ? '#4ade80' : '#d64541', 6, 'center');
         /* The two things you can do were a six-pixel hint bar at the top of the
@@ -11952,8 +11958,8 @@ const GAMES = {
             const [rx, ry, rw, rh] = this.optRect(i);
             ctx.fillStyle = '#161b21'; ctx.fillRect(rx, ry, rw, rh);
             ctx.strokeStyle = '#343b44'; ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
-            txt((i+1) + '.', 100, 134 + i*28, '#2f7fbe', 7);
-            wrapTxt(o.t, 246, 130 + i*28, 270, '#c9c4b8', 6);
+            txt((i+1) + '.', 96, 134 + i*28, '#2f7fbe', 7);
+            wrapTxt(o.t, 250, 130 + i*28, 258, '#c9c4b8', 6);
           });
         } else txt('MEETING SURVIVED.', 240, 130, '#4ade80', 8, 'center');
         if (this.flash > 0 && this.at > 0)
@@ -12189,7 +12195,8 @@ const GAMES = {
       draw(){
         mgPanel('BY THE SCRIPT', this.hint);
         /* left: what they have said, newest at the bottom */
-        txt(this.who.toUpperCase() + ' — ' + this.sub.toUpperCase(), 66, 70, '#ffb02e', 6);
+        txt(fitPx(this.who.toUpperCase() + ' — ' + this.sub.toUpperCase(), 178, 6),
+            66, 70, '#ffb02e', 6);
         const rows = [];
         for (let i=0;i<Math.min(this.at + 1, this.lines.length); i++)
           for (const l of wrapPx(this.lines[i].t.split(' '), ' ', 168, 6))
@@ -12426,7 +12433,10 @@ const GAMES = {
       flash:0, flashTxt:'', flashOk:false, click:null,
       obj:'FINANCE HAVE GIVEN YOU A NUMBER. IT IS NOT ENOUGH.',
       hint:'UP/DOWN A LINE · 1 2 3 SETS ITS TIER · E SUBMITS',
-      rowRect(i){ return [70, 84 + i*20, 340, 18]; },
+      /* obj at 68, the two totals at 78, the tier headings at 86, the rows
+         from 90 at an eighteen-pixel pitch: six of them end at 198, clear of
+         the submit button at 206. Everything here used to want the same band. */
+      rowRect(i){ return [70, 90 + i*18, 340, 16]; },
       tierRect(i, t){ return [236 + t*58, 84 + i*20, 54, 18]; },
       btns: [ { x:330, y:212, w:130, h:18, k:'send', cap:'E  SUBMIT QUOTE' } ],
       total(){ return this.rows.reduce((a, r) => a + r.cost[r.pick], 0); },
@@ -12474,8 +12484,8 @@ const GAMES = {
         mgPanel('THE SHORTFALL', this.hint);
         txt(this.obj, 240, 68, '#8d8778', 6, 'center');
         const tot = this.total(), over = tot > this.budget;
-        txt('QUOTED ' + tot + 'K', 70, 74, over ? '#d64541' : '#4ade80', 7);
-        txt('BUDGET ' + this.budget + 'K', 410, 74, '#c9c4b8', 7, 'right');
+        txt('QUOTED ' + tot + 'K', 70, 78, over ? '#d64541' : '#4ade80', 7);
+        txt('BUDGET ' + this.budget + 'K', 410, 78, '#c9c4b8', 7, 'right');
         this.rows.forEach((r, i) => {
           const [rx, ry, rw, rh] = this.rowRect(i);
           if (i === this.cur){ ctx.fillStyle = '#1d2530'; ctx.fillRect(rx, ry, rw, rh); }
@@ -12495,9 +12505,9 @@ const GAMES = {
                 on ? (bad ? '#d64541' : '#e8e4da') : '#6b6559', 6, 'center');
           }
         });
-        txt('PROPER', 263, 80, '#8d8778', 5, 'center');
-        txt('ADEQUATE', 321, 80, '#8d8778', 5, 'center');
-        txt('CHEAPEST', 379, 80, '#8d8778', 5, 'center');
+        txt('PROPER', 263, 86, '#8d8778', 5, 'center');
+        txt('ADEQUATE', 321, 86, '#8d8778', 5, 'center');
+        txt('CHEAPEST', 379, 86, '#8d8778', 5, 'center');
         if (this.flash > 0)
           wrapTxt(this.flashTxt, 240, 232, 340, this.flashOk ? '#4ade80' : '#d64541', 6);
       } };
@@ -12640,7 +12650,7 @@ const GAMES = {
           if (i === this.cur && !mv.done){ ctx.fillStyle = '#1d2530'; ctx.fillRect(rx, ry, rw, rh); }
           const col = mv.done ? '#4a4740' : (i === this.cur ? '#e8e4da' : '#c9c4b8');
           txt(mv.done ? '·' : (i === this.cur ? '>' : ' '), rx + 4, ry + 9, '#2f7fbe', 6);
-          txt(mv.t, rx + 14, ry + 9, col, 6);
+          txt(fitPx(mv.t, rw - 14 - 62, 6), rx + 14, ry + 9, col, 6);
           const f = mv.fx, sig = v => (v > 0 ? '+' : '') + v;
           txt(sig(f.c) + ' ' + sig(f.t) + ' ' + sig(f.m), rx + rw - 4, ry + 9,
               mv.done ? '#4a4740' : '#8d8778', 6, 'right');
@@ -12869,7 +12879,9 @@ const GAMES = {
          pitch from y136 the eighth landed at y241 -- one pixel below the
          panel, printed straight onto the dimmed office behind it */
       rowRect(i){ return [70, 130 + i*13, 340, 11]; },
-      btns: [ { x:340, y:214, w:150, h:16, k:'concede', cap:'2  I CANNOT DEFEND THAT' } ],
+      /* beside the WHAT YOU CAN CITE heading rather than under the last row:
+         eight facts at a thirteen-pixel pitch reach y232 and this was at 214 */
+      btns: [ { x:340, y:116, w:150, h:14, k:'concede', cap:'2  I CANNOT DEFEND THAT' } ],
       act(k){ if (k === 'concede') this.concede(); else if (k === 'cite') this.cite(); },
       concede(){
         const q = this.qs[this.at]; if (!q) return;
@@ -12928,7 +12940,8 @@ const GAMES = {
             const [rx, ry, rw, rh] = this.rowRect(i);
             if (i === this.cur && !h.used){ ctx.fillStyle = '#1d2530'; ctx.fillRect(rx, ry, rw, rh); }
             txt(h.used ? '·' : (i === this.cur ? '>' : ' '), rx + 4, ry + 9, '#2f7fbe', 6);
-            txt(h.t, rx + 14, ry + 9, h.used ? '#4a4740' : (i === this.cur ? '#e8e4da' : '#c9c4b8'), 5);
+            txt(fitPx(h.t, rw - 20, 5), rx + 14, ry + 9,
+                h.used ? '#4a4740' : (i === this.cur ? '#e8e4da' : '#c9c4b8'), 5);
           });
         } else txt('THE MEETING ENDS ON TIME.', 240, 120, '#4ade80', 8, 'center');
         if (this.flash > 0)
@@ -12986,7 +12999,7 @@ const GAMES = {
          size is 4 + min(diff,2), so a Director's own migration announced the
          wrong number of jobs on two difficulties out of three. */
       obj: numWord(tasks.length).toUpperCase() + ' THINGS. ONE WEEKEND. EVERYBODY HAS A NAME.',
-      hint:'UP/DOWN A JOB · 1-3 GIVES IT TO SOMEONE · 4 TAKES IT YOURSELF · E SUBMITS',
+      hint:'UP/DOWN A JOB · 1-3 GIVES IT AWAY · 4 KEEPS IT · E SUBMITS',
       rowRect(i){ return [70, 108 + i*17, 340, 15]; },
       /* THE ONE BOARD A POINTER COULD NOT PLAY. Clicking a job moved the
          cursor and nothing else — handing the job to somebody was on 1/2/3/4
@@ -13228,7 +13241,7 @@ const GAMES = {
           txt(this.flashTxt, 240, 236, this.flashOk ? '#4ade80' : '#d64541', 6, 'center');
         else
           txt('MARKED ' + this.all.filter(n => n.marked).length +
-              ' · A MEMBER HOP CARRIES THE CHANGE · DENIED, STALE AND LINK DO NOT',
+              ' · MEMBER HOPS CARRY IT · DENIED AND STALE DO NOT',
               240, 236, '#8b93a0', 6, 'center');
       } };
   }}
@@ -13242,9 +13255,9 @@ function drawBrief(g){
   const B = GAME_BRIEF[g.gid]; if (!B) return;
   const L = 46, R = 434, W = R - L, CX = (L + R) / 2, PAD = 16;
   ctx.fillStyle = 'rgba(6,8,11,.93)'; ctx.fillRect(0, 0, VW, VH);
-  ctx.fillStyle = '#12161b'; ctx.fillRect(L, 14, W, 242);
-  ctx.strokeStyle = '#ffb02e'; ctx.strokeRect(L + .5, 14.5, W - 1, 241);
-  ctx.fillStyle = '#ffb02e'; ctx.fillRect(L, 14, W, 2);
+  ctx.fillStyle = '#12161b'; ctx.fillRect(L, 12, W, 250);
+  ctx.strokeStyle = '#ffb02e'; ctx.strokeRect(L + .5, 12.5, W - 1, 249);
+  ctx.fillStyle = '#ffb02e'; ctx.fillRect(L, 12, W, 2);
 
   txt(g.brief.first ? 'NEW — HOW THIS ONE WORKS' : 'HOW THIS ONE WORKS',
       CX, 32, '#ffb02e', 7, 'center');
@@ -13253,26 +13266,47 @@ function drawBrief(g){
   /* Every block is CENTRED and measured against the panel's own inner width.
      Left-aligning a centred x is how the password policy ran off its box the
      first time; it is not going to be how this one does. */
-  wrapPx(B.what.split(' '), ' ', W - PAD*2, 6).slice(0, 4)
-    .forEach((l, i) => txt(l, CX, 64 + i*10, '#c9c4b8', 6, 'center'));
+  /* every block takes the height it needs and the next one starts under it.
+     These were fixed offsets that reserved four lines for `what` whether it
+     used them or not, which is twenty wasted pixels on half the cards and the
+     difference between the caution fitting and being cut off. */
+  const whatLines = wrapPx(B.what.split(' '), ' ', W - PAD*2, 6).slice(0, 4);
+  whatLines.forEach((l, i) => txt(l, CX, 64 + i*10, '#c9c4b8', 6, 'center'));
 
-  const boxTop = 104, boxH = B.keys.length * 13 + 8;
+  /* THE DESCRIPTION COLUMN WRAPS. It did not, and it is 260 pixels wide
+     against rows that measure up to 318 in the real font -- "a step done out
+     of order tells you why and costs you nothing else" ran clean off the card
+     on the new-starter board, and six more did the same. The self test has
+     been asking about this the whole time; it was measuring the FALLBACK font,
+     because the pixel face is fetched over the network and this machine had
+     none, so the check was quietly passing on metrics no player ever sees.
+     Wrapped against the space that is actually there, like every other block
+     on this card. */
+  const KX = L + PAD + 96, KW = (R - PAD) - KX;
+  const rows = B.keys.map(([k, what]) =>
+    ({ k, lines: wrapPx(String(what).split(' '), ' ', KW, 6) }));
+  const rowH = r => Math.max(1, r.lines.length) * 10 + 3;
+  const boxH = rows.reduce((a, r) => a + rowH(r), 0) + 8;
+  const boxTop = 60 + whatLines.length * 10 + 8;
   ctx.fillStyle = '#0d1014'; ctx.fillRect(L + PAD, boxTop, W - PAD*2, boxH);
-  B.keys.forEach(([k, what], i) => {
-    const y = boxTop + 14 + i*13;
-    txt(k, L + PAD + 10, y, '#39d7ff', 6);
-    txt(what, L + PAD + 96, y, '#c9c4b8', 6);
-  });
+  let ky = boxTop + 12;
+  for (const r of rows){
+    txt(r.k, L + PAD + 10, ky, '#39d7ff', 6);
+    r.lines.forEach((l, j) => txt(l, KX, ky + j*10, '#c9c4b8', 6));
+    ky += rowH(r);
+  }
 
-  const wy = boxTop + boxH + 14;
-  wrapPx(B.watch.split(' '), ' ', W - PAD*2, 6).slice(0, 3)
+  const wy = boxTop + boxH + 13;
+  /* and the caution takes what is left between the box and the way out */
+  const wLines = Math.max(1, Math.floor((236 - wy) / 10));
+  wrapPx(B.watch.split(' '), ' ', W - PAD*2, 6).slice(0, wLines)
     .forEach((l, i) => txt(l, CX, wy + i*10, '#8b93a0', 6, 'center'));
 
   /* the way out is the one thing on here that must never be missed, so it
      pulses rather than blinking off the screen entirely */
   const on = (performance.now() % 1200) < 800;
-  txt('PRESS E OR CLICK TO START', CX, 236, on ? '#4ade80' : '#2f6b45', 7, 'center');
-  txt('H reopens this', R - PAD, 250, '#5c646e', 6, 'right');
+  txt('PRESS E OR CLICK TO START', CX, 244, on ? '#4ade80' : '#2f6b45', 7, 'center');
+  txt('H reopens this', R - PAD, 256, '#5c646e', 6, 'right');
 }
 const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
   starter:'NEW STARTER CHECKLIST',
@@ -13317,6 +13351,20 @@ function mgPanel(title, hint){
      on the line that tells a player what the board is for. */
   txt(hint, 240, 56, '#8b93a0', 6, 'center');
   txt('H = RULES', 414, 36, '#5c646e', 6, 'right');
+}
+/* CLIP A LABEL TO THE SPACE IT ACTUALLY HAS. Row labels are drawn at a fixed
+   x with something else to their right, or with a panel edge, and several of
+   them are authored prose whose length nobody measured: a citable fact on the
+   board paper ran 414 pixels from x84 on a panel that ends at 420, and a
+   move's description on KEEPING EVERYBODY ran straight through the effects
+   column beside it. Clipped with an ellipsis, so the row still says what it
+   is and the thing beside it survives. */
+function fitPx(str, maxPx, size){
+  ctx.font = Math.max(6, size || 6) + 'px "Press Start 2P", monospace';
+  let t = String(str);
+  if (ctx.measureText(t).width <= maxPx) return t;
+  while (t.length > 1 && ctx.measureText(t + '\u2026').width > maxPx) t = t.slice(0, -1);
+  return t.replace(/[ ,;:]+$/, '') + '\u2026';
 }
 /* Wrap to a MEASURED width. Wrapping by character count guessed 78 characters
    for a 360-pixel panel and the password policy ran off both edges of the box
@@ -19709,18 +19757,48 @@ function selfTest(runSim){
     /* every minigame explains itself, and every card FITS the panel it is
        drawn in — the password policy already ran off this exact box once */
     {
+      /* THE FONT THESE MEASUREMENTS ARE TAKEN IN IS THE ONE THAT SHIPS.
+         Every layout check in this suite measures text, and "Press Start 2P"
+         is fetched from a font CDN -- so on a machine with no network the
+         canvas silently falls back to ui-monospace, which is NARROWER, and
+         every one of them passes against metrics no player ever sees. That is
+         exactly what happened here: the how-to-play cards overflowed their
+         panel and the cable board's footer ran off the right edge for as long
+         as the harness had no network, and the suite called it green the whole
+         time. A layout test measuring the wrong font is worse than no layout
+         test, so it says so. */
+      ok('art: the pixel font is loaded, so the layout checks measure what ships',
+         document.fonts && document.fonts.check('6px "Press Start 2P"'),
+         'falling back to monospace — every measurement below is narrower than it ships');
       const missing = Object.keys(GAMES).filter(g => !GAME_BRIEF[g]);
       ok('minigame: every game has a how-to-play card', missing.length === 0, missing.join(','));
       const over = [];
       for (const g in GAME_BRIEF){
         const B = GAME_BRIEF[g];
+        /* MEASURED AGAINST THE CARD drawBrief ACTUALLY DRAWS, not against
+           three magic numbers. The row limit was a flat 240 pixels for a
+           column that is 260 wide and does not wrap, and the caution was
+           capped at three lines wherever the box happened to end -- so the
+           test could not say how much room was really left, and the answer
+           depends on how tall the keys box came out. It fits the card's own
+           arithmetic now, and the descriptions wrap, so what it asks is the
+           thing that matters: does every line land inside the box. */
+        const L = 46, R = 434, PAD = 16, WW = R - L, INNER = WW - PAD*2;
+        const KX = L + PAD + 96, KW = (R - PAD) - KX;
         if (!B.keys.length || !B.what || !B.watch) over.push(g + ':empty');
-        if (wrapPx(B.what.split(' '), ' ', 356, 6).length > 4) over.push(g + ':what');
-        if (wrapPx(B.watch.split(' '), ' ', 356, 6).length > 3) over.push(g + ':watch');
+        const whatL = wrapPx(B.what.split(' '), ' ', INNER, 6);
+        if (whatL.length > 4) over.push(g + ':what');
+        const boxTop = 60 + Math.min(4, whatL.length) * 10 + 8;
+        const rowsH = B.keys.reduce((a, [, w]) =>
+          a + Math.max(1, wrapPx(String(w).split(' '), ' ', KW, 6).length) * 10 + 3, 0) + 8;
+        const wy = boxTop + rowsH + 13;
+        const room = Math.max(1, Math.floor((236 - wy) / 10));
+        if (wrapPx(B.watch.split(' '), ' ', INNER, 6).length > room) over.push(g + ':watch');
         if (B.keys.length > 5) over.push(g + ':keys');
         ctx.font = '6px "Press Start 2P", monospace';
-        for (const [k, w] of B.keys)
-          if (ctx.measureText(k).width > 84 || ctx.measureText(w).width > 240) over.push(g + ':row');
+        for (const [k] of B.keys)
+          if (ctx.measureText(k).width > 84) over.push(g + ':key');
+        if (wy + room * 10 > 240) over.push(g + ':tall');
         if (!MG_TITLES[g]) over.push(g + ':title');
       }
       ok('minigame: no how-to-play card overflows its panel', over.length === 0, over.join(' '));
