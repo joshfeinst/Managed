@@ -48,8 +48,42 @@ async function launch() {
                    speed: +(new URLSearchParams(location.search).get('speed') || 40) };
     window.__drive = function(){
       const M = window.__M;
+      /* THE BOARD COUNTS AS MOVEMENT. This signature was state, modal kind,
+         clock, day and queue length -- and the sim clock is deliberately
+         FROZEN for the whole of every modal, which is most of the point of
+         modals. So every one of the five was constant from the moment a
+         minigame opened until it closed, and a board that took more than 400
+         driver ticks to finish was reported as a stalled game. It fired on
+         roughly one clean run in four, always on a board, always a lie; a
+         harness that cries wolf at that rate cannot be used to gate anything,
+         and would have hidden a real freeze inside its own noise.
+
+         So ask the board whether IT moved. Cosmetic fields are skipped for the
+         same reason tools/keys.js skips them: a decaying flash timer is not
+         progress, and counting it would make the detector never fire at all. */
+      const mgSig = () => {
+        if (typeof MG === 'undefined' || !MG) return '-';
+        const skip = new Set(['flash','flashTxt','flashOk','buzz','t','click','hint',
+                              'brief','gid','onDone','dark','darkOf','_plan']);
+        const seen = new WeakSet();
+        let h = 0;
+        const bump = v => { const t = String(v);
+          for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; };
+        const walk = v => {
+          if (v && typeof v === 'object'){
+            if (seen.has(v)) return; seen.add(v);
+            if (v instanceof Set){ bump([...v].sort().join(',')); return; }
+            for (const k of Object.keys(v)){
+              if (skip.has(k) || typeof v[k] === 'function') continue;
+              bump(k); walk(v[k]);
+            }
+          } else bump(v);
+        };
+        walk(MG); return h;
+      };
       const sig = G.state + '|' + (G.modal ? G.modal.kind : '-') + '|' +
-                  (run ? Math.floor(run.clock) + '|' + run.day + '|' + run.queue.length : 'norun');
+                  (run ? Math.floor(run.clock) + '|' + run.day + '|' + run.queue.length : 'norun') +
+                  '|' + mgSig();
       if (sig === M.lastSig) M.stallTicks++; else { M.stallTicks = 0; M.lastSig = sig; }
       if (G.modal) M.modalTicks++; else M.modalTicks = 0;
 
@@ -97,6 +131,26 @@ async function launch() {
             const r = g.rounds[g.at];
             if (r){ const i = r.opts.findIndex(o => o.ok); [press.one, press.two, press.three][0];
               if (i === 0) press.one = true; else if (i === 1) press.two = true; else press.three = true; }
+          } else {
+            /* EVERY OTHER BOARD, WHICH IS NINE OF THE TWELVE. There was
+               bespoke play for cable, pw and jargon and nothing whatsoever for
+               the rest: on any of the other nine the driver pressed no key at
+               all and simply sat there. Every MARATHON OK was a run whose days
+               happened not to open one -- and with the signature fixed above,
+               a run that did open one reported the game as frozen, which it
+               was not. The board was waiting for a player who never pressed
+               anything.
+
+               No policy here needs to play well; it needs to press the keys a
+               player has so the board can move. Every board in the game
+               answers UP/DOWN and E or a digit, so cycle them. */
+            const t = (M.boardTick = (M.boardTick || 0) + 1) % 6;
+            if      (t === 0) press.down  = true;
+            else if (t === 1) press.use   = true;
+            else if (t === 2) press.one   = true;
+            else if (t === 3) press.two   = true;
+            else if (t === 4) press.three = true;
+            else              press.four  = true;
           }
         }
         return;

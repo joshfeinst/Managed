@@ -6979,7 +6979,7 @@ function spawnPeople(min, playerPos){
   occ.add(okey(player.tx, player.ty));
   for (const id in NPCS){
     const N = NPCS[id];
-    let a = schedAnchor(N, min);
+    let a = schedAnchor(N, min, id);
     if (!a) continue;
     /* never spawn two bodies into one cell — take the nearest free neighbour */
     if (entAt(a[0], a[1]) || solidAt(a[0], a[1])){
@@ -6998,7 +6998,38 @@ function spawnPeople(min, playerPos){
   }
 }
 function schedActive(N, min){ return !N.visitor || (min >= N.sched[0][0]); }
-function schedAnchor(N, min){
+/* THE PERSON YOU ARE GOING TO SEE IS THERE WHEN YOU ARRIVE.
+   Seven tickets walk you somewhere and then have a named colleague speak, and
+   schedules are written per floor: 'sign-it-in-person' opens with "Yvonne is
+   downstairs", sends you downstairs, and Yvonne's whole day is spent upstairs.
+   Five more send you outside, where the schedules put NOBODY, ever -- forty
+   cars, a barrier, a smoking corner, and a nameplate saying MARCUS over an
+   empty tarmac. The fiction is specific and checkable and the game was not
+   keeping it.
+
+   Derived rather than stored: it reads the ticket you are actually carrying,
+   so there is nothing to serialise, nothing to clear when the job resolves,
+   and no way for it to be left behind pointing at yesterday's errand. */
+function meetingNow(){
+  if (typeof run === 'undefined' || !run || !run.active) return null;
+  const t = run.active, steps = (TICKETS[t.id] || {}).steps || [];
+  for (let i = t.si; i < steps.length; i++){
+    if (!steps[i].goto) continue;
+    const nxt = steps[i+1];
+    const k = nxt && (nxt.say || nxt.choice);
+    const n = k && DIALOGUE[k];
+    return (n && n.who && NPCS[n.who]) ? { who:n.who, at:steps[i].goto } : null;
+  }
+  return null;
+}
+function schedAnchor(N, min, id){
+  if (id){
+    const m = meetingNow();
+    if (m && m.who === id && floorOf(m.at) === W2.id){
+      const p = anchorPos(m.at);
+      if (p) return p;
+    }
+  }
   let a = N.sched[0][1];
   for (const [t, an] of N.sched) if (min >= t) a = an;
   return anchorPos(a);
@@ -7030,7 +7061,7 @@ function npcUpdate(e, dt, clockMin){
   if (e.hidden) return;
   entUpdate(e, dt, 4.2);
   if (e.t < 1) return;
-  const goal = schedAnchor(N, clockMin);
+  const goal = schedAnchor(N, clockMin, e.id);
   if (!goal) return;
   if (e.tx === goal[0] && e.ty === goal[1]){
     e.path = null;
@@ -21446,6 +21477,45 @@ function selfTest(runSim){
          smear.length ? smear.slice(0, 5).join(' · ')
                       : 'only ' + lines + ' strings seen across ' +
                         Object.keys(GAMES).length + ' boards — the probe is not watching');
+      run = null; G.state = 'title';
+    }
+
+    /* AND THE PERSON THE TICKET SENDS YOU TO MEET IS THERE WHEN YOU ARRIVE.
+       Schedules are written per floor and every one of them is written for
+       office1 or the ground floor, so seven errands walked you somewhere and
+       then put a nameplate over an empty room. 'sign-it-in-person' opens with
+       "Yvonne is downstairs", sends you downstairs, and Yvonne's entire day is
+       upstairs. Five more send you outside, where the schedules place nobody
+       at all -- forty cars, a barrier, a smoking corner, and MARCUS talking to
+       you off an empty piece of tarmac.
+
+       Checked with the ticket actually in hand, because that is the only state
+       in which the answer is meant to be true: take the job, load the map it
+       sends you to, spawn the room, and ask whether the person who speaks next
+       is standing in it. */
+    {
+      QUIET = true; rngInit('MEET'); runInit('MEET'); rollDay();
+      const missing = [];
+      for (const id in TICKETS){
+        const steps = TICKETS[id].steps || [];
+        for (let i = 0; i < steps.length; i++){
+          const g = steps[i].goto;
+          if (!g) continue;
+          const nxt = steps[i+1], k = nxt && (nxt.say || nxt.choice);
+          const n = k && DIALOGUE[k];
+          if (!n || !n.who || !NPCS[n.who]) continue;
+          const home = floorOf(g);
+          if (!home) continue;
+          run.active = { id, si:i, uid:0 };
+          loadMap(home); spawnPeople(240);
+          if (!npcs[n.who]) missing.push(id + ': ' + g + ' on ' + home + ' without ' + n.who);
+        }
+      }
+      run.active = null;
+      loadMap('office1'); spawnPeople();
+      ok('tickets: the person an errand sends you to meet is there when you arrive',
+         !missing.length, missing.slice(0, 5).join(' · ') +
+         (missing.length > 5 ? ' +' + (missing.length-5) : ''));
       run = null; G.state = 'title';
     }
 
