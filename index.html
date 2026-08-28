@@ -13987,7 +13987,13 @@ function pauseGame(){
 function resumeWork(){
   G.leftBoard = null;
   if (G.state !== 'pause') return;
-  G.state = 'work'; show(null); clearInput(); view.focus();
+  /* RESYNC, DO NOT CLEAR. A hard clear empties both held[] and the set of
+     physically-down keys, and a keydown REPEAT never re-arms either — so a
+     player who was walking when they hit Escape came back to a game that had
+     forgotten the key they are still holding, and stood still until they let
+     go and pressed again. closeModalToWork has used resyncInput for exactly
+     this reason for a long time; the pause menu is the same door. */
+  G.state = 'work'; show(null); resyncInput(); view.focus();
   hudShow(true);
   if (run && run.resumePending && run.active){
     run.resumePending = false;
@@ -14014,19 +14020,32 @@ function onKey(e){
      now remember whether they did the pausing, and Esc closes them. */
   const closeOverlay = () => {
     G.showLog = false; G.showTests = false;
-    if (G.overlayPaused && G.state === 'pause'){ G.overlayPaused = false; resumeWork(); }
-    else show(screenForState());
+    const resume = G.overlayPaused && G.state === 'pause';
+    G.overlayPaused = false;              // cleared whichever way this goes
+    if (resume) resumeWork(); else show(screenForState());
   };
   if (e.code === 'Escape' && (G.showLog || G.showTests)){
     e.preventDefault(); closeOverlay(); return;
   }
+  /* AN OVERLAY OPENED OVER AN OVERLAY MUST NOT FORGET WHO PAUSED. F1 then F4
+     then Escape put you on the pause menu from a day you had been playing:
+     F1 paused and set overlayPaused, F4 then re-derived the flag from a state
+     that was already 'pause', got false, and Escape had nothing left telling
+     it to resume. Once an overlay has taken responsibility for the pause it
+     keeps it until an overlay actually closes — which is the only place the
+     flag is cleared. */
+  const takePause = () => {
+    G.overlayPaused = G.overlayPaused || G.state === 'work' || G.state === 'modal';
+    if (G.overlayPaused && G.state !== 'pause') pauseGame();
+  };
   if (e.code === 'F1'){
     e.preventDefault();
     if (G.showLog){ closeOverlay(); return; }
     /* never leave the day running behind the log, and never let a DOM screen
-       sit on top of it — it draws on the canvas */
-    G.overlayPaused = (G.state === 'work' || G.state === 'modal');
-    if (G.overlayPaused) pauseGame();
+       sit on top of it — it draws on the canvas. And never stack the two:
+       both are drawn every frame, so the report would print over the log. */
+    if (G.showTests) G.showTests = false;
+    takePause();
     G.logReturn = G.screenId;
     G.showLog = true; show(null);
     return;
@@ -14036,8 +14055,7 @@ function onKey(e){
     if (G.showLog) G.showLog = false;
     if (G.showTests){ closeOverlay(); return; }
     /* never leave a live sim (or an open modal) running under the report */
-    G.overlayPaused = (G.state === 'work' || G.state === 'modal');
-    if (G.overlayPaused) pauseGame();
+    takePause();
     const sim = (G.state === 'title' || G.state === 'over' || G.state === 'menu');
     G.testReturn = G.screenId;          // show(null) below clears it otherwise
     selfTest(sim);
@@ -20719,6 +20737,93 @@ function selfTest(runSim){
       ok('review: it says whether you had started them',
          /never started|part-way in|never picked up/.test(html));
 
+      /* THE WAY OUT OF AN OVERLAY IS THE WAY YOU CAME IN. F1 and F4 both pause
+         a live day so it does not run on behind a near-opaque panel, and both
+         remember that they were the one who paused so Escape can put you back.
+         Opening the second one over the first broke the memory: F1 paused and
+         set the flag, F4 re-derived it from a state that was already 'pause',
+         got false, and Escape had nothing left telling it to resume — so a
+         day you were playing ended on the pause menu. Both orders, and both
+         overlays on their own, and from a screen where there is nothing to
+         pause. */
+      {
+        const realRun = run, realState = G.state, realScreen = G.screenId;
+        const key = c => onKey({ code:c, target:document.body, preventDefault(){} });
+        /* F4 RUNS THE SUITE, AND WE ARE INSIDE THE SUITE. Pressing it for real
+           from in here is unbounded recursion; the suite's own report is not
+           what is under test, the pause bookkeeping around it is. */
+        const realSelfTest = selfTest;
+        selfTest = function(){};
+        const wrong = [];
+        const from = (state) => { G.showLog = G.showTests = false; G.overlayPaused = false;
+                                  G.state = state; show(screenForState()); };
+        const seqs = [ ['F1'], ['F4'], ['F1','F4'], ['F4','F1'], ['F1','F4','F1'] ];
+        try {
+          QUIET = true; rngInit('OVERLAY'); runInit('OVERLAY'); run.phase = 'work';
+          for (const seq of seqs){
+            from('work');
+            for (const k of seq) key(k);
+            if (G.state !== 'pause') wrong.push(seq.join('>') + ' did not pause the day');
+            if (G.showLog && G.showTests) wrong.push(seq.join('>') + ' left both overlays drawn');
+            key('Escape');
+            if (G.state !== 'work') wrong.push(seq.join('>') + '>Esc landed on ' + G.state);
+            if (G.showLog || G.showTests) wrong.push(seq.join('>') + '>Esc left an overlay open');
+            /* And from a screen with no day running, Escape must NOT start one. */
+            from('title');
+            for (const k of seq) key(k);
+            key('Escape');
+            if (G.state !== 'title') wrong.push('title ' + seq.join('>') + '>Esc landed on ' + G.state);
+          }
+          ok('every way out of the F1/F4 overlays puts you back where you were',
+             !wrong.length, wrong.slice(0,3).join('; ') || seqs.length + ' orders, from work and from the title');
+        } finally {
+          selfTest = realSelfTest;
+          G.showLog = G.showTests = false; G.overlayPaused = false;
+          run = realRun; G.state = realState; show(realScreen || null);
+        }
+      }
+      /* AND A KEY YOU ARE STILL HOLDING SURVIVES THE PAUSE MENU. resumeWork
+         hard-cleared the input, which empties both held[] and the set of
+         physically-down keys — and a keydown REPEAT never re-arms either. So
+         a player who was walking when they hit Escape came back to a game
+         that had forgotten the key under their finger, and stood still until
+         they let go and pressed it again. */
+      {
+        const realRun = run, realState = G.state;
+        try {
+          QUIET = true; rngInit('HELDKEY'); runInit('HELDKEY'); run.phase = 'work';
+          G.state = 'work'; show(null);
+          const down = c => dispatchEvent(new KeyboardEvent('keydown', { code:c, bubbles:true }));
+          const up   = c => dispatchEvent(new KeyboardEvent('keyup',   { code:c, bubbles:true }));
+          down('KeyD'); down('ShiftLeft');
+          const walking = held.right && held.sprint;
+          pauseGame();
+          resumeWork();
+          ok('a key you are still holding survives the pause menu',
+             walking && held.right && held.sprint,
+             walking ? 'right ' + held.right + ', sprint ' + held.sprint
+                     : 'the key never registered in the first place');
+          up('KeyD'); up('ShiftLeft');
+          /* ...and letting go on the pause menu does NOT come back walking. */
+          down('KeyA'); pauseGame(); up('KeyA'); resumeWork();
+          ok('and a key you let go of on the pause menu does not', !held.left,
+             'left ' + held.left);
+          up('KeyA');
+          /* ...and the ONE-SHOT latches do not survive it either. press.use is
+             consumed once per frame by whatever is on screen, so an E pressed
+             on the way into the pause menu would be spent the instant you came
+             out of it — advancing a line of the conversation you paused, or
+             using whatever you happen to be facing. */
+          clearInput();
+          down('KeyE');
+          const latched = press.use;
+          pauseGame(); up('KeyE'); resumeWork();
+          ok('and a keypress latched on the way in is not spent on the way out',
+             latched && !press.use, latched ? 'press.use ' + press.use
+                                            : 'the press never latched in the first place');
+          clearInput();
+        } finally { run = realRun; G.state = realState; clearInput(); }
+      }
       /* A SCENE THAT COMES BACK AFTER A PAUSE COMES BACK FILLED. openEvent
          computes {cost} from the minutes it has just charged — no FILLS pool
          holds it, so sceneFills() cannot re-derive it — and the pause parked
