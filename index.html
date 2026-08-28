@@ -3819,14 +3819,14 @@ const DIALOGUE = {
     'It is out on the estate. Take a tape measure and take photographs, because you will not be going twice.'] },
   'site.cup.b': { who:'dennis', t:['That is the comms cupboard. There is a mop in it because there is nowhere else for the mop.',
     'The switch is on the shelf. The shelf is held up by a phone book. I did not do that, and I would like that written down somewhere.'],
-    opts:[ {t:'Measure it properly and photograph every face of the rack', fx:{time:14, rep:4, bonus:2, stress:3}},
+    opts:[ {t:'Measure it properly and photograph every face of the rack', fx:{time:14, rep:7, bonus:2, stress:3}},
            {t:'Photograph it and estimate the rest from the photographs', fx:{time:6, rep:1, bonus:1, stress:2}},
            {t:'Write down what the last site like this cost', fx:{time:2, rep:-3, stress:6}} ] },
 
   'site.desk.a': { who:'sys', t:['You are expected at {client} at eleven. This is the entire content of the calendar invitation.'] },
   'site.desk.b': { who:'bev', t:['I have no record of you. The man who books you lot is on annual leave until the ninth.',
     'There is the book, there is a lanyard in this drawer, and there is a chair that faces the car park. It is up to you.'],
-    opts:[ {t:'Wait, sign in properly, and let somebody find the person', fx:{time:16, rep:3, bonus:1, stress:4}},
+    opts:[ {t:'Wait, sign in properly, and let somebody find the person', fx:{time:16, rep:5, bonus:1, stress:4}},
            {t:'Ring your own account manager from their reception', fx:{time:9, rep:2, bonus:1, stress:6}},
            {t:'Walk in behind somebody with a pass', fx:{time:3, rep:-4, stress:8}} ] },
 
@@ -3834,7 +3834,7 @@ const DIALOGUE = {
     'That is the whole ticket. That is what it says.'] },
   'site.floor.b': { who:'sys', t:['Six people stop you between the door and the far wall. Four of them have a different problem. One of them is the wifi.',
     'You are the first person from the supplier any of them have seen in person.'],
-    opts:[ {t:'Survey it properly, write the four down, and say when', fx:{time:18, rep:5, bonus:2, stress:5}},
+    opts:[ {t:'Survey it properly, write the four down, and say when', fx:{time:18, rep:8, bonus:2, stress:5}},
            {t:'Fix the wifi, and log the other four when you get back', fx:{time:11, rep:3, bonus:1, stress:4}},
            {t:'Fix the wifi and tell the other four to raise tickets', fx:{time:4, rep:-2, stress:5}} ] },
 
@@ -3842,7 +3842,7 @@ const DIALOGUE = {
     'One of those numbers is being depreciated and it is not the one in the room.'] },
   'site.store.b': { who:'sys', t:['There are nine. Two are in somebody\'s car. Three still have the film on the screens.',
     'The register has four because four is how many were ever put on it.'],
-    opts:[ {t:'Serial-number all nine and reconcile it in front of them', fx:{time:20, rep:5, bonus:2, stress:4}},
+    opts:[ {t:'Serial-number all nine and reconcile it in front of them', fx:{time:20, rep:7, bonus:2, stress:4}},
            {t:'Count them, send the number, let Finance reconcile it', fx:{time:8, rep:2, bonus:1, stress:3}},
            {t:'Report eleven, because that is what they told you', fx:{time:2, rep:-4, stress:7}} ] },
 
@@ -5881,7 +5881,21 @@ const TICKETS = {
   /* THE ONES THAT ACTUALLY GO. Priced by walkLegs like every other errand, so
      the drive is not a number somebody typed: from a T3 desk this is a walk to
      the lift, the lift, a walk to the car park, the drive, and the same again
-     coming back. They are the biggest tickets in the game and they should be. */
+     coming back. They are the biggest tickets in the game and they should be.
+
+     AND THEY HAD TO BE WORTH GOING. When these shipped, the ladder's loose
+     column rose on four rungs and the note written at the time defended it:
+     an on-site is worth four points and costs a fifth of the day, but it pays
+     in REPUTATION, which the day score does not measure. That defence was not
+     checked, and it was wrong. Measured: the best option on a site ticket paid
+     a median of 5 reputation for 53 minutes of work -- 0.094 a minute against
+     0.114 for every other ticket in the game. They paid slightly more in
+     absolute terms and LESS per minute, on the one axis they were supposed to
+     win, which makes the drive a trap on both.
+     The best option on each is worth going for now: 0.13 to 0.18 a minute,
+     comfortably above the pool. The quick options are untouched, so the trade
+     is still a trade -- do it properly and be paid for the day it costs, or do
+     the cheap version and get out. */
   'site-the-cupboard-is-a-cupboard': { tiers:[3,7], weight:1, slaMult:2.4, pri:3, stress:7,
     title:'{client} want a recabling quote and nobody has seen the cupboard',
     steps:[{say:'site.cup.a'},{goto:'SITECOMMS'},{game:'cable',diff:2},{choice:'site.cup.b'}] },

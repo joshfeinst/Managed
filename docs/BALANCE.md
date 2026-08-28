@@ -2837,9 +2837,20 @@ stayed at 20. It redistributed — relmgr tight 2→0, solarch 3→0, vcio 2→1
 the loose column up one on four rungs. That last shape is what a large,
 low-priority ticket makes: worth four points, costs a fifth of the day, so a
 worst-first bot that ignores it loses nothing while a by-priority bot that
-takes it spends the afternoon. It is not a bug in the tickets. **An on-site
-pays in reputation** — the options carry rep 4 and 5 and two points of quality
-— and reputation is not in the day score those rows measure, so a harness that
-reads only `dayPerf` will always price a site visit as a trap. `bars.js` reads
+takes it spends the afternoon.
+
+**The defence written here was that an on-site pays in reputation, and it was
+wrong.** Measured the next day: the best option on a site ticket paid a median
+of 5 reputation for 53 minutes of work — **0.094 a minute against 0.114 for
+every other ticket in the game**. They paid slightly more in absolute terms and
+*less* per minute, on the one axis they were supposed to win. A ticket that
+loses on stakes and on reputation is a trap on both, and the harness was right
+to say so.
+
+The best option on each is worth going for now — 0.13 to 0.18 a minute,
+comfortably above the pool — while the quick options are untouched, so the
+trade is still a trade: do it properly and be paid for the day it costs, or do
+the cheap version and get out. `GATE_DEBT` held at 20, all bars still well
+placed, `meta.js` 40/40. `bars.js` reads
 all nine rungs healthy; `meta.js` moved 7.3 → 8.1 careers to win, which is the
 game getting harder because it got bigger.
