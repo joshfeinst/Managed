@@ -268,6 +268,21 @@ h2.ttl{font-family:var(--pix); font-size:clamp(11px,2.1vh,17px); margin:0; color
 .btn:hover{filter:brightness(1.12)}
 .btn:focus-visible{outline:2px solid var(--corp); outline-offset:2px}
 .row{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
+/* THE CERTIFICATE SHELF, AS A LIST RATHER THAN A ZIGZAG. Each certificate was
+   a .row holding a button sized to its own name, centred — so eight of them
+   stepped left and right down the page at eight different widths, with the
+   description floating beside whichever end the button happened to reach. It
+   is the screen where a career's whole reputation gets spent and it could not
+   be scanned. One width, name left, price right, what it does underneath, and
+   the whole card is the button, which also makes it a target a thumb can hit. */
+.certrow{width:min(520px,92vw)}
+.certcard{display:block; width:100%; text-align:left; padding:8px 10px; line-height:1.5}
+.certcard .cc-top{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+.certcard .cc-name{font-size:8px}
+.certcard .cc-price{font-size:7px; color:var(--corp); white-space:nowrap; letter-spacing:.08em}
+.certcard[disabled] .cc-price{color:var(--dim)}
+.certcard .cc-what{display:block; margin-top:4px; font-family:var(--body); font-size:11px;
+  line-height:1.45; letter-spacing:0; color:var(--dim); white-space:normal}
 .dl{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:clamp(11px,1.7vh,15px); margin:0}
 .dl dt{color:var(--dim); text-transform:uppercase; letter-spacing:.08em; font-size:.82em; padding-top:.15em}
 .dl dd{margin:0; font-variant-numeric:tabular-nums; font-weight:600}
@@ -13105,18 +13120,24 @@ function actSetup(){
   for (const k of shelf){
     const C = CERTS[k], can = meta.rep >= C.cost.rep;
     const row = document.createElement('div');
-    row.className = 'row certrow';
-    const b = mkBtn(row, (can ? 'STUDY: ' : 'LOCKED: ') + C.name +
-                    ' (' + C.cost.rep + ' REP)', () => {
+    row.className = 'certrow';
+    const b = document.createElement('button');
+    b.className = 'btn ghost certcard';
+    b.onclick = () => {
       if (meta.rep < C.cost.rep) return;
       meta.certs.push(k); meta.rep -= C.cost.rep;
       saveGame(); sfx('promo');
       toast('CERTIFIED. THE FRAME COSTS EXTRA.', 'ok', 3000);
       actSetup();
-    }, true);
-    b.style.fontSize = '8px';
-    if (!can){ b.disabled = true; b.style.opacity = '.45'; }
-    b.title = C.desc + ' — ' + C.note;
+    };
+    const top = document.createElement('span'); top.className = 'cc-top';
+    const nm  = document.createElement('span'); nm.className  = 'cc-name';
+    nm.textContent = (can ? 'STUDY: ' : 'LOCKED: ') + C.name;
+    const pr  = document.createElement('span'); pr.className  = 'cc-price';
+    pr.textContent = C.cost.rep + ' REP';
+    top.appendChild(nm); top.appendChild(pr);
+    b.appendChild(top);
+    if (!can){ b.disabled = true; b.style.opacity = '.55'; }
     /* WHAT IT DOES, ON THE SCREEN. This lived in the button's title attribute
        and nowhere else: a hover tooltip, on a game whose handbook opens "the
        mouse plays the whole game" and which ships a harness proving it plays
@@ -13124,10 +13145,10 @@ function actSetup(){
        find it. Four certificates, one reputation pool, and the only screen
        where you choose between them showed four names and four prices. */
     const what = document.createElement('span');
-    what.className = 'hint';
-    what.style.cssText = 'display:block;margin:2px 0 0;font-size:7px';
+    what.className = 'cc-what';
     what.textContent = C.desc + ' ' + C.note;
-    row.appendChild(what);
+    b.appendChild(what);
+    row.appendChild(b);
     setup.insertBefore(row, setup.lastElementChild);
   }
   /* what you are carrying, so the screen is a record and not just a shop */
@@ -18316,7 +18337,7 @@ function selfTest(runSim){
       const setupEl = document.getElementById('s-setup');
       const barEl = setupEl.lastElementChild, savedH = setupEl.style.height;
       setupEl.style.height = '260px'; setupEl.scrollTop = 0;
-      const shelf = [...setupEl.querySelectorAll('.row.certrow')];
+      const shelf = [...setupEl.querySelectorAll('div.certrow')];
       let stacked = '';
       for (let i = 0; i < shelf.length && !stacked; i++)
         for (let j = i + 1; j < shelf.length; j++){
