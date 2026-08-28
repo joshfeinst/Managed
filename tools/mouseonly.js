@@ -221,6 +221,25 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   step('every how-to-play card can be dismissed with the mouse', !stuck.length,
        stuck.length ? stuck.join(' ') : boards.length + ' boards');
 
+  /* AND THE WAY BACK TO THE RULES OF THE BOARD YOU ARE STUCK ON. briefReopen
+     was bound to KeyH and to nothing else, and mgPanel prints "H = RULES" in
+     the corner with no hit target behind it -- so on the one screen where a
+     player is most likely to be confused, the only way to re-read the rules
+     needed a keyboard. This file exists to catch exactly that and did not,
+     because it only ever dismissed the card and never asked for it back. */
+  const noRules = [];
+  for (const g of boards){
+    await page.evaluate((k) => { if (G.modal) closeModalToWork();
+      openGame(k, 2, () => {}); G.state = 'modal'; if (MG) MG.brief = null; }, g);
+    await page.waitForTimeout(200);
+    await clickView(408, 35);                       // where H = RULES is printed
+    await page.waitForTimeout(200);
+    if (!await page.evaluate(() => !!(MG && MG.brief))) noRules.push(g);
+  }
+  await page.evaluate(() => { if (G.modal) closeModalToWork(); });
+  step('the rules of a board can be re-opened with the mouse', !noRules.length,
+       noRules.length ? noRules.join(' ') : boards.length + ' boards');
+
   /* and the pause menu — which is where SAVE & QUIT lives */
   await page.evaluate(() => { G.state = 'work'; });
   const pauseBtn = await clickEl('#h-pause');

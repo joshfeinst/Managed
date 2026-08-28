@@ -11824,7 +11824,7 @@ const GAMES = {
       seen.add(it.pw); items.push(it);
     }
     while (items.length < k) items.push(pwItem());   // pathological seeds still finish
-    return { kind:'pw', items, at:0, right:0, flash:0, flashTxt:'', click:null,
+    return { kind:'pw', drawsOwnBtns:true, items, at:0, right:0, flash:0, flashTxt:'', click:null,
       hint:'DOES IT MEET THE POLICY ABOVE?',
       /* one place both the renderer and the hit test read */
       btns: [ { x:146, y:186, w:88, h:20, ok:true,  cap:'1  APPROVE' },
@@ -13101,7 +13101,7 @@ const GAMES = {
        } while ((deepest < 2 || live < 2) && guard++ < 60);
     const flatAll = [];
     (function walk(ns){ for (const n of ns){ flatAll.push(n); walk(n.kids); } })(root);
-    return { kind:'blast', root, all:flatAll, cur:0, top:0, applied:false,
+    return { kind:'blast', drawsOwnBtns:true, root, all:flatAll, cur:0, top:0, applied:false,
       total: flatAll.filter(n => n.hits && !n.group).length,
       objName, obj: 'SECURITY GROUP ' + objName,
       click:null, flash:0, flashTxt:'', flashOk:false,
@@ -13256,6 +13256,28 @@ const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
                     diagram:'THE DIAGRAM',
                     paper:'THE BOARD PAPER',
                     weekend:'WHOSE SATURDAY' };
+/* THE BUTTONS FIVE BOARDS DECLARED AND NOBODY DREW. Every board's `btns` are
+   hit-tested -- THE ADDRESS PLAN's E ALLOCATE, the quote's SUBMIT, the
+   diagram's MARK and TEST and SUBMIT, the board paper's I CANNOT DEFEND THAT,
+   the rota's SUBMIT THE ROTA -- and only pw and blast ever painted them. On
+   the other five they were invisible hot rectangles: a pointer-only player
+   could find SUBMIT only by accident, on a game whose handbook opens "The
+   mouse plays the whole game" and which ships two harnesses proving it plays
+   with taps alone. Both of those drive MG.click at the declared rectangles, so
+   both were satisfied by a button nobody could see -- covered by name, not by
+   sight, which is the same hole the click-rect sweep had.
+
+   Drawn from the render path rather than from each board, so a board added
+   later cannot forget. The two that paint their own say so. */
+function mgBtns(g){
+  if (!g || !g.btns || g.drawsOwnBtns) return;
+  for (const b of g.btns){
+    const x = b.x - b.w/2;
+    ctx.fillStyle = '#1b2129'; ctx.fillRect(x, b.y, b.w, b.h);
+    ctx.strokeStyle = '#3f4854'; ctx.strokeRect(x + .5, b.y + .5, b.w - 1, b.h - 1);
+    txt(b.cap || b.k || '', b.x, b.y + b.h - 5, '#c9c4b8', 6, 'center');
+  }
+}
 function mgPanel(title, hint){
   ctx.fillStyle = 'rgba(8,10,13,.88)'; ctx.fillRect(0,0,VW,VH);
   ctx.fillStyle = '#12161b'; ctx.fillRect(60, 26, 360, 214);
@@ -21555,8 +21577,20 @@ function selfTest(runSim){
              catch below -- so nothing was ever recorded and the test passed its
              own mutation. Hence the count check under the loop: a smear test
              that saw no text is not a pass. */
-          try { MG.draw(); } catch(e){ smear.push(id + ': draw threw ' + e.message); }
+          try { MG.draw(); mgBtns(MG); }
+          catch(e){ smear.push(id + ': draw threw ' + e.message); }
           watching = false;
+          /* EVERY BUTTON A BOARD DECLARES IS PAINTED. They are all hit-tested,
+             and only two boards ever painted theirs -- so SUBMIT, ALLOCATE and
+             TEST were invisible hot rectangles a pointer-only player could
+             only find by accident. tools/keys.js and tools/touch.js both drive
+             MG.click at the declared rectangles, so both were satisfied by a
+             button nobody could see. Covered by name, not by sight. */
+          for (const b of (MG.btns || [])){
+            const cap = String(b.cap || b.k || '');
+            if (cap && !drawn.some(d => d.s.indexOf(cap) >= 0))
+              smear.push(id + ' d' + diff + ': button "' + cap + '" is never drawn');
+          }
           const keep = drawn.filter(d => d.s.trim() && !/^H = RULES$/.test(d.s));
           lines += keep.length;
           /* AND INSIDE THE PANEL IT IS DRAWN ON. mgPanel's box is x 60..420,
@@ -21576,7 +21610,7 @@ function selfTest(runSim){
           closeModalToWork();
         }
       } finally { window.txt = real; }
-      ok('boards: no two lines of a board are printed into the same pixels',
+      ok('boards: every line and button lands once, inside the panel, on its own pixels',
          !smear.length && lines > 300,
          smear.length ? smear.slice(0, 5).join(' · ')
                       : 'only ' + lines + ' strings seen across ' +
@@ -22383,6 +22417,7 @@ function render(){
     drawWorld();
     if (G.state === 'modal' && G.modal && G.modal.kind === 'game' && MG){
       MG.draw();
+      mgBtns(MG);                      // the five boards that never drew their own
       if (MG.brief) drawBrief(MG);     // over the real board, so you see what is coming
     }
     if (G.state !== 'pause') hudUpdate();
@@ -22455,7 +22490,23 @@ function clickAdvance(ev){
     const k = G.modal.kind;
     /* A minigame gets the POINT as well as the press. Telling a first-timer to
        click and then only listening for keys is worse than not offering it. */
-    if (k === 'game'){ if (MG) MG.click = canvasPoint(ev); press.use = true; return; }
+    if (k === 'game'){
+      if (MG){
+        const pt = canvasPoint(ev);
+        /* H = RULES IS A THING THE MOUSE CAN PRESS. briefReopen was bound to
+           KeyH and to nothing else, and mgPanel prints "H = RULES" in the
+           corner with no hit target behind it -- so on a game whose handbook
+           opens "The mouse plays the whole game", and which ships a harness
+           proving every board can be finished with taps alone, the one way
+           back to the rules of the board you are stuck on needed a keyboard.
+           The corner it is printed in is the corner it answers. */
+        if (pt && pt.x >= 396 && pt.x <= 420 && pt.y >= 28 && pt.y <= 42){
+          briefReopen(); return;
+        }
+        MG.click = pt;
+      }
+      press.use = true; return;
+    }
     if (k === 'dlg'){ press.use = true; return; }
     /* Rows are the panel's own business, but a click that lands OUTSIDE it is
        a player asking to leave, and Escape used to be the only answer. */
