@@ -2181,7 +2181,13 @@ const DIALOGUE = {
            {t:'Judge it, briefly', fx:{time:5, rep:1, bonus:1, stress:1}},
            {t:'Send apologies and a donation', fx:{time:2, rep:-1, bonus:1, stress:2}} ] },
   'x.pr2.a':   { who:'client', t:['The printer on floor two.',
-    'You have a corner office, a budget, and nine rungs of career behind you, and the printer on floor two is still the printer on floor two.'] },
+    'You have a corner office, a budget, and nine rungs of career behind you, and the printer on floor two is still the printer on floor two.',
+    /* FILLS.swear is four minced oaths -- sugar, fudge, dagnabbit, golly --
+       and nothing in the game had ever emitted a {swear} token, so a whole
+       pool of jokes sat in the data unreachable. The register is exactly
+       right for the one man at this company who has never once said the
+       actual word, on the one machine that has earned it. */
+    'Gary saw you looking at it and said "{swear}" out loud, which is the worst you have ever heard him say about anything.'] },
   'x.pr2.b':   { who:'sys', t:['You know exactly what is wrong with it. You have known for years.'],
     opts:[ {t:'Fix it yourself, one last time', fx:{time:9, rep:2, bonus:1, stress:2}},
            {t:'Raise it with the supplier, properly', fx:{time:7, rep:1, bonus:1, stress:3}},
@@ -8921,12 +8927,25 @@ const OFFERS = {};
 function ticketOffers(id){
   if (OFFERS[id]) return OFFERS[id];
   const T = TICKETS[id];
+  /* WHAT IS ON OFFER IS THE SUM OF THE FORKS, NOT THE BEST ONE. This ran a
+     single running maximum across every option of every choice node, and
+     applyFx SUMS the bonus you actually earn -- so on a ticket with two
+     bonus-granting forks, taking the good option at the first one already put
+     `t.bonus` at or above the whole denominator, and resolveTicket's
+     clamp(t.bonus / offers.bonus, 0, 1) was pinned at 1 before the second
+     decision was even shown. Thirty templates have two forks. On those, the
+     second judgement the ticket asks you for could not change the score by a
+     single point, whichever way you went -- which is a decision the game puts
+     in front of a player and then throws away. Per node, summed. */
   let game = false, bonus = 0;
   for (const st of T.steps){
     if (st.game) game = true;
     const node = DIALOGUE[st.choice];
-    if (node && node.opts)
-      for (const o of node.opts) bonus = Math.max(bonus, (o.fx && o.fx.bonus) || 0);
+    if (node && node.opts){
+      let best = 0;
+      for (const o of node.opts) best = Math.max(best, (o.fx && o.fx.bonus) || 0);
+      bonus += best;
+    }
   }
   return (OFFERS[id] = { game, bonus });
 }
@@ -13384,6 +13403,15 @@ function clearToasts(){
 }
 function toTitle(){
   clearToasts();
+  /* THE BOARD YOU WALKED OUT OF BELONGED TO A CAREER THAT IS OVER. G.leftBoard
+     is what the pause card offers to send you back to, and only resumeWork
+     ever cleared it -- not SAVE & QUIT, not the exit interview, not coming
+     back to the title. So: abandon a minigame, quit, start a brand new career,
+     press Escape, and the card names the board and the score you walked out on
+     in a career that no longer exists, with a button reading LEAVE IT AND
+     CARRY ON. Every route back to this screen ends a career, so this is where
+     it clears. */
+  G.leftBoard = null;
   G.state = 'title';
   hudShow(false);
   const s = loadGame();
@@ -21520,6 +21548,68 @@ function selfTest(runSim){
                       : 'only ' + lines + ' strings seen across ' +
                         Object.keys(GAMES).length + ' boards — the probe is not watching');
       run = null; G.state = 'title';
+    }
+
+    /* EVERY FILL POOL IS REACHABLE. FILLS.swear held four minced oaths and
+       nothing in the game emitted a {swear} token -- a whole pool of jokes
+       sitting in the data where no player could ever reach them. A pool that
+       nothing references is either content nobody can see or a token somebody
+       misspelled, and both are worth knowing about. */
+    {
+      const used = {};
+      const scan = t => { for (const m of String(t).match(/\{(\w+)\}/g) || [])
+                            used[m.slice(1,-1)] = (used[m.slice(1,-1)] || 0) + 1; };
+      for (const k in TICKETS) scan(TICKETS[k].title);
+      for (const k in DIALOGUE){
+        const n = DIALOGUE[k];
+        (n.t || []).forEach(scan);
+        (n.opts || []).forEach(o => scan(o.t));
+      }
+      const unreachable = Object.keys(FILLS).filter(k => !used[k]);
+      ok('content: every fill pool is reachable by some token',
+         !unreachable.length, unreachable.join(' ') + ' — nothing emits it');
+    }
+
+    /* BOTH BONUS DECISIONS ON A TICKET COUNT. ticketOffers ran a single
+       running maximum over every option of every choice node, and applyFx SUMS
+       the bonus you actually earn -- so on a ticket with two bonus-granting
+       forks, taking the good option at the first already put you at or above
+       the whole denominator, and resolveTicket's clamp was pinned at 1 before
+       the second decision was shown. Thirty templates have two forks: on all
+       of them the second judgement the ticket asks for could not move the
+       score by a point, whichever way you went. */
+    {
+      const dead = [];
+      for (const id in TICKETS){
+        const forks = [];
+        for (const st of TICKETS[id].steps || []){
+          const node = DIALOGUE[st.choice];
+          if (!node || !node.opts) continue;
+          let best = 0;
+          for (const o of node.opts) best = Math.max(best, (o.fx && o.fx.bonus) || 0);
+          if (best > 0) forks.push(best);
+        }
+        if (forks.length < 2) continue;
+        const offered = ticketOffers(id).bonus;
+        const biggest = Math.max.apply(null, forks);
+        if (offered <= biggest)
+          dead.push(id + ' offers ' + offered + ' against forks ' + forks.join('+'));
+      }
+      ok('tickets: where a ticket asks twice, both answers count',
+         !dead.length, dead.slice(0, 4).join(' · ') +
+         (dead.length > 4 ? ' +' + (dead.length - 4) : ''));
+    }
+
+    /* AND NOTHING FROM A FINISHED CAREER IS STILL ON OFFER. G.leftBoard is the
+       minigame the pause card offers to send you back to, and only resumeWork
+       cleared it -- not SAVE & QUIT, not the exit interview. Walk out of a
+       board, quit, start a new career, press Escape, and the card named a
+       board and a score from a career that no longer exists. */
+    {
+      G.leftBoard = { name:'A BOARD FROM A DEAD CAREER', worth:42 };
+      toTitle();
+      ok('pause: a board you walked out of does not outlive its career',
+         !G.leftBoard, 'still offering ' + JSON.stringify(G.leftBoard));
     }
 
     /* EVERY PERK THE PROFILE CAN HOLD IS NAMED ON A SCREEN. Three of them
