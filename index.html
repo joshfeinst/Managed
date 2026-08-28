@@ -10443,13 +10443,22 @@ function endDay(){
    floor-to-bar span instead and the headline agrees with the paragraph
    underneath it again. */
 function perfName(p, rung){
-  const at = reviewAt(p, rung === undefined ? run.rung : rung);
+  const r = rung === undefined ? run.rung : rung;
+  const at = reviewAt(p, r);
+  /* WHO SIGNS THE BOTTOM TWO. Both were Linda's at every rung on the ladder,
+     including the one where the game's own promotion scene says "Linda reports
+     to you as of this morning. She has been here longer than you have. Neither
+     of you is going to mention it." Being summoned by your own service manager
+     is the one thing the Director's desk cannot mean. Above her there is only
+     the board, which is also the better joke: the higher you climb, the vaguer
+     the person who is disappointed in you. */
+  const sign = ROLES[r].gates.nextAt ? ' — LINDA' : ' — THE BOARD';
   return at >= 1.00 ? 'EXCEEDS EXPECTATIONS (SUSPICIOUS)' :
          at >= 0.70 ? 'MEETS EXPECTATIONS' :
          at >= 0.40 ? 'DEVELOPING (HR WORD FOR STRUGGLING)' :
          at >= 0.15 ? 'BELOW EXPECTATIONS' :
-         at >= 0.00 ? 'SEE ME — LINDA' :
-         'SEE ME. TODAY. — LINDA';
+         at >= 0.00 ? 'SEE ME' + sign :
+         'SEE ME. TODAY.' + sign;
 }
 function reviewScreen(dayPerf, eod, promo, ending){
   document.getElementById('r-eyebrow').textContent = 'end of day ' + run.day;
@@ -13527,6 +13536,29 @@ function actSetup(){
       '. Reputation banked: ' + meta.rep + '.'
     : 'No certifications. Reputation banked: ' + meta.rep + '.';
   setup.insertBefore(held, setup.lastElementChild);
+  /* WHAT THE CAREERS BEHIND YOU LEFT. Three perks unlock on careers played --
+     two, five and nine -- and each one quietly changes the game: two of them
+     add starting reputation and the third slows burnout by a tenth. They were
+     read in exactly two places, metaFx and metaHasPerk, and rendered in none.
+     No toast when one unlocked, no row on the shelf, no line on the title
+     screen. A player could finish nine careers and never learn that any of it
+     had happened, which makes the meta-progression the game is built around
+     invisible to the person it is happening to. The shelf is the record of
+     what you are carrying, so it is where they belong; the ones still ahead of
+     you are named too, with the number of careers they want, for the same
+     reason a locked certificate is shown rather than hidden. */
+  const perks = document.createElement('p');
+  perks.className = 'hint certrow'; perks.style.margin = '4px 0 0';
+  const hasP = Object.keys(PERKS).filter(metaHasPerk);
+  const nextP = Object.keys(PERKS).filter(k => !metaHasPerk(k))
+    .sort((a,b) => PERKS[a].need.runs - PERKS[b].need.runs)[0];
+  perks.textContent =
+    (hasP.length ? 'What the last ' + meta.runsPlayed + ' careers left you: ' +
+       hasP.map(k => PERKS[k].name + ' (' + PERKS[k].desc + ')').join(' · ')
+     : 'Nothing from the careers behind you yet.') +
+    (nextP ? '  Next: ' + PERKS[nextP].name + ', after ' + PERKS[nextP].need.runs +
+             ' careers.' : '');
+  setup.insertBefore(perks, setup.lastElementChild);
   show('s-setup');
 }
 function act(a){
@@ -21222,13 +21254,23 @@ function selfTest(runSim){
          rungs were tuned individually, so a flawless day at Solutions
          Architect was DEVELOPING (HR word for struggling) and a sloppy one on
          the Project Team MET EXPECTATIONS. */
+      /* THE VERDICT, NOT WHO SIGNED IT. This compared the whole string, and the
+         bottom two bands carry a name: Linda's at every rung with somebody
+         above it, and the board's at the one where Linda reports to you. What
+         has to be the same at every desk is the reading of the day. */
+      const verdict = t => String(t).replace(/ \u2014 .*$/, '');
       const drift = [];
       for (let rung = 1; rung < ROLES.length; rung++)
         for (let i = 0; i < FRACS.length; i++)
-          if (perfName(spanAt(FRACS[i], rung), rung) !== names[i])
+          if (verdict(perfName(spanAt(FRACS[i], rung), rung)) !== verdict(names[i]))
             drift.push(ROLES[rung].id + '@' + FRACS[i]);
       ok('and the same day reads the same at every desk on the ladder',
          !drift.length, drift.slice(0,6).join(' '));
+      /* and the one desk Linda cannot summon you to is the one she reports to */
+      const topRung = ROLES.length - 1;
+      ok('review: the Director is not sent to see the manager who reports to them',
+         !/LINDA/.test(perfName(spanAt(0.05, topRung), topRung)),
+         perfName(spanAt(0.05, topRung), topRung));
       QUIET = true; rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
       loadMap('office1'); spawnPeople();
       run.day = FIRE_GRACE + 1; run.firedStreak = 1;
@@ -21478,6 +21520,24 @@ function selfTest(runSim){
                       : 'only ' + lines + ' strings seen across ' +
                         Object.keys(GAMES).length + ' boards — the probe is not watching');
       run = null; G.state = 'title';
+    }
+
+    /* EVERY PERK THE PROFILE CAN HOLD IS NAMED ON A SCREEN. Three of them
+       unlock on careers played and each quietly changes the game -- two add
+       starting reputation, the third slows burnout by a tenth -- and they were
+       read in exactly two places and rendered in none. No toast, no row, no
+       line anywhere. A player could finish nine careers and never learn any of
+       it had happened. */
+    {
+      const before = JSON.parse(JSON.stringify(meta));
+      meta.runsPlayed = 99;
+      actSetup();
+      const shown = document.getElementById('s-setup').textContent;
+      const unnamed = Object.keys(PERKS).filter(k => shown.indexOf(PERKS[k].name) < 0);
+      meta = normalizeMeta(before);
+      ok('meta: every perk a career can earn is named on a screen',
+         !unnamed.length, unnamed.join(' ') + ' unlock silently');
+      G.state = 'title'; show('s-title');
     }
 
     /* AND THE PERSON THE TICKET SENDS YOU TO MEET IS THERE WHEN YOU ARRIVE.

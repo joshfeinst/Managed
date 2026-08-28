@@ -276,7 +276,9 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
      is the arrangement that went out as eight stacked sticky bars. Audit the
      screen a returning player sees, not the one a new install shows. */
   await p.evaluate(()=>{
-    meta.rep = 150; meta.certs = [Object.keys(CERTS)[0]];
+    /* runsPlayed as well, so the perk record renders: three perks unlock on
+       careers played and the line naming them is only drawn once some are */
+    meta.rep = 150; meta.certs = [Object.keys(CERTS)[0]]; meta.runsPlayed = 6;
     G.state = 'setup'; actSetup();
   });
   await p.waitForTimeout(350);
