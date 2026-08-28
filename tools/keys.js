@@ -41,6 +41,17 @@ const NAMED = [['ArrowUp',   String.raw`\bUP\b`],
                ['Digit3',    String.raw`\b3\b`],
                ['Digit4',    String.raw`\b4\b`]];
 
+/* Dialogue nodes hold their prose in `t` and their branches in `opts`; the
+   live `dlg` object renames them to `lines`. Picking the node by the wrong
+   field silently opens nothing and reports every advance key dead. */
+const OPEN_LINES = `const n = Object.keys(DIALOGUE).find(k => DIALOGUE[k].t && DIALOGUE[k].t.length > 1);
+                    openDlg(n, {}, null);`;
+const DLG_LINE   = `dlg ? dlg.li + '/' + Math.round(dlg.reveal * 10) : 'none'`;
+const OPEN_OPTS  = `const n = Object.keys(DIALOGUE).find(k => DIALOGUE[k].opts && DIALOGUE[k].opts.length >= 3);
+                    openDlg(n, {}, null);
+                    for (let i = 0; i < 400 && dlg && !dlg.optsShown; i++){
+                      press.use = true; dlgTick(.2); press.use = false; }`;
+
 (async () => {
   const browser = await launch();
   const page = await browser.newPage();
@@ -246,6 +257,132 @@ const NAMED = [['ArrowUp',   String.raw`\bUP\b`],
     results.push({ id, dead });
   }
 
+  /* ---- THE HANDBOOK'S OWN PROMISES ------------------------------------
+     The two sweeps above cover the minigame boards, which is where the dead
+     key was found that started this file. Nothing covered the OTHER key list
+     in the game: the eleven rows of the employee handbook, repeated in the
+     pause card, which are the keys a player actually uses all day. They are
+     bound in three different places -- KEYMAP, the keydown listener's latches,
+     and onKey -- and documented in two hand-written HTML tables that no test
+     has ever read. A row promising a key that moved is indistinguishable, to a
+     player, from a game that has stopped responding.
+
+     Every probe drives the REAL listener with a REAL key event and asserts the
+     game's own state moved. Setup never presses a key it is about to test, so
+     a dead key fails one row rather than cascading.
+
+     A note on why each probe re-enters WORK from Node rather than in one
+     evaluate: clockIn() opens the morning dialogue a tick later, so a
+     synchronous "close every modal" loop runs before the modal exists, breaks
+     out, and leaves the world paused behind a panel that appears immediately
+     afterwards. Every key then reads as dead, because during a modal the world
+     genuinely does not move -- which is the game working. Poll from out here. */
+  const globalResults = [];
+  {
+    const page2 = page;
+    await page2.goto('file://' + target);
+    await page2.waitForFunction(() => typeof G !== 'undefined' && typeof selfTest === 'function');
+    await page2.keyboard.press('Space');
+    await page2.waitForTimeout(400);
+
+    const toWork = async () => {
+      await page2.evaluate(() => {
+        SAVE_SUSPEND = true; QUIET = true;
+        if (!run) { newRun('KEY-GLOBAL'); clockIn(); }
+        if (G.showLog || G.showTests){
+          G.showLog = G.showTests = false;
+          if (G.overlayPaused){ G.overlayPaused = false; resumeWork(); } else show(null);
+        }
+      });
+      /* WORK HAS TO HOLD, NOT MERELY HAPPEN. The morning dialogue opens on the
+         first tick of the first work frame, so a loop that stops the instant
+         it sees 'work' hands the probe a world that is about to pause behind
+         a panel -- and during a panel the world genuinely does not move, so
+         the first key tested reads as dead while the same key a probe later
+         is fine. Require two consecutive clean samples. */
+      let clean = 0;
+      for (let i = 0; i < 60 && clean < 2; i++){
+        const st = await page2.evaluate(() => {
+          if (G.state === 'pause') resumeWork();
+          else if (G.modal) closeModalToWork();
+          return G.state;
+        });
+        clean = st === 'work' ? clean + 1 : 0;
+        await page2.waitForTimeout(120);
+      }
+      await page2.evaluate(() => { clearToasts(); clearInput(); });
+    };
+
+    /* one probe: set the world up, press the key for real, look again */
+    const probe = async (row, key, setupJs, checkJs, holdMs) => {
+      await toWork();
+      if (setupJs) await page2.evaluate(setupJs);
+      await page2.waitForTimeout(120);
+      const before = await page2.evaluate(checkJs);
+      /* what the world was actually in when the key landed: a probe that could
+         not reach its own precondition must say so rather than blame the key */
+      const at = await page2.evaluate(() => G.state + (G.modal ? '/' + G.modal.kind : ''));
+      if (holdMs){ await page2.keyboard.down(key); await page2.waitForTimeout(holdMs);
+                   await page2.keyboard.up(key); }
+      else await page2.keyboard.press(key);
+      await page2.waitForTimeout(250);
+      const after = await page2.evaluate(checkJs);
+      globalResults.push({ row, key, at, alive: JSON.stringify(before) !== JSON.stringify(after),
+                           before, after });
+    };
+
+    /* WALK. Each direction starts the player facing the opposite way on a known
+       open tile, so a key that only turns still registers -- turning IS the
+       documented behaviour of a tap -- while a key wired to nothing does not. */
+    const POS = `player ? player.dir + ':' + Math.round(player.x*100)/100 + ',' +
+                          Math.round(player.y*100)/100 : 'none'`;
+    for (const [k, d] of [['KeyW','up'], ['ArrowUp','up'], ['KeyS','down'], ['ArrowDown','down'],
+                          ['KeyA','left'], ['ArrowLeft','left'], ['KeyD','right'], ['ArrowRight','right']])
+      await probe('Walk', k,
+        `player.x=15; player.y=7; player.t=1; player.dir='${d === 'up' ? 'down' : 'up'}';`,
+        POS, 420);
+
+    /* RUN. The row says "you will be running", so the claim under test is
+       SPEED, not a flag: walk a fixed wall-clock with and without Shift held
+       and require the sprint to cover meaningfully more ground. A Shift bound
+       to a sprint flag nothing reads would pass a flag check and fail this. */
+    {
+      const walked = async (sprint) => {
+        await toWork();
+        await page2.evaluate(() => { player.x=15; player.y=7; player.t=1; player.dir='up'; clearInput(); });
+        await page2.waitForTimeout(120);
+        const y0 = await page2.evaluate(() => player.y);
+        if (sprint) await page2.keyboard.down('ShiftLeft');
+        await page2.keyboard.down('KeyW');
+        await page2.waitForTimeout(700);
+        await page2.keyboard.up('KeyW');
+        if (sprint) await page2.keyboard.up('ShiftLeft');
+        await page2.waitForTimeout(150);
+        const y1 = await page2.evaluate(() => player.y);
+        return Math.abs(y0 - y1);
+      };
+      const slow = await walked(false), fast = await walked(true);
+      globalResults.push({ row:'Run (you will be running)', key:'ShiftLeft',
+        alive: fast > slow + 0.4, before:'walk ' + slow + ' tiles', after:'sprint ' + fast + ' tiles' });
+    }
+
+    await probe('Talk / use / advance', 'KeyE', OPEN_LINES, DLG_LINE);
+    await probe('Talk / use / advance', 'Space', OPEN_LINES, DLG_LINE);
+    await probe('Talk / use / advance', 'Enter', OPEN_LINES, DLG_LINE);
+    for (const k of ['Digit1','Digit2','Digit3'])
+      await probe('Dialogue choices', k, OPEN_OPTS, `dlg ? 'open:' + dlg.optsShown : 'closed'`);
+    await probe('Service queue', 'Tab', null, `G.modal ? G.modal.kind : 'none'`);
+    await probe('Service queue: Esc closes it', 'Escape',
+      `openQueue(); renderQueue();`, `G.state + '/' + (G.modal ? G.modal.kind : '-')`);
+    await probe('How to play this minigame', 'KeyH',
+      `openGame(Object.keys(GAMES)[0], 2, ()=>{}); if (MG) MG.brief = null;`,
+      `!!(MG && MG.brief)`);
+    await probe('Pause · save and quit', 'Escape', null, `G.state`);
+    await probe('Mute music', 'KeyM', null, `A.musOn`);
+    await probe('Session log (for feedback)', 'F1', null, `!!G.showLog`);
+    await probe('Run self test', 'F4', null, `!!G.showTests`);
+  }
+
   console.log('DEAD-KEY SWEEP — every key each how-to-play card promises\n');
   let bad = 0;
   for (const r of results){
@@ -264,10 +401,19 @@ const NAMED = [['ArrowUp',   String.raw`\bUP\b`],
       ? r.tested + ' rects, all live'
       : 'no declared rects — hit-tests inline, NOT COVERED HERE'));
   }
+  console.log('\nGLOBAL-KEY SWEEP — every key the employee handbook promises\n');
+  let gbad = 0;
+  for (const r of globalResults){
+    if (!r.alive) gbad++;
+    console.log('  ' + (r.alive ? 'live  ' : 'DEAD  ') + String(r.key).padEnd(11) +
+                r.row.padEnd(32) + JSON.stringify(r.before) + ' -> ' + JSON.stringify(r.after) +
+                (r.alive || !r.at ? '' : '   [pressed in ' + r.at + ']'));
+  }
   if (errs.length) console.log('\npage errors: ' + errs.length + '\n  ' + errs.slice(0,4).join('\n  '));
   console.log(bad ? '\n' + bad + ' BOARD(S) WITH A DEAD KEY' : '\nNO DEAD KEYS');
   console.log(cbad ? cbad + ' BOARD(S) WITH A DEAD CLICK RECT' : 'NO DEAD CLICK RECTS');
-  bad += cbad;
+  console.log(gbad ? gbad + ' DEAD KEY(S) THE HANDBOOK PROMISES' : 'NO DEAD GLOBAL KEYS');
+  bad += cbad + gbad;
   await browser.close();
   process.exit(bad || errs.length ? 1 : 0);
 })();
