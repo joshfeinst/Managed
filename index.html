@@ -1547,8 +1547,11 @@ ground: {
             SITEFLOOR:[18,15], SITESTORE:[35,15] }
 }};
 
-/* meta-progression. Four certificates and three perks; this said "one cert
-   and one perk visible, more later" for long after later arrived. */
+/* meta-progression. EIGHT certificates and three perks -- this said "one cert
+   and one perk visible, more later" for long after later arrived, and then
+   said four for long after the table held eight. The count in a comment is a
+   claim like any other and it had been wrong twice; the pricing note twenty
+   lines down has said eight, and totalled them correctly, the whole time. */
 /* THE ONLY THING TO SPEND A CAREER ON WAS ONE EXAM. Reputation accumulates
    across every career you have ever had, and there was a single certificate
    costing three of it — after which banked reputation did nothing at all
@@ -2635,7 +2638,13 @@ const DIALOGUE = {
     opts:[ {t:'Ring all nine personally before the letter lands', fx:{time:17, rep:5, bonus:1, stress:5}},
            {t:'Letter to seven, call the two who will bite', fx:{time:10, rep:3, bonus:1}},
            {t:'Send all nine letters and brace', fx:{time:2, rep:-4, stress:12}} ] },
-  'r.ref.a': { who:'derek', t:['I need a reference call for a prospect. {client} would be perfect. They love us.',
+  /* A NAMEPLATE OVER A LINE ABOUT THE PERSON ON IT. A node carries one
+     speaker, and the second line here is the game's aside rather than Derek's,
+     so under his own plate Derek was talking about himself in the third
+     person. The aside is the joke, so the narrator keeps both lines and Derek
+     gets quotation marks. Three more nodes were pure narration wearing a
+     colleague's plate and are simply DISPATCH now. */
+  'r.ref.a': { who:'sys', t:['Derek wants a reference call for a prospect. "{client} would be perfect," he says. "They love us."',
     'They have an open complaint about the migration. Derek does not know this.'] },
   'r.ref.b': { who:'sys', t:['A reference call with an open complaint is a coin flip you are asking somebody else to toss.'],
     opts:[ {t:'Close the complaint first, then ask them properly', fx:{time:13, rep:4, bonus:1}},
@@ -2816,7 +2825,7 @@ const DIALOGUE = {
            {t:'Agree to the 14th and work the weekends', fx:{time:6, rep:1, stress:13}} ] },
   'p.derek.a':{ who:'sys', t:['Two projects need Derek on Thursday. Both were planned around him being there.',
     'There is one Derek. Derek does not know about either of them yet.'] },
-  'p.derek.b':{ who:'derek', t:['Derek says he can do both if he leaves one at lunchtime. Derek says a lot of things on a Tuesday.'],
+  'p.derek.b':{ who:'sys', t:['Derek says he can do both if he leaves one at lunchtime. Derek says a lot of things on a Tuesday.'],
     opts:[ {t:'Pick one, tell the other client today, and say why', fx:{time:16, rep:4, bonus:1, stress:4}},
            {t:'Find out what only Derek can actually do, and hand off the rest', fx:{time:21, rep:4, bonus:1, stress:3}},
            {t:'Let Derek try to do both', fx:{time:4, rep:-4, stress:12}} ] },
@@ -4093,9 +4102,9 @@ const DIALOGUE = {
     'The tab called Findings is not empty. It is never empty. It is not supposed to be empty.'] },
   'e.q.qbr':   { who:'derek', t:['Supplier QBR. They present our own spend back to us as if we had not been there when we spent it.',
     'There is a slide called "Partnership". It has a photograph of a bridge on it.'] },
-  'e.h.queue': { who:'linda', t:['Queue review. Linda reads the numbers out to the people who generated them.',
+  'e.h.queue': { who:'sys', t:['Queue review. Linda reads the numbers out to the people who generated them.',
     'Yours are fine. She reads them anyway, in full, and then reads out the target you already met, in case you want to meet it again.'] },
-  'e.h.buddy': { who:'raj', t:['You are shadowing Raj today. Raj is shadowing you at the same time, which nobody has acknowledged.',
+  'e.h.buddy': { who:'sys', t:['You are shadowing Raj today. Raj is shadowing you at the same time, which nobody has acknowledged.',
     'He solves something in forty seconds by knowing which of two identical buttons is the real one. You ask how he knows. He says "you just know", which is the entire knowledge base.'] },
   'e.h.script':{ who:'mackenzie', t:['A new call script. It opens by thanking the caller for their patience before they have shown any.',
     'There is a line in it you are required to say that is not true on Tuesdays. Everyone has spotted this. It goes live Monday.'] },
@@ -5003,7 +5012,7 @@ const TICKETS = {
     title:'Firewall rule for the new app — vendor doc says "disable the firewall"',
     steps:[{say:'t2.fw.a'},{choice:'t2.fw.b'}] },
   'wipe-then-found': { tiers:[2,5], weight:3, slaMult:1.4, pri:4, stress:10,
-    title:'URGENT: remote wipe the stolen laptop (16:50)',
+    title:'URGENT: remote wipe the stolen laptop (urgent since Tuesday)',
     steps:[{say:'t2.wipe.a'},{choice:'t2.wipe.b'},{say:'t2.wipe.c'}] },
   'delegate-her-mailbox': { tiers:[2,6], weight:3, slaMult:1.6, pri:3, stress:9,
     title:'Grant me full access to {user}\'s mailbox — approved by her manager',
@@ -5242,7 +5251,12 @@ const TICKETS = {
     steps:[{say:'j.dog.a'},{choice:'j.dog.b'}] },
   'unmute-the-television': { tiers:[2,6], weight:3, slaMult:2.3, pri:1, stress:3,
     title:'The reception television has no sound and never has',
-    steps:[{say:'j.tv.a'},{goto:'LOBBY'},{choice:'j.tv.b'}] },
+    /* IT SAYS RECEPTION THREE TIMES. The title, the first line and the second
+       all say the television is in reception; the goto was LOBBY, which
+       ANCHOR_NAMES renders THE SECOND-FLOOR LOBBY, so the queue row and the GO
+       TO banner sent the player upstairs to fix a television downstairs. The
+       building has a reception and this is it. */
+    steps:[{say:'j.tv.a'},{goto:'RECEPTION'},{choice:'j.tv.b'}] },
   'sort-my-inbox': { tiers:[2,6], weight:3, slaMult:2.6, pri:1, stress:4,
     title:'{User} would like their inbox organised. By you.',
     steps:[{say:'j.inbox.a'},{choice:'j.inbox.b'}] },
@@ -13430,8 +13444,8 @@ function actSetup(){
        and nowhere else: a hover tooltip, on a game whose handbook opens "the
        mouse plays the whole game" and which ships a harness proving it plays
        with taps alone. A phone could not read it at all, and a mouse had to
-       find it. Four certificates, one reputation pool, and the only screen
-       where you choose between them showed four names and four prices. */
+       find it. Eight certificates, one reputation pool, and the only screen
+       where you choose between them showed eight names and eight prices. */
     const what = document.createElement('span');
     what.className = 'cc-what';
     what.textContent = C.desc + ' ' + C.note;
@@ -21398,6 +21412,30 @@ function selfTest(runSim){
                       : 'only ' + lines + ' strings seen across ' +
                         Object.keys(GAMES).length + ' boards — the probe is not watching');
       run = null; G.state = 'title';
+    }
+
+    /* NOBODY TALKS ABOUT THEMSELVES IN THE THIRD PERSON UNDER THEIR OWN
+       NAMEPLATE. A dialogue node carries ONE speaker for all of its lines, so
+       a node that mixes a colleague's words with the game's aside about that
+       colleague prints the aside under their plate: DEREK, saying "Derek says
+       a lot of things on a Tuesday." Four nodes did it -- three were pure
+       narration wearing a plate, one genuinely mixed the two.
+
+       Only the SPEAKER'S lines count. An option naming them is the player
+       choosing while they stand there -- "Side with Brenda (wise)" is correct
+       and there are several -- so opts are deliberately not checked. */
+    {
+      const thirdPerson = [];
+      for (const k in DIALOGUE){
+        const n = DIALOGUE[k], nm = (NPCS[n.who] || {}).name;
+        if (!nm || !n.t) continue;
+        const first = String(nm).split(/\s+/)[0];
+        const re = new RegExp('\\b' + first + '\\b', 'i');
+        for (const line of n.t)
+          if (re.test(line)) thirdPerson.push(k + ' [' + nm + '] ' + String(line).slice(0, 40));
+      }
+      ok('dialogue: nobody is named in the third person under their own nameplate',
+         !thirdPerson.length, thirdPerson.slice(0, 4).join(' · '));
     }
 
     /* NO BOARD DRAWS TWO OF ITS OWN OPTIONS INTO ONE RECTANGLE. Every board
