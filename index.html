@@ -10290,6 +10290,18 @@ function endDay(){
   const costly = burned.slice(tolerance);
   const burnedStakes = costly.reduce((a,b) => a+b, 0)
                      + burned.slice(0, tolerance).reduce((a,b) => a+b, 0) * FORGIVEN;
+  /* WHICH OF THEM WAS ACTUALLY CHARGED, ON THE LEDGER ITSELF. Forgiveness is
+     worked out on a sorted list of stakes and never written back to the
+     entries, so "What it cost you" printed every casualty at its full price --
+     including the ones charged at a quarter, and including every casualty on a
+     day where breaches came in under tolerance and NOTHING was charged in
+     full. Four times the real figure, in red, directly above the line saying
+     how many the day forgave. The ledger is sorted the same way the charge is,
+     so the same first `tolerance` entries are the forgiven ones. */
+  {
+    const cheapestFirst = (run.burnLog || []).slice().sort((a,b) => a.s - b.s);
+    cheapestFirst.forEach((w, i) => { w.forgiven = i < tolerance; });
+  }
   /* THE NUMBER THAT DECIDES YOUR CAREER IS THE NUMBER ON THE SCREEN. The
      review prints "<earned> of <closed+burned> priority points banked — that
      ratio IS your performance", and then printed a Performance line computed
@@ -10510,7 +10522,11 @@ function reviewScreen(dayPerf, eod, promo, ending){
   document.getElementById('r-stats').innerHTML =
     (ls && ls.worst && ls.worst.length
       ? '<dt>What it cost you</dt><dd>' + ls.worst.map(w =>
-          '<b>P' + w.p + '</b> ' + w.t + ' <span style="color:var(--alert)">(-' + w.s + ')</span>' +
+          '<b>P' + w.p + '</b> ' + w.t +
+          (w.forgiven
+            ? ' <span style="color:var(--dim)">(-' + Math.round(w.s * FORGIVEN * 10) / 10 +
+              ', inside the day\'s allowance)</span>'
+            : ' <span style="color:var(--alert)">(-' + w.s + ')</span>') +
           (w.never ? ' — never started' : w.worked ? ' — you were part-way in' : ' — never picked up'))
           .join('<br>') + '</dd>'
       : '') +
@@ -21857,6 +21873,37 @@ function selfTest(runSim){
       }
       ok('boards: no two of a board\'s own option rectangles land on each other',
          !clash.length, clash.slice(0, 6).join(' '));
+      run = null; G.state = 'title';
+    }
+
+    /* WHAT IT COST YOU IS WHAT IT COST YOU. Forgiveness is worked out on a
+       sorted list of stakes and was never written back to the ledger, so the
+       block printed every casualty at its FULL price -- four times the real
+       figure for anything inside the allowance, in red, directly above the
+       line that says how many the day forgave. On a day whose breaches come in
+       under tolerance nothing is charged in full at all, and all three rows
+       were still red. */
+    {
+      QUIET = true;
+      rngInit('FORGIVE'); runInit('FORGIVE'); rollDay();
+      run.clock = DAY_MIN + 1; run.burnLog = [];
+      const role = ROLES[run.rung], P = run.plan;
+      while (run.queue.length < 2 && P.ai < P.arrivals.length){
+        const a = makeArrival(P.arrivals[P.ai].id, 60, role); P.ai++;
+        run.queue.push({ uid:a.uid, id:a.id, title:a.title, fills:a.fills, at:60,
+          deadline:60+a.sla, sla:a.sla, stress:a.stress, si:0, bonus:0, gameScores:[], from:null });
+      }
+      endDay();
+      const led = run.burnLog || [];
+      const ls = run.lastScore;
+      /* every casualty on this day is inside the allowance, so every one of
+         them must say so rather than showing its undiscounted stakes */
+      const unmarked = led.filter(w => w.forgiven === undefined);
+      const allForgiven = ls && led.length && led.length <= ls.tolerance;
+      ok('review: a casualty the day forgave is not printed at its full price',
+         !unmarked.length && (!allForgiven || led.every(w => w.forgiven)),
+         unmarked.length ? unmarked.length + ' ledger entries carry no charge'
+                         : led.map(w => w.s + (w.forgiven ? 'f' : '')).join(' '));
       run = null; G.state = 'title';
     }
 
