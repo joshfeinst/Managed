@@ -14,7 +14,7 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   const ctx = await b.newContext({ viewport:{width:960,height:540} });
   const p = await ctx.newPage();
   const errs=[]; p.on('pageerror',e=>errs.push(e.message));
-  await p.goto('file:///home/user/managed/index.html');
+  await p.goto('file://' + path.resolve(process.argv[2] || path.join(__dirname, '..', 'index.html')));
   await p.waitForFunction(()=>typeof G!=='undefined'&&typeof selfTest==='function');
   await p.keyboard.press('Space'); await p.waitForTimeout(300);
 
