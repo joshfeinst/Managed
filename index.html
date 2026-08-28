@@ -10644,8 +10644,29 @@ function reviewScreen(dayPerf, eod, promo, ending){
        appears when burnout is past LEAVE.offerAt and you have leave left, so
        most careers never see it and a bad one sees it twice. */
     if (canTakeLeave())
-      mkBtn(act, 'BOOK A DAY OFF (' + (LEAVE.perCareer - (run.leaveTaken || 0)) + ' LEFT)',
-            () => { takeLeave(); toast('LEAVE BOOKED. IT WILL STILL BE THERE.', 'ok', 3000);
+      /* THE ONE UNPRICED BUTTON IN THE GAME. Every other cost is quoted where
+         the decision is made: a dialogue option prints its own minutes, the
+         coffee toast names the stress, the crash delay and the cup, and the
+         handbook is generated from the constants so it cannot drift. Annual
+         leave is the largest discretionary spend a career has, and the button
+         said only how many were left while takeLeave charged 55 goodwill, set
+         the next day 40% heavier and spent a day of the career. None of the
+         three appeared on any screen.
+
+         What it costs is named on the button, from the constants, so it cannot
+         drift either -- and what it does NOT cost stays unsaid. Goodwill's help
+         at the gate saturates at REP.maxHelp / REP.perPoint, under nine points,
+         and leave is offered at a measured median of 175, so the 55 almost
+         never moves tonight's promotion bar. It comes out of the half that
+         banks into the next career. Saying "it costs you your promotion" would
+         be a second lie in place of the silence. */
+      mkBtn(act, 'BOOK A DAY OFF — ' + LEAVE.repCost + ' GOODWILL, AND TOMORROW IS ' +
+                 Math.round((LEAVE.backlog - 1) * 100) + '% HEAVIER (' +
+                 (LEAVE.perCareer - (run.leaveTaken || 0)) + ' LEFT)',
+            () => { const rep0 = run.rep;
+                    takeLeave();
+                    toast('LEAVE BOOKED. GOODWILL ' + rep0 + ' \u2192 ' + run.rep +
+                          '. THE QUEUE KEPT ITS OWN COUNSEL.', 'ok', 4200);
                     startCommute(); }, true);
     mkBtn(act, 'SAVE & QUIT', () => { saveGame(); toTitle(); }, true);
   }
@@ -10873,12 +10894,26 @@ function saveGame(wipeRun){
        lose your job. Now a title-screen save updates meta and PRESERVES the
        stored run; only careerOver, which means it, passes wipeRun. A save
        from a newer version of the game is never overwritten at all. */
-    let carried = null;
-    if (!run && !wipeRun){
-      const s = loadGame();
-      if (s === 'future') return;
-      if (s && s.run) carried = s.run;
+    /* ...AND WHERE THAT CHECK SAT DID NOT DO WHAT THE LINE ABOVE CLAIMS. The
+       bail was inside the no-live-run branch, so it only ever protected a
+       title-screen save. During play the autosave fires every twenty-five
+       seconds and never consulted it at all -- so an older build, a cached
+       PWA, a second tab, a copy someone downloaded last month, would spend a
+       whole career quietly writing over a newer version's save. It is asked
+       first now, whatever is happening.
+
+       And it says so, once. Refusing silently leaves a player saving into a
+       void for a whole career and finding out at the title screen. */
+    const s = loadGame();
+    if (s === 'future'){
+      if (!G.futureWarned){
+        G.futureWarned = true;
+        toast('A SAVE FROM A NEWER VERSION IS ON THIS MACHINE. NOTHING HERE WILL OVERWRITE IT.', 'alert', 7000);
+      }
+      return;
     }
+    let carried = null;
+    if (!run && !wipeRun && s && s.run) carried = s.run;
     const data = { v:SAVE_V, meta, run: run ? serializeRun() : carried };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   } catch(_){}
@@ -21754,6 +21789,32 @@ function selfTest(runSim){
          !unreachable.length, unreachable.join(' ') + ' — nothing emits it');
     }
 
+    /* THE PRICE OF A DAY OFF IS ON THE BUTTON THAT CHARGES IT. Every other
+       cost in this game is quoted where the decision is made -- a dialogue
+       option prints its own minutes, the coffee toast names the stress and the
+       crash and the cup, the handbook is generated from the constants so it
+       cannot drift. Leave is the largest discretionary spend a career has and
+       its button said only how many were left, while takeLeave charged 55
+       goodwill, made the next day 40% heavier and spent a day of the career.
+       None of the three was on any screen. Read from the constants here too,
+       so the label cannot drift away from what is charged. */
+    {
+      QUIET = true;
+      rngInit('LEAVE-SAY'); runInit('LEAVE-SAY'); rollDay();
+      run.day = 8; run.burnout = LEAVE.offerAt + 4; run.rep = 120;
+      run.clock = DAY_MIN + 1; run.queue = [];
+      endDay();
+      const btn = [...document.querySelectorAll('#r-actions button')]
+        .find(b => /DAY OFF/i.test(b.textContent));
+      const label = btn ? btn.textContent : '';
+      const saysRep  = label.indexOf(String(LEAVE.repCost)) >= 0;
+      const saysLoad = label.indexOf(String(Math.round((LEAVE.backlog - 1) * 100)) + '%') >= 0;
+      ok('review: the day-off button names what it charges',
+         !!btn && saysRep && saysLoad,
+         btn ? label : 'no leave button on an evening that offers leave');
+      run = null; G.state = 'title';
+    }
+
     /* NO BOARD'S ABANDON CEILING SITS BELOW WHAT THE BOARD CAN BE PLAYED TO.
        Leaving a minigame caps the ticket's board score at abandonScore(), and
        that is meant to be the best it could STILL finish at -- a ceiling. THE
@@ -22218,6 +22279,20 @@ function selfTest(runSim){
         const fut = JSON.parse(localStorage.getItem(SAVE_KEY));
         ok('save: a newer version\'s save is never overwritten from the title',
            fut && fut.v === SAVE_V + 7, 'v=' + (fut && fut.v));
+        /* ...AND NOT BY THE AUTOSAVE EITHER, WHICH IS THE CASE THAT FAILED.
+           The bail lived inside saveGame's no-live-run branch, so it only ever
+           covered the title screen -- exactly what the line above tests. The
+           autosave fires every twenty-five seconds during play and never
+           consulted it, so an older build would spend a whole career writing
+           over a newer one and this test would stay green throughout. */
+        localStorage.setItem(SAVE_KEY, JSON.stringify({ v: SAVE_V + 7, meta: {} }));
+        rngInit('FUTURE-RUN'); runInit('FUTURE-RUN'); rollDay();
+        G.futureWarned = true;                    // no toast in the suite
+        saveGame();                               // a LIVE career, mid-day
+        const futRun = JSON.parse(localStorage.getItem(SAVE_KEY));
+        ok('save: ...and the autosave does not overwrite it either',
+           futRun && futRun.v === SAVE_V + 7, 'v=' + (futRun && futRun.v));
+        run = null;
       } finally {
         SAVE_SUSPEND = true;
         if (realRaw === null) localStorage.removeItem(SAVE_KEY);
