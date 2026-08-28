@@ -794,13 +794,28 @@ function Rt(g,x,y,w,h,c){ g.fillStyle=c; g.fillRect(x|0,y|0,w|0,h|0); }
 
 /* Atlas is a row of 16x16 tiles, index = position. Painted flat, lit from the
    top-left, in tired-office colours. */
-const ATLAS_N = 40;
+const ATLAS_N = 48;
 let atlas = null, atlasG = null;
 function tilePx(i){ return i*TILE; }
-function bakeAtlas(){
-  [atlas, atlasG] = cv(ATLAS_N*TILE, TILE);
-  const g = atlasG;
-  const T = (i, fn) => { g.save(); g.translate(tilePx(i), 0); fn(g); g.restore(); };
+/* PAD SPREADS THE SLOTS APART. The atlas is packed edge to edge, so a bake
+   that draws one pixel outside its own 16x16 lands in the NEXT TILE, silently,
+   for the rest of the game -- see the note on the self test that catches it.
+   Baking the same table with the slots spaced out gives that test an
+   uncontaminated copy of every tile to compare against. */
+function bakeAtlas(pad){
+  pad = pad || 1;
+  const [c, g] = cv(ATLAS_N*TILE*pad, TILE);
+  if (pad === 1){ atlas = c; atlasG = g; }
+  /* AND EACH SLOT IS CLIPPED TO ITSELF. Spacing alone would only let the test
+     see the bleed; this stops it happening. The keep-clear hatching is drawn
+     as a diagonal sweep whose x runs from -16 to +30 so the stripes meet the
+     tile's edges at the right angle, and without this it painted yellow
+     diagonals across the floor box and the coffee rings on either side of it.
+     No tile in the atlas draws outside its own square on purpose, so nothing
+     that shipped before this changes. */
+  const T = (i, fn) => { g.save(); g.beginPath();
+                         g.rect(tilePx(i)*pad, 0, TILE, TILE); g.clip();
+                         g.translate(tilePx(i)*pad, 0); fn(g); g.restore(); };
 
   T(0, g=>{ Rt(g,0,0,16,16,'#8d857a'); });                                     // void/unused
   /* 1 carpet: the grey-blue institutional kind, with the sad fleck */
@@ -859,7 +874,10 @@ function bakeAtlas(){
     Rt(g,3,13,10,1,'#8d867a'); });
   /* 16 server rack */
   T(16, g=>{ Rt(g,2,0,12,15,'#191d24'); Rt(g,2,0,12,1,'#2a3038');
-    for (let y=2;y<14;y+=3){ Rt(g,3,y,10,2,'#0d1015'); Rt(g,11,y,1,1,Math.random()<.5?'#39d7ff':'#4ade80'); }
+    /* the blinkenlights were a coin flip, which made the atlas a different
+       picture on every boot and gave the bleed test below nothing stable to
+       compare against. Two greens and two blues, fixed, reads the same. */
+    for (let y=2;y<14;y+=3){ Rt(g,3,y,10,2,'#0d1015'); Rt(g,11,y,1,1,(y%2)?'#39d7ff':'#4ade80'); }
     Rt(g,3,14,10,1,'#0a0c10'); });
   /* ------------------------------ OUTSIDE ---------------------------------
      The first tiles in the game that are not carpet, lino or a server room
@@ -965,6 +983,66 @@ function bakeAtlas(){
   T(31, g=>{ Rt(g,5,10,6,4,'#8a5a34'); Rt(g,5,10,6,1,'#a06c40');
     Rt(g,7,5,2,5,'#7a6a3a'); Rt(g,5,6,2,2,'#8a7a44'); Rt(g,10,7,2,1,'#8a7a44');
     Rt(g,4,12,1,1,'#8a7a44'); Rt(g,11,11,1,1,'#8a7a44'); });
+
+  /* ---------------------- 40-47: WHAT THE FLOOR REMEMBERS -------------------
+     Every object glyph in the legend is solid, so until now the only way to
+     put anything on a floor was to put a wall on it. Four maps of flat carpet
+     were the result: a building nobody had ever worked in, which is the one
+     thing this office is not supposed to be. These are FLOOR indices, not
+     objects -- you walk straight over them, nothing about collision, routing
+     or the measured travel budgets changes -- and they are the marks a
+     building actually accumulates.
+
+     They have to read as floor at a glance or they break the game's own
+     readability rule, which is that anything you cannot walk through looks
+     like an obstacle. So: flat, no shadow, no silhouette, and never darker
+     than the wall they sit next to. */
+  /* 40 the network drop that was temporary in 2019, taped across the carpet */
+  T(40, g=>{ Rt(g,0,0,16,16,'#5d6672');
+    for (let i=0;i<9;i++) Rt(g,(i*5.3)%16,(i*7.7)%16,1,1,'#67707c');
+    Rt(g,0,6,16,4,'#4e565f'); Rt(g,0,6,16,1,'#5a636d'); Rt(g,0,9,16,1,'#454c55');
+    Rt(g,0,7,16,1,'#565f69'); });
+  /* 41 the carpet tile they replaced after the leak, from a later dye lot */
+  T(41, g=>{ Rt(g,0,0,16,16,'#5f6875');
+    for (let i=0;i<9;i++) Rt(g,(i*5.3)%16,(i*7.7)%16,1,1,'#69727e');
+    for (let i=0;i<5;i++) Rt(g,(i*6.1+3)%16,(i*4.3+2)%16,1,1,'#555d68');
+    Rt(g,0,0,16,1,'#575f6a'); });
+  /* 42 the floor box: four sockets, three of them under a desk leg */
+  T(42, g=>{ Rt(g,0,0,16,16,'#5d6672');
+    for (let i=0;i<9;i++) Rt(g,(i*5.3)%16,(i*7.7)%16,1,1,'#67707c');
+    Rt(g,4,4,8,8,'#8d8579'); Rt(g,4,4,8,1,'#a29a8d'); Rt(g,4,11,8,1,'#6d665c');
+    Rt(g,6,6,2,2,'#3a4148'); Rt(g,9,6,2,2,'#3a4148');
+    Rt(g,6,9,2,1,'#3a4148'); Rt(g,9,9,2,1,'#3a4148'); });
+  /* 43 KEEP CLEAR, hatched, in front of a door nobody keeps clear */
+  T(43, g=>{ Rt(g,0,0,16,16,'#5d6672');
+    for (let i=0;i<9;i++) Rt(g,(i*5.3)%16,(i*7.7)%16,1,1,'#67707c');
+    for (let i=-16;i<16;i+=6) for (let k=0;k<16;k++) Rt(g,i+k,k,3,1,'#8a7c46');
+    Rt(g,0,0,16,1,'#4e565f'); Rt(g,0,15,16,1,'#4e565f'); });
+  /* 44 the rings under where the kettle used to be */
+  T(44, g=>{ Rt(g,0,0,16,16,'#a89f8d'); Rt(g,0,0,16,1,'#b8b0a0'); Rt(g,0,8,16,1,'#988f7e');
+    Rt(g,8,0,1,16,'#988f7e'); Rt(g,0,0,1,16,'#b8b0a0');
+    Rt(g,3,3,4,1,'#8e8471'); Rt(g,2,4,1,3,'#8e8471'); Rt(g,7,4,1,3,'#8e8471');
+    Rt(g,3,7,4,1,'#8e8471');
+    Rt(g,10,9,3,1,'#8e8471'); Rt(g,9,10,1,2,'#8e8471'); Rt(g,13,10,1,2,'#8e8471');
+    Rt(g,10,12,3,1,'#8e8471'); });
+  /* 45 the entrance matting, worn down the middle by everybody who visits */
+  T(45, g=>{ Rt(g,0,0,16,16,'#3b3f44'); Rt(g,0,0,16,1,'#4a4f56'); Rt(g,0,15,16,1,'#2e3237');
+    for (let x=1;x<15;x+=2) Rt(g,x,2,1,12,'#43484e');
+    Rt(g,5,3,6,10,'#4d5259'); });
+  /* 46 the leak from the car in bay nineteen */
+  T(46, g=>{ Rt(g,0,0,16,16,'#3f434a');
+    for (let i=0;i<9;i++) Rt(g,(i*7.1)%16,(i*4.7)%16,1,1,'#474b53');
+    Rt(g,0,0,1,16,'#c9c4b8');
+    Rt(g,5,6,7,5,'#33363c'); Rt(g,4,7,9,3,'#33363c'); Rt(g,6,5,4,1,'#383b41');
+    Rt(g,7,11,3,1,'#383b41'); Rt(g,12,9,2,1,'#3a3d43'); });
+  /* 47 a bay number, repainted once and fading again */
+  T(47, g=>{ Rt(g,0,0,16,16,'#3f434a');
+    for (let i=0;i<9;i++) Rt(g,(i*7.1)%16,(i*4.7)%16,1,1,'#474b53');
+    Rt(g,0,0,1,16,'#c9c4b8');
+    Rt(g,4,5,1,6,'#5a5d62'); Rt(g,3,6,1,1,'#54575c');
+    Rt(g,7,5,3,1,'#5a5d62'); Rt(g,10,6,1,2,'#5a5d62'); Rt(g,8,8,2,1,'#54575c');
+    Rt(g,7,9,1,1,'#4d5055'); Rt(g,10,9,1,1,'#5a5d62'); Rt(g,8,10,2,1,'#5a5d62'); });
+  return c;
 }
 
 /* ------------------------- people: paper-doll bake ------------------------ */
@@ -1294,13 +1372,13 @@ const MAPS = { carpark: {
     '########XX###########################X######',
     '#---P------------------------------b-------#',
     '#zZyZZ-yZz--z-ZzZZyz-zZzzzZ-yZ-zyz-zyZzz-zz#',
-    '#------------------------------------------#',
+    '#------n-------------n-------------n-------#',
     '#zyyzz-zZyzzy-Zy--yz-ZyZZZy-zZzzyy-ZZQZy-Zy#',
-    '#------------------------------------------#',
+    '#-----------*------------------------------#',
     '#zzyZy-ZzzyZZ-zzzyyZ-zzz-Zz-zyyZzz-ZZZ-z-yz#',
     '#------------------------------------------#',
     '#ZZyZZ-Z--zZz-ZZzyZy-yyzzzz-zyZyzZ--zzZz-ZZ#',
-    '#------------------------------------------#',
+    '#-----------------------------*------------#',
     '#zzyzz-yzyyZ--zzZyZz-zZzzzz-y-ZyZz-ZzZZZ-ZZ#',
     '#------------------------------------------#',
     '#gggggggggggggggggggggggggggggggggggggggggg#',
@@ -1324,21 +1402,21 @@ const MAPS = { carpark: {
     '#..f.....#......................#mmxmmmmmmm#',
     '#EP......W..qc...qc...qc...qc...#mm.dqdq.dq#',
     '#E.......W..1....2....3....4....#mmm8......#',
-    '#........#......................#mmmmmmmmmm#',
+    '#........#....+..........+......#mmmmmmmmmm#',
     '#..NN....#......................#GGGGDGGGGG#',
-    '#...6....#......................#..........#',
-    '#........#......................#..ttttttdq#',
+    '#...6.::.#......................#..........#',
+    '#.....::.#......................#..ttttttdq#',
     '#p.......#....qc...qc.......Tc..#..ttttt..7#',
     '#........D......................D..........#',
     '#lllDlllllllplllllllplllllDlllpllllllDllllo#',
-    '####......................................e#',
-    '####.........................9............e#',
+    '####..........=======.....................e#',
+    '####.........................9....%%%.....e#',
     '#########D######D########D#########D########',
     '#kkKkVk......#......#........#sssssssssssss#',
-    '#,,,,,,......#..HH..#........#sssssssssssss#',
+    '#,,",,,......#..HH..#........#sssssssssssss#',
     '#,,,,,,..U...#dqHH..#....R...#ssSSSSSSSSsss#',
     '#C,,,,,..U...#.5....#........#sssssssssssss#',
-    '#,,,,,,......#..FF..#........#ssSSSSSSSSsss#',
+    '#,,,,",......#..FF..#........#ssSSSSSSSSsss#',
     '#,,A,,,......#......#........#sssssssssssss#',
     '#,,,,,,......############DWWWWWWW#D#########',
     '#,,,,x,......#.dq..dq..dq....FF.....dq..dq.#',
@@ -1395,21 +1473,21 @@ ground: {
   name:'PROACTIVE IT PARTNERS — GROUND FLOOR',
   map:[
     '###wwwwww####wwwwwww###wwwwwww####wwwwww####',
-    '#,,,,,,,,,,#.........#....F....#...........#',
+    '#,,,,,,,,,,#....+....#....F....#...........#',
     '#EP,,,,,,,,D..cccc...#...cc....#...dq......#',
     '#E,,,,,,,,,#..tttt...#...tt....#...dq......#',
     '#,,,,,,,,,,#..cccc...#...cc....#.....f.....#',
     '#,,NNNNN,,,#.........#.........#...........#',
     '#,,,,,,,,,,GGGGGGGGGGGGGGDGGGGGGGGGGDGGGGGG#',
-    '#,,,,,,,,,,...............................e#',
+    '#,,,,,,,,,,...=======.....%%%.............e#',
     '#,,,,,,,,,,####D###########D#########D######',
     '#,,,,,,,,,,#..........#.........#..........#',
-    '#,,UU,,,f,,#BBBBB.....#.hhhhhhh.#..tt..tt..#',
-    '#,,,,,,,,,,#..........#.........#..cc..cc..#',
+    '#,,UU,,,f,,#BBBBB...::#.hhhhhhh.#..tt..tt..#',
+    '#,,,,,,,,,,#........::#.........#..cc..cc..#',
     '#,,UU,,,,,,#BBBBB.....#.hhhhhhh.#..........#',
     '#,,,,,,,,,,#..........#.........#..tt..tt..#',
     '#,,f,,,,f,,#...dq.....#.hhhhhhh.#..cc..cc..#',
-    '#,,,,,,,,,,#..........#.........#...f...vv.#',
+    '#,,,,,,,__,#..........#.........#...f_..vv.#',
     '########XX###########################X######',
     '############################################'
   ],
@@ -1439,21 +1517,21 @@ ground: {
   name:'MERIDIAN FREIGHT — UNIT 4, THE ESTATE',
   map:[
     '############################################',
-    '#------------------------------------------#',
+    '#--n----n---n------------------------------#',
     '#--zz---zz---zz--------------zz---zz---zz--#',
-    '#------------------------------------------#',
+    '#---------*--------------------------------#',
     '#--b---------------------------------zz----#',
-    '#------------------------------------------#',
+    '#------------------------*-----------------#',
     '####################DD######################',
     '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,#',
     '#,,NN,,,,,,,,,,,,,,,dq,,,,,,,,,,,,,,,,Uv,,,#',
     '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,#',
     '####D#############D################D########',
-    '#........#..................#..............#',
+    '#........#..................#.....%%%......#',
     '#..SS....#....dq....dq......#....h.........#',
-    '#........#..................#....h.........#',
-    '#..f.....#....dq....dq...v..#..............#',
-    '#........#..................#..............#',
+    '#.....+..#..................#....h..======.#',
+    '#..f.....#....dq....dq::.v..#..............#',
+    '#........#............::....#..............#',
     '############################################'
   ],
   anchors:{ SITEPARK:[21,5], SITEDESK:[21,9], SITECOMMS:[4,13],
@@ -6722,6 +6800,13 @@ const LEGEND = {
      all would put an exit on the kitchen. Same art, an act on top. */
   'X':{f:8, act:'outside'},
   '-':{f:33}, 'g':{f:35},
+  /* FLOOR MARKS. Every one of these is an `f`, so it is drawn and walked over
+     and nothing else: no solidity, no act, no anchor, no effect on any route
+     or on the three measured travel ceilings. The alternative was an object
+     glyph, and objects in this legend are solid by construction -- which is
+     why four maps had nothing on the floor at all. */
+  '=':{f:40}, ':':{f:41}, '+':{f:42}, '%':{f:43},
+  '"':{f:44}, '_':{f:45}, '*':{f:46}, 'n':{f:47},
   'Z':{o:34}, 'z':{o:38}, 'y':{o:39}, 'b':{o:37, act:'bins'}, '!':{o:36, act:'barrier'},
   /* YOUR car, as opposed to the forty others. The YOURCAR anchor is the tarmac
      BESIDE it, not this tile: you stand in the aisle and face the car, the way
@@ -15097,6 +15182,50 @@ function selfTest(runSim){
           const idle = painted.filter(i => i !== 0 && !drawn.has(i));
           ok('art: every tile the atlas bakes is a tile some floor uses',
              !idle.length, idle.join(' ') + (idle.length ? ' — place it or stop baking it' : ''));
+        }
+
+        /* NO TILE PAINTS OUTSIDE ITS OWN SQUARE. The atlas is one strip with
+           the slots packed edge to edge, so a bake that draws a pixel past its
+           own sixteen lands in the NEXT TILE and stays there for the rest of
+           the game, on every map that uses it, with nothing to say so. That is
+           not hypothetical: the keep-clear hatching sweeps its stripes from
+           x=-16 to x=+30 so they meet the tile edges at the right angle, and
+           it painted yellow diagonals across the floor box and the coffee
+           rings either side of it -- art for one glyph corrupting two others,
+           found by looking at a screenshot and not by any test.
+
+           Bake the same table a second time with the slots spaced three apart,
+           where a neighbour is too far away to reach, and compare. Every slot
+           must be identical to its uncontaminated twin. */
+        {
+          const spaced = bakeAtlas(3);
+          const [pa, pag] = cv(TILE, TILE), [sa, sag] = cv(TILE, TILE);
+          const bled = [];
+          for (let i = 0; i < ATLAS_N; i++){
+            pag.clearRect(0,0,TILE,TILE); sag.clearRect(0,0,TILE,TILE);
+            pag.drawImage(atlas, i*TILE, 0, TILE, TILE, 0, 0, TILE, TILE);
+            sag.drawImage(spaced, i*TILE*3, 0, TILE, TILE, 0, 0, TILE, TILE);
+            const a = pag.getImageData(0,0,TILE,TILE).data;
+            const b = sag.getImageData(0,0,TILE,TILE).data;
+            /* NOT EXACT EQUALITY. Drawing the same arc at x=448 and at x=1344
+               is the same picture, but the rasteriser rounds its antialiasing
+               differently at the two addresses: the wall clock came out one
+               pixel apart in the last bit of two channels, which is the tile
+               being drawn correctly twice. A bleed is not subtle: the real one
+               moves a channel by seventy over carpet and by a hundred and ten
+               over the floor box's sockets, and it is still caught with the
+               threshold raised to eighty. Eight sits just above the
+               rasteriser's last bit with two orders of margin to spare, and
+               three such pixels are needed before it counts at all. */
+            let off = 0;
+            for (let k = 0; k < a.length; k += 4)
+              if (Math.abs(a[k]-b[k]) > 8 || Math.abs(a[k+1]-b[k+1]) > 8 ||
+                  Math.abs(a[k+2]-b[k+2]) > 8 || Math.abs(a[k+3]-b[k+3]) > 8) off++;
+            if (off >= 3) bled.push(i + '(' + off + 'px)');
+          }
+          ok('art: no tile paints outside its own square in the atlas',
+             !bled.length,
+             bled.length ? 'slot(s) ' + bled.join(' ') + ' differ from an unpacked bake' : '');
         }
       }
 
