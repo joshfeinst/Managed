@@ -1127,8 +1127,23 @@ function bakePortrait(look){
    lives here as data; the engine below never needs to change to add satire.
    ========================================================================== */
 
-/* The ladder. perf is a rolling 0..1 score of ticket outcomes; a promotion
-   needs perf >= nextAt.perf held for nextAt.days consecutive days.
+/* The ladder. perf is a rolling 0..1 score of ticket outcomes.
+
+   A PROMOTION IS A ROLLING AVERAGE, NOT A STREAK, and this header described a
+   streak for as long as the streak had been gone. nextAt.days is the LENGTH OF
+   THE WINDOW the review looks at — your last N days at this rung — and the
+   promotion fires when that window is full and its MEAN clears the bar. Under
+   the variance the queue actually produces, needing N days each above the bar
+   was a 9% shot per window: an eleven-day wait inside an eight-day career,
+   which is why the ladder measured unclimbable above T2. An average asks for
+   the same consistency without letting one bad Tuesday delete a good week.
+
+   The bar is not nextAt.perf either. repHelp() discounts it by up to seven
+   points of goodwill, so being liked lowers the number you have to hit — the
+   review screen prints the discounted bar, and this is what it is printing.
+   See gateWindow(); guarded by "the ladder header describes the gate the code
+   applies".
+
    firedBelow two days running = gone.
 
    `cert:null` used to sit on every one of these gates, over a note saying
@@ -1571,24 +1586,31 @@ ground: {
    every number in docs/BALANCE.md is measured on the bare game — certificates
    make it easier from a known floor, which is the only honest way round. */
 /* WHAT A CAREER BANKS, MEASURED, so the shelf below can be priced against it
-   instead of against nothing. Twelve careers driven end to end through the real
-   systems, taking the best dialogue option every time: the median career banks
-   161 reputation. Playing the WORST option every time banks 0 — reputation is
-   the social axis and answers to how you treat people, not to craft, which is
-   why skill barely moves it (161 flawless against 157 mediocre).
+   instead of against nothing. Playing the WORST option every time banks 0 —
+   reputation is the social axis and answers to how you treat people, not to
+   craft, which is why skill barely moves it.
+
+   THE NUMBER WAS MEASURED ON THE ONE CAREER NOBODY PLAYS TWICE. It said 161,
+   from twelve careers each begun on a bare profile: intern to burnout, a
+   sixteen-day climb, every time. A player plays exactly one career like that.
+   From the second on they are re-hired above intern off the back of the last
+   one, the climb is half as long — eight days, starting at T3 and later at
+   vCIO — and the career banks a hundred and four. Pricing a shelf against the
+   first career and then selling it to the other seven put the real cost at
+   thirteen careers on a page that said eight.
 
    THE SHELF USED TO COST 31. All four certificates, together, for a fifth of
    ONE career's earnings — so the meta-progression was over before the second
    career started, every row read STUDY from then on, and "LOCKED: CISSP (13
-   REP)" implied a scarcity that did not exist for even one day. A currency
-   with one thing to buy and five times too much income is not a progression;
-   it is a number going up in the corner.
+   REP)" implied a scarcity that did not exist for even one day.
 
-   Priced against the measurement now: eight certificates totalling 1,355, which
-   is about eight careers of good play, against the ten a career takes to reach
-   retirement. You cannot hold them all until near the end, and which two you
-   hold first is a real choice. */
-const REP_PER_CAREER = 161;    // median banked, best-choices play, 12 careers
+   Eight certificates totalling 1,355 is thirteen careers of good play, and a
+   playthrough that reaches retirement is about seven of them: it earns some
+   nine hundred and ends holding six of the eight. You never hold the shelf,
+   which two you buy first is a real choice, and the last two are somebody
+   else's career. tools/rep.js measures all of that and fails if the constant
+   below drifts from it. */
+const REP_PER_CAREER = 104;    // median banked by a career in a sequence
 const CERTS = {
   aplus: { name:'COMPTIA A+ (PRACTICE EXAM)',
            desc:'Minigames start one step easier.',
@@ -4864,8 +4886,18 @@ const DIALOGUE = {
 
 /* --------------------------------- tickets -------------------------------- */
 /* steps: {say:node} | {goto:anchor} | {game:id,diff} | {choice:node}.
-   sla in game-minutes (scaled by role slaScale). weight biases the draw.
-   from: npc originator (else a client from FILLS is stamped on).
+   weight biases the draw. from: npc originator (else a client from FILLS).
+
+   THERE IS NO sla FIELD, and this header claimed one for a long time — "sla in
+   game-minutes (scaled by role slaScale)", beside a table in which not one row
+   has ever carried it. The deadline is derived, in slaFor(): the ticket
+   declares slaMult, the SLACK IT GETS AS A MULTIPLE OF ITS OWN WORK — 1.4
+   rush, 1.9 routine, 3.2 backlog — and the engine multiplies that by the
+   ticket's measured work, its priority grace and the role's slaScale, then
+   floors the result at work + MIN_SLACK. Anybody who trusted the old sentence
+   and wrote sla:40 on a new ticket would have written a field nothing reads,
+   and got the default 1.9 on a deadline they thought they had set. Guarded:
+   "no ticket declares a field the engine does not read".
 
    pri IS STORED INVERTED. Display = 5 - pri. So pri:4 renders P1 and is worth
    STAKES[4] = the most; pri:1 renders P4 and is worth the least. Write the
@@ -7654,8 +7686,17 @@ const FORGIVEN = .25;
    holds roughly half again as much as one person can touch. Every casualty
    past the twelfth percent was scored against a player who never had the
    minutes, which is why flawless play banked 40% of a pool and was marked
-   against a 70% bar. Triage is the job; the first third of a deliberately
-   overfull day is the triage, not the failure. */
+   against a 70% bar. Triage is the job, and a deliberately overfull day has to
+   forgive the part of it you were never given the minutes for.
+
+   IT FORGIVES A FIFTH, AND THE JUSTIFICATION ABOVE USED TO SAY A THIRD. The
+   argument was written for the day's oversubscription — half again as much
+   work as fits, so a third of what arrives is surplus — and then the constant
+   was set below it, at a fifth, without the paragraph moving. A comment that
+   argues for one number beside a line that holds another is a claim that
+   contradicts the code. A fifth is the number the ladder is tuned on: at a
+   third the tolerance swallows most of a real day's casualties and triage
+   stops being scored at all. */
 const BREACH_TOLERANCE = .20;
 /* How many rungs of your own history keep arriving at full rate, and how fast
    the ones beyond that fade. Swept: at 4 and .45 the taper is a no-op, because
@@ -14297,6 +14338,28 @@ function selfTest(runSim){
       if (T.from && !NPCS[T.from]) bad.push(id + ':from');
     }
     ok('every ticket is resolvable (nodes, games, fills)', !bad.length, bad.slice(0,4).join(' '));
+    /* AND NO TICKET DECLARES A FIELD THE ENGINE DOES NOT READ. The header
+       above this table claimed an `sla` field for a long time — "sla in
+       game-minutes" — over a table where the deadline has only ever been
+       derived from `slaMult`, a multiple of the ticket's own work. A row
+       written from that sentence would carry a deadline nothing reads, and
+       silently take the 1.9 default instead. Anything set on a ticket has to
+       be something slaFor(), rollDay() or the panel actually looks at; a
+       typo'd or imagined key is a deadline, a weight or a priority that
+       quietly did not happen. */
+    {
+      /* Every key any of the 361 rows actually carries, and nothing else. A
+         new field belongs here only once the engine reads it — adding the
+         name to this list is the moment somebody has to check that it does. */
+      const KNOWN = new Set(['tiers','weight','slaMult','pri','stress',
+                             'title','steps','from','fills']);
+      const stray = [];
+      for (const id in TICKETS)
+        for (const k in TICKETS[id]) if (!KNOWN.has(k)) stray.push(id + ':' + k);
+      ok('no ticket declares a field the engine does not read', !stray.length,
+         stray.slice(0,5).join(' ') || Object.keys(TICKETS).length + ' tickets, ' +
+         KNOWN.size + ' known fields');
+    }
     /* AND A TICKET THAT NAMES ITS OWN PRIORITY IS THAT PRIORITY. The queue row
        prints P1..P4 an inch from the title, so a title reading "reopened, at
        P1, as a fault" beside a row saying P2 is the game arguing with itself
@@ -20555,6 +20618,39 @@ function selfTest(runSim){
       ok('review: it says whether you had started them',
          /never started|part-way in|never picked up/.test(html));
 
+      /* THE LADDER HEADER DESCRIBES THE GATE THE CODE APPLIES. It said, for a
+         long time after the streak was removed, that a promotion "needs perf
+         >= nextAt.perf held for nextAt.days consecutive days" — two claims,
+         both false. The gate is the MEAN of the last nextAt.days, so a window
+         holding a day below the bar still promotes; and the bar is discounted
+         by repHelp(), so a liked player is promoted on a number lower than the
+         one written in the table. A player reading that header would grind for
+         a streak the game never asks for. */
+      {
+        const realRun = run;
+        QUIET = true; rngInit('GATEDOC'); runInit('GATEDOC');
+        run.rung = 0; run.rungSince = 0; run.rep = 0;
+        const need = ROLES[0].gates.nextAt;
+        /* A window whose days are NOT all above the bar, but whose mean is —
+           the exact case a streak rejects and an average passes. */
+        const lo = Math.max(0, need.perf - .25), hi = Math.min(1, need.perf + .25);
+        run.perfHist = []; for (let i = 0; i < need.days; i++) run.perfHist.push(i ? hi : lo);
+        const g = gateWindow();
+        ok('a promotion is the window average, not a streak of good days',
+           g.win === need.days && g.avg >= g.bar && lo < g.bar,
+           need.days + ' day(s), one at ' + (lo*100).toFixed(0) + '% under a bar of ' +
+           (g.bar*100).toFixed(0) + '%, mean ' + (g.avg*100).toFixed(0) + '%');
+        /* And the bar itself moves with goodwill, which is why the review
+           prints run.gateBar and not gates.nextAt.perf. */
+        const bare = gateWindow().bar;
+        run.rep = Math.ceil(REP.maxHelp / REP.perPoint);          // saturated
+        const liked = gateWindow().bar;
+        ok('and goodwill discounts the bar it is measured against',
+           Math.abs(bare - need.perf) < 1e-9 && Math.abs((bare - liked) - REP.maxHelp) < 1e-9,
+           'bar ' + (bare*100).toFixed(0) + '% at 0 goodwill, ' + (liked*100).toFixed(0) +
+           '% at ' + run.rep + ' — ' + (REP.maxHelp*100).toFixed(0) + ' points of help');
+        run = realRun;
+      }
       /* THE REVIEW MUST SURVIVE A RELOAD. gateWin and gateAvg are a VIEW of
          perfHist, were computed once in endDay and read straight off `run`, and
          are not in the save because they cannot be. So a career resumed from

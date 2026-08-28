@@ -2620,8 +2620,10 @@ document.
 ### The certificate shelf cost a fifth of one career
 
 Twelve careers driven end to end through the real systems, taking the best
-dialogue option every time: **the median career banks 161 reputation**. The
-whole shelf — four certificates — cost **31**.
+dialogue option every time on a bare profile: **the median career banks 161
+reputation**. The whole shelf — four certificates — cost **31**. (That 161 is
+the from-scratch figure; the section below re-measures it for the careers a
+player actually plays.)
 
 So the meta-progression was over before the second career started. Every row on
 the study screen read STUDY from then on, and `LOCKED: CISSP (13 REP)` implied
@@ -2634,10 +2636,44 @@ craft**. Best dialogue options bank 161, worst bank 0, and skill barely moves it
 (161 flawless against 157 mediocre). That is the design — it is the social axis,
 not the competence one.
 
-The shelf is eight certificates costing 1,355 now, priced against the
-measurement: about eight careers of good play against the ten a career takes to
-reach retirement. `REP_PER_CAREER = 161` is recorded in the source beside it so
-the pricing can be re-derived rather than re-guessed.
+The shelf is eight certificates costing 1,355 now, and `REP_PER_CAREER` is
+recorded in the source beside it so the pricing can be re-derived rather than
+re-guessed.
+
+### The constant was measured on the one career nobody plays twice
+
+`REP_PER_CAREER` said **161**, and the shelf was described on that basis as
+"about eight careers of good play". Both numbers came from twelve careers each
+begun on a bare profile — intern to burnout, a sixteen-day climb, every time.
+
+A player plays exactly one career like that. From the second on they are
+re-hired above intern off the back of the last one, and the climb is half as
+long. `tools/rep.js` plays the sequence a player actually plays:
+
+| | median banked | median days | starts at |
+|---|---|---|---|
+| from scratch, best options | 162 | 16 | intern |
+| **in a sequence, best options** | **104** | **8** | intern, then T3, project, procure, vCIO… |
+| from scratch, worst options | 0 | 22 | intern |
+
+So the shelf costs **thirteen careers of good play**, not eight — the price was
+right and the sentence describing it was wrong by 55%.
+
+What the price actually buys, measured by playing six playthroughs to
+retirement and studying between careers:
+
+| | value |
+|---|---|
+| careers to retirement | 6–8 (median 7) |
+| reputation earned across the playthrough | ~900 |
+| certificates held at the end | **6 of 8** (min 5) |
+
+That is the shelf working as designed: you never hold all of it, which two you
+buy first is a real choice, and the last two belong to somebody else's career.
+`tools/rep.js` fails the build if the constant drifts more than 15% from the
+sequence measurement, if worst-option play stops being worth less than half of
+best-option play, or if a winning playthrough ends up holding all eight or
+fewer than two.
 
 ### `meta.js` never bought one
 
