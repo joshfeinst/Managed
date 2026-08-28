@@ -8408,6 +8408,16 @@ function rollDay(){
     seen['cutover-weekend'] = (seen['cutover-weekend'] || 0) + 1;
     arrivals.unshift(makeArrival('cutover-weekend', 24, role));
   }
+  /* AND THE LIST GOES BACK IN ORDER. arrivalsTick walks this array by index
+     and stops at the first row whose minute has not come — so an out-of-order
+     row does not arrive early, it HOLDS EVERYTHING BEHIND IT. The migration is
+     unshifted at 24 after the sort, and 43% of final days deal something in
+     the first 24 minutes: measured, a median of 12 minutes and up to 18 in
+     which the ticket behind it sat invisible while its deadline, computed from
+     the minute it was SUPPOSED to land, ran anyway. Linda's review landing at
+     6 and dealt at 24, with a fifth of its clock already gone, on the one day
+     the whole career aims at. */
+  arrivals.sort((a,b)=>a.at-b.at);
   const events = [];
   /* One event opened 88% of every day of every career: the same standup, from
      the same person, forever. The morning rotates now — it is still usually a
@@ -19759,6 +19769,31 @@ function selfTest(runSim){
       const onLast = dealtOn(need - 1), before = dealtOn(0);
       ok('the last day at the top deals the Big Migration, exactly once',
          onLast === 1, 'last day ' + onLast + ', an ordinary day ' + before);
+      /* AND THE DAY IS STILL IN THE ORDER IT ARRIVES IN. arrivalsTick walks
+         run.plan.arrivals by index and stops at the first row whose minute has
+         not come — so a row out of order does not arrive early, it holds
+         everything behind it, invisible, while a deadline computed from the
+         minute it was supposed to land runs anyway. The migration is unshifted
+         at minute 24 and 43% of final days deal something inside the first 24
+         minutes: measured before the fix, a median of 12 minutes lost and up
+         to 18, on the one day the whole career aims at. Swept across the
+         ladder, and over enough final days to catch it. */
+      {
+        const held = [];
+        for (let i = 0; i < 40; i++){
+          rngInit('ORDER' + i); runInit('ORDER' + i);
+          run.rung = i % ROLES.length; run.day = 1 + (i % 9);
+          if (run.rung === ROLES.length - 1)
+            run.daysAtTop = ROLES[run.rung].gates.retireAfterDays - 1;
+          rollDay();
+          const A = run.plan.arrivals;
+          for (let k = 1; k < A.length; k++)
+            if (A[k].at < A[k-1].at)
+              held.push(A[k].id + ' at ' + A[k].at.toFixed(0) + ' behind ' + A[k-1].at.toFixed(0));
+        }
+        ok('and every day deals its tickets in the order they arrive', !held.length,
+           held.slice(0,3).join('; ') || '40 days across ' + ROLES.length + ' rungs');
+      }
       /* and LANDING it is what picks the ending. Asserting only that the two
          texts differ passes happily while endDay hands out the same ending to
          everybody — which is exactly what the mutation showed, so this drives
