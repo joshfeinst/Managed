@@ -9136,7 +9136,16 @@ const COMMUTE = {
       t:'You sat in the car for eleven minutes after the engine stopped. You are not sure what happened in them.' },
     { if:r => r.burnout > 50,
       t:'You have started taking the long way in. You have told yourself it is about the traffic.' },
-    { if:r => r.promoted,
+    /* THE MORNING AFTER, NOT EVERY MORNING AFTER. run.promoted is set at the
+       gate and nothing ever set it back, so from a player's first promotion
+       this line -- a line whose whole joke is that only the job has changed --
+       was the card every single morning for the rest of the career, and the
+       nine lines below it could never be reached again. The flag is not the
+       question; "was I promoted at the last review" is, and rungSince already
+       answers it: it is set to perfHist.length at the gate, and perfHist only
+       grows at an evening review, so the two are equal for exactly the one day
+       that follows a promotion. */
+    { if:r => r.promoted && r.perfHist.length === r.rungSince,
       t:'Same drive, same exit, same barrier that only reads your badge on the second try. Different job.' },
     { if:r => r.stress > 70,
       t:'You have been composing an email in your head since the roundabout. You will not send it.' },
@@ -10164,8 +10173,17 @@ function endDay(){
   /* anything still open rolls into the void; unworked queue counts against you */
   for (const t of run.queue){
     run.scores.push(0); run.breaches++; run.burned.push(stakesOf(t.id));
+    /* `never` WAS SET FOR EVERYTHING STILL OPEN AT FIVE, INCLUDING THE TICKET
+       IN YOUR HANDS. The review reads the three states in order -- never
+       started, you were part-way in, never picked up -- and tests `never`
+       first, so a ticket recorded on the very same line as `worked: true` was
+       printed to the player as one they never started. It is the ticket the
+       clock ran out on top of; it is the one they remember. The two flags are
+       complements: `never` is untouched, `worked` is begun, and whether the
+       casualty happened at five or at its own deadline is what still separates
+       "never started" from "never picked up". */
     (run.burnLog = run.burnLog || []).push({ t: t.title, p: 5 - (TICKETS[t.id].pri || 2),
-                                             s: stakesOf(t.id), worked: t.si > 0, never: true });
+                                             s: stakesOf(t.id), worked: t.si > 0, never: t.si === 0 });
   }
   run.queue = [];
   /* An oversubscribed day cannot be cleared, and grading the mean over every
@@ -21227,6 +21245,56 @@ function selfTest(runSim){
          onReview && !!card && cameBack, 'onReview ' + onReview + ' card ' + !!card + ' back ' + cameBack);
       ok('review: replaying the card never re-scores the day', sameDay);
       run = null; G.state = 'title';
+    }
+
+    /* AND THE EVENING DOES NOT CALL A TICKET UNTOUCHED WHEN ITS OWN LEDGER SAYS
+       YOU WERE ON IT. endDay stamps everything left in the queue at five, and
+       it stamped `never: true` unconditionally -- on the same line that
+       records `worked: t.si > 0`. The review tests `never` first, so the
+       ticket the clock ran out on top of, the one the player remembers, was
+       printed back to them as one they never started. */
+    {
+      const opened = { t:'A JOB YOU HAD STARTED', p:2, s:4, worked:true,  never:false };
+      const cold   = { t:'A JOB YOU HAD NOT',     p:2, s:4, worked:false, never:true  };
+      const say = w => w.never ? 'never started' : w.worked ? 'part-way in' : 'never picked up';
+      ok('review: a ticket you were part-way into is not reported as one you never started',
+         say(opened) === 'part-way in' && say(cold) === 'never started',
+         say(opened) + ' / ' + say(cold));
+      /* and the ledger endDay actually writes agrees with that */
+      QUIET = true;
+      rngInit('BURN-1'); runInit('BURN-1'); rollDay();
+      run.clock = DAY_MIN + 1; run.burnLog = [];
+      const role = ROLES[run.rung], P = run.plan;
+      while (run.queue.length < 2 && P.ai < P.arrivals.length){
+        const a = makeArrival(P.arrivals[P.ai].id, 60, role); P.ai++;
+        run.queue.push({ uid:a.uid, id:a.id, title:a.title, fills:a.fills, at:60,
+          deadline:60+a.sla, sla:a.sla, stress:a.stress, si:0, bonus:0, gameScores:[], from:null });
+      }
+      if (run.queue[0]) run.queue[0].si = 1;              // one you had begun
+      endDay();
+      const both = (run.burnLog || []).filter(w => w.worked && w.never);
+      ok('review: nothing in the burn ledger is worked and never started at once',
+         !both.length, both.length + ' entr(ies): ' + both.map(w => w.t).join(', '));
+      run = null; G.state = 'title';
+    }
+
+    /* THE MORNING CARD IS NOT ONE LINE FOREVER. COMMUTE.when is scanned with
+       .find(), so any condition that latches on and never lets go silences
+       every line below it for the rest of the career. run.promoted was exactly
+       that: set at the gate, never cleared, so from a player's first promotion
+       the same card came up every single morning -- a line whose own joke is
+       that only the job has changed -- and the nine lines under it could not
+       be reached again. */
+    {
+      const line = (COMMUTE.when || []).find(w => /Different job\./.test(w.t));
+      const st = { day:6, rung:3, burnout:10, stress:20, rep:0, promoted:true,
+                   perfHist:[1,2,3,4], rungSince:4 };
+      const morningAfter = !!(line && line.if(st));
+      st.perfHist = [1,2,3,4,5];                 // one more evening scored
+      const everyMorningAfter = !!(line && line.if(st));
+      ok('commute: the promotion morning is the morning after a promotion, and then not again',
+         morningAfter && !everyMorningAfter,
+         'fires the morning after: ' + morningAfter + ', still firing a day later: ' + everyMorningAfter);
     }
 
     /* the handbook and the pause card admit the mouse exists */
