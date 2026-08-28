@@ -10702,10 +10702,17 @@ const REVIEW_LINES = {
    the pricing moves; the self test below fails if they drift.
 
               intern    t1     t2     t3   project procure relmgr solarch vcio  director */
-/* Director is the noisiest of the ten -- its careers are the shortest, so it
-   yields the fewest days per seed -- and three samples put it at 0.551, 0.567
-   and 0.631. This is the sixty-seed one. */
-const REVIEW_TOP = [0.833, 0.738, 0.656, 0.488, 0.490, 0.464, 0.474, 0.523, 0.500, 0.567];
+/* RE-RECORDED after simDay stopped working past five o'clock. The bot used to
+   finish whatever it had picked up whatever the time and resolve it on the
+   other side, so every one of these was fitted to a player working most of an
+   extra hour a week that nobody can work -- and to tickets counted as closed
+   that a real shift would have burned. Every rung came down between two and
+   nine points except Director, which went up: it deals the fewest and heaviest
+   jobs, so losing the overtime costs it least and the days it does finish are
+   its good ones. Director is the noisiest of the ten -- its careers are the
+   shortest, so it yields the fewest days per seed -- and takes sixty seeds
+   where the rest take thirty. */
+const REVIEW_TOP = [0.808, 0.750, 0.609, 0.512, 0.463, 0.439, 0.431, 0.500, 0.473, 0.618];
 function reviewBar(rung){
   if (REVIEW_TOP[rung] !== undefined) return REVIEW_TOP[rung];
   const G = ROLES[rung].gates;
@@ -13964,9 +13971,30 @@ function simDay(skill, policy){
     const t = run.queue.slice().sort(ORDERS[policy.order] || ORDERS.deadline)[0];
     run.active = t;
     const steps = TICKETS[t.id].steps;
-    let sg = 0;
+    let sg = 0, ranOut = false;
+    /* THE BOT CLOCKS OFF WHEN A PLAYER DOES. The outer loop is gated on the
+       shift, and this one was not -- so once the bot picked a ticket up it
+       worked it to completion whatever the time, and called resolveTicket on
+       the other side. Measured over 24 seeds x 3 rungs, it entered endDay past
+       five o'clock on 30 days of 72, by a median of 34 minutes and once by
+       168. A player gets DAY_OVERRUN, twenty minutes, and only while a panel
+       is holding the day open; in the open office at 17:00 the day simply
+       ends and whatever was in their hands rolls into the void.
+
+       So every bar, window and yardstick in this file was fitted to a player
+       who works most of an extra hour a week that nobody can work. Same rule
+       for both now: no new step past the overrun, and the ticket is left where
+       the player would have left it. */
     while (t.si < steps.length && sg++ < 20){
       const st = steps[t.si];
+      /* AND THE TWO HALVES OF THE SHIFT ARE NOT THE SAME. Walking happens in
+         the open office, where 17:00 is hard: the day ends under a player mid
+         corridor. Only a panel -- a conversation, a board, the queue -- holds
+         it open, and only for DAY_OVERRUN. One test for both let the bot start
+         a forty-minute walk at ten to five. */
+      const willCost = st.goto ? 0 : stepCost(st);
+      if (st.goto ? run.clock >= DAY_MIN
+                  : run.clock + willCost > DAY_MIN + DAY_OVERRUN){ ranOut = true; break; }
       /* REALISTIC time costs — a review caught the bot pricing minigames at
          1.2 minutes while a human pays 8-20 of real clock, which made every
          bot-validated SLA target unreachable in real play. Reading a line is
@@ -13986,6 +14014,12 @@ function simDay(skill, policy){
       t.si++;
       arrivalsTick(); crashTick(); slaTick();
     }
+    /* A TICKET THE SHIFT RAN OUT ON IS NOT A TICKET YOU CLOSED. resolveTicket
+       was called unconditionally, so a job the bot was half way through at
+       five o'clock scored as finished -- while a player's half-finished job
+       stays in the queue and endDay burns it as a casualty. Left where a
+       player would have left it: in the queue. */
+    if (ranOut){ run.active = null; break; }
     resolveTicket(t);
   }
   endDay();

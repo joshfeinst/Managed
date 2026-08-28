@@ -37,7 +37,7 @@ twice.
 
 Measured across 16 seeds and six days each, with every board played perfectly so
 that only the triage rule differs, the two strategies that work are
-*protect the big ones* (74.2%) and *close what you can actually finish*
+*protect the big ones* (72.3%) and *close what you can actually finish*
 (70.0%) — four points apart, so there is no single right answer, which is the
 point. Two things lose you the most: doing the least important thing first
 (50.8%), and **working the queue in the order it arrived** (59.9%). Going in
@@ -54,8 +54,8 @@ badly.
 `tools/bars.js` measures each rung's separation as flawless p50 minus sloppy
 p50, in points of day score. All nine are healthy — good triage clears at least
 60% of seeds and bad triage no more than 30% — but they are not equal:
-**T3 Helpdesk is the narrowest rung at 19 points**, and **Procurement is the
-widest at 34**. A narrow rung is one where the day is closest to fitting, so
+**T3 Helpdesk is the narrowest rung at 17 points**, and **Procurement is the
+widest at 28**. A narrow rung is one where the day is closest to fitting, so
 there is least to decide.
 
 That pair of names is checked: `bars.js` re-reads this paragraph and fails if
