@@ -1520,7 +1520,7 @@ ground: {
     '#--n----n---n------------------------------#',
     '#--zz---zz---zz--------------zz---zz---zz--#',
     '#---------*--------------------------------#',
-    '#--b---------------------------------zz----#',
+    '#--b-----------------Q---------------zz----#',
     '#------------------------*-----------------#',
     '####################DD######################',
     '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,#',
@@ -1534,6 +1534,15 @@ ground: {
     '#........#............::....#..............#',
     '############################################'
   ],
+  /* THE WAY HOME. EXITS has always declared the drive back -- clientsite to
+     carpark, SITEPARK to YOURCAR, twenty-six minutes -- and exitsFrom happily
+     reported it as built, because both anchors exist. But interaction in this
+     game is act-tile based: you face a tile and press E, and the only acts on
+     this map were bins, couch, vending, rack and stores. There was no car to
+     face. The drive out worked, the drive back was a table entry, and a player
+     who took a client-site ticket was stranded at Meridian Freight until the
+     shift ended. This is the car, parked in the bay above SITEPARK, which is
+     the tarmac you stand on to use it -- the same arrangement as YOURCAR. */
   anchors:{ SITEPARK:[21,5], SITEDESK:[21,9], SITECOMMS:[4,13],
             SITEFLOOR:[18,15], SITESTORE:[35,15] }
 }};
@@ -10628,6 +10637,16 @@ function serializeRun(){
     satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
     introDone: !!run.introDone, seen: run.seen || {}, burnLog: run.burnLog || [],
     reviewCard: run.reviewCard || null,
+    /* THE FLAG THAT DECIDES WHICH ENDING YOU READ. Landing the Big Migration
+       sets run.landedMigration, and careerOver picks 'retired' or 'shortof'
+       from it -- the win or the consolation. It was never written here, so any
+       save on the final day (and the autosave fires every 25 seconds) told a
+       player who HAD landed the cutover that they left it on somebody else's
+       desk, and banked three fewer points of reputation for it. */
+    landedMigration: !!run.landedMigration,
+    /* the morning card's calendar row, and the three blocks of the review that
+       explain where the score came from */
+    cancelled: run.cancelled || 0, lastScore: run.lastScore || null,
     leaveTaken: run.leaveTaken || 0, backlog: run.backlog || 1,
     /* Both were memory-only, and both detonated on resume: a missing warned
        threw a TypeError per tick for the 12 minutes before every calendar
@@ -10684,6 +10703,13 @@ function resumeRun(s){
     breaches:r.breaches, resolved:r.resolved,
     aces:r.aces, daysAtTop:r.daysAtTop, queueDays:r.queueDays || 0,
     satOn:r.satOn || {}, promoted:r.promoted,
+    /* All five of these were lost on every resume, and two of them were being
+       written to the save and simply never read back out of it -- so the
+       twice-a-career leave cap reset to two every time you continued, and the
+       heavier day that leave is supposed to cost you never arrived. */
+    landedMigration: !!r.landedMigration,
+    cancelled: r.cancelled || 0, lastScore: r.lastScore || null,
+    leaveTaken: r.leaveTaken || 0, backlog: r.backlog || 1,
     phase:r.phase || 'work', pendingEnd: r.pendingEnd || null };
   if (run.pendingEnd){ careerOver(run.pendingEnd); return; }
   if (!run.plan){ startCommute(); return; }
@@ -18770,6 +18796,42 @@ function selfTest(runSim){
         sides[L.act] = Math.max(sides[L.act] || 0, free);
       }));
       ok('map: nothing you are told to use is walled in', walled.length === 0, walled.join(' '));
+
+      /* EVERY EXIT THE GAME DECLARES CAN ACTUALLY BE TAKEN. exitsFrom() calls
+         an exit "built" when both its anchors exist, and that is not what
+         built means: interaction in this game is act-tile based, so leaving a
+         map requires a TILE on it carrying the act. The client site had the
+         anchor, had the EXITS row -- clientsite to carpark, twenty-six minutes
+         -- and had no car to face. The drive out worked, the drive home was a
+         line in a table, and a player who took a client-site ticket stayed at
+         Meridian Freight until the shift ended.
+
+         So check the thing the player needs rather than the thing the table
+         says: for every declared exit, does some tile on the map it leaves
+         carry its act. */
+      {
+        const unusable = [];
+        for (const e of EXITS){
+          if (!MAPS[e.from] || !MAPS[e.to]) continue;
+          loadMap(e.from);
+          let has = false;
+          for (let i = 0; i < W2.act.length; i++) if (W2.act[i] === e.act){ has = true; break; }
+          if (!has) unusable.push(e.from + '->' + e.to + ' needs a ' + e.act + ' tile');
+        }
+        ok('map: every exit the game declares has a tile you can actually use',
+           !unusable.length, unusable.join(' · '));
+        /* and no map is a one-way trip: if you can get on to it, you can get
+           off it again */
+        const stranded = [];
+        for (const id in MAPS){
+          const off = EXITS.some(e => e.from === id);
+          const on  = EXITS.some(e => e.to === id);
+          if (on && !off) stranded.push(id);
+        }
+        ok('map: no floor you can walk on to is a floor you cannot leave',
+           !stranded.length, stranded.join(' '));
+        loadMap('office1'); spawnPeople();
+      }
       /* THE SIGN POINTING AT IT HAS TO FIT ON THE SCREEN. The objective plate
          is drawn centred on a clamped x, and the clamp used a fixed forty-pixel
          margin that knows nothing about how wide the words are. The longest
@@ -21038,6 +21100,53 @@ function selfTest(runSim){
     ok('page: charset is declared and UTF-8',
        document.characterSet === 'UTF-8' && !!document.querySelector('meta[charset]'),
        document.characterSet + (document.querySelector('meta[charset]') ? '' : ' / no meta tag'));
+
+    /* EVERY FIELD ON THE RUN SURVIVES A SAVE, NOT THE FIVE SOMEBODY REMEMBERED.
+       serializeRun and resumeRun are two hand-written lists of forty-odd
+       fields that have to agree with each other and with everything gameplay
+       reads, and they had drifted apart in both directions at once: three
+       fields the save never wrote, and two it wrote and the resume never read
+       back. What that cost was not subtle. run.landedMigration decides which
+       of the two endings you get, so a player who HAD landed the Big Migration
+       and saved on the final day -- and the autosave fires every twenty-five
+       seconds -- was told they left the cutover on somebody else's desk.
+       run.leaveTaken caps annual leave at twice a career, so the cap reset
+       every time you pressed CONTINUE; run.backlog is the heavier day leave is
+       supposed to cost you, so it never arrived. run.lastScore is the three
+       blocks of the review that explain the score, and run.cancelled is the
+       morning card's calendar row; both silently emptied.
+
+       A test naming fields is the same list a fourth time, and would have
+       drifted with them. So this one names none: it puts a marker on every key
+       the live run object has, round-trips it, and asks which markers did not
+       come back. The allow-list below is the four fields that are MEANT to be
+       rebuilt rather than carried, each of which the resume sets itself. */
+    {
+      QUIET = true;
+      rngInit('SAVE-ALL'); runInit('SAVE-ALL'); rollDay();
+      run.clock = 120; run.landedMigration = true; run.leaveTaken = 1;
+      run.backlog = 1.4; run.cancelled = 3; run.lastScore = { earned: 9, worst: [] };
+      run.promoted = true; run.satOn = { linda: 1 };
+      /* rebuilt on purpose: the live ticket and marker are re-derived from the
+         queue, the event list is re-rolled from the plan, and the queue itself
+         is restored element by element rather than by reference */
+      const REBUILT = new Set(['active', 'marker', 'pendingEvents', 'queue']);
+      const before = Object.keys(run).filter(k => run[k] !== undefined && !REBUILT.has(k));
+      const ser = serializeRun();
+      resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(ser)) });
+      const lost = before.filter(k => run[k] === undefined);
+      /* AND THE ALLOW-LIST CANNOT BE THE ESCAPE HATCH. Everything above is
+         driven off `before`, so widening REBUILT until the test has nothing
+         left to check would make it pass while checking nothing -- the exact
+         shape of fix somebody reaches for when this fails on a field they do
+         not want to serialise. The run carries forty-odd fields; require the
+         test to still be looking at most of them. */
+      ok('save: every field the run carries survives a save and a resume',
+         !lost.length && before.length >= 30,
+         lost.length ? 'dropped: ' + lost.join(' ')
+                     : 'only ' + before.length + ' fields checked — REBUILT has grown too wide');
+      run = null; G.state = 'title';
+    }
 
     /* warned + taughtQueue survive the save; a resumed career neither
        crashes eventsTick for 12 minutes before every meeting nor replays
