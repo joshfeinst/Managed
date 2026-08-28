@@ -255,6 +255,32 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   await p.evaluate(()=>{ if (G.modal) closeModalToWork(); pauseGame ? pauseGame() : act('pause'); });
   await p.waitForTimeout(300);
   bad += await audit('pause');
+
+  /* THE SCREENS A CONFUSED PLAYER OPENS ON PURPOSE. This sweep grew one screen
+     at a time from whatever had just broken, and the two it never grew to are
+     the handbook and the options list — the only two screens whose entire job
+     is to be read. The handbook is also the longest text in the game, so it is
+     the one most likely to overflow its box on a short window and the one
+     least likely to be noticed doing it, because nothing in the day forces you
+     through it. */
+  await p.evaluate(()=>{ act('controls'); }); await p.waitForTimeout(300);
+  bad += await audit('handbook');
+  await p.evaluate(()=>{ act('options');  }); await p.waitForTimeout(300);
+  bad += await audit('options');
+
+  /* THE CERTIFICATE SHELF, STOCKED. 'setup / job posting' above is audited on a
+     first boot, where banked reputation is zero — so every certificate row is
+     the disabled variant and the shelf is eight identical greys. The layout
+     that actually ships has affordable rows and locked rows in one column,
+     with two different price colours and two different name prefixes, and that
+     is the arrangement that went out as eight stacked sticky bars. Audit the
+     screen a returning player sees, not the one a new install shows. */
+  await p.evaluate(()=>{
+    meta.rep = 150; meta.certs = [Object.keys(CERTS)[0]];
+    G.state = 'setup'; actSetup();
+  });
+  await p.waitForTimeout(350);
+  bad += await audit('setup / certificate shelf stocked');
   await p.evaluate(()=>{ G.state='work'; show(null); selfTest(); });
   await p.waitForTimeout(600);
   bad += await audit('self-test report');
