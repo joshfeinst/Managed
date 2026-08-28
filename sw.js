@@ -22,12 +22,24 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
+  /* ONLY A REAL ANSWER GOES IN THE CACHE. This wrote whatever came back --
+     any status, any type -- straight over './index.html'. A 404 from a
+     mis-deploy, a 500 from a wobbling host, or the 200-with-a-login-page that
+     a hotel or airport captive portal serves for every request, and the
+     offline copy of the game became that page. Permanently, because the next
+     visit is served from the cache, and the cached "game" is now a portal
+     screen with no way back. The one file this worker exists to protect was
+     the easiest one to destroy. */
+  const worthCaching = r => r && r.ok && r.status === 200 && r.type === 'basic';
+
   if (url.origin === location.origin) {
     e.respondWith(
       fetch(e.request)
         .then(r => {
-          const copy = r.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy));
+          if (worthCaching(r)) {
+            const copy = r.clone();
+            caches.open(CACHE).then(c => c.put(e.request, copy));
+          }
           return r;
         })
         .catch(() =>
@@ -42,8 +54,13 @@ self.addEventListener('fetch', e => {
       caches.match(e.request).then(m => {
         const net = fetch(e.request)
           .then(r => {
-            const copy = r.clone();
-            caches.open(CACHE).then(c => c.put(e.request, copy));
+            /* a font comes back opaque from another origin, so `basic` is the
+               wrong test here -- but a portal's redirect or error is still not
+               a font, and a cached one of those means no text for good */
+            if (r && (r.ok || r.type === 'opaque')) {
+              const copy = r.clone();
+              caches.open(CACHE).then(c => c.put(e.request, copy));
+            }
             return r;
           })
           .catch(() => m);

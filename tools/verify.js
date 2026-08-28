@@ -68,8 +68,33 @@ async function launch() {
   if (dupes.length) console.log('DUPLICATE KEYS ' + dupes.length + '\n  ' + dupes.join('\n  '));
   else console.log('DUPLICATE KEYS 0');
 
+  /* THE OFFLINE COPY IS ONLY AS GOOD AS WHAT THE WORKER AGREED TO CACHE.
+     sw.js wrote whatever came back over './index.html' -- any status, any
+     type. A 404 from a mis-deploy, a 500 from a wobbling host, or the
+     200-with-a-login-page a captive portal serves for every request, and the
+     cached game became that page. Permanently, because the next visit is
+     served from the cache, and the cached "game" is now a portal screen with
+     no way back to the real one. Read as source rather than exercised: a
+     service worker needs a real origin, a registration and a second load, and
+     none of those exist in a file:// harness -- but a cache write with no test
+     in front of it is plain either way. */
+  let swBad = 0;
+  {
+    const swPath = path.join(path.dirname(path.resolve(process.argv[2])), 'sw.js');
+    if (fs.existsSync(swPath)){
+      const sw = fs.readFileSync(swPath, 'utf8');
+      const puts = (sw.match(/\.put\(/g) || []).length;
+      const guards = (sw.match(/worthCaching|r\.ok|status === 200/g) || []).length;
+      if (!puts || guards < 2){
+        console.log('SW ' + puts + ' cache write(s), ' + guards + ' status guard(s)' +
+                    ' — an unguarded write can cache a portal page over the game');
+        swBad = 1;
+      } else console.log('SW ' + puts + ' cache writes, all behind a status check');
+    }
+  }
+
   console.log('PAGE ERRORS ' + errors.length + (errors.length ? '\n  ' + errors.join('\n  ') : ''));
-  const clean = fails.length === 0 && errors.length === 0 && dupes.length === 0;
+  const clean = fails.length === 0 && errors.length === 0 && dupes.length === 0 && !swBad;
   console.log(clean ? 'VERIFY OK' : 'VERIFY FAILED');
   await browser.close();
   process.exit(clean ? 0 : 1);
