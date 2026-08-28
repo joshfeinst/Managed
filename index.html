@@ -430,7 +430,15 @@ body.touch #tix .row:active{filter:brightness(1.3)}
           <dt>Company</dt><dd>Proactive IT Partners — Managed IT Services</dd>
           <dt>Benefits</dt><dd id="job-perk">Coffee is free. That is the benefit.</dd>
         </dl>
-        <p class="hint" style="margin:12px 0 6px">Job posting ID — the same ID always produces the same career. Share it.</p>
+        <!-- IT DOES NOT PRODUCE THE SAME CAREER, AND SAYING SO WAS A PROMISE THE
+             GAME COULD NOT KEEP. Measured: the same ID with a different
+             meta.carry deals a different day one, because carry decides which
+             desk you are hired onto and every rung has its own queue. What IS
+             true, and what a shared ID is actually worth, is that the same ID
+             deals the same days to the same desk -- certificates change nothing
+             about the plan, and two players at the same rung on the same ID get
+             the same arrivals, the same calendar and the same dialogue. -->
+        <p class="hint" style="margin:12px 0 6px">Job posting ID — the same ID deals the same days to the same desk. Where you start depends on the careers behind you. Share it.</p>
         <input type="text" id="seedbox" maxlength="18" spellcheck="false">
         <p class="hint" id="abandon-warn" style="margin:10px 0 0;color:var(--alert);display:none">
           A career is already in progress. Accepting this offer abandons it — click ACCEPT OFFER again to confirm.</p>
@@ -14557,9 +14565,37 @@ function selfTest(runSim){
     const p1 = JSON.stringify(run.plan);
     rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
     ok('determinism: one seed, one day', JSON.stringify(run.plan) === p1);
-    /* ...AND ONE SEED, ONE CAREER. The run-setup screen says "the same ID
-       always produces the same career. Share it." — the seed is the whole
-       social feature and the leaderboard it is aimed at. This guard checked
+    /* ONE SEED, ONE DESK, ONE DAY -- ACROSS PROFILES. The setup screen used to
+       say "the same ID always produces the same career. Share it." It does
+       not: meta.carry decides which desk you are hired onto, every rung has
+       its own queue, and two players with different histories on the same ID
+       get different day ones. Certificates, measured, change nothing about the
+       plan. So the shareable property is the one below -- same ID, same rung,
+       same day, whatever else the profile is carrying -- and the screen now
+       says that instead. */
+    {
+      const meta0 = JSON.parse(JSON.stringify(meta));
+      const planAt = (carry, certs) => {
+        meta.carry = carry; meta.certs = certs.slice(); meta.rep = carry * 40;
+        QUIET = true; rngInit('SHARE-DESK'); runInit('SHARE-DESK');
+        run.rung = 2;                          // the same desk, either way
+        rollDay();
+        const j = JSON.stringify(run.plan); run = null; return j;
+      };
+      const plain = planAt(0, []);
+      const decorated = planAt(3, Object.keys(CERTS).slice(0, 2));
+      meta = normalizeMeta(meta0);
+      ok('determinism: one seed and one desk deal the same day to any profile',
+         plain === decorated,
+         plain === decorated ? '' : 'the profile changed the day at a fixed rung');
+      run = null; G.state = 'title';
+    }
+
+    /* ...AND ONE SEED, ONE CAREER, FOR ONE PROFILE. The run-setup screen used
+       to say "the same ID always produces the same career. Share it." — the
+       seed is the whole social feature and the leaderboard it is aimed at, and
+       across two profiles that sentence was not true; see the desk test above
+       for what actually holds and what the screen says now. This guard checked
        ONE DAY'S PLAN, which is the part that cannot drift; what can is state
        that outlives a re-seed, and that only ever shows up on day two or
        later. Eight days, played twice, compared on every day's arrivals, its
