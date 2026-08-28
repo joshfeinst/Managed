@@ -221,6 +221,50 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   step('every how-to-play card can be dismissed with the mouse', !stuck.length,
        stuck.length ? stuck.join(' ') : boards.length + ' boards');
 
+  /* A CLICK THAT LANDS ON NOTHING DOES NOTHING. Every pointer press on a
+     board also latched press.use -- E, which is the irreversible action on
+     most of these boards -- so a click on blank canvas performed it. On THE
+     DIAGRAM it inverted the board: step() reads `press.one ? 'mark' :
+     press.use ? 'probe'` BEFORE the hit test, so a click arrived already
+     meaning 'probe', the `k = k || 'mark'` under the node test could never
+     fire, and clicking a box spent one of three outage windows instead of
+     marking it -- on a board whose own card says a click marks.
+
+     It has to be a REAL click. A self test that sets MG.click by hand cannot
+     see this at all: the bug is in the handler that latches the key on the way
+     in, not in the board that reads it, and a probe that skips the handler
+     passes on the broken build. Which it did, first time out. */
+  const commits = [];
+  for (const g of boards){
+    const snap = () => page.evaluate(() => {
+      if (!MG) return 'gone';
+      const skip = new Set(['flash','flashTxt','flashOk','buzz','t','click','hint',
+                            'brief','gid','onDone','dark','darkOf','_plan']);
+      const seen = new WeakSet();
+      const walk = v => {
+        if (v instanceof Set) return [...v].sort().join(',');
+        if (Array.isArray(v)) return v.map(walk).join('|');
+        if (v && typeof v === 'object'){
+          if (seen.has(v)) return '<c>'; seen.add(v);
+          return Object.keys(v).filter(k => !skip.has(k) && typeof v[k] !== 'function')
+                 .map(k => k + ':' + walk(v[k])).join(',');
+        }
+        return String(v);
+      };
+      return walk(MG);
+    });
+    await page.evaluate((k) => { if (G.modal) closeModalToWork();
+      openGame(k, 2, () => {}); G.state = 'modal'; if (MG) MG.brief = null; }, g);
+    await page.waitForTimeout(250);
+    const before = await snap();
+    await clickView(64, 30);                    // inside the panel, on nothing
+    await page.waitForTimeout(250);
+    if (await snap() !== before) commits.push(g);
+  }
+  await page.evaluate(() => { if (G.modal) closeModalToWork(); });
+  step('a click on empty panel does not act for you', !commits.length,
+       commits.length ? commits.join(' ') : boards.length + ' boards');
+
   /* AND THE WAY BACK TO THE RULES OF THE BOARD YOU ARE STUCK ON. briefReopen
      was bound to KeyH and to nothing else, and mgPanel prints "H = RULES" in
      the corner with no hit target behind it -- so on the one screen where a

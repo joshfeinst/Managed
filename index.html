@@ -22763,6 +22763,23 @@ function clickAdvance(ev){
           briefReopen(); return;
         }
         MG.click = pt;
+        /* A CLICK IS NOT THE COMMIT KEY. Every pointer press on a board also
+           latched press.use -- which is E, which is the irreversible action on
+           most of these boards -- so a click that hit nothing still performed
+           it. On THE DIAGRAM it was worse than wasteful: step() reads
+           `press.one ? 'mark' : press.use ? 'probe' : ...` BEFORE the hit
+           test, so a click arrived already meaning 'probe', the `k = k ||
+           'mark'` under the node test could never fire, and clicking a box
+           spent one of your three outage windows instead of marking it. The
+           card for that board says "1 MARKS IT · E TESTS IT · CLICK or click
+           the answer". A pointer did the opposite of what it was told.
+
+           Every board hit-tests its own rectangles and its own buttons, and
+           tools/touch.js plays all twelve to a result with taps alone, so
+           none of them needs this. The brief card still takes any tap: it is
+           a card you dismiss, not a decision. */
+        if (MG.brief) press.use = true;
+        return;
       }
       press.use = true; return;
     }
