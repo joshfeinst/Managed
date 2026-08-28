@@ -103,6 +103,24 @@ const MIN_TAP = 44;
   step('a conversation advances on a tap',
        !(await page.evaluate(() => typeof dlg !== 'undefined' && !!dlg)), taps + ' taps');
 
+  /* 4b. THE OPENING LESSON NAMES CONTROLS THIS DEVICE HAS. #keyhint is up for
+     the first two days and is the first thing the game teaches, and it read
+     "WASD MOVE · SHIFT RUN · E USE · TAB QUEUE · ESC PAUSE" to everybody. The
+     only rule that hid it was scoped to coarse AND portrait, so in coarse
+     landscape -- which the README calls the better way to hold a phone -- the
+     opening lesson was five keys the device does not have, and it never named
+     the QUEUE and PAUSE buttons body.touch puts on screen for a finger. */
+  const hint = await page.evaluate(() => {
+    const k = document.getElementById('keyhint');
+    if (!k) return { there:false };
+    const cs = getComputedStyle(k);
+    return { there: cs.display !== 'none', text: (k.textContent || '').trim() };
+  });
+  const KEYS = /\bWASD\b|\bSHIFT\b|\bTAB\b|\bESC\b|\bCLICK\b/;
+  step('the on-screen hint names controls a finger has',
+       !hint.there || !KEYS.test(hint.text),
+       (hint.there ? 'showing: ' : 'hidden: ') + (hint.text || '').slice(0, 80));
+
   /* 5. walking */
   const termTile = await page.evaluate(() => {
     for (let y = 0; y < W2.H; y++) for (let x = 0; x < W2.W; x++)

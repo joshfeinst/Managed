@@ -13419,8 +13419,19 @@ function hudUpdate(){
   document.getElementById('obj-t').textContent = ot;
   obj.style.display = ot ? 'flex' : 'none';
   /* the controls stay up for the first two days, then get out of the way */
-  document.getElementById('keyhint').style.display =
-    (run.day <= 2 && G.state === 'work') ? 'flex' : 'none';
+  const kh = document.getElementById('keyhint');
+  kh.style.display = (run.day <= 2 && G.state === 'work') ? 'flex' : 'none';
+  /* AND THEY ARE THE CONTROLS THE DEVICE HAS. This line is the first thing the
+     game teaches, and it named WASD, SHIFT, E, TAB and ESC to everybody. The
+     only rule that hid it was scoped to (pointer:coarse) AND portrait -- so in
+     coarse LANDSCAPE, which the README calls the better way to hold a phone,
+     the opening lesson of the game was five keys the device does not have, and
+     it never once named the QUEUE and PAUSE buttons that body.touch puts on
+     screen precisely so a finger has them. */
+  const kt = kh.firstElementChild;
+  if (kt) kt.textContent = document.body.classList.contains('touch')
+    ? 'TAP THE FLOOR TO WALK · TAP A MACHINE OR A PERSON TO USE THEM · QUEUE AND PAUSE, TOP RIGHT'
+    : 'CLICK TO WALK, USE AND TALK · WASD MOVE · SHIFT RUN · E USE · TAB QUEUE · ESC PAUSE';
 }
 
 /* --------------------------------- screens -------------------------------- */
