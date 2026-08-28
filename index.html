@@ -11552,7 +11552,15 @@ const GAME_BRIEF = {
 };
 const GAMES = {
   cable: { init(diff){
-    const n = 3 + diff;
+    /* THE RACK CANNOT HAVE MORE PORTS THAN THERE ARE COLOURS. `n` was 3+diff
+       with nothing holding it to the palette, and CABLE_COLS has seven: at
+       diff 5 the board asked for eight, slice() quietly handed back seven,
+       and draw() indexed past the end of `left` and threw on every frame --
+       the render fault handler catching it and toasting FAULT IN RENDER every
+       three seconds at a board that could not be drawn, let alone finished.
+       Nothing in the shipped content asks for more than diff 3, so this has
+       never happened to a player; it was one ticket away from happening. */
+    const n = Math.min(3 + diff, CABLE_COLS.length);
     const cols = CABLE_COLS.slice(0, n);
     const left = cols.map((c,i)=>({c, i}));
     const right = cols.map((c,i)=>({c, i}));
@@ -12091,8 +12099,18 @@ const GAMES = {
     return { kind:'subnet', sites, at:0, cur:2, used:0, right:0, ran:false,
       flash:0, flashTxt:'', flashOk:false, click:null,
       obj: 'ONE /24. ' + sites.length + ' SITES. NO SECOND /24.',
-      hint:'PICK A PREFIX · UP/DOWN OR 1-6, THEN E',
-      optRect(i){ return [72, 150 + (i%3)*22, 160, 18]; },
+      /* the input layer latches Digit1..Digit4 and nothing more, so 5 and 6
+         were keys the board advertised and the game had never bound */
+      hint:'PICK A PREFIX · UP/DOWN OR 1-4, THEN E',
+      /* SIX PREFIXES, SIX RECTANGLES. This had no column term and cycled on
+         i%3, so /27, /26 and /25 were painted exactly on top of /30, /29 and
+         /28: three boxes on screen carrying six labels, and the click loop --
+         which tests all six and lets the last match win -- handed you /27 when
+         you clicked the box that said /30. With the opening cursor on /28,
+         under /25, nothing on the board appeared selected at all. Six rows
+         down one column rather than two columns, because the allocation
+         ledger owns x 250..410 and a second column would land under it. */
+      optRect(i){ return [72, 138 + i*13, 160, 12]; },
       /* the ledger is what makes the trap legible AFTER the fact */
       allocRect(i){ return [250, 92 + i*16, 160, 14]; },
       btns: [ { x:300, y:206, w:112, h:18, k:'take', cap:'E  ALLOCATE' } ],
@@ -12143,7 +12161,7 @@ const GAMES = {
       },
       draw(){
         mgPanel('THE ADDRESS PLAN', this.hint);
-        txt(this.obj, 240, 60, '#8d8778', 6, 'center');
+        txt(this.obj, 240, 68, '#8d8778', 6, 'center');
         /* the range, spent left to right — the only honest picture of the trap */
         const BX = 72, BY = 70, BW = 336;
         ctx.fillStyle = '#161b21'; ctx.fillRect(BX, BY, BW, 10);
@@ -12167,8 +12185,8 @@ const GAMES = {
             const on = i === this.cur;
             ctx.fillStyle = on ? '#1d2530' : '#161b21'; ctx.fillRect(rx, ry, rw, rh);
             ctx.strokeStyle = on ? '#2f7fbe' : '#343b44'; ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
-            txt(pf.cidr, rx + 8, ry + 12, on ? '#e8e4da' : '#c9c4b8', 6);
-            txt(pf.hosts + ' USABLE', rx + 74, ry + 12, '#8d8778', 6);
+            txt(pf.cidr, rx + 8, ry + 9, on ? '#e8e4da' : '#c9c4b8', 6);
+            txt(pf.hosts + ' USABLE', rx + 74, ry + 9, '#8d8778', 6);
           });
         } else txt('THE PLAN IS SIGNED.', 240, 130, '#4ade80', 8, 'center');
         /* what you already spent, so the mistake is readable when it lands */
@@ -12282,7 +12300,7 @@ const GAMES = {
       },
       draw(){
         mgPanel('THE SHORTFALL', this.hint);
-        txt(this.obj, 240, 60, '#8d8778', 6, 'center');
+        txt(this.obj, 240, 68, '#8d8778', 6, 'center');
         const tot = this.total(), over = tot > this.budget;
         txt('QUOTED ' + tot + 'K', 70, 74, over ? '#d64541' : '#4ade80', 7);
         txt('BUDGET ' + this.budget + 'K', 410, 74, '#c9c4b8', 7, 'right');
@@ -12431,10 +12449,10 @@ const GAMES = {
       },
       draw(){
         mgPanel('KEEPING EVERYBODY', this.hint);
-        txt(this.obj, 240, 58, '#8d8778', 6, 'center');
+        txt(this.obj, 240, 68, '#8d8778', 6, 'center');
         const meters = [['THE CLIENT', this.c], ['YOUR TEAM', this.t], ['THE MARGIN', this.m]];
         meters.forEach((mm, i) => {
-          const x = 72 + i*116, y = 72;
+          const x = 72 + i*116, y = 84;   // clear of the objective at y68
           const met = mm[1] >= this.goal;
           txt(mm[0], x, y, met ? '#4ade80' : '#c9c4b8', 6);
           ctx.fillStyle = '#161b21'; ctx.fillRect(x, y + 5, 100, 8);
@@ -12515,19 +12533,36 @@ const GAMES = {
     /* lay it out by depth, staggered so the lines are readable */
     const byDepth = {};
     nodes.forEach((nd, i) => { (byDepth[nd.depth] = byDepth[nd.depth] || []).push(i); });
+    /* INSIDE THE PANEL, AT ANY SHAPE OF TREE. Both spreads were fixed -- 62
+       pixels per depth and 26 per sibling -- against a tree whose depth and
+       column height are both drawn from the node count, so a deep one walked
+       off the right of the canvas and a tall one put its first box on the
+       title. Measured: a five-box column started at y44, which is the line
+       that says THE DIAGRAM. Spread to fit instead, and centre the columns on
+       the middle of the working area rather than on a number that assumed
+       three of them. */
+    const depths = Object.keys(byDepth).map(Number);
+    const maxD = Math.max(1, Math.max.apply(null, depths));
+    const dx = Math.min(62, 280 / maxD);
+    /* and the boxes are as wide as the pitch allows, with four pixels of air:
+       a fixed 52 against a pitch that shrinks with depth made neighbouring
+       boxes overlap by five pixels on a six-deep tree, which reads as one
+       long box rather than two */
+    const bw = Math.max(34, Math.min(52, Math.round(dx) - 4));
     for (const d in byDepth){
-      const col = byDepth[d], x = 84 + (+d) * 62;
+      const col = byDepth[d], x = 84 + (+d) * dx;
+      const dy = Math.min(26, 132 / Math.max(1, col.length - 1 || 1));
       col.forEach((i, k) => {
         nodes[i].x = x;
-        nodes[i].y = 96 + (k - (col.length - 1) / 2) * 26;
+        nodes[i].y = 160 + (k - (col.length - 1) / 2) * dy;
       });
     }
-    return { kind:'diagram', nodes, spofs, cur:1, probes: 4 - Math.min(diff, 2),
+    return { kind:'diagram', nodes, spofs, bw, cur:1, probes: 4 - Math.min(diff, 2),
       dark:null, darkOf:-1, submitted:false, marked:new Set(),
       flash:0, flashTxt:'', flashOk:false, click:null,
       obj:'MARK EVERY BOX THAT TAKES SOMETHING ELSE DOWN WITH IT',
       hint:'UP/DOWN A BOX · 1 MARKS IT · E TESTS IT · 2 SUBMITS',
-      nodeRect(i){ const nd = this.nodes[i]; return [nd.x - 26, nd.y - 8, 52, 16]; },
+      nodeRect(i){ const nd = this.nodes[i], w = this.bw || 52; return [nd.x - w/2, nd.y - 8, w, 16]; },
       btns: [ { x:110, y:214, w:96, h:16, k:'mark',  cap:'1  MARK' },
               { x:220, y:214, w:96, h:16, k:'probe', cap:'E  TEST' },
               { x:342, y:214, w:110, h:16, k:'send', cap:'2  SUBMIT' } ],
@@ -12592,8 +12627,8 @@ const GAMES = {
       },
       draw(){
         mgPanel('THE DIAGRAM', this.hint);
-        txt(this.obj, 240, 58, '#8d8778', 6, 'center');
-        txt('OUTAGE WINDOWS LEFT: ' + this.probes, 240, 70,
+        txt(this.obj, 240, 68, '#8d8778', 6, 'center');
+        txt('OUTAGE WINDOWS LEFT: ' + this.probes, 240, 82,
             this.probes ? '#c9c4b8' : '#ffb02e', 6, 'center');
         /* links first, so boxes sit on top of them */
         ctx.strokeStyle = '#2a323b'; ctx.lineWidth = 1;
@@ -12658,7 +12693,10 @@ const GAMES = {
       flash:0, flashTxt:'', flashOk:false, click:null,
       obj:'ANSWER IT WITH A FACT, OR SAY YOU CANNOT',
       hint:'UP/DOWN A FACT · E CITES IT · 2 CONCEDES THE QUESTION',
-      rowRect(i){ return [70, 136 + i*15, 340, 13]; },
+      /* eight citable facts is the most this board deals, and at a 15-pixel
+         pitch from y136 the eighth landed at y241 -- one pixel below the
+         panel, printed straight onto the dimmed office behind it */
+      rowRect(i){ return [70, 130 + i*13, 340, 11]; },
       btns: [ { x:340, y:214, w:150, h:16, k:'concede', cap:'2  I CANNOT DEFEND THAT' } ],
       act(k){ if (k === 'concede') this.concede(); else if (k === 'cite') this.cite(); },
       concede(){
@@ -12708,7 +12746,7 @@ const GAMES = {
       },
       draw(){
         mgPanel('THE BOARD PAPER', this.hint);
-        txt(this.obj, 240, 58, '#8d8778', 6, 'center');
+        txt(this.obj, 240, 68, '#8d8778', 6, 'center');
         const q = this.qs[this.at];
         if (q){
           txt('QUESTION ' + (this.at + 1) + ' OF ' + this.qs.length, 70, 76, '#8d8778', 6);
@@ -12844,11 +12882,11 @@ const GAMES = {
       },
       draw(){
         mgPanel('WHOSE SATURDAY', this.hint);
-        txt(this.obj, 240, 56, '#8d8778', 6, 'center');
+        txt(this.obj, 240, 68, '#8d8778', 6, 'center');
         /* the people, and how much of them is left */
         const all = this.staff.concat([this.you]);
         all.forEach((p, i) => {
-          const x = 72 + i*86, y = 70;
+          const x = 72 + i*86, y = 82;   // clear of the objective at y68
           const load = this.loadOf(i), cap = this.capOf(i), busted = load > cap;
           txt(p.name, x, y, busted ? '#d64541' : '#c9c4b8', 6);
           ctx.fillStyle = '#161b21'; ctx.fillRect(x, y + 5, 74, 7);
@@ -13079,6 +13117,10 @@ function mgPanel(title, hint){
   ctx.strokeStyle = '#343b44'; ctx.strokeRect(60.5, 26.5, 359, 213);
   ctx.fillStyle = '#ffb02e'; ctx.fillRect(60, 26, 360, 2);
   txt(title, 240, 44, '#ffb02e', 8, 'center');
+  /* y44 title, y56 hint, y68 the board's own objective. Six boards drew their
+     objective at 56, 58 or 60 -- one of them on this exact baseline -- so the
+     two strings rendered into the same strip of pixels as an unreadable smear,
+     on the line that tells a player what the board is for. */
   txt(hint, 240, 56, '#8b93a0', 6, 'center');
   txt('H = RULES', 414, 36, '#5c646e', 6, 'right');
 }
@@ -21244,6 +21286,130 @@ function selfTest(runSim){
       ok('review: quitting on the review screen brings it back',
          onReview && !!card && cameBack, 'onReview ' + onReview + ' card ' + !!card + ' back ' + cameBack);
       ok('review: replaying the card never re-scores the day', sameDay);
+      run = null; G.state = 'title';
+    }
+
+    /* AND NO BOARD PRINTS TWO STRINGS INTO THE SAME PIXELS. The rectangle
+       test above catches two hit targets on top of each other; this catches
+       two pieces of TEXT on top of each other, which is a different bug with
+       the same look. mgPanel owns the top of every board -- title at y44, hint
+       at y56 -- and six boards drew their own objective at 56, 58 or 60. One
+       of them landed on the hint's exact baseline, same centre and same size,
+       and the two rendered as an unreadable smear on the line that tells a
+       player what the board is for; the other five overlapped by two to four
+       pixels. Nothing could see it, because every harness in this repo either
+       drives the boards by calling their methods or looks at DOM boxes, and
+       this is text painted on a canvas.
+
+       So measure it: wrap txt() for the duration of one render per board,
+       record where every string actually landed, and compare the boxes. The
+       flash line is excluded because it is DESIGNED to be drawn over the board
+       -- it is the board answering you -- and so is the rules corner, which is
+       chrome. */
+    {
+      const real = txt;
+      const drawn = [];
+      let watching = false;
+      window.txt = function(str, x, y, col, size, align){
+        if (watching){
+          const sz = Math.max(6, size || 8);
+          ctx.font = sz + 'px "Press Start 2P", monospace';
+          const w = ctx.measureText(String(str)).width;
+          const left = align === 'center' ? x - w/2 : align === 'right' ? x - w : x;
+          drawn.push({ s:String(str), x:left, y:y - sz, w, h:sz });
+        }
+        return real.apply(null, arguments);
+      };
+      const smear = [];
+      let lines = 0;
+      try {
+        /* EVERY DIFFICULTY THE CONTENT ASKS FOR, not just the hardest. Boards
+           size themselves off diff -- rows, columns, tree depth -- so the
+           layout that breaks is not reliably the biggest one: THE BOARD PAPER
+           printed its eighth fact a pixel below the panel at diff 2 and fitted
+           at diff 3. */
+        for (const id in GAMES)
+        for (const diff of [1, 2, 3]){
+          rngInit('TXT-' + id + diff); runInit('TXT-' + id + diff); rollDay();
+          openGame(id, diff, () => {});
+          if (!MG) continue;
+          MG.brief = null; MG.flash = 0;
+          drawn.length = 0; watching = true;
+          /* MG.draw() takes no arguments and there is no drawBoard(). The first
+             cut of this called `drawBoard ? drawBoard() : MG.draw(ctx)`, which
+             threw a ReferenceError on an undeclared name, straight into the
+             catch below -- so nothing was ever recorded and the test passed its
+             own mutation. Hence the count check under the loop: a smear test
+             that saw no text is not a pass. */
+          try { MG.draw(); } catch(e){ smear.push(id + ': draw threw ' + e.message); }
+          watching = false;
+          const keep = drawn.filter(d => d.s.trim() && !/^H = RULES$/.test(d.s));
+          lines += keep.length;
+          /* AND INSIDE THE PANEL IT IS DRAWN ON. mgPanel's box is x 60..420,
+             y 26..240, and anything outside it is printed onto the dimmed
+             office behind the board -- which is where THE BOARD PAPER's eighth
+             citable fact went, at y241. */
+          for (const d of keep)
+            if (d.x < 60 || d.x + d.w > 420 || d.y < 26 || d.y + d.h > 240)
+              smear.push(id + ' d' + diff + ': "' + d.s.slice(0,18) + '" outside the panel at ' +
+                         Math.round(d.x) + ',' + Math.round(d.y));
+          for (let i = 0; i < keep.length; i++)
+            for (let j = i+1; j < keep.length; j++){
+              const a = keep[i], b = keep[j];
+              if (a.x < b.x+b.w && b.x < a.x+a.w && a.y < b.y+b.h && b.y < a.y+a.h)
+                smear.push(id + ' d' + diff + ': "' + a.s.slice(0,18) + '" over "' + b.s.slice(0,18) + '"');
+            }
+          closeModalToWork();
+        }
+      } finally { window.txt = real; }
+      ok('boards: no two lines of a board are printed into the same pixels',
+         !smear.length && lines > 300,
+         smear.length ? smear.slice(0, 5).join(' · ')
+                      : 'only ' + lines + ' strings seen across ' +
+                        Object.keys(GAMES).length + ' boards — the probe is not watching');
+      run = null; G.state = 'title';
+    }
+
+    /* NO BOARD DRAWS TWO OF ITS OWN OPTIONS INTO ONE RECTANGLE. Every board
+       declares its hit rectangles as functions -- optRect, rowRect, tierRect,
+       cardRect, nodeRect -- and draws its options from the same functions, so
+       a rectangle that repeats is both an unreadable pile of overlapping
+       labels and a click that selects the wrong thing. THE ADDRESS PLAN had
+       `optRect(i) = [72, 150 + (i%3)*22, ...]` with no column term against six
+       prefixes, so /27, /26 and /25 were painted exactly over /30, /29 and
+       /28: three boxes on screen carrying six labels, a click loop that let
+       the last match win and so handed you /27 for the box marked /30, and an
+       opening cursor on /28 that appeared unselected because /25 sat on top of
+       it. tools/keys.js pokes each rect and asks whether the board notices,
+       which a pile of six answers perfectly well. Nobody asked whether two of
+       them were the same rectangle. */
+    {
+      const clash = [];
+      const overlap = (a, b) => a[0] < b[0]+b[2] && b[0] < a[0]+a[2] &&
+                                a[1] < b[1]+b[3] && b[1] < a[1]+a[3];
+      for (const id in GAMES){
+        rngInit('RECT-' + id); runInit('RECT-' + id); rollDay();
+        openGame(id, 3, () => {});
+        const g = MG;
+        if (!g) continue;
+        g.brief = null;
+        const n = (g.rows && g.rows.length) || (g.tasks && g.tasks.length) ||
+                  (g.hand && g.hand.length) || (g.sites && g.sites.length) ||
+                  (g.qs && g.qs.length) || (g.steps && g.steps.length) || 0;
+        const sets = [];
+        if (g.optRect)  sets.push(['optRect',  Array.from({length:6}, (_, i) => g.optRect(i))]);
+        if (g.rowRect)  sets.push(['rowRect',  Array.from({length:Math.max(n,2)}, (_, i) => g.rowRect(i))]);
+        if (g.cardRect) sets.push(['cardRect', Array.from({length:4}, (_, i) => g.cardRect(i))]);
+        if (g.allocRect)sets.push(['allocRect',Array.from({length:Math.max(n,2)}, (_, i) => g.allocRect(i))]);
+        for (const [name, rs] of sets)
+          for (let i = 0; i < rs.length; i++)
+            for (let j = i+1; j < rs.length; j++)
+              if (rs[i] && rs[j] && overlap(rs[i], rs[j]))
+                clash.push(id + '.' + name + ' ' + i + '/' + j);
+        closeModalToWork();
+      }
+      ok('boards: no two of a board\'s own option rectangles land on each other',
+         !clash.length, clash.slice(0, 6).join(' '));
       run = null; G.state = 'title';
     }
 
