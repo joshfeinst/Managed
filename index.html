@@ -8379,11 +8379,22 @@ const CROSS_FLOOR_BUDGET = 78;
    walk to the CAR PARK alone already costs 51 to 69 depending on the desk --
    at or above the cross-floor ceiling before the engine is started.
    Measured, not chosen, exactly like the two above it: the worst case the
-   layout allows is the Relationship Manager to the comms cupboard at 97, so
-   this is that with two minutes in hand. A ratchet -- it only ever goes down,
-   and moving your car to the bay by the fire exit has already taken seven
-   minutes off every rung's number once. */
-const OFF_SITE_BUDGET = 99;
+   layout allows is the Relationship Manager to the comms cupboard, and it is
+   117, so this is that with two minutes in hand. A ratchet -- it only ever
+   goes down, and moving your car to the bay by the fire exit has already
+   taken seven minutes off every rung's number once.
+
+   AND THIS IS THE ONE TIME IT WENT UP, WHICH NEEDS SAYING. It was 99, from a
+   measurement of 97, and 97 was wrong: every estimator in the game billed a
+   route at `hops * LIFT_MIN`, so the drive out was priced as a four-minute
+   lift ride when takeExit charged twenty-six for it. The worst trip was
+   understated by exactly the twenty minutes that error is worth on a
+   three-hop route, and the ceiling was fitted to the understatement. The
+   layout has not got worse and the ratchet has not slipped; the number it was
+   ratcheting against was never the real one. What actually changed is that a
+   client-site errand now costs a quarter of the shift on the clock as well as
+   in the fiction, which is the joke the client site was built for. */
+const OFF_SITE_BUDGET = 119;
 /* How strongly a rung's priority must predict its urgency: corr(pri, slaMult)
    has to be at least this negative. Measured, not chosen — the ladder runs
    -0.54 to -0.74 and T3, the loosest, was -0.28 when a quadrant of its P1s
@@ -8558,23 +8569,34 @@ function routeVia(fromMap, near, anchor){
   const home = floorOf(anchor);
   if (!home) return null;
   const K = (m, a) => m + '\u0000' + (a || '');
-  const dist = {}, hops = {}, first = {}, at = {}, seen = {}, via = {};
+  /* THE SEARCH IS IN MINUTES, NOT IN TILES. Every exit used to be worth the
+     same to this loop, which was true while the only exits were two lifts.
+     It stopped being true the moment a door cost 2 and a drive cost 26: the
+     shortest WALK to somewhere is not the shortest TRIP to it once one of the
+     hops is a forty-mile round trip, and relaxing on tiles alone will happily
+     route you through the car and call it cheap. dist still counts tiles,
+     because the final walking is priced from the total rather than per leg,
+     but the frontier is ordered by what the trip actually costs. */
+  const dist = {}, emin = {}, pri = {}, hops = {}, first = {}, at = {}, seen = {}, via = {};
   const s = K(fromMap, null);
-  dist[s] = 0; hops[s] = 0; first[s] = null; at[s] = { map:fromMap, a:null }; via[s] = {};
+  dist[s] = 0; emin[s] = 0; pri[s] = 0;
+  hops[s] = 0; first[s] = null; at[s] = { map:fromMap, a:null }; via[s] = {};
   for (;;){
     let k = null, d = Infinity;
-    for (const kk in dist) if (!seen[kk] && dist[kk] < d){ d = dist[kk]; k = kk; }
+    for (const kk in pri) if (!seen[kk] && pri[kk] < d){ d = pri[kk]; k = kk; }
     if (k === null) break;
     seen[k] = 1;
     const here = at[k];
     for (const e of exitsFrom(here.map)){
       const step = here.a === null ? near(e.at) : floorDist(here.map, here.a, e.at);
       if (step === null || step === undefined) continue;
-      const nk = K(e.to, e.arrive), nd = d + step;
+      const nk = K(e.to, e.arrive);
+      const nt = dist[k] + step, ne = emin[k] + (e.mins || 0);
+      const np = nt * WALK_MIN_PER_TILE + ne;
       /* strictly cheaper only, so the FIRST exit listed wins a tie — which is
          what keeps ELEV ahead of ELEV_E exactly as the old loop did */
-      if (dist[nk] === undefined || nd < dist[nk]){
-        dist[nk] = nd; hops[nk] = hops[k] + 1;
+      if (pri[nk] === undefined || np < pri[nk]){
+        dist[nk] = nt; emin[nk] = ne; pri[nk] = np; hops[nk] = hops[k] + 1;
         first[nk] = first[k] === null ? e.at : first[k];
         /* WHICH EXIT TO TAKE, KEYED BY THE MAP YOU ARE STANDING ON. An ordered
            list is not enough: the east lift is on the route out of office1 AND
@@ -8592,13 +8614,17 @@ function routeVia(fromMap, near, anchor){
     if (h.map !== home) continue;
     const last = h.a === null ? near(anchor) : floorDist(h.map, h.a, anchor);
     if (last === null || last === undefined) continue;
-    const tiles = dist[k] + last, n = hops[k];
+    const tiles = dist[k] + last, n = hops[k], ex = emin[k];
     /* compare in MINUTES, because routes of different length are not
-       comparable in tiles. With every route the same length — which is every
-       route in a two-floor building — this is identical to comparing tiles. */
-    const cost = Math.max(3, Math.round(tiles * WALK_MIN_PER_TILE)) + n * LIFT_MIN;
+       comparable in tiles — and charge each exit ITS OWN price. Every
+       estimator in the game used to bill `hops * LIFT_MIN`, so a client-site
+       errand -- lift 4, fire door 2, drive 26 -- was quoted at twelve minutes
+       and charged thirty-two by takeExit, which is the only place that ever
+       read e.mins. The queue row, the SLA and the arrow all told you one
+       number and the clock took another. */
+    const cost = Math.max(3, Math.round(tiles * WALK_MIN_PER_TILE)) + ex;
     if (best === null || cost < best.cost)
-      best = { tiles, hops:n, first:first[k], via:via[k], cost };
+      best = { tiles, hops:n, exitMins:ex, first:first[k], via:via[k], cost };
   }
   return best;
 }
@@ -8648,8 +8674,8 @@ function tilesBetween(from, anchor){
 function walkCost(anchor, from){
   if (isOffFloor(anchor)){
     const r = crossTiles(L => tilesBetween(from, L), anchor);
-    /* r.hops, not one lift: a destination two maps away costs two rides */
-    if (r) return Math.max(3, Math.round(r.tiles * WALK_MIN_PER_TILE)) + r.hops * LIFT_MIN;
+    /* each exit at its own price, not one flat fare per hop */
+    if (r) return Math.max(3, Math.round(r.tiles * WALK_MIN_PER_TILE)) + r.exitMins;
     return WALK_FALLBACK + LIFT_MIN;
   }
   const n = tilesBetween(from, anchor);
@@ -8658,10 +8684,37 @@ function walkCost(anchor, from){
 /* The SLA a ticket is BORN with must be identical for a given seed, so it is
    priced from the desk — a fixed point on the map — never from wherever the
    player happens to be standing when it lands. */
+/* THE DESK DOES NOT MOVE WHEN YOU DO. Every deskAnchor lives on office1, and
+   anchorPos() answers only for the LOADED map, so the moment a ticket took you
+   downstairs -- or outside, or off site -- the desk resolved to null, walkCost
+   fell through to WALK_FALLBACK, and every row in the queue collapsed to a
+   flat 14 or 18 minutes. Measured from the T3 desk: on office1 the coffee
+   machine prices at 35, the printer 16, the store room 53, the client comms
+   cupboard 99; standing on the ground floor those become 18, 18, 14, 18. The
+   queue stopped being a triage screen the moment you left the floor.
+
+   Worse than a bad number on a panel: ticketWork() runs through here, and
+   resolveTicket() re-derives it when the last step lands, so the same ticket
+   scored differently depending on which building you happened to finish it in.
+
+   The desk's price cannot depend on where the player is standing, which is
+   what FLOOR_DIST is for -- an anchor-to-anchor tile index for every map,
+   built at boot precisely so a floor that is not loaded can still be measured.
+   When the desk's own floor IS loaded nothing changes: that path still walks
+   the real A*, occupancy and all, and restates no ticket. */
 function walkCostFromDesk(anchor){
   const role = (typeof run !== 'undefined' && run) ? ROLES[run.rung] : null;
-  const desk = role && anchorPos(role.deskAnchor || 'TERMINAL');
-  return walkCost(anchor, desk);
+  const deskName = (role && role.deskAnchor) || 'TERMINAL';
+  const desk = anchorPos(deskName);
+  if (desk) return walkCost(anchor, desk);
+  const home = floorOf(deskName) || 'office1';
+  if (floorOf(anchor) === home){
+    const n = floorDist(home, deskName, anchor);
+    return n === null ? WALK_FALLBACK : Math.max(3, Math.round(n * WALK_MIN_PER_TILE));
+  }
+  const r = routeVia(home, L => floorDist(home, deskName, L), anchor);
+  return r ? Math.max(3, Math.round(r.tiles * WALK_MIN_PER_TILE)) + r.exitMins
+           : WALK_FALLBACK + LIFT_MIN;
 }
 /* Walk a ticket's remaining goto legs and price them the way the day will
    charge them. Each leg starts where the previous one ENDED — pricing every
@@ -8684,13 +8737,27 @@ function walkLegs(steps, si, fromPos){
      player is not there yet and the SLA a ticket is born with must not depend
      on where they happened to be. Getting that subtly wrong restated 256 of
      977 ticket/rung pairs on the first attempt at this refactor. */
-  let floor = W2.id, atName = null, at = null, mins = 0;
+  /* AND THE TRIP STARTS AT THE CHAIR, NOT AT WHATEVER MAP IS LOADED. `floor`
+     began as W2.id unconditionally, so a price taken from the desk -- which is
+     every leg the player has not reached yet, and every SLA at birth -- was
+     measured as though the desk were on the ground floor whenever the player
+     happened to be standing there. One client-site ticket came out at 134
+     minutes from the office, 138 from the ground floor and 53 from the car
+     park, for the same job; resolveTicket re-derives this as the last step
+     lands, so where you finished a ticket changed what it scored. */
+  const role = (typeof run !== 'undefined' && run) ? ROLES[run.rung] : null;
+  const deskName = (role && role.deskAnchor) || 'TERMINAL';
+  const deskFloor = floorOf(deskName) || 'office1';
+  let floor = fromPos ? W2.id : deskFloor;
+  let atName = null, at = null, mins = 0;
   const names = [], crossed = [];
   for (let i = si; i < steps.length; i++){
     const g = steps[i].goto;
     if (!g) continue;
     const home = floorOf(g) || floor;
     const atPos = at || (i === si ? fromPos : null);
+    /* still in the chair: nothing has been walked and no position was given */
+    const atDesk = !atName && !atPos;
     let m;
     if (home === floor){
       /* On the loaded floor keep pricing by the same A* the game has always
@@ -8702,16 +8769,19 @@ function walkLegs(steps, si, fromPos){
         m = atPos ? walkCost(g, atPos) : walkCostFromDesk(g);
         at = anchorPos(g) || at;
       } else {
-        const n = atName ? floorDist(floor, atName, g) : tilesFromLift(g);
+        const n = atName ? floorDist(floor, atName, g)
+                : atDesk ? floorDist(floor, deskName, g)
+                : tilesFromLift(g);
         m = n === null ? WALK_FALLBACK : Math.max(3, Math.round(n * WALK_MIN_PER_TILE));
       }
     } else {
       const r = routeVia(floor, L => (floor === W2.id)
         ? (atPos ? tilesBetween(atPos, L) : deskToLift(L))
-        : (atName ? floorDist(floor, atName, L) : 0), g);
+        : (atName ? floorDist(floor, atName, L)
+          : atDesk ? floorDist(floor, deskName, L) : 0), g);
       m = !r
         ? WALK_FALLBACK + LIFT_MIN
-        : Math.max(3, Math.round(r.tiles * WALK_MIN_PER_TILE)) + r.hops * LIFT_MIN;
+        : Math.max(3, Math.round(r.tiles * WALK_MIN_PER_TILE)) + r.exitMins;
       floor = home; at = null;
       crossed.push(g);
     }
@@ -8720,10 +8790,20 @@ function walkLegs(steps, si, fromPos){
   }
   return { mins, names, crossed };
 }
+/* Same fix as walkCostFromDesk, and it has to be the same fix: this hands
+   routeVia the near half of every cross-map estimate, and it was returning
+   null off office1 -- so the route was unpriceable and fell through to a flat
+   18. That is why ticketWork for one client-site ticket read 134 from the
+   office and 53 from the ground floor, and why resolveTicket, which re-derives
+   it as the last step lands, scored the same job differently depending on
+   which building you happened to finish it in. */
 function deskToLift(lift){
   const role = (typeof run !== 'undefined' && run) ? ROLES[run.rung] : null;
-  const desk = role && anchorPos(role.deskAnchor || 'TERMINAL');
-  return desk ? tilesBetween(desk, lift || 'ELEV') : null;
+  const deskName = (role && role.deskAnchor) || 'TERMINAL';
+  const desk = anchorPos(deskName);
+  if (desk) return tilesBetween(desk, lift || 'ELEV');
+  const home = floorOf(deskName) || 'office1';
+  return floorDist(home, deskName, lift || 'ELEV');
 }
 /* THE ROW IS ANSWERING "CAN I STILL FINISH THIS?", SO IT HAS TO COUNT THE
    FORK. ticketWork prices a choice at a flat 7 on purpose — it is the day's
@@ -18103,6 +18183,78 @@ function selfTest(runSim){
            over.slice(0,6).join(' ') + (over.length > 6 ? ' +' + (over.length-6) : ''));
         ok('and the longest one is on record', worst > 0,
            'worst ' + worst + ' min (' + worstAt + '), budget ' + WALK_BUDGET);
+
+        /* THE QUOTE AND THE BILL ARE THE SAME NUMBER. takeExit charges
+           `run.clock += use.mins` and was the only place in the game that ever
+           read e.mins: routeVia, walkCost and walkLegs all billed a route at
+           `hops * LIFT_MIN`, so a client-site errand -- lift 4, fire door 2,
+           drive 26 -- was quoted at twelve minutes in the queue row, in the
+           slack column and on the SLA, and charged thirty-two by the clock.
+           The player was told one number and paid another, on every trip off
+           the site, which is the errand the whole client site exists for.
+
+           Two ways at it. You cannot reach the client site without starting
+           the car, so no estimate to it can come in under DRIVE_MIN; and the
+           one route there has exactly three known hops, so its exit total is
+           an arithmetic fact rather than a judgement. */
+        {
+          loadMap('office1'); spawnPeople();
+          const desk = anchorPos((ROLES[1] || ROLES[0]).deskAnchor) || anchorPos('TERMINAL');
+          const cheap = [];
+          for (const a of Object.keys(FLOOR_POS.clientsite || {})){
+            const m = walkCost(a, desk);
+            if (m < DRIVE_MIN) cheap.push(a + ':' + m);
+          }
+          ok('travel: nothing off site is priced as though you did not drive there',
+             !cheap.length, cheap.join(' ') + ' — under DRIVE_MIN ' + DRIVE_MIN);
+          const r = routeVia('office1', L => tilesBetween(desk, L), 'SITECOMMS');
+          const want = LIFT_MIN + DOOR_MIN + DRIVE_MIN;
+          ok('travel: a route charges each exit its own price, not one flat fare',
+             !!r && r.exitMins === want,
+             r ? 'exitMins ' + r.exitMins + ', want ' + want +
+                 ' (hops ' + r.hops + ' x LIFT_MIN would be ' + (r.hops*LIFT_MIN) + ')'
+               : 'no route to SITECOMMS');
+        }
+
+        /* A TICKET COSTS WHAT IT COSTS, WHEREVER YOU HAPPEN TO BE STANDING.
+           Three functions took their origin from the LOADED map rather than
+           from the chair the price is supposed to be measured from --
+           walkCostFromDesk, deskToLift, and walkLegs' starting floor -- and
+           the desk lives on office1, so all three fell back to a flat number
+           the moment a ticket took you anywhere else. One client-site job
+           priced at 134 minutes from your desk, 138 from the ground floor and
+           53 from the car park. resolveTicket re-derives this as the last step
+           lands, so that was not just a wrong row in the queue: it was the
+           same job scoring differently depending on which building you
+           finished it in, which is a thing a player can work out and abuse.
+
+           The residual is 4 minutes on the worst of 3610 ticket-and-rung
+           pairs, 3551 of which are now identical to the minute. It is the
+           known A*-versus-flood-fill difference the comment in walkLegs
+           describes: the loaded floor is measured with the real pathfinder,
+           occupancy and all, and a floor that is not loaded has only the
+           flood-fill index. Closing the last four minutes means measuring the
+           loaded floor with the index too, which would restate every SLA in
+           the game. A ratchet, like the travel budgets: it only comes down. */
+        {
+          const MAPS_TO_TRY = ['office1', 'ground', 'carpark', 'clientsite'];
+          let worstSpread = 0, worstWhere = '';
+          const rung0 = run ? run.rung : 0;
+          for (let rung = 0; rung < ROLES.length; rung++){
+            if (run) run.rung = rung;
+            for (const tid in TICKETS){
+              const w = [];
+              for (const m of MAPS_TO_TRY){ loadMap(m); spawnPeople(); w.push(ticketWork(TICKETS[tid], 0, null)); }
+              const d = Math.max.apply(null, w) - Math.min.apply(null, w);
+              if (d > worstSpread){ worstSpread = d; worstWhere = tid + ' rung' + rung + ' ' + w.join('/'); }
+            }
+          }
+          if (run) run.rung = rung0;
+          loadMap('office1'); spawnPeople();
+          ok('travel: what a ticket costs does not depend on the map you are standing on',
+             worstSpread <= 4,
+             'worst spread ' + worstSpread + ' min (' + worstWhere + ')');
+        }
       }
 
       /* THE ROW PROMISES A WALK AND THE SLACK COLUMN CHARGES ONE. They were

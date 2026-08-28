@@ -13,8 +13,12 @@ fire door, walk, car, drive, walk.
 
 Each kind of trip has its own measured ceiling, because each is a different
 trip: `WALK_BUDGET` 62 for one floor, `CROSS_FLOOR_BUDGET` 78 for two,
-`OFF_SITE_BUDGET` 99 for a drive. They are ratchets — measured from the layout,
-and they only ever come down.
+`OFF_SITE_BUDGET` 119 for a drive. They are ratchets — measured from the
+layout, and they only ever come down. The off-site one went up once, from 99,
+and only because the measurement behind 99 was wrong: routes were priced at a
+flat lift fare per hop, so the drive was quoted at four minutes and charged at
+twenty-six. Driving to a client now costs a quarter of the shift on the clock
+as well as in the fiction.
 
 ## Shape
 
@@ -79,7 +83,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 493 in-game self-tests |
+| `verify.js` | boots it and runs the 496 in-game self-tests |
 | `claims.js` | re-derives every number the README and this file state from the built game |
 | `dead.js` | finds data, state, functions and dialogue that are written and never read |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
