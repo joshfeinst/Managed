@@ -7262,6 +7262,31 @@ function markerLift(mx, my){
 }
 /* One source of truth for "where should I be going", shared by the in-world
    arrow, the off-screen compass and the HUD objective line. */
+/* WHICH WAY OFF THIS MAP, INCLUDING FROM A MAP THE ROUTE NEVER PLANNED FOR.
+   markerVia is decided once, when the step is taken, and holds one exit per map
+   ON THAT ROUTE -- which is the right design, because an arrow that swapped
+   ends every few steps would be worse than a wrong one. But it is only
+   populated when the destination was already off the map at that moment, so
+   taking a floor-2 job while standing on floor 2 leaves it null; walk outside
+   afterwards and the lookup misses. The old answer was to fall back to 'ELEV',
+   and the car park and the client site have no lift, so the arrow returned
+   null and simply went out -- no marker, no banner target, on the two maps a
+   player is least sure how to leave. Re-derive from here instead, once, and
+   remember it, so the arrow still does not swap ends. */
+function markerExit(){
+  if (!run || !run.markerVia && !run.markerAnchor) return null;
+  let L = (run.markerVia || {})[W2.id];
+  if (L && W2.anchors[L]) return L;
+  if (!run.markerAnchor || !player) return null;
+  const rr = routeVia(W2.id, A => tilesBetween([player.tx, player.ty], A), run.markerAnchor);
+  L = (rr && rr.via) ? rr.via[W2.id] : null;
+  if (L && W2.anchors[L]){
+    run.markerVia = run.markerVia || {};
+    run.markerVia[W2.id] = L;            // decided once here too
+    return L;
+  }
+  return null;
+}
 function objectiveTarget(){
   if (typeof run === 'undefined' || !run || !W2.W) return null;
   /* a marker set upstairs is a set of coordinates that mean something else
@@ -7270,8 +7295,8 @@ function objectiveTarget(){
   if (run.marker){
     if (run.markerFloor && run.markerFloor !== W2.id){
       /* the exit the route takes out of the map you are standing on */
-      const L = (run.markerVia || {})[W2.id] || 'ELEV';
-      return W2.anchors[L] ? { pos: W2.anchors[L], label: ANCHOR_NAMES[L] || 'THE LIFT' } : null;
+      const L = markerExit();
+      return L && W2.anchors[L] ? { pos: W2.anchors[L], label: ANCHOR_NAMES[L] || 'THE WAY OUT' } : null;
     }
     return { pos: run.marker, label: run.markerLabel || 'GO HERE' };
   }
@@ -7307,7 +7332,7 @@ function objectiveText(){
   if (!run) return '';
   if (run.marker){
     if (run.markerFloor && run.markerFloor !== W2.id){
-      const L = (run.markerVia || {})[W2.id] || 'ELEV';
+      const L = markerExit();
       /* "THE OTHER FLOOR" was a sentence a two-floor building could say, and
          "NOT ON THIS FLOOR" is one only a building can say at all: a car park
          is not a floor and an industrial estate is not upstairs. */
@@ -7315,7 +7340,7 @@ function objectiveText(){
                   : run.markerFloor === 'carpark'    ? ' IS OUTSIDE — TAKE '
                   : ' IS NOT ON THIS FLOOR — TAKE ';
       return (run.markerLabel || 'THE MARKER') + where +
-             (ANCHOR_NAMES[L] || 'THE LIFT');
+             (ANCHOR_NAMES[L] || 'THE WAY OUT');
     }
     return 'GO TO ' + (run.markerLabel || 'THE MARKER') + ' — FOLLOW THE ARROW';
   }
@@ -10067,6 +10092,7 @@ function advanceStep(){
     const rr = a.floor !== W2.id
       ? routeVia(W2.id, L => tilesBetween([player.tx, player.ty], L), st.goto) : null;
     run.markerVia = rr ? rr.via : null;
+    run.markerAnchor = st.goto;          // so the way out can be re-derived
     if (G.modal) closeModalToWork();
     const away = a.floor !== W2.id;
     /* NAME THE WAY OUT THE ROUTE ACTUALLY PICKED. This said "TAKE THE LIFT" for
@@ -10328,7 +10354,16 @@ function endDay(){
     run.rung++; run.rep += 2; run.promoted = true;
     run.gateStreak = 0; run.firedStreak = 0; run.rungSince = run.perfHist.length;
     run.stress = Math.round(run.stress * .6);
-    run.burnout = Math.max(0, run.burnout - BURN.promoRelief);
+    /* ...BUT NOT THE RELIEF, ON THE DAY THE BURNOUT WON. A promotion takes six
+       points off the meter, and it was taken even when the ending above had
+       already been decided BY that meter -- so an evening that both promoted
+       you and ended you printed "Burnout 94% — permanent" under a headline
+       that only fires at 100, and told the player the number that stopped
+       their career was one they could still see room above. The rung still
+       goes up, deliberately, so the exit interview names the job you reached;
+       what does not happen is being given relief by the thing that finished
+       you. */
+    if (ending !== 'burnout') run.burnout = Math.max(0, run.burnout - BURN.promoRelief);
     /* SOMEBODY SAYS SOMETHING. Nine gates could fire and not one of them spoke:
        the rung number went up, the review said PROMOTED, and the next morning
        you were simply somewhere else with different tickets. A promotion in
@@ -21411,6 +21446,62 @@ function selfTest(runSim){
          smear.length ? smear.slice(0, 5).join(' · ')
                       : 'only ' + lines + ' strings seen across ' +
                         Object.keys(GAMES).length + ' boards — the probe is not watching');
+      run = null; G.state = 'title';
+    }
+
+    /* THE ARROW STILL POINTS SOMEWHERE FROM WHEREVER YOU ARE STANDING.
+       markerVia holds one exit per map on the route the step planned, and it
+       is only populated when the destination was already off the map at the
+       moment the step was taken -- so take a floor-2 job while standing on
+       floor 2 and it is null. Walk outside afterwards and the lookup missed;
+       the fallback was 'ELEV', the car park and the client site have no lift,
+       and objectiveTarget returned null. The arrow went out, and the banner
+       said TAKE THE LIFT, on the two maps a player is least sure how to
+       leave. */
+    {
+      QUIET = true; rngInit('ARROW'); runInit('ARROW'); rollDay();
+      const dark = [];
+      for (const dest of ['PRINTER', 'RECEPTION', 'SITECOMMS', 'YOURCAR']){
+        const home = floorOf(dest);
+        if (!home) continue;
+        for (const here of Object.keys(MAPS)){
+          if (here === home) continue;
+          loadMap(here); spawnPeople();
+          /* the state a player is in having walked here with a job in hand and
+             no route that ever planned for this map */
+          run.marker = [0,0]; run.markerFloor = home;
+          run.markerVia = null; run.markerAnchor = dest;
+          run.markerLabel = ANCHOR_NAMES[dest] || dest;
+          const t = objectiveTarget(), said = objectiveText();
+          if (!t || /THE LIFT/.test(said) && !liftsOn(here).length)
+            dark.push(here + '->' + dest + (t ? ' says "' + said.slice(0,40) + '"' : ' no arrow'));
+        }
+      }
+      run.marker = null; run.markerVia = null; run.markerAnchor = null;
+      loadMap('office1'); spawnPeople();
+      ok('objective: the arrow points somewhere from every map, not just the planned ones',
+         !dark.length, dark.slice(0, 5).join(' · '));
+      run = null; G.state = 'title';
+    }
+
+    /* THE NUMBER THE EVENING PRINTS IS THE NUMBER THAT ENDED YOU. Burnout ends
+       a career at 100, and a promotion takes six points off the meter -- and
+       the relief was applied even on the evening that the same meter had
+       already ended the career, because the ending is decided before the
+       promotion is applied and the screen is drawn after both. An evening that
+       promoted and finished you printed "Burnout 94% — permanent" under a
+       headline that only fires at 100. */
+    {
+      QUIET = true;
+      rngInit('BURNOUT-100'); runInit('BURNOUT-100'); rollDay();
+      run.rung = 2; run.burnout = 99.6; run.clock = DAY_MIN + 1; run.queue = [];
+      run.perfHist = [.95,.95,.95]; run.rungSince = 0; run.scores = [.95,.95];
+      run.resolved = 8; run.stakesDone = 20; run.earned = 19; run.breaches = 0;
+      endDay();
+      const ended = run && run.pendingEnd === 'burnout';
+      const shown = run ? run.burnout : 0;
+      ok('review: a career ended by burnout does not print a burnout under 100',
+         !ended || shown >= 100, 'ending ' + (run && run.pendingEnd) + ', meter ' + shown.toFixed(1));
       run = null; G.state = 'title';
     }
 
