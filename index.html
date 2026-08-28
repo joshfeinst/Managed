@@ -12879,6 +12879,19 @@ function txt(s, x, y, col, size, align){
 function txtPlate(str, x, y, col, size, align){
   ctx.font = Math.max(6, size||6) + 'px "Press Start 2P", monospace';
   const w = ctx.measureText(str).width;
+  /* KEEP THE WHOLE PLATE ON SCREEN, which only this function can do because
+     only this function knows how wide the words are. Both callers clamped the
+     plate's CENTRE to a fixed forty-pixel margin, which is right for a short
+     label and wrong for a long one: "YOUR DESK — THE GREEN SCREEN" is about
+     168 pixels of Press Start 2P, so a centre pinned at VW-40 puts its right
+     edge 44 past the edge of a 480-wide viewport. On the intern's first
+     morning — the one screen every player sees — the label naming the desk
+     they are being told to find ran off the side of the screen.
+     Clamped by the measured box, so it is right for any string at any size. */
+  const half = align === 'center' ? w/2 : align === 'right' ? w : 0;
+  const lo = 3 + half, hi = VW - 3 - (w - half);
+  if (hi >= lo) x = clamp(x, lo, hi);
+  else if (align === 'center') x = VW / 2;          // wider than the screen: centre it and spill evenly
   const ax = align === 'center' ? x - w/2 : align === 'right' ? x - w : x;
   ctx.fillStyle = 'rgba(8,10,13,.86)';
   ctx.fillRect(Math.round(ax) - 3, Math.round(y) - (size||6) - 2, Math.round(w) + 6, (size||6) + 6);
@@ -18600,6 +18613,39 @@ function selfTest(runSim){
         sides[L.act] = Math.max(sides[L.act] || 0, free);
       }));
       ok('map: nothing you are told to use is walled in', walled.length === 0, walled.join(' '));
+      /* THE SIGN POINTING AT IT HAS TO FIT ON THE SCREEN. The objective plate
+         is drawn centred on a clamped x, and the clamp used a fixed forty-pixel
+         margin that knows nothing about how wide the words are. The longest
+         label in the game -- the one naming the desk on the intern's first
+         morning -- is about 168 pixels of 6px Press Start 2P, so its right edge
+         landed 44 past a 480-wide viewport on the one screen every player sees.
+         Measured against the real font, for every name a marker can carry, at
+         both ends of the screen. */
+      {
+        /* Drive the REAL txtPlate and watch the box it paints. Re-deriving the
+           clamp here would pass with the bug put back, which is the whole
+           failure mode a guard like this exists to stop. */
+        const realRect = ctx.fillRect.bind(ctx), boxes = [];
+        ctx.fillRect = (x, y, w, h) => { boxes.push([x, w]); };
+        const wide = [];
+        const labels = Object.keys(ANCHOR_NAMES).map(k => ANCHOR_NAMES[k])
+          .concat(['YOUR DESK — THE GREEN SCREEN'])
+          .concat(Object.keys(ANCHOR_NAMES).map(k => ANCHOR_NAMES[k] + ' · 24'));
+        for (const L of labels)
+          for (const want of [-999, 0, 40, VW / 2, VW - 40, VW, 999]){
+            boxes.length = 0;
+            txtPlate(L, want, 40, '#ffb02e', 6, 'center');
+            const b = boxes[boxes.length - 1];
+            if (!b) continue;
+            if (b[1] + 6 > VW) continue;                 // genuinely wider than the screen
+            if (b[0] < 0 || b[0] + b[1] > VW)
+              wide.push(L.slice(0, 22) + '@' + Math.round(want) +
+                        ' spans ' + Math.round(b[0]) + '..' + Math.round(b[0] + b[1]));
+          }
+        ctx.fillRect = realRect;
+        ok('ui: the objective plate fits on screen wherever it is pinned',
+           !wide.length, wide.slice(0, 3).join(' · '));
+      }
       ok('map: and the stress lever is one of the things you are told to use',
          (sides.coffee || 0) >= 1, 'coffee approachable from ' + (sides.coffee || 0) + ' side(s)');
       /* recorded, not asserted: a one-sided approach is findable only if you
