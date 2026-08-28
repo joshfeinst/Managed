@@ -13689,7 +13689,7 @@ const GAMES = {
        } while ((deepest < 2 || live < 2) && guard++ < 60);
     const flatAll = [];
     (function walk(ns){ for (const n of ns){ flatAll.push(n); walk(n.kids); } })(root);
-    return { kind:'blast', drawsOwnBtns:true, root, all:flatAll, cur:0, top:0, applied:false,
+    return { kind:'blast', root, all:flatAll, cur:0, top:0, applied:false,
       total: flatAll.filter(n => n.hits && !n.group).length,
       objName, obj: 'SECURITY GROUP ' + objName,
       click:null, flash:0, flashTxt:'', flashOk:false,
@@ -13700,9 +13700,10 @@ const GAMES = {
         return out;
       },
       rowRect(i){ return [66, 72 + i*11, 348, 10]; },
-      btns: [ { x:76,  y:206, w:100, h:18, k:'mark',  cap:'1  MARK' },
-              { x:186, y:206, w:112, h:18, k:'open',  cap:'E  EXPAND' },
-              { x:308, y:206, w:100, h:18, k:'apply', cap:'2  APPLY' } ],
+      /* x is the CENTRE, like every other board — see mgBtns */
+      btns: [ { x:126, y:206, w:100, h:18, k:'mark',  cap:'1  MARK' },
+              { x:242, y:206, w:112, h:18, k:'open',  cap:'E  EXPAND' },
+              { x:358, y:206, w:100, h:18, k:'apply', cap:'2  APPLY', col:'#4ade80' } ],
       act(k){
         const rs = this.rows(), n = rs[this.cur];
         if (k === 'apply'){ this.applied = true; return; }
@@ -13748,7 +13749,7 @@ const GAMES = {
         let k = press.use ? 'open' : press.one ? 'mark' : press.two ? 'apply' : null;
         if (this.click){
           const pt = this.click; this.click = null;
-          for (const b of this.btns) if (inRect(pt, b.x, b.y, b.w, b.h)) k = b.k;
+          for (const b of this.btns) if (inRect(pt, b.x - b.w/2, b.y, b.w, b.h)) k = b.k;
           const vis = Math.min(rs.length - this.top, 12);
           for (let i = 0; i < vis; i++) if (inRect(pt, ...this.rowRect(i))){
             /* a click both selects the row and does the obvious thing to it */
@@ -13779,12 +13780,8 @@ const GAMES = {
         if (rs.length > 12)
           txt((this.top + 1) + '-' + Math.min(rs.length, this.top + 12) + ' OF ' + rs.length,
               404, 68, '#5c646e', 6, 'right');
-        for (const b of this.btns){
-          ctx.fillStyle = '#1b2129'; ctx.fillRect(b.x, b.y, b.w, b.h);
-          ctx.strokeStyle = b.k === 'apply' ? '#4ade80' : '#343b44';
-          ctx.strokeRect(b.x + .5, b.y + .5, b.w - 1, b.h - 1);
-          txt(b.cap, b.x + b.w/2, b.y + 12, b.k === 'apply' ? '#4ade80' : '#c9c4b8', 6, 'center');
-        }
+        /* drawn by the shared mgBtns from the render path, like every
+           other board — this drew its own, at a different x */
         if (this.flash > 0)
           txt(this.flashTxt, 240, 236, this.flashOk ? '#4ade80' : '#d64541', 6, 'center');
         else
@@ -13824,7 +13821,7 @@ const GAMES = {
     }
     return { kind:'ask', rounds, at:0, right:0, flash:0, ok:false, click:null,
       hint:'WHOSE IS THIS? · 1 – 4 OR CLICK',
-      optRect(i){ return [76, 124 + i*26, 328, 22]; },
+      optRect(i){ return [76, 120 + i*25, 328, 21]; },
       step(dt){
         this.flash = Math.max(0, this.flash - dt);
         if (this.at >= this.rounds.length){
@@ -13859,7 +13856,7 @@ const GAMES = {
             ctx.strokeStyle = '#343b44'; ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
             txt((i+1) + '.', rx + 8, ry + 9, '#2f7fbe', 7);
             txt(fitPx(o.t, 82, 7), rx + 22, ry + 9, '#e8e4da', 7);
-            txt(fitPx(o.sub, 208, 6), rx + 112, ry + 16, '#8d8778', 6);
+            txt(fitPx(o.sub, 200, 6), rx + 116, ry + 16, '#8d8778', 6);
           });
         } else txt('IT ALL WENT SOMEWHERE.', 240, 130, '#4ade80', 8, 'center');
         if (this.flash > 0 && this.at > 0)
@@ -13956,7 +13953,7 @@ const GAMES = {
     return { kind:'restore', job:J, pts, brokeAt, want, cur:0, at:0, done:false,
       flash:0, ok:false, click:null,
       hint:'PICK A POINT · UP/DOWN · E RESTORE FROM IT',
-      rowRect(i){ return [76, 112 + i*17, 328, 15]; },
+      rowRect(i){ return [76, 108 + i*16, 328, 14]; },
       step(dt){
         this.flash = Math.max(0, this.flash - dt);
         if (this.done){ if (this.flash <= 0) this.finished = true; return; }
@@ -14008,8 +14005,8 @@ const GAMES = {
                       : this.chose.age < this.brokeAt ? 'THAT IS AFTER IT BROKE — IT IS STILL BROKEN'
                       : 'IT WORKS. YOU ALSO THREW AWAY ' +
                         (this.chose.age - this.want.age) + ' ' + this.job.unit,
-              240, 232, this.ok ? '#4ade80' : '#d64541', 6, 'center');
-        else txt('THE LATEST ONE THAT IS COMPLETE AND OLD ENOUGH', 240, 232, '#8b93a0', 6, 'center');
+              240, 228, this.ok ? '#4ade80' : '#d64541', 6, 'center');
+        else txt('THE LATEST ONE THAT IS COMPLETE AND OLD ENOUGH', 240, 228, '#8b93a0', 6, 'center');
       } };
   }},
 
@@ -14030,9 +14027,9 @@ const GAMES = {
     return { kind:'logs', title:I.title, rows, cur:0, opens: Math.max(1, 4 - diff),
       used:0, done:false, flash:0, ok:false, click:null,
       hint:'MARK THE CAUSE · UP/DOWN · 2 OPEN A LINE · E MARK IT',
-      rowRect(i){ return [70, 104 + i*15, 340, 13]; },
-      btns:[{ k:'open', cap:'2 — OPEN THIS LINE', x:158, y:214, w:130, h:15 },
-            { k:'mark', cap:'E — THIS IS THE CAUSE', x:318, y:214, w:140, h:15 }],
+      rowRect(i){ return [70, 100 + i*14, 340, 12]; },
+      btns:[{ k:'open', cap:'2 — OPEN THIS LINE', x:158, y:218, w:130, h:15 },
+            { k:'mark', cap:'E — THIS IS THE CAUSE', x:318, y:218, w:140, h:15 }],
       step(dt){
         this.flash = Math.max(0, this.flash - dt);
         if (this.done){ if (this.flash <= 0) this.finished = true; return; }
@@ -14079,17 +14076,24 @@ const GAMES = {
           ctx.fillStyle = '#161b21'; ctx.fillRect(rx, ry, rw, rh);
           ctx.strokeStyle = i === this.cur ? '#ffb02e' : '#343b44';
           ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
-          txt(fitPx(r.t, 200, 6), rx + 8, ry + 9, '#c9c4b8', 6);
-          if (r.open) txt(fitPx(r.why, 122, 6), rx + 214, ry + 9, '#8d8778', 6);
+          txt(fitPx(r.t, 292, 6), rx + 8, ry + 8, '#c9c4b8', 6);
+          if (r.open) txt('OPEN', rx + 310, ry + 8, '#4ade80', 6);
         });
+        /* WHAT AN OPEN ACTUALLY BOUGHT YOU, IN FULL. It was drawn inside the
+           row, in the 122 pixels left over beside a log line, so the one thing
+           you spent a limited resource to read arrived with an ellipsis in it.
+           It goes on its own line under the list, for the row you are on. */
+        const here = this.rows[this.cur];
         if (this.flash > 0 && this.done)
           txt(this.ok ? 'THAT IS THE ONE. EVERYTHING ELSE WAS THAT.'
                       : 'THAT IS A SYMPTOM. SOMETHING ABOVE IT DID THAT.',
-              240, 232, this.ok ? '#4ade80' : '#d64541', 6, 'center');
+              240, 208, this.ok ? '#4ade80' : '#d64541', 6, 'center');
         else if (this.flash > 0 && this.noMore)
-          txt('NO OPENS LEFT — DECIDE ON WHAT YOU HAVE', 240, 232, '#d64541', 6, 'center');
+          txt('NO OPENS LEFT — DECIDE ON WHAT YOU HAVE', 240, 208, '#d64541', 6, 'center');
+        else if (here && here.open)
+          wrapTxt(here.why, 240, 202, 340, '#8d8778', 6);
         else
-          txt('EVERY OTHER LINE HAPPENED BECAUSE OF ONE OF THEM', 240, 232, '#8b93a0', 6, 'center');
+          txt('EVERY OTHER LINE HAPPENED BECAUSE OF ONE OF THEM', 240, 208, '#8b93a0', 6, 'center');
       } };
   }}
 };
@@ -14181,13 +14185,21 @@ const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
 
    Drawn from the render path rather than from each board, so a board added
    later cannot forget. The two that paint their own say so. */
+/* ONE DRAWER, ONE CONVENTION. `btns` declares x as the button's CENTRE, and
+   every hit test, every harness sweep and this function agree — except BLAST
+   RADIUS, which drew and hit-tested its three at x = the LEFT edge, fifty
+   pixels off everything else. It was internally consistent, so it worked; it
+   also meant the panel-layout invariant, the click sweep and the touch driver
+   had all been aiming fifty pixels left of the buttons a player can see, and
+   passing, because a hundred-pixel box overlaps itself shifted by fifty.
+   It draws through here now. `col` is the accent it wanted. */
 function mgBtns(g){
   if (!g || !g.btns || g.drawsOwnBtns) return;
   for (const b of g.btns){
     const x = b.x - b.w/2;
     ctx.fillStyle = '#1b2129'; ctx.fillRect(x, b.y, b.w, b.h);
-    ctx.strokeStyle = '#3f4854'; ctx.strokeRect(x + .5, b.y + .5, b.w - 1, b.h - 1);
-    txt(b.cap || b.k || '', b.x, b.y + b.h - 5, '#c9c4b8', 6, 'center');
+    ctx.strokeStyle = b.col || '#3f4854'; ctx.strokeRect(x + .5, b.y + .5, b.w - 1, b.h - 1);
+    txt(b.cap || b.k || '', b.x, b.y + b.h - 5, b.col || '#c9c4b8', 6, 'center');
   }
 }
 function mgPanel(title, hint){
@@ -19019,6 +19031,66 @@ function selfTest(runSim){
       MG = savedMG; G.state = savedState; run = savedRunP; SAVE_SUSPEND = false;
       ok('every board can be played to a result with a pointer alone',
          !stuck.length, stuck.join(' · '));
+    }
+    /* AND NO BOARD DRAWS ITS ROWS ON TOP OF ITS OWN BUTTONS. Every board is a
+       list inside a 360x214 panel, and the list is as long as the content
+       happens to make it — seven restore points where the code was laid out
+       for five, seven log lines where the buttons sat. Three of the four new
+       boards shipped their first draft with the bottom row under the footer
+       or under the button bar, and nothing in this suite could see it: the
+       pointer sweep taps rectangles and does not care what is drawn over
+       them, and the visual audit checks the panel's edges and not what is
+       inside it. Rectangles a board declares are the rectangles a finger is
+       promised, so they have to be somewhere a finger can reach them. */
+    {
+      const savedMG2 = MG, savedState2 = G.state, savedRun2 = run;
+      const clash = [];
+      const rectsOf = g => {
+        const l = [];
+        const n = (g.rows && g.rows.length) || (g.tasks && g.tasks.length) ||
+                  (g.hand && g.hand.length) || (g.sites && g.sites.length) ||
+                  (g.qs && g.qs.length) || (g.steps && g.steps.length) ||
+                  (g.items && g.items.length) || (g.lines && g.lines.length) ||
+                  (g.pts && g.pts.length) || 0;
+        if (g.rowRect)    for (let i = 0; i < n; i++) l.push(['row' + i, g.rowRect(i)]);
+        if (g.optRect)    for (let i = 0; i < 4; i++) l.push(['opt' + i, g.optRect(i)]);
+        if (g.leftRect)   for (let i = 0; i < (g.n||0); i++) l.push(['cable' + i, g.leftRect(i)]);
+        if (g.rightRect)  for (let i = 0; i < (g.n||0); i++) l.push(['port' + i, g.rightRect(i)]);
+        if (g.personRect) for (let i = 0; i <= (g.staff ? g.staff.length : 0); i++)
+          l.push(['who' + i, g.personRect(i)]);
+        if (g.cardRect)   for (let i = 0; i < 4; i++) l.push(['card' + i, g.cardRect(i)]);
+        for (const b of (g.btns || [])) l.push(['btn:' + (b.k || '?'), [b.x - b.w/2, b.y, b.w, b.h]]);
+        return l;
+      };
+      /* the panel mgPanel draws: x60..420, y26..240, and the title and hint
+         own the first sixteen rows of it */
+      const TOP = 62, BOT = 238, LEFT = 62, RIGHT = 418;
+      for (const id in GAMES){
+        QUIET = true; SAVE_SUSPEND = true;
+        rngInit('LAYOUT-' + id); runInit('LAYOUT-' + id);
+        /* the hardest difficulty any ticket actually asks this board for, so
+           the longest list this board can be given is the one measured */
+        let hardest = 1;
+        for (const tid in TICKETS)
+          for (const st of TICKETS[tid].steps)
+            if (st.game === id) hardest = Math.max(hardest, st.diff || 1);
+        const g = GAMES[id].init(hardest);
+        const rs = rectsOf(g);
+        if (!rs.length) continue;
+        for (const [nm, [x, y, w, h]] of rs){
+          if (x < LEFT || y < TOP || x + w > RIGHT || y + h > BOT)
+            clash.push(id + ':' + nm + ' outside the panel');
+        }
+        for (let a = 0; a < rs.length; a++)
+          for (let b = a + 1; b < rs.length; b++){
+            const [na, A] = rs[a], [nb, B] = rs[b];
+            if (A[0] < B[0]+B[2] && B[0] < A[0]+A[2] && A[1] < B[1]+B[3] && B[1] < A[1]+A[3])
+              clash.push(id + ':' + na + ' over ' + nb);
+          }
+      }
+      MG = savedMG2; G.state = savedState2; run = savedRun2; SAVE_SUSPEND = false;
+      ok('no board draws its rows on top of its own buttons', !clash.length,
+         clash.slice(0,4).join(' · ') || Object.keys(GAMES).length + ' boards at their hardest');
     }
     /* AND THE RUNG'S OWN BOARD HAS TO BE ON THE RUNG'S OWN TICKETS. Six
        bespoke minigames were written for rungs four to nine, one each, and a
