@@ -1751,11 +1751,17 @@ const NPCS = {
      because neither of them works for you and one of them is the reason the
      ticket exists: the person who was not told you were coming, and the guy.
      Nine years, a home network, and a strong view about the firewall. */
-  bev:     { name:'BEV', role:'Meridian Freight · was not told you were coming',
+  /* THEIR COMPANY IS WHICHEVER ONE THE TICKET SENT YOU TO. Both of these
+     were captioned MERIDIAN FREIGHT, one fixed name out of a sixteen-name
+     pool — so fifteen drives in sixteen ended with the game naming a
+     different company under the face of the person standing in the building
+     you had just been told to drive to. {client} is filled from the ticket
+     that took you out there; see npcRole(). */
+  bev:     { name:'BEV', role:'{client} · was not told you were coming',
     look:{skin:2,hair:4,shirt:'#6b4a72',hairLong:true},
     sched:[[0,'SITEDESK'],[150,'SITEFLOOR'],[190,'SITEDESK'],[330,'SITESTORE'],[360,'SITEDESK']],
     talk:'sm.bev' },
-  dennis:  { name:'DENNIS', role:'Meridian Freight · "we have a guy". He is the guy.',
+  dennis:  { name:'DENNIS', role:'{client} · "we have a guy". He is the guy.',
     look:{skin:0,hair:5,shirt:'#4a5a3f',glasses:true},
     sched:[[0,'SITEFLOOR'],[120,'SITECOMMS'],[170,'SITEFLOOR'],[300,'SITECOMMS'],[350,'SITEFLOOR']],
     talk:'sm.dennis' }
@@ -8196,11 +8202,18 @@ function startingRung(){
 function runInit(seed){
   rngInit(seed);
   run = { seed, day:1, rung:startingRung(), clock:0, perfHist:[], gateStreak:0, firedStreak:0,
-          stress:20, coffee:0, crashes:[], burnout:0, rep:meta.certs.length ? 1 : 0,
+          /* GOODWILL YOU ARRIVE WITH IS A PERK, AND ONLY A PERK. This read
+             `meta.certs.length ? 1 : 0` — holding any certificate at all
+             silently granted the exact effect PERKS.ref exists to unlock,
+             stacked on top of it if you had both, and was written down
+             nowhere. The study screen sells certificates on what they do to
+             the day; the profile screen sells "A GUY WHO KNOWS A GUY" on
+             starting with +1. One of those two was lying. */
+          stress:20, coffee:0, crashes:[], burnout:0, rep:0,
           queue:[], plan:null, uid:1, active:null, marker:null, pendingEvents:[], pendingScenes:[], seen:{},
           scores:[], breaches:0, resolved:0, aces:0, daysAtTop:0, satOn:{}, promoted:false,
           burned:[], earned:0, stakesDone:0, rungSince:0, warned:{}, queueDays:0,
-          leaveTaken:0, backlog:1 };
+          leaveTaken:0, backlog:1, siteClient:null };
   run.rep += metaFx('rep');
 }
 function newRun(seed){
@@ -10971,6 +10984,7 @@ function serializeRun(){
   const { plan, queue } = run;
   return { seed:run.seed, day:run.day, rung:run.rung, clock:run.clock,
     perfHist:run.perfHist, gateStreak:run.gateStreak, firedStreak:run.firedStreak,
+    siteClient:run.siteClient,
     stress:run.stress, coffee:run.coffee, crashes:run.crashes, burnout:run.burnout,
     rep:run.rep, uid:run.uid, scores:run.scores, breaches:run.breaches,
     burned:run.burned || [], earned:run.earned || 0, stakesDone:run.stakesDone || 0,
@@ -11034,6 +11048,7 @@ function resumeRun(s){
   run = { seed:r.seed, day:r.day, rung:r.rung, clock:r.clock, perfHist:r.perfHist,
     gateStreak:r.gateStreak, firedStreak:r.firedStreak, stress:r.stress,
     coffee:r.coffee, crashes:r.crashes, burnout:r.burnout, rep:r.rep,
+    siteClient:r.siteClient || null,
     queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
     pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone,
     warned: r.warned || {}, taughtQueue: !!r.taughtQueue, lastChat: r.lastChat || {},
@@ -11156,9 +11171,21 @@ function whoOf(node, fills, custom){
    whole ladder is aimed at, contradicted by a caption, every time she spoke.
    Neither of them mentions it; the caption should not either. */
 const ROLE_AT_TOP = { linda:'Service Manager · reports to you, as of Monday' };
+/* WHOSE BUILDING YOU ARE STANDING IN. The client site is one map that stands
+   in for every client in the pool, so the two people who work there have no
+   fixed employer — they work for whoever the ticket named. Remembered on the
+   run, because a caption has to survive the ticket closing while you are
+   still out there signing the book. */
+function siteClient(){
+  if (typeof run === 'undefined' || !run) return 'THE CLIENT';
+  const a = run.active;
+  if (a && a.fills && a.fills.client && /^onsite|^site-/.test(a.id)) run.siteClient = a.fills.client;
+  return run.siteClient || 'THE CLIENT';
+}
 function npcRole(id){
   const top = (typeof run !== 'undefined' && run && !ROLES[run.rung].gates.nextAt);
-  return (top && ROLE_AT_TOP[id]) || (NPCS[id] || {}).role || '';
+  const r = (top && ROLE_AT_TOP[id]) || (NPCS[id] || {}).role || '';
+  return r.indexOf('{client}') < 0 ? r : r.split('{client}').join(siteClient());
 }
 function openDlg(nodeId, fills, onDone, custom, ticket){
   const node = custom ? null : DIALOGUE[nodeId];
@@ -20618,6 +20645,68 @@ function selfTest(runSim){
       ok('review: it says whether you had started them',
          /never started|part-way in|never picked up/.test(html));
 
+      /* THE PEOPLE AT THE CLIENT SITE WORK FOR THE CLIENT ON THE TICKET. One
+         map stands in for sixteen companies, and both of the people who live
+         on it were captioned MERIDIAN FREIGHT — one name out of the pool — so
+         fifteen drives in sixteen ended with the game naming a different
+         company under the face of the person standing in the building it had
+         just sent you to. */
+      {
+        const realRun = run;
+        const onSite = Object.keys(NPCS).filter(id =>
+          (NPCS[id].sched || []).every(([, a]) => /^SITE/.test(a)));
+        const fixed = onSite.filter(id => FILLS.client.some(c => (NPCS[id].role||'').indexOf(c) >= 0));
+        ok('nobody at the client site is captioned with a fixed company',
+           onSite.length > 0 && !fixed.length,
+           fixed.join(', ') || onSite.length + ' on site: ' + onSite.join(', '));
+        /* And the caption is the company the ticket named, on every one of the
+           site templates — including after the ticket closes, because you are
+           still standing in their building signing their book. */
+        const sites = Object.keys(TICKETS).filter(id => /^onsite|^site-/.test(id));
+        const bad = [];
+        QUIET = true; rngInit('SITECAP'); runInit('SITECAP');
+        for (const tid of sites){
+          run.siteClient = null;
+          run.active = { id:tid, fills:{ client:'Tannerville Public Library' } };
+          for (const id of onSite)
+            if (npcRole(id).indexOf('Tannerville Public Library') < 0) bad.push(tid + '/' + id);
+          run.active = null;                                  // ticket closed, still on site
+          for (const id of onSite)
+            if (npcRole(id).indexOf('Tannerville Public Library') < 0) bad.push(tid + '/' + id + ':after');
+        }
+        ok('and they are captioned with the company the ticket named',
+           sites.length > 0 && !bad.length,
+           bad.slice(0,4).join(' ') || sites.length + ' site tickets x ' + onSite.length + ' people');
+        run = realRun;
+      }
+      /* THE GOODWILL YOU ARRIVE WITH IS EXACTLY WHAT THE PROFILE SCREEN SAYS.
+         runInit seeded rep at 1 for any profile holding a certificate — the
+         effect PERKS.ref is sold on, granted invisibly by an unrelated
+         purchase, and stacking to 2 for a player who had earned the perk as
+         well. Nothing on the study screen or the profile screen mentioned it.
+         Starting goodwill is the sum of the perk effects the profile lists,
+         and nothing else may add to it. */
+      {
+        const realRun = run, realMeta = meta;
+        try {
+          const repPerks = Object.keys(PERKS).filter(k => PERKS[k].fx && PERKS[k].fx.rep);
+          const cases = [
+            { label:'nothing',            m:{ certs:[], runsPlayed:0 }, want:0 },
+            { label:'every certificate',  m:{ certs:Object.keys(CERTS), runsPlayed:0 }, want:0 },
+            { label:'every rep perk',     m:{ certs:[], runsPlayed:99 },
+              want: repPerks.reduce((a,k) => a + PERKS[k].fx.rep, 0) },
+          ];
+          const wrong = [];
+          for (const c of cases){
+            meta = Object.assign({ rep:0, conn:0, best:{ days:0, rung:0 } }, c.m);
+            QUIET = true; runInit('GOODWILL');
+            if (run.rep !== c.want) wrong.push(c.label + ' gave ' + run.rep + ', not ' + c.want);
+          }
+          ok('starting goodwill is only ever what a perk grants', !wrong.length,
+             wrong.join('; ') || repPerks.length + ' perk(s) grant it, ' +
+             Object.keys(CERTS).length + ' certificates grant none');
+        } finally { meta = realMeta; run = realRun; }
+      }
       /* THE LADDER HEADER DESCRIBES THE GATE THE CODE APPLIES. It said, for a
          long time after the streak was removed, that a promotion "needs perf
          >= nextAt.perf held for nextAt.days consecutive days" — two claims,
