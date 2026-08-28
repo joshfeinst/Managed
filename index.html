@@ -6665,11 +6665,24 @@ const BR_TAGS = {
    same reason the cable rack is scored on accuracy: a real-time dexterity tax
    inside a panel that freezes the shift clock is the defect we removed from
    CRAFT, and re-introducing it on a new board would be re-introducing it. */
+/* `killedBy` is the evidence a caller line must contain before it is allowed
+   to kill this box. The whole board is the claim that a mandated line stops
+   being true at the exact sentence where the caller answers it first — so a
+   line that kills CONFIRM IDENTITY has to be a line where they say who they
+   are. The very first call in the table killed it on "I have typed it about
+   nine times. Nine. So it is not that.", which identifies nobody: the box
+   went dead, the player lost the point, and the caller had not told them a
+   thing. Written down here and enforced by "a line only kills a box it has
+   actually answered", so a new call cannot quietly do it again. */
 const QA_STEPS = [
-  { id:'ident',   box:'CONFIRM IDENTITY',    say:'Can I take your name and the company you are calling from?' },
-  { id:'restart', box:'ASK IF RESTARTED',    say:'And have you tried turning it off and on again?' },
-  { id:'checks',  box:'ANNOUNCE THE CHECKS', say:'I will just take you through a few quick checks.' },
-  { id:'else',    box:'OFFER FURTHER HELP',  say:'Is there anything else I can help you with today?' }
+  { id:'ident',   box:'CONFIRM IDENTITY',    say:'Can I take your name and the company you are calling from?',
+    killedBy:/\{User\}|\{client\}/ },
+  { id:'restart', box:'ASK IF RESTARTED',    say:'And have you tried turning it off and on again?',
+    killedBy:/restart|reboot|turned it off|off and on|off at the wall/i },
+  { id:'checks',  box:'ANNOUNCE THE CHECKS', say:'I will just take you through a few quick checks.',
+    killedBy:/check/i },
+  { id:'else',    box:'OFFER FURTHER HELP',  say:'Is there anything else I can help you with today?',
+    killedBy:/that is all|anything else|nothing else|do not need anything|will not need/i }
 ];
 /* Filler. Says nothing, costs a turn, and every one of them is a real thing a
    T1 says while reading a knowledge base article they do not believe. */
@@ -6687,9 +6700,10 @@ const CALLS = [
     fixAt:2, fix:'Your account is locked from the failed attempts. Unlocking it now.',
     lines:[
       { t:'Hi, yes, it says my password is wrong but it is definitely not wrong.' },
-      { t:'I have typed it about nine times. Nine. So it is not that.', kills:'ident' },
+      { t:'I have typed it about nine times. Nine. So it is not that.' },
       { t:'And yes I rebooted, I rebooted twice, my son told me to.', kills:'restart' },
       { t:'Is it the cloud? My neighbour said it is usually the cloud.' },
+      { t:'Sorry — {User}, at {client}. You will want that for the ticket.', kills:'ident' },
       { t:'Hello? Are you still there? Hello?' }
     ] },
   { who:'{User} at {client}', sub:'printer, again',
@@ -6716,7 +6730,7 @@ const CALLS = [
     lines:[
       { t:'My file is gone. The one on the desktop. It was RIGHT THERE.' },
       { t:'No, not that one. The important one. You know the one.' },
-      { t:'It might have been in a folder. There was a folder at one point.', kills:'checks' },
+      { t:'Please do not do the checks. I have done the checks. There was a folder.', kills:'checks' },
       { t:'This is {User}. {client}. You have my number.', kills:'ident' },
       { t:'If this is lost I will have to redo the whole quarter.' }
     ] },
@@ -9452,7 +9466,9 @@ function eventsTick(){
     /* saves written before scenes remembered their place hold plain ids */
     const s = run.pendingScenes.shift();
     const id = (s && typeof s === 'object') ? s.id : s;
-    openDlg(id, sceneFills(id), null);
+    /* the fills it was opened with if we have them — saves written before
+       scenes remembered them, and scenes queued by id alone, re-derive */
+    openDlg(id, (s && typeof s === 'object' && s.fills) || sceneFills(id), null);
     if (dlg && s && typeof s === 'object' && s.li > 0){
       dlg.li = Math.min(s.li, dlg.lines.length - 1);
       dlg.reveal = dlg.lines[dlg.li].length;     // don't re-type what was read
@@ -11205,7 +11221,7 @@ function openDlg(nodeId, fills, onDone, custom, ticket){
       const tmp = opts[i]; opts[i] = opts[j]; opts[j] = tmp;
     }
   const [who, role] = whoOf(node || {}, fills || {}, custom);
-  dlg = { lines, li:0, reveal:0, opts, onDone, ticket, scene:nodeId, done:false };
+  dlg = { lines, li:0, reveal:0, opts, onDone, ticket, scene:nodeId, done:false, fills: fills || null };
   document.getElementById('tix').style.display = 'none';   // never stack over the queue panel
   document.getElementById('d-name').textContent = who;
   document.getElementById('d-role').textContent = role;
@@ -13913,8 +13929,16 @@ function pauseGame(){
          mid-briefing and coming back to Linda starting from her first line
          again is the same conversation charged twice in attention, even now
          that it is no longer charged twice in minutes. */
+      /* PARK THE FILLS TOO. A scene is opened with fills that sceneFills()
+         cannot re-derive: openEvent computes {cost} from the minutes it just
+         charged, and no FILLS pool holds it. Parking only the id meant a
+         one-to-one interrupted by Escape came back as "she asks how you are,
+         and she means it, and she has {cost}" — the raw token, on screen, in
+         the one place the game explains what a meeting just took off your
+         day. */
       if (dlg && dlg.scene && !dlg.onDone)
-        (run.pendingScenes = run.pendingScenes || []).push({ id: dlg.scene, li: dlg.li });
+        (run.pendingScenes = run.pendingScenes || [])
+          .push({ id: dlg.scene, li: dlg.li, fills: dlg.fills || null });
       if (run.active){
         if (G.modal.kind === 'game' && MG){
           run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
@@ -17143,6 +17167,47 @@ function selfTest(runSim){
         ok('the fix card is dead before you have heard enough',
            g.cards()[3].k === 'fix' && !g.cards()[3].armed,
            'fixAt ' + g.fixAt + ', at ' + g.at);
+      }
+      /* 1b. A LINE ONLY KILLS A BOX IT HAS ACTUALLY ANSWERED. The board's whole
+         claim is that a mandated line stops being true at the sentence where
+         the caller answers it first — bank each box at the last honest moment.
+         Two lines in the table killed boxes they said nothing about: the very
+         first call killed CONFIRM IDENTITY on "I have typed it about nine
+         times. Nine. So it is not that.", and the missing-file call killed
+         ANNOUNCE THE CHECKS on a line about a folder. A player who was
+         reading the caller, which is the only way to play this board, lost
+         the point for reading correctly. QA_STEPS.killedBy is the evidence
+         each box needs, so the rule is data and not somebody's memory. */
+      {
+        const wrong = [], kills = [];
+        CALLS.forEach((c, ci) => c.lines.forEach((l, li) => {
+          if (!l.kills) return;
+          kills.push(l.kills);
+          const q = QA_STEPS.find(q => q.id === l.kills);
+          if (!q) { wrong.push('call' + ci + ':' + li + ':no such box ' + l.kills); return; }
+          if (!q.killedBy.test(l.t)) wrong.push('call' + ci + ' line' + li + ' kills ' + l.kills);
+        }));
+        ok('a line only kills a box it has actually answered', !wrong.length && kills.length >= 10,
+           wrong.slice(0,4).join('; ') || kills.length + ' kills across ' + CALLS.length + ' calls');
+        /* And every box is killable somewhere, or its evidence rule is a
+           regex nothing has ever been tested against. */
+        const never = QA_STEPS.filter(q => !kills.includes(q.id)).map(q => q.id);
+        ok('and every mandated box can be killed by some caller', !never.length,
+           never.join(', ') || QA_STEPS.map(q => q.id + '×' +
+             kills.filter(k => k === q.id).length).join(' '));
+        /* AND EACH RULE HAS TO REJECT SOMETHING. The check above is only as
+           strong as the regexes beside it, and the cheapest way to make a bad
+           line pass is to widen its rule until it matches anything the caller
+           could possibly say. A rule that accepts most of the table is not
+           evidence, it is a rubber stamp. */
+        const all = CALLS.flatMap(c => c.lines.map(l => l.t));
+        const loose = QA_STEPS
+          .map(q => ({ id:q.id, hit: all.filter(t => q.killedBy.test(t)).length }))
+          .filter(x => x.hit > all.length * 0.4);
+        ok('and each evidence rule rejects most of what a caller says', !loose.length,
+           loose.map(x => x.id + ' matches ' + x.hit + '/' + all.length).join(', ') ||
+           QA_STEPS.map(q => q.id + ' ' + all.filter(t => q.killedBy.test(t)).length).join(' ') +
+           ' of ' + all.length);
       }
       /* 2. banking a box the caller already answered is scored as a lie —
             the box still ticks, which is the joke, but it costs you */
@@ -20645,6 +20710,46 @@ function selfTest(runSim){
       ok('review: it says whether you had started them',
          /never started|part-way in|never picked up/.test(html));
 
+      /* A SCENE THAT COMES BACK AFTER A PAUSE COMES BACK FILLED. openEvent
+         computes {cost} from the minutes it has just charged — no FILLS pool
+         holds it, so sceneFills() cannot re-derive it — and the pause parked
+         only the scene's id and line number. Escape out of the one-to-one and
+         come back and Linda "asks how you are, and she means it, and she has
+         {cost}": the raw token, on screen, in the one line that tells you
+         what the meeting took off your day. Every event whose scene names
+         {cost}, opened and interrupted at every line. */
+      {
+        const realRun = run, realDlg = dlg, realState = G.state, realModal = G.modal;
+        try {
+          QUIET = true; rngInit('SCENEFILL'); runInit('SCENEFILL');
+          const withCost = Object.keys(EVENTS).filter(id => {
+            const n = DIALOGUE[EVENTS[id].scene];
+            return n && (n.t || []).some(l => String(l).indexOf('{cost}') >= 0); });
+          const raw = [];
+          for (const id of withCost){
+            openEvent(id);
+            const lines = dlg.lines.length;
+            for (let li = 0; li < lines; li++){
+              dlg.li = li;
+              run.pendingScenes = [];
+              pauseGame();
+              G.state = 'work'; G.modal = null; dlg = null;
+              eventsTick();
+              if (!dlg){ raw.push(id + ':gone@' + li); continue; }
+              if (dlg.lines.some(l => l.indexOf('{cost}') >= 0)) raw.push(id + '@' + li);
+              if (dlg.li !== li) raw.push(id + ':line' + dlg.li + '!=' + li);
+            }
+            dlg = null; G.state = 'work'; G.modal = null;
+          }
+          ok('a scene interrupted mid-line comes back filled, on the line you left',
+             withCost.length > 0 && !raw.length,
+             raw.slice(0,4).join(' ') || withCost.length + ' events name {cost}');
+        } finally {
+          run = realRun; dlg = realDlg; G.state = realState; G.modal = realModal;
+          document.getElementById('dlg').style.display = 'none';
+          document.body.classList.remove('panelopen');
+        }
+      }
       /* THE PEOPLE AT THE CLIENT SITE WORK FOR THE CLIENT ON THE TICKET. One
          map stands in for sixteen companies, and both of the people who live
          on it were captioned MERIDIAN FREIGHT — one name out of the pool — so
