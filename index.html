@@ -11143,7 +11143,17 @@ function serializeRun(){
     speedSum:run.speedSum || 0, qualSum:run.qualSum || 0, qualN:run.qualN || 0,
     rungSince:run.rungSince || 0,
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop, queueDays:run.queueDays || 0,
-    satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
+    satOn:run.satOn, promoted:run.promoted,
+    /* A SCENE ON SCREEN IS PART OF THE SAVE. The heartbeat autosave fires in
+       'modal' too, and openEvent charges a meeting's minutes and stress the
+       moment it opens — so a crash after the save but mid-scene kept the cost
+       and lost the meeting (and its choices, the game's only free stress
+       relief). Only pauseGame parked dlg; the serializer never looked at it.
+       Park it here, at the front so it replays first. pauseGame's own save
+       cannot double-park: closeModalToWork nulls dlg before it saves. */
+    pendingScenes: (G.modal && typeof dlg !== 'undefined' && dlg && dlg.scene && !dlg.onDone)
+      ? [{ id: dlg.scene, li: dlg.li, fills: dlg.fills || null }].concat(run.pendingScenes || [])
+      : (run.pendingScenes || []),
     introDone: !!run.introDone, seen: run.seen || {}, burnLog: run.burnLog || [],
     reviewCard: run.reviewCard || null,
     /* THE FLAG THAT DECIDES WHICH ENDING YOU READ. Landing the Big Migration
@@ -11239,8 +11249,16 @@ function resumeRun(s){
     startCommute(); return;
   }
   /* saved past closing time (a modal held the clock past 17:00, then a blur
-     autosave): score the day now rather than silently discarding it */
-  if (run.clock >= DAY_MIN){ loadMap('office1'); endDay(); return; }
+     autosave): score the day now rather than silently discarding it. UNLESS
+     the save sits inside the overrun window with interrupted work to reopen:
+     the sim gives a modal until DAY_OVERRUN past close to finish (see the
+     endDay gate in sim()), and the pause card promises going back to work
+     keeps what you had. Scoring here instead meant SAVE & QUIT at 17:03,
+     mid-board on a P1, came back as that P1 breached — quit-and-continue
+     forfeited the ticket that in-session pause/resume let you finish. */
+  if (run.clock >= DAY_MIN &&
+      !(run.clock < DAY_MIN + DAY_OVERRUN &&
+        (r.activeUid || run.pendingScenes.length))){ loadMap('office1'); endDay(); return; }
   /* saved at the commute screen: present the SAVED plan, don't re-roll */
   if (run.clock <= 0.001){ presentCommute(); return; }
   /* back where you were standing, on the floor you were standing on. A save
@@ -14576,7 +14594,13 @@ function act(a){
        the only way in from across the room was a key. */
     case 'queue':
       if (G.modal && G.modal.kind === 'tix') closeModalToWork();
-      else if (run && (G.state === 'work' || G.modal)){ if (G.modal) closeModalToWork(); openQueue(); }
+      else if (run && (G.state === 'work' || G.modal)){
+        /* park before closing, same as every other exit: without it this
+           button was a free re-roll on a bad board and a shredder for the
+           event scene it happened to be clicked over */
+        if (G.modal){ parkModal(); closeModalToWork(); }
+        openQueue();
+      }
       break;
     case 'newrun': actSetup(); break;
     case 'reroll':
@@ -14654,41 +14678,48 @@ function paintPace(){
     ' The shift is the same ' + numWord(dayHours()) + ' hours at every pace \u2014 ' +
     'same tickets, same deadlines, same score. Only how fast those hours pass in the real world changes.';
 }
+/* An interrupted modal must not orphan its work — through ANY door out.
+   Decide from the MODAL, not from run.active: an event scene (no onDone) is
+   queued to replay even while a ticket is active, and an abandoned minigame
+   is scored as played so F4/alt-tab cannot re-roll a bad board for free.
+   This lived inside pauseGame, which made Escape, blur and pagehide honest —
+   and left the HUD QUEUE button, which stays clickable over every modal,
+   going through closeModalToWork alone: an event scene died unreplayed and a
+   botched board re-rolled fresh and uncapped, the exact exploit the abandon
+   cap was measured and built to close. Every exit from a modal parks here. */
+function parkModal(){
+  if (!run || !G.modal) return;
+  /* Remember WHERE you were, not just which scene it was. Clicking away
+     mid-briefing and coming back to Linda starting from her first line
+     again is the same conversation charged twice in attention, even now
+     that it is no longer charged twice in minutes. */
+  /* PARK THE FILLS TOO. A scene is opened with fills that sceneFills()
+     cannot re-derive: openEvent computes {cost} from the minutes it just
+     charged, and no FILLS pool holds it. Parking only the id meant a
+     one-to-one interrupted by Escape came back as "she asks how you are,
+     and she means it, and she has {cost}" — the raw token, on screen, in
+     the one place the game explains what a meeting just took off your
+     day. */
+  if (dlg && dlg.scene && !dlg.onDone)
+    (run.pendingScenes = run.pendingScenes || [])
+      .push({ id: dlg.scene, li: dlg.li, fills: dlg.fills || null });
+  if (run.active){
+    if (G.modal.kind === 'game' && MG){
+      run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
+      /* Say so on the pause card. Escape from a board you cannot solve DOES
+         let you walk away with what you had earned — but the only words on
+         screen were BACK TO WORK and SAVE & QUIT, neither of which mentions
+         the board. A tester read that as "there is no way out", went back
+         in, and logged 570 mistakes on a five-cable rack. */
+      G.leftBoard = { name: MG_TITLES[MG.gid] || MG.gid.toUpperCase(),
+                      worth: Math.round((run.active.gameCap ?? 1) * 100) };
+    }
+    run.resumePending = true;
+  }
+}
 function pauseGame(){
   if (G.modal){
-    /* an interrupted modal must not orphan its work. Decide from the MODAL,
-       not from run.active: an event scene (no onDone) is queued to replay even
-       while a ticket is active, and an abandoned minigame is scored as played
-       so F4/alt-tab cannot re-roll a bad board for free. */
-    if (run){
-      /* Remember WHERE you were, not just which scene it was. Clicking away
-         mid-briefing and coming back to Linda starting from her first line
-         again is the same conversation charged twice in attention, even now
-         that it is no longer charged twice in minutes. */
-      /* PARK THE FILLS TOO. A scene is opened with fills that sceneFills()
-         cannot re-derive: openEvent computes {cost} from the minutes it just
-         charged, and no FILLS pool holds it. Parking only the id meant a
-         one-to-one interrupted by Escape came back as "she asks how you are,
-         and she means it, and she has {cost}" — the raw token, on screen, in
-         the one place the game explains what a meeting just took off your
-         day. */
-      if (dlg && dlg.scene && !dlg.onDone)
-        (run.pendingScenes = run.pendingScenes || [])
-          .push({ id: dlg.scene, li: dlg.li, fills: dlg.fills || null });
-      if (run.active){
-        if (G.modal.kind === 'game' && MG){
-          run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
-          /* Say so on the pause card. Escape from a board you cannot solve DOES
-             let you walk away with what you had earned — but the only words on
-             screen were BACK TO WORK and SAVE & QUIT, neither of which mentions
-             the board. A tester read that as "there is no way out", went back
-             in, and logged 570 mistakes on a five-cable rack. */
-          G.leftBoard = { name: MG_TITLES[MG.gid] || MG.gid.toUpperCase(),
-                          worth: Math.round((run.active.gameCap ?? 1) * 100) };
-        }
-        run.resumePending = true;
-      }
-    }
+    parkModal();
     closeModalToWork();
   }
   if (G.state !== 'work') return;
@@ -14730,7 +14761,17 @@ function resumeWork(){
 document.addEventListener('click', e => {
   audioInit();
   const b = e.target.closest('[data-act]');
-  if (b) act(b.dataset.act);
+  if (b){
+    act(b.dataset.act);
+    /* A CLICKED BUTTON KEEPS KEYBOARD FOCUS. After a mouse click on QUEUE the
+       browser leaves the button focused, so the next Space both latched
+       press.use (starting the selected ticket) AND re-clicked the button on
+       keyup (closing what it just opened and re-raising the queue) — and Enter
+       closed the panel the queue's own help promises it works. The game reads
+       the keyboard from the document; buttons must not keep a claim on it. */
+    b.blur();
+    if (G.state === 'work' || G.state === 'modal') view.focus();
+  }
 });
 function onKey(e){
   audioInit();
@@ -14750,6 +14791,11 @@ function onKey(e){
     const resume = G.overlayPaused && G.state === 'pause';
     G.overlayPaused = false;              // cleared whichever way this goes
     if (resume) resumeWork(); else show(screenForState());
+    /* spent: each open records its own return. testReturn in particular was
+       never cleared, so once F4 had been pressed at the title, every later
+       F1-close in the menu state resolved to that old screen instead of the
+       one the log was opened over. */
+    G.testReturn = G.logReturn = null;
   };
   if (e.code === 'Escape' && (G.showLog || G.showTests)){
     e.preventDefault(); closeOverlay(); return;
@@ -15027,6 +15073,20 @@ function simDay(skill, policy){
 function selfTest(runSim){
   const Rres = [];
   const ok = (name, pass, detail) => Rres.push({ name, pass:!!pass, detail:detail||'' });
+
+  /* F4 DURING A LIVE DAY MUST GIVE THE WORLD BACK. The lints below walk every
+     floor through loadMap and reseed the password draws with rngInit; the sim
+     branch restores all of that — but only when it runs, and a mid-day F4 runs
+     with runSim false (takePause has already made the state 'pause'). Without
+     this snapshot the player came back from the report standing on office1 at
+     another floor's coordinates, sometimes inside a wall, and every later
+     shuffle and board drew from the fixed JOB-TEST streams — the same state on
+     every press, which turned the report key into a board-fishing tool. */
+  const liveWorld = (run && !runSim)
+    ? { map: W2.id || 'office1',
+        px: player ? player.tx : null, py: player ? player.ty : null,
+        seed: RNG.seed, streams: rngState() }
+    : null;
 
   /* --- static content lints (always run) --- */
   {
@@ -15418,6 +15478,14 @@ function selfTest(runSim){
       ok('a password round never shows the same string twice', dupes === 0, dupes + ' rounds with a repeat');
     }
     ok('fill pools have variety', Object.values(FILLS).every(p => p.length >= 3));
+  }
+
+  /* see liveWorld above: the lints moved the floor and the streams; put both
+     back before the report goes up over a paused day */
+  if (liveWorld){
+    rngInit(liveWorld.seed, liveWorld.streams);
+    loadMap(liveWorld.map);
+    spawnPeople(run.clock, liveWorld.px !== null ? [liveWorld.px, liveWorld.py] : null);
   }
 
   if (runSim){
@@ -16133,6 +16201,86 @@ function selfTest(runSim){
       const wire = serializeRun();
       ok('save: an abandoned minigame stays capped across a reload',
          wire.queue[0].gameCap === .31, 'cap ' + wire.queue[0].gameCap);
+    }
+    /* A save written INSIDE the overrun window with a ticket in hand must come
+       back as that ticket, not as a scored day: SAVE & QUIT at 17:03 mid-board
+       forfeited the P1 the pause card had just promised you could finish. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const t = { uid:9090, id:'password-reset', title:'in hand', fills:{}, at:0,
+                  deadline:DAY_MIN + 60, sla:90, stress:4, si:1, bonus:0,
+                  gameScores:[], from:null, paidStep:0 };
+      run.queue = [t]; run.active = t;
+      run.clock = DAY_MIN + 5;                       // 17:05 — inside DAY_OVERRUN
+      const held0 = serializeRun();
+      resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(held0)) });
+      const held = run && G.state === 'work' && run.active && run.active.uid === 9090;
+      ok('save: a quit inside the overrun window keeps the ticket in hand',
+         held, 'state ' + G.state + ' active ' + (run && run.active && run.active.uid));
+      /* and past the window the day still scores rather than silently hanging */
+      run.clock = DAY_MIN + DAY_OVERRUN + 1;
+      const held1 = serializeRun();
+      resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(held1)) });
+      ok('save: past the overrun window a quit still scores the day',
+         !run || run.phase === 'review' || G.state === 'review' || G.state === 'over',
+         'state ' + G.state);
+      if (run) run.pendingEnd = null;
+      run = null; G.state = 'title';
+    }
+    /* The heartbeat autosave fires in 'modal' too: an open event scene has to
+       be IN the write, or a crash keeps the meeting's cost and loses the
+       meeting — and its choices, the game's one free stress relief. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.pendingScenes = [];
+      const eid = Object.keys(EVENTS)[0], sid = EVENTS[eid].scene;
+      openDlg(sid, sceneFills(sid), null);
+      const wire2 = serializeRun();
+      ok('save: a modal save carries the scene on screen',
+         wire2.pendingScenes.length === 1 && wire2.pendingScenes[0].id === sid &&
+         run.pendingScenes.length === 0,
+         JSON.stringify(wire2.pendingScenes));
+      closeModalToWork();
+      run = null; G.state = 'title';
+    }
+    /* The HUD QUEUE button stays clickable over every modal: it is a door out
+       and must park like one — resumePending and the cap for a board, the
+       scene queued to replay for a meeting — not a silent shredder. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const tb = { uid:9191, id:'password-reset', title:'board', fills:{}, at:0,
+                   deadline:240, sla:90, stress:4, si:1, bonus:0,
+                   gameScores:[], from:null };
+      run.queue = [tb]; run.active = tb; run.resumePending = false;
+      openGame('cable', 1, () => {});
+      act('queue');                                  // the button, not Escape
+      const parkedBoard = run.resumePending === true && run.active.gameCap !== undefined;
+      if (G.modal) closeModalToWork();
+      run.pendingScenes = []; run.active = null; run.resumePending = false;
+      const eid2 = Object.keys(EVENTS)[0], sid2 = EVENTS[eid2].scene;
+      openDlg(sid2, sceneFills(sid2), null);
+      act('queue');
+      const parkedScene = run.pendingScenes.length === 1 && run.pendingScenes[0].id === sid2;
+      if (G.modal) closeModalToWork();
+      ok('the QUEUE button parks the modal it interrupts', parkedBoard && parkedScene,
+         'board ' + parkedBoard + ' scene ' + parkedScene);
+      run = null; G.state = 'title';
+    }
+    /* F4 mid-day must give the world back: the static lints walk every floor
+       and reseed the password draws, and only the sim branch used to restore. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const mapBefore = W2.id, rngBefore = JSON.stringify(rngState());
+      selfTest(false);                               // what a mid-day F4 runs
+      ok('overlay: the F4 report leaves the floor and the streams as it found them',
+         W2.id === mapBefore && JSON.stringify(rngState()) === rngBefore,
+         'map ' + W2.id);
+      run = null; G.state = 'title';
     }
     /* A meeting that runs past 17:00 must not hold the shift open forever. */
     {
