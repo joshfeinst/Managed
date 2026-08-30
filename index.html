@@ -11747,7 +11747,7 @@ function abandonScore(g){
   if (g.kind === 'diagram'){
     /* the best it could still finish at: everything left, found, and nothing
        further marked wrongly. Wrong marks already made stand — at the
-       OVERMARK ratio the finish charges, not the flat .25 it retired; see
+       OVERMARK ratio the finish charges, not the flat quarter it retired; see
        the blast branch above for what the drift cost. */
     const hit = [...g.marked].filter(i => g.spofs.includes(i)).length;
     const over = Math.max(0, g.marked.size - hit - (g.forgive || 0));
@@ -16515,7 +16515,7 @@ function selfTest(runSim){
        them: a clean walk-away costs nothing (an OS focus-steal is not a
        mistake), and walking out of a botched board can never beat finishing
        it. WHOSE SATURDAY opened at zero; BLAST RADIUS and THE DIAGRAM still
-       charged the flat .25 the finish scorer retired for the OVERMARK ratio;
+       charged the flat quarter the finish scorer retired for the OVERMARK ratio;
        KEEPING EVERYBODY held the abandoned anchor-3 scale on both counts. */
     {
       QUIET = true;
@@ -16531,12 +16531,30 @@ function selfTest(runSim){
         if (a < bar) low.push(gid + ' ' + a.toFixed(2));
       }
       ok('boards: an untouched board abandons at full marks', !low.length, low.join(' '));
-      const dA = abandonScore({ kind:'diagram', marked:new Set([99]), spofs:[1,2,3], forgive:0 });
-      const bA = abandonScore({ kind:'blast', total:2, forgive:0,
-                                all:[{ marked:true, group:false, hits:0 }] });
+      /* AGAINST THE FINISH SCORER'S OWN OUTPUT, not a re-typed copy of its
+         formula. The first version of this asserted 1 - OVERMARK/k, which is
+         the implementation recomputed from the implementation's constant —
+         a mutant that drifted the FINISH scorer's charge (re-opening the
+         walk-out-beats-finishing exploit this exists to hold shut) passed
+         the whole suite. Now the same wrong mark is priced twice: once by
+         abandonScore, once by playing the board to its best finish, and the
+         two answers have to be the same number. */
+      const dg = GAMES.diagram.init(2); dg.forgive = 0;
+      const wrongD = dg.nodes.map((n, i) => i).find(i => i > 0 && !dg.spofs.includes(i));
+      dg.marked.add(wrongD);
+      const dA = abandonScore(dg);
+      for (const i of dg.spofs) dg.marked.add(i);
+      dg.submitted = true; dg.flash = 0; dg.step(0.016);
+      const bl = GAMES.blast.init(2); bl.forgive = 0;
+      const wrongB = bl.all.find(n => !n.group && !n.hits);
+      wrongB.marked = true;
+      const bA = abandonScore(bl);
+      for (const n of bl.all) if (!n.group && n.hits) n.marked = true;
+      bl.applied = true; bl.flash = 0; bl.step(0.016);
       ok('boards: a wrong mark walks out at the price the finish charges',
-         Math.abs(dA - (1 - OVERMARK/3)) < .001 && Math.abs(bA - (1 - OVERMARK/2)) < .001,
-         'diagram ' + dA.toFixed(3) + ' blast ' + bA.toFixed(3));
+         Math.abs(dA - dg.score) < .001 && Math.abs(bA - bl.score) < .001,
+         'diagram ' + dA.toFixed(3) + ' vs finish ' + (dg.score ?? -1).toFixed(3) +
+         ' · blast ' + bA.toFixed(3) + ' vs finish ' + (bl.score ?? -1).toFixed(3));
       const kA = abandonScore({ kind:'keep', hand:[], left:0, goal:6,
                                 c:3, t:4, m:5, c0:5, t0:5, m0:5 });
       ok('boards: a wrecked hand with no moves left abandons at what it would score',

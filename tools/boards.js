@@ -436,6 +436,16 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   console.log('  blind is the best a rule that needs NO comprehension manages — always the');
   console.log('  longest answer, tick everything, concede everything. It must stay at least');
   console.log('  ' + BLIND_GAP + ' points below perfect, or the board can be played without being read.');
+  /* THE HEADLINE MUST NOT PRINT OVER AN UNMEASURED BOARD. The DRIVE table is
+     hand-written per board; a seventeenth board would ship silently uncovered
+     under "ALL BOARDS DISCRIMINATE" — and an empty result set printed OK. */
+  const shipped = await page.evaluate(() => Object.keys(GAMES).sort());
+  const driven = out.map(r => r.id).sort();
+  const unmeasured = shipped.filter(id => !driven.includes(id));
+  if (!out.length || unmeasured.length){
+    console.log('\nUNMEASURED BOARD(S): ' + (unmeasured.join(' ') || '(no results at all)'));
+    bad++;
+  }
   console.log(bad ? '\n' + bad + ' BOARD(S) NEED WORK' : '\nALL BOARDS DISCRIMINATE');
   await browser.close();
   process.exit(bad ? 1 : 0);
