@@ -7,7 +7,15 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- LOADED ASYNC, DELIBERATELY. As a plain stylesheet this line render-blocks
+     the whole page: on a first visit over a degraded network (before sw.js has
+     cached the fonts) the player stared at a blank screen for as long as the
+     CSS fetch took to fail — measured at 12.5s against 0.3s without it. The
+     media swap paints the game immediately in the fallback stack and upgrades
+     the type when the fonts arrive; every visit after the first is served by
+     the service worker either way. -->
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{
   --void:#14161a; --chrome:#1d2126; --line:#343b44;
@@ -8405,8 +8413,14 @@ function rollDay(){
      real route at play time — two different numbers about the same walk, which
      is precisely the guesswork this pricing replaced. Parsing the map is
      cheap, idempotent and touches no RNG stream, so the day is planned against
-     the same office the player will walk. */
-  if (!W2.W) loadMap('office1');
+     the same office the player will walk.
+     AND THE SAME FLOOR EVERY TIME: the day can end with the car park or the
+     client site still loaded (endDay never reloads a map), so "a map exists"
+     was not enough — the next morning's desk legs were priced off another
+     floor's flood-fill table. (Yesterday's leftover occupancy was probed as a
+     determinism risk too — a 21-body ring around the desk — and moved no born
+     SLA, so the floor is the whole fix.) */
+  if (!W2.W || W2.id !== 'office1') loadMap('office1');
   const role = ROLES[run.rung];
   let elig = Object.keys(TICKETS).filter(id =>
     TICKETS[id].tiers[0] <= run.rung && run.rung <= TICKETS[id].tiers[1]);
@@ -9640,6 +9654,13 @@ function openEvent(id){
   const f = sceneFills(E.scene); f.cost = minsText(E.fx.time || 0);
   openDlg(E.scene, f, null);
 }
+/* "BEGUN" IS PAID-FOR OR IN HAND, NOT "COMPLETED A STEP". si counts steps
+   FINISHED, so a ticket that died mid-first-step — twelve minutes charged, a
+   board entered, the player mid-walk to the server room — read si === 0 and
+   the review printed "never started" / "never picked up" about the ticket in
+   the player's hands. One definition, used by both the five-o'clock burn and
+   the breach ledger, so the two callers cannot drift apart again. */
+const begunTicket = t => t.si > 0 || t.paidStep != null || (run && run.active === t);
 function slaTick(){
   for (let i=run.queue.length-1; i>=0; i--){
     const t = run.queue[i];
@@ -9665,7 +9686,8 @@ function slaTick(){
       run.stress = clamp(run.stress + t.stress * (.30 + .25*pri), 0, 100);
       const pn = 5 - pri;
       /* what it was, so the evening can say what the day actually cost you */
-      (run.burnLog = run.burnLog || []).push({ t: t.title, p: pn, s: stakesOf(t.id), worked: t.si > 0 });
+      (run.burnLog = run.burnLog || []).push({ t: t.title, p: pn, s: stakesOf(t.id),
+                                              worked: begunTicket(t) });
       slog('BREACHED (P' + pn + '): ' + t.title);
       /* the first one of a career explains itself, once — a new player reads a
          breach as failure, and here it is the mechanic */
@@ -10485,9 +10507,11 @@ function endDay(){
        clock ran out on top of; it is the one they remember. The two flags are
        complements: `never` is untouched, `worked` is begun, and whether the
        casualty happened at five or at its own deadline is what still separates
-       "never started" from "never picked up". */
+       "never started" from "never picked up".
+       AND "BEGUN" IS NOT "COMPLETED A STEP" — see begunTicket. */
     (run.burnLog = run.burnLog || []).push({ t: t.title, p: 5 - (TICKETS[t.id].pri || 2),
-                                             s: stakesOf(t.id), worked: t.si > 0, never: t.si === 0 });
+                                             s: stakesOf(t.id),
+                                             worked: begunTicket(t), never: !begunTicket(t) });
   }
   run.queue = [];
   /* An oversubscribed day cannot be cleared, and grading the mean over every
@@ -10774,7 +10798,15 @@ function reviewScreen(dayPerf, eod, promo, ending){
       : speed + '% of each ticket\'s waiting room still unused — higher is better') + '</dd>' +
     '<dt>Craft</dt><dd>' + (qual === null ? 'nothing hands-on today'
       : qual + '% across ' + run.qualN + ' hands-on job' + (run.qualN === 1 ? '' : 's')) + '</dd>' +
-    '<dt>Performance</dt><dd><b>' + Math.round(dayPerf*100) + '%</b> — ' + perfName(dayPerf) +
+    /* THE DAY WAS PLAYED AT THE OLD DESK. The promotion is applied before the
+       review draws (deliberately — see endDay), so on a promotion evening
+       run.rung is already the new job, and banding dayPerf against the new
+       job's floor-to-bar span told a vCIO who had just won the Director's
+       chair that their winning day was DEVELOPING (HR word for struggling),
+       directly under the headline PROMOTED. Grade the day on the desk it was
+       worked at. */
+    '<dt>Performance</dt><dd><b>' + Math.round(dayPerf*100) + '%</b> — ' +
+      perfName(dayPerf, promo ? Math.max(0, run.rung - 1) : run.rung) +
       (dPrev === null ? '' : ' <span style="color:' + (dPrev >= 0 ? 'var(--ok)' : 'var(--alert)') +
         '">(' + (dPrev >= 0 ? '+' : '') + dPrev + ' on yesterday)</span>') + '</dd>' +
     (gate ? (() => { const gw = gateWindow(); run.gateWin = gw.win; run.gateAvg = gw.avg;
@@ -11315,7 +11347,8 @@ function toast(text, kind, ms){
   setTimeout(() => { d.style.transition='opacity .35s'; d.style.opacity='0';
     setTimeout(() => d.remove(), 400); }, dur);
 }
-function clearToasts(){ const w = document.getElementById('toasts'); if (w) w.textContent=''; }
+/* clearToasts lives with the toast machinery below — a second definition here
+   was shadowed by hoisting and dead the whole time it existed */
 function mkBtn(parent, label, fn, ghost){
   const b = document.createElement('button');
   b.className = 'btn' + (ghost ? ' ghost' : '');
@@ -11548,10 +11581,17 @@ function abandonScore(g){
   }
   if (g.kind === 'blast'){
     /* the best it could still finish at: everything left to find, found, and
-       nothing wrongly marked from here on — the marks already wrong stand */
+       nothing wrongly marked from here on — the marks already wrong stand,
+       AND THEY STAND AT THE PRICE THE FINISH CHARGES. When the flat .25 grew
+       into the OVERMARK ratio the finish scorer moved and this did not, so on
+       every board with fewer than six people in the blast (81% of them) the
+       ceiling for walking out sat ABOVE the best possible finish — mark the
+       wrong person, Escape, and the fresh board banked .75 where playing the
+       mistake out was worth .30. The one invariant this function exists to
+       hold, inverted by a retune two screens away. */
     const marked = g.all.filter(n => n.marked && !n.group);
     const over = Math.max(0, marked.length - marked.filter(n => n.hits).length - (g.forgive || 0));
-    return clamp(1 - over*.25, 0, 1);
+    return clamp(1 - over * (OVERMARK / Math.max(1, g.total)), 0, 1);
   }
   if (g.kind === 'subnet'){
     /* the best it could still finish at: every site left, sized right. The
@@ -11578,16 +11618,34 @@ function abandonScore(g){
                  Math.max(.001, g.best), 0, 1);
   }
   if (g.kind === 'keep'){
-    /* the meters as they stand: unplayed moves are not credit for anything */
-    const v = x => clamp((x - 3) / (g.goal - 3), 0, 1);
-    return (v(g.c) + v(g.t) + v(g.m)) / 3;
+    /* the best it could still finish at: the finest remaining plays from this
+       exact state, priced on the ground-made-up scale the finish uses. This
+       held the anchor-3 ramp the finish scorer was rebuilt to abolish (see
+       NOT CREDIT FOR THE CHAIR YOU SAT DOWN IN): it paid .667 for an
+       untouched board, so a blur-pause capped a clean retry at two thirds,
+       and it paid a botched mid-game state MORE to walk out of than playing
+       it to the end could ever score. The hand is at most eight cards, so
+       the true best finish is a 2^8 walk, done here. */
+    const u = (x, from) => clamp((x - from) / Math.max(.001, g.goal - from), -1, 1);
+    const rest = g.hand.filter(h => !h.done);
+    let best = clamp((u(g.c, g.c0) + u(g.t, g.t0) + u(g.m, g.m0)) / 3, 0, 1);
+    const walk = (i, left, c, t, m) => {
+      best = Math.max(best, clamp((u(c, g.c0) + u(t, g.t0) + u(m, g.m0)) / 3, 0, 1));
+      if (!left || i >= rest.length) return;
+      walk(i + 1, left - 1, c + rest[i].fx.c, t + rest[i].fx.t, m + rest[i].fx.m);
+      walk(i + 1, left, c, t, m);
+    };
+    walk(0, g.left, g.c, g.t, g.m);
+    return best;
   }
   if (g.kind === 'diagram'){
     /* the best it could still finish at: everything left, found, and nothing
-       further marked wrongly. Wrong marks already made stand. */
+       further marked wrongly. Wrong marks already made stand — at the
+       OVERMARK ratio the finish charges, not the flat .25 it retired; see
+       the blast branch above for what the drift cost. */
     const hit = [...g.marked].filter(i => g.spofs.includes(i)).length;
     const over = Math.max(0, g.marked.size - hit - (g.forgive || 0));
-    return clamp(1 - over * .25, 0, 1);
+    return clamp(1 - over * (OVERMARK / Math.max(1, g.spofs.length)), 0, 1);
   }
   if (g.kind === 'paper'){
     /* the best it could still finish at: every remaining question answered
@@ -11596,8 +11654,15 @@ function abandonScore(g){
     return clamp((g.credit + left) / g.qs.length - g.bluffed * .12, 0, 1);
   }
   if (g.kind === 'weekend'){
-    /* nothing is committed until the rota goes out, so an abandoned board is
-       worth what is on it — with the unassigned rows worth nothing */
+    /* nothing is committed until the rota goes out, and a job comes back off
+       a name as freely as it went on — so until submit the board is still
+       worth full marks, the same contract the restore call keeps: walking
+       away has cost nothing but the minutes. Pricing the standing
+       assignments made the OPENING state — every row unassigned — abandon at
+       ZERO: an OS focus-steal on the Big Migration (blur pauses, the pause
+       caps) zeroed the craft of the one ticket the whole career aims at,
+       before the player had touched anything. */
+    if (!g.submitted) return 1;
     let good = 0;
     const over = [];
     for (let p = 0; p <= g.staff.length; p++)
@@ -13032,15 +13097,27 @@ const GAMES = {
         }
         if (press.up)   this.cur = (this.cur + this.rows.length - 1) % this.rows.length;
         if (press.down) this.cur = (this.cur + 1) % this.rows.length;
-        const set = t => { this.rows[this.cur].pick = t; this.touched = true; sfx('ui'); };
-        if (press.one) set(0); if (press.two) set(1); if (press.three) set(2);
+        /* ONE DOOR FOR BOTH HANDS. `touched` arms the abandon rule ("you
+           cannot walk out of a quote you have made a mess of"), and it was
+           set only on the keyboard path — a mouse player clicking every line
+           to PROPER walked out of an unsubmittable mess uncapped, while a
+           keyboard player whose keypress changed NOTHING (pressing 2 on a
+           line already at ADEQUATE) was armed and then capped at .15 by a
+           blur-pause on a board they never altered. A pick that does not
+           change is not a change, whichever hand made it. */
+        const set = (i, t) => {
+          this.cur = i;
+          if (this.rows[i].pick !== t){ this.rows[i].pick = t; this.touched = true; }
+          sfx('ui');
+        };
+        if (press.one) set(this.cur, 0); if (press.two) set(this.cur, 1); if (press.three) set(this.cur, 2);
         let go = press.use;
         if (this.click){
           const pt = this.click; this.click = null;
           for (let i = 0; i < this.rows.length; i++){
             if (inRect(pt, ...this.rowRect(i))) this.cur = i;
             for (let t = 0; t < 3; t++)
-              if (inRect(pt, ...this.tierRect(i, t))){ this.cur = i; this.rows[i].pick = t; sfx('ui'); }
+              if (inRect(pt, ...this.tierRect(i, t))) set(i, t);
           }
           for (const b of this.btns) if (inRect(pt, b.x - b.w/2, b.y, b.w, b.h)) go = true;
         }
@@ -16281,6 +16358,106 @@ function selfTest(runSim){
          W2.id === mapBefore && JSON.stringify(rngState()) === rngBefore,
          'map ' + W2.id);
       run = null; G.state = 'title';
+    }
+    /* THE TWO CONTRACTS OF abandonScore, held against the boards that broke
+       them: a clean walk-away costs nothing (an OS focus-steal is not a
+       mistake), and walking out of a botched board can never beat finishing
+       it. WHOSE SATURDAY opened at zero; BLAST RADIUS and THE DIAGRAM still
+       charged the flat .25 the finish scorer retired for the OVERMARK ratio;
+       KEEPING EVERYBODY held the abandoned anchor-3 scale on both counts. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const low = [];
+      /* the quote is priced as-it-stands by design (it opens near its best,
+         not at it), so it answers to a looser bar than the best-still-
+         reachable boards */
+      for (const [gid, bar] of [['weekend',.95],['keep',.95],['blast',.95],
+                                ['diagram',.95],['quote',.8]]){
+        const g = GAMES[gid].init(2); g.forgive = 0;
+        const a = abandonScore(g);
+        if (a < bar) low.push(gid + ' ' + a.toFixed(2));
+      }
+      ok('boards: an untouched board abandons at full marks', !low.length, low.join(' '));
+      const dA = abandonScore({ kind:'diagram', marked:new Set([99]), spofs:[1,2,3], forgive:0 });
+      const bA = abandonScore({ kind:'blast', total:2, forgive:0,
+                                all:[{ marked:true, group:false, hits:0 }] });
+      ok('boards: a wrong mark walks out at the price the finish charges',
+         Math.abs(dA - (1 - OVERMARK/3)) < .001 && Math.abs(bA - (1 - OVERMARK/2)) < .001,
+         'diagram ' + dA.toFixed(3) + ' blast ' + bA.toFixed(3));
+      const kA = abandonScore({ kind:'keep', hand:[], left:0, goal:6,
+                                c:3, t:4, m:5, c0:5, t0:5, m0:5 });
+      ok('boards: a wrecked hand with no moves left abandons at what it would score',
+         kA === 0, 'got ' + kA);
+      run = null; G.state = 'title';
+    }
+    /* the quote's abandon rule arms on a CHANGE, from either hand: the mouse
+       path never set `touched` (a clicked mess walked out uncapped) and the
+       keyboard path set it on a keypress that changed nothing */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      for (const k in press) press[k] = false;
+      const q = GAMES.quote.init(2); q.forgive = 0;
+      const [tx, ty] = q.tierRect(0, 0);
+      q.click = { x: tx + 2, y: ty + 2 }; q.step(0);
+      const mouseArms = q.touched === true && q.rows[0].pick === 0;
+      const q2 = GAMES.quote.init(2); q2.forgive = 0;
+      press.two = true; q2.step(0); press.two = false;   // every line opens at ADEQUATE
+      const noopUnarmed = !q2.touched;
+      ok('boards: the quote abandon rule arms on a change from either hand',
+         mouseArms && noopUnarmed, 'mouse ' + mouseArms + ' noop ' + noopUnarmed);
+      run = null; G.state = 'title';
+    }
+    /* the ticket in your hands is "begun", even mid-first-step: si counts
+       steps FINISHED, and the review called the ticket the clock ran out on
+       top of "never picked up" */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const t = { uid:903, id:'coffee-derek', title:'t', fills:{}, at:0, deadline:10,
+                  sla:10, stress:4, si:0, paidStep:0, bonus:0, gameScores:[], from:null };
+      run.queue = [t]; run.active = t; run.burnLog = [];
+      run.clock = t.deadline + ACTIVE_GRACE_MAX + 1;
+      slaTick();
+      const e = run.burnLog[0];
+      ok('review: the ticket in your hands is never "never picked up"',
+         e && e.worked === true, JSON.stringify(e || null));
+      run = null;
+    }
+    /* the day is priced on the working floor: ending the day in the car park
+       or at the client site re-priced the next morning's desk legs from
+       another floor's flood-fill table */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const born = run.plan.arrivals.map(a => a.sla).join(',');
+      const elsewhere = Object.keys(MAPS).find(m => m !== 'office1');
+      rngInit('JOB-TEST'); runInit('JOB-TEST');
+      if (elsewhere) loadMap(elsewhere);               // the wrong floor loaded overnight
+      rollDay();
+      ok('rollDay prices the day on the working floor', W2.id === 'office1', W2.id);
+      ok('the SLA a ticket is born with ignores where the last day ended',
+         run.plan.arrivals.map(a => a.sla).join(',') === born, 'differs from a clean roll');
+      run = null; G.state = 'title';
+    }
+    /* a promotion evening grades the day at the desk it was worked: the promo
+       is applied before the review draws (deliberately), and banding dayPerf
+       against the NEW rung's floor-to-bar span printed DEVELOPING (HR word
+       for struggling) directly under the headline PROMOTED */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.rung = ROLES.length - 1;               // the desk AFTER the promotion
+      run.lastScore = null;
+      reviewScreen(.5, 40, true, null);
+      const row = document.getElementById('r-stats').textContent;
+      const oldBand = perfName(.5, run.rung - 1), newBand = perfName(.5, run.rung);
+      ok('review: a promotion evening grades the day at the desk it was worked',
+         row.indexOf(oldBand) >= 0 && (oldBand === newBand || row.indexOf(newBand) < 0),
+         'bands old "' + oldBand + '" new "' + newBand + '"');
+      show(null); run = null; G.state = 'title';
     }
     /* A meeting that runs past 17:00 must not hold the shift open forever. */
     {
