@@ -9466,7 +9466,15 @@ const COMMUTE = {
       t:'You have been composing an email in your head since the roundabout. You will not send it.' },
     { if:r => r.rep >= 8,
       t:'Somebody from another team held a door for you and said your name. You have no idea who they are.' },
-    { if:r => r.rep <= -3,
+    /* WRITTEN, REFERENCED, UNREACHABLE: every write to run.rep floors it at
+       zero, so `<= -3` could never fire and the stairs line was lost content.
+       The state it describes is a goodwill-burner — a week in and nothing
+       banked, because every conversation was ducked or taken cynically —
+       and rep pinned to its floor past the first week is exactly that. One
+       weekday only, or it eats the whole card for that player: rep 0 is also
+       just an ordinary early-career state, and the breadth check below sweeps
+       it. */
+    { if:r => r.rep <= 0 && r.day > 5 && (r.day % 5) === 3,
       t:'You take the stairs today. The lift is a small room with people who have opinions about last week.' },
     /* fmtDate reads days[(d-1) % 5], so day 1 is Monday and day 5 is Friday —
        Monday is d % 5 === 1, not 0. Written as `5 % 5` first time out, which

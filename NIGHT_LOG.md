@@ -41,7 +41,7 @@ the `main` build. Every cycle ends with the full battery green and a push.
 - Triage spread **0.014 → 0.128** · skill spread **0.057 → 0.138** · template luck **0.245 → 0.145**
 - Retirement: unreachable → **6/6 expert sequences in ~9.3 careers**; a weak player 2/6, otherwise stalling at Solutions Architect
 - Careers run ~10.6 days for careful play, ~9.5 priority-blind, 4 for a slacker (fired)
-- Content: **43 tickets · 14 events · 18 jargon rounds · a generated password game**
+- Content: **375 ticket templates · 65 events · 16 boards · 18 jargon rounds · a generated password game** (every rung holds 46–169 eligible tickets of its own)
 
 ## How the night worked
 
