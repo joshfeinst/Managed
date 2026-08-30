@@ -1,6 +1,6 @@
 /* Managed service worker — network-first shell with offline fallback, plus
    stale-while-revalidate for the Google Fonts. Bump CACHE per release. */
-const CACHE = 'managed-v0.1';
+const CACHE = 'managed-v0.2';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'
@@ -37,8 +37,23 @@ self.addEventListener('fetch', e => {
       fetch(e.request)
         .then(r => {
           if (worthCaching(r)) {
-            const copy = r.clone();
-            caches.open(CACHE).then(c => c.put(e.request, copy));
+            /* THE FALLBACK ENTRY HAS TO STAY FRESH TOO. Runtime puts refresh
+               only the exact URL requested, and normal navigations request
+               './' — so the './index.html' entry the offline fallback serves
+               stayed frozen at whatever addAll snapshotted on install day.
+               Months later, offline, a link ending in index.html (or any
+               evicted URL) handed a current save to that ancient build. A
+               document served at either spelling is the same document: cache
+               it under both. */
+            const p = url.pathname;
+            const twin = p.endsWith('/index.html') ? p.slice(0, -'index.html'.length)
+                       : p.endsWith('/')           ? p + 'index.html'
+                       : null;
+            const copy = r.clone(), twinCopy = twin ? r.clone() : null;
+            caches.open(CACHE).then(c => {
+              c.put(e.request, copy);
+              if (twin) c.put(twin, twinCopy);
+            });
           }
           return r;
         })
