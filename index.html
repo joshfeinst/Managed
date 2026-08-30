@@ -6017,7 +6017,13 @@ const TICKETS = {
     steps:[{say:'t.sort.a'},{game:'ask',diff:1},{choice:'t.sort.b'}] },
   'raj-got-a-mailbox-ticket': { tiers:[0,0], weight:3, slaMult:2.4, pri:2, stress:5, from:'raj',
     title:'RAJ has been sent two things that are not RAJ\'s',
-    steps:[{say:'t.sort2.a'},{goto:'n2'},{game:'ask',diff:2},{say:'t.sort.b'}] },
+    /* choice, not say: the node carries options, and wiring it as `say`
+       rendered them while bypassing the ticket-fx pipeline — the good
+       option's 8 minutes were charged but never credited back through
+       t.spent (docking promptness for doing the right thing) and its
+       authored bonus could never be earned. The lint beside the suite's
+       other step checks holds the whole class down now. */
+    steps:[{say:'t.sort2.a'},{goto:'n2'},{game:'ask',diff:2},{choice:'t.sort.b'}] },
   'triage-before-eleven': { tiers:[0,0], weight:3, slaMult:1.9, pri:3, stress:6, from:'derek',
     title:'DEREK will ask at eleven what is in the overnight stack',
     steps:[{say:'t.pile.a'},{game:'ask',diff:2},{choice:'t.sort.b'}] },
@@ -7043,6 +7049,14 @@ const inMap = (x,y) => x>=0 && y>=0 && x<W2.W && y<W2.H;
 const solidAt = (x,y) => !inMap(x,y) || W2.solid[cellIx(x,y)] === 1;
 
 function loadMap(id){
+  /* A CLICK-ROUTE IS MAP-SCOPED DATA. G.autoPath held raw tile coordinates
+     and survived every scene change — ride the lift mid-route and the
+     character marched the rest of the route across the WRONG floor (toward
+     the front doors, on the probe that found it), fired its deferred E-press
+     at whatever sits at those coordinates downstairs, and a route pending at
+     17:00 was walked from the desk the NEXT MORNING. The floor changing is
+     the definition of the route being stale. */
+  if (typeof G !== 'undefined') G.autoPath = null;
   const M = MAPS[id];
   const rows = M.map;
   W2.H = rows.length; W2.W = rows[0].length; W2.name = M.name; W2.id = id;
@@ -8304,6 +8318,8 @@ let meta = { certs:[], rep:0, conn:0, runsPlayed:0, carry:0, best:{ days:0, rung
 function normalizeMeta(m){
   if (!m || typeof m !== 'object') m = {};
   if (!Array.isArray(m.certs)) m.certs = [];
+  /* a duplicate certificate, once saved, applied its metaFx twice forever */
+  m.certs = [...new Set(m.certs)];
   if (typeof m.rep !== 'number') m.rep = 0;
   if (typeof m.conn !== 'number') m.conn = 0;
   if (typeof m.runsPlayed !== 'number') m.runsPlayed = 0;
@@ -9806,6 +9822,12 @@ function walkToClick(vx, vy){
   const cx2 = Math.round(cam.x), cy2 = Math.round(cam.y);
   const tx = Math.floor((vx + cx2) / TILE), ty = Math.floor((vy + cy2) / TILE);
   if (tx < 0 || ty < 0 || tx >= W2.W || ty >= W2.H) return false;
+  /* clicking your own character is not an instruction. entAt() is true of the
+     player's own cell, so this fell into the blocked-target branch, walked
+     you one tile OFF the spot you were deliberately standing on (a goto
+     anchor, say) and pressed E back at where you had been — and on mobile
+     your own character is the most natural thing on screen to tap. */
+  if (tx === player.tx && ty === player.ty) return false;
   /* A THING YOU USE IS NOT ALWAYS A THING YOU CANNOT WALK ON. This asked
      solidAt() alone, which is true of every prop in the building — the lift
      doors, the coffee machine, the printer — and false of a door you walk
@@ -11055,6 +11077,14 @@ function careerOver(kind){
   slog('CAREER OVER: ' + kind);
   if (run) run.pendingEnd = null;
   G.state = 'over';
+  /* A NEW CAREER IS A NEW POSTING. actSetup rerolls the seed box only when it
+     is empty, and after an ending it still held the seed of the career that
+     just finished — so the no-touch NEW CAREER flow re-dealt the identical
+     posting, and at the same starting rung, the identical career. A player
+     who wants the same posting back can note it; a roguelite that quietly
+     re-deals yesterday is broken in a way nobody reports. */
+  const sb = document.getElementById('seedbox');
+  if (sb) sb.value = '';
   meta.runsPlayed++;
   meta.rep += Math.floor(run.rep / 2) + (kind === 'retired' ? 5 : kind === 'shortof' ? 2 : 0);
   meta.best.days = Math.max(meta.best.days, run.day);
@@ -14580,6 +14610,26 @@ const JOB_POSTING = [
   { pos:'Director of IT (£160,000, "own the function")',
     perk:'The above. Nobody has mentioned hours, which is how you know.' }
 ];
+/* THE SHELF SPENDS THE GAME'S SCARCEST CURRENCY AND HAD NO GUARDS AT ALL.
+   Buying re-lays the shelf sorted cheapest-first, so the NEXT certificate
+   slides up into the exact pixels just clicked — an ordinary accidental
+   double-click bought two different certificates, the second unseen, for
+   most of a career's banked rep. (ACCEPT OFFER, on the same screen, has a
+   700ms dwell built for exactly this; the shop had nothing.) And nothing
+   checked ownership, so the same certificate could be charged twice and
+   metaFx would apply its effect twice forever. Named, so a test can buy. */
+function buyCert(k){
+  const C = CERTS[k];
+  if (!C || meta.certs.includes(k) || meta.rep < C.cost.rep) return false;
+  const now = performance.now();
+  if (now - (G.lastCertBuy || 0) < 350) return false;   // the double-click, absorbed
+  G.lastCertBuy = now;
+  meta.certs.push(k); meta.rep -= C.cost.rep;
+  saveGame(); sfx('promo');
+  toast('CERTIFIED. THE FRAME COSTS EXTRA.', 'ok', 3000);
+  actSetup();
+  return true;
+}
 function actSetup(){
   G.state = 'setup';
   disarmAbandon();
@@ -14609,13 +14659,7 @@ function actSetup(){
     row.className = 'certrow';
     const b = document.createElement('button');
     b.className = 'btn ghost certcard';
-    b.onclick = () => {
-      if (meta.rep < C.cost.rep) return;
-      meta.certs.push(k); meta.rep -= C.cost.rep;
-      saveGame(); sfx('promo');
-      toast('CERTIFIED. THE FRAME COSTS EXTRA.', 'ok', 3000);
-      actSetup();
-    };
+    b.onclick = () => buyCert(k);
     const top = document.createElement('span'); top.className = 'cc-top';
     const nm  = document.createElement('span'); nm.className  = 'cc-name';
     nm.textContent = (can ? 'STUDY: ' : 'LOCKED: ') + C.name;
@@ -15563,6 +15607,21 @@ function selfTest(runSim){
       ok('a password round never shows the same string twice', dupes === 0, dupes + ' rounds with a repeat');
     }
     ok('fill pools have variety', Object.values(FILLS).every(p => p.length >= 3));
+    /* A NODE THAT OFFERS OPTIONS IS A CHOICE. Wired as `say` the options
+       still render and the player still answers — but advanceStep's say
+       branch passes no ticket, so the fx pipeline (t.spent, t.bonus,
+       ticketOffers) never hears about it: minutes charged and not credited
+       back, an authored bonus that cannot be earned, and a step priced as a
+       say. One template shipped that way for a whole era of the intern day. */
+    {
+      const wired = [];
+      for (const id in TICKETS)
+        for (const st of TICKETS[id].steps)
+          if (st.say && DIALOGUE[st.say] && DIALOGUE[st.say].opts)
+            wired.push(id + ':' + st.say);
+      ok('every step that offers options is wired as a choice',
+         !wired.length, wired.join(' '));
+    }
   }
 
   /* see liveWorld above: the lints moved the floor and the streams; put both
@@ -16466,6 +16525,49 @@ function selfTest(runSim){
          row.indexOf(oldBand) >= 0 && (oldBand === newBand || row.indexOf(newBand) < 0),
          'bands old "' + oldBand + '" new "' + newBand + '"');
       show(null); run = null; G.state = 'title';
+    }
+    /* the certificate shelf spends the scarcest currency: one certificate is
+       charged once, a shelf that re-lays under the pointer does not sell the
+       next row to the same double-click, and a duplicate smuggled into a save
+       does not apply its effect twice forever */
+    {
+      QUIET = true;
+      const mSnap = { rep: meta.rep, certs: meta.certs.slice(), last: G.lastCertBuy };
+      const cheap = Object.keys(CERTS).sort((a,b) => CERTS[a].cost.rep - CERTS[b].cost.rep);
+      meta.rep = 500; meta.certs = []; G.lastCertBuy = 0;
+      const first = buyCert(cheap[0]);
+      G.lastCertBuy = 0;                          // past the dwell: ownership alone must refuse
+      const again = buyCert(cheap[0]);
+      G.lastCertBuy = performance.now();          // inside the dwell: the slid row must wait
+      const slide = buyCert(cheap[1]);
+      ok('shop: a double-click buys one certificate, once',
+         first === true && again === false && slide === false &&
+         meta.certs.length === 1 && meta.rep === 500 - CERTS[cheap[0]].cost.rep,
+         'certs ' + JSON.stringify(meta.certs) + ' rep ' + meta.rep);
+      ok('shop: a duplicate certificate in a save is deduped on the way in',
+         normalizeMeta({ certs: [cheap[0], cheap[0]] }).certs.length === 1);
+      meta.rep = mSnap.rep; meta.certs = mSnap.certs; G.lastCertBuy = mSnap.last;
+      G.state = 'title';
+    }
+    /* a click-route is map-scoped: the floor changing is the definition of it
+       being stale, and clicking your own character is not an instruction */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      G.autoPath = { path: [[1,1]], use: null };
+      loadMap('office1');
+      ok('a click-route does not survive a floor change', G.autoPath === null,
+         JSON.stringify(G.autoPath));
+      spawnPeople();
+      for (const k in press) press[k] = false;
+      const vx = player.tx * TILE - Math.round(cam.x) + 4;
+      const vy = player.ty * TILE - Math.round(cam.y) + 4;
+      const took = walkToClick(vx, vy);
+      ok('clicking your own character is not an instruction',
+         took === false && !G.autoPath && !press.use,
+         'took ' + took + ' path ' + !!G.autoPath + ' use ' + !!press.use);
+      run = null; G.state = 'title';
     }
     /* A meeting that runs past 17:00 must not hold the shift open forever. */
     {
@@ -24319,8 +24421,12 @@ function render(){
     if (G.state !== 'pause') hudUpdate();
     autosaveTick(performance.now());
   } else if (W2.W){
-    /* menus idle over a slow pan of the office */
-    idleT += 1/60;
+    /* menus idle over a slow pan of the office — on the clock, not the frame
+       counter: += 1/60 per rAF assumed a 60Hz display, so a 144Hz laptop
+       panned the title office at 2.4x and a throttled 30fps tab at half,
+       the one animation in the game that moved with the refresh rate while
+       every other wobble reads performance.now() */
+    idleT = performance.now() * .001;
     cam.x = 40 + Math.sin(idleT*.1)*36 + 140;
     cam.y = 60 + Math.cos(idleT*.07)*30;
     drawWorld();
@@ -24356,9 +24462,16 @@ function fit(){
      available size went to margins and everything looked half a size too small.
      Quarters keep sprite edges on clean half-pixels and gain that back. */
   if (s >= 1) s = Math.floor(s * 4) / 4;
-  view.style.width = Math.floor(VW*s)+'px';
-  view.style.height = Math.floor(VH*s)+'px';
-  frameNarrow(Math.floor(VW*s));
+  /* THE SAME SCALE ON BOTH AXES. Flooring width and height separately made
+     the two disagree at x.25/x.75 steps — 480x1.75 is 840 but 270x1.75 is
+     472.5, floored to 472 — so sx was 1.75 while sy was 1.748, and under
+     pixelated nearest-neighbour that is a band of pixels one device-pixel
+     shorter than they are wide: exactly the misalignment the quarter comment
+     above says the stepping exists to prevent. CSS takes fractional pixels;
+     what it must not take is two different scales. */
+  view.style.width = (VW*s)+'px';
+  view.style.height = (VH*s)+'px';
+  frameNarrow(Math.round(VW*s));
 }
 /* The HUD's space is the frame, not the window — see the .narrow rules in the
    stylesheet. One function so the CSS and the thing that triggers it cannot
@@ -24370,6 +24483,12 @@ function frameNarrow(px){
   if (f) f.classList.toggle('narrow', px < HUD_NARROW);
 }
 addEventListener('resize', fit);
+/* fit() reads visualViewport but nothing ever told it the visual viewport
+   changed: the on-screen keyboard (the seed box is a real text field) and a
+   mobile pinch-zoom resize the visual viewport WITHOUT a window resize, so
+   the min() clamp above was dead weight and the frame stayed sized for a
+   screen the keyboard had just eaten half of. */
+if (window.visualViewport) visualViewport.addEventListener('resize', fit);
 
 /* Clicking a dialogue box to advance it is what every game with a dialogue box
    does, and the game only listened to the keyboard. A click anywhere over the
