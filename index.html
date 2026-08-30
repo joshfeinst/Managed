@@ -8389,6 +8389,25 @@ function newRun(seed){
    Split from takeLeave so the review screen and the headless career bots ask
    the same question -- a mechanic no harness can exercise is a mechanic whose
    balance nobody knows, and this file has been bitten by exactly that twice. */
+/* A DROPPED MEETING MUST NOT KEEP ITS SEAT. The slot was claimed BEFORE the
+   spacing check, so a meeting skipped for being too close to the previous one
+   still blocked its slot — and the slot's OTHER candidate, arriving with all
+   the clearance in the world, was then turned away by a ghost. Measured: 8%
+   of T2 days rolled two on-call candidates and held neither, on a rule whose
+   own comment says "a day holds one of each, and the first in the day wins".
+   Only a meeting that is actually KEPT claims anything now. Named, so the
+   suite can seat a calendar directly. */
+function spaceEvents(events){
+  const bySlot = new Set(), spaced = [];
+  for (const e of events){
+    const slot = EVENTS[e.id].slot;
+    if (slot && bySlot.has(slot)) continue;
+    if (spaced.length && e.at - spaced[spaced.length-1].at < MEETING_GAP) continue;
+    if (slot) bySlot.add(slot);
+    spaced.push(e);
+  }
+  return spaced;
+}
 function canTakeLeave(){
   return !!run && !run.pendingEnd &&
          (run.leaveTaken || 0) < LEAVE.perCareer &&
@@ -8412,6 +8431,18 @@ function takeLeave(){
   /* The day off is a day. It scores nothing, because you were not there to be
      scored -- no perfHist entry, so a promotion streak is not broken by a week
      you were not assessed in, which is both fair and how it actually works. */
+  /* A FRIDAY OFF IS STILL FOLLOWED BY A WEEKEND. The weekend's deeper stress
+     carry and burnout relief live in endDay, keyed on a PLAYED Friday — so
+     booking leave at a Thursday review consumed day 5, no Friday evening ever
+     ran, and the week's weekend simply never happened: the one leave day that
+     cost you the recovery the button exists to buy, decided by which weekday
+     you clicked it on. If the day being skipped is a Friday, the weekend it
+     leads into still counts. */
+  if (run.day % 5 === 0){
+    run.burnout = Math.max(0, run.burnout - BURN.weekendRelief);
+    run.stress = Math.round(run.stress *
+      Math.min(.92, BURN.weekend + (run.burnout / 100) * BURN.sleepless));
+  }
   run.day++;
   slog('ANNUAL LEAVE — one day, and the queue kept its own counsel');
   return true;
@@ -8601,16 +8632,7 @@ function rollDay(){
      is the other half: you have to be able to physically get out of one room
      and into the next. */
   {
-    const bySlot = new Set(), spaced = [];
-    for (const e of events){
-      const slot = EVENTS[e.id].slot;
-      if (slot){
-        if (bySlot.has(slot)) continue;
-        bySlot.add(slot);
-      }
-      if (spaced.length && e.at - spaced[spaced.length-1].at < MEETING_GAP) continue;
-      spaced.push(e);
-    }
+    const spaced = spaceEvents(events);
     events.length = 0; events.push.apply(events, spaced);
   }
   /* YOUR AFTERNOON GETS CANCELLED, AND THANK GOD. Every rung ADDS meetings and
@@ -9073,7 +9095,20 @@ function walkLegs(steps, si, fromPos){
     const g = steps[i].goto;
     if (!g) continue;
     const home = floorOf(g) || floor;
-    const atPos = at || (i === si ? fromPos : null);
+    /* THE TRIP STARTS WHERE THE PLAYER IS, WHENEVER WE KNOW WHERE THAT IS.
+       This used to hand fromPos only to the leg that is the ticket's current
+       step, and price every other un-walked leg "from the desk" — but nearly
+       every ticket opens with a say, so an untouched ticket's first goto was
+       a desk price even when the queue asked from the player. On office1 the
+       two agree within a few tiles. Standing at the client site they do not:
+       the desk arithmetic ran against the WRONG MAP's exits, every edge came
+       back null, and the row quoted the 18-minute fallback about jobs that
+       really cost 70-88 minutes from out there — a triage screen lying
+       hardest exactly when triage matters most. A say step moves nobody, so
+       a goto's price must not depend on whether one precedes it; that
+       invariant is now in the suite. Birth pricing passes no fromPos and is
+       untouched. */
+    const atPos = at || (!atName ? fromPos : null);
     /* still in the chair: nothing has been walked and no position was given */
     const atDesk = !atName && !atPos;
     let m;
@@ -10269,16 +10304,22 @@ function legHint(t){
      car park shipped, and the estate would have inherited it. The row is the
      only place a player can see what an errand costs before taking it, so a
      direction it gets wrong is worse than one it omits. */
+  /* AND THE THIRD MAP INHERITED IT AFTER ALL: standing AT the client site,
+     an office errand crosses back the other way, and the catch-all called a
+     26-minute drive plus a lift "upstairs, ~X min walk". A trip that starts
+     off the campus is a drive home first, whichever floor it ends on. */
   const off = L.crossed.some(isOffSite);
+  const backFromSite = !off && W2.id === 'clientsite' && L.crossed.length > 0;
   const via = !L.crossed.length ? ''
     : off                                    ? ', out at the client'
+    : backFromSite                           ? ', back at the office'
     : floorOf(L.crossed[0]) === 'carpark'     ? ', outside'
     : floorOf(L.crossed[0]) === 'ground'      ? ', downstairs'
     : ', upstairs';
   const far = L.mins >= 25;
   return '<span class="leg" style="color:' + (far ? 'var(--alert)' : 'var(--corp)') + '">· ' +
          L.names.join(' then ').toLowerCase() + via + ', ~' + L.mins +
-         (off ? ' min drive' : ' min walk') + '</span>';
+         (off || backFromSite ? ' min drive' : ' min walk') + '</span>';
 }
 function renderQueue(){
   const list = document.getElementById('tix-list');
@@ -11074,6 +11115,11 @@ function reviewLine(p){
   return pool[((run.day || 1) * 5 + run.rung) % pool.length];
 }
 function careerOver(kind){
+  /* ONCE. The first call banks rep, counts the career and nulls the run; a
+     second dispatch of the same button (a touch ghost-click is the realistic
+     path) got past the soft `if (run)` below, counted the career AGAIN into
+     meta.runsPlayed, and then threw on run.rep. An ended career cannot end. */
+  if (G.state === 'over' && !run) return;
   slog('CAREER OVER: ' + kind);
   if (run) run.pendingEnd = null;
   G.state = 'over';
@@ -11276,6 +11322,28 @@ function resumeRun(s){
   clearToasts();
   meta = normalizeMeta(s.meta);
   const r = s.run;
+  /* A SAVE IS OUTSIDE INPUT. loadGame refuses torn JSON, but well-formed JSON
+     with wrong types half-loaded into a run that could not be played OR
+     refused: rung 99 threw a TypeError per frame at hudUpdate; a string
+     clock grew by CONCATENATION every tick, so no SLA could breach and the
+     day could never end; a non-array queue faulted every render. meta gets
+     normalizeMeta on the way in; the run gets the same courtesy. Fields the
+     sim indexes or does arithmetic on are clamped, structures it iterates
+     are checked, and a plan that is not a plan re-rolls through the commute
+     rather than faulting forever. */
+  const rnum = (v, d, lo, hi) => (typeof v === 'number' && isFinite(v))
+    ? Math.min(hi, Math.max(lo, v)) : d;
+  r.rung = Math.round(rnum(r.rung, 0, 0, ROLES.length - 1));
+  r.clock = rnum(r.clock, 0, 0, DAY_MIN + DAY_OVERRUN + 60);
+  r.day = Math.round(rnum(r.day, 1, 1, 9999));
+  r.stress = rnum(r.stress, 0, 0, 100);
+  r.burnout = rnum(r.burnout, 0, 0, 100);
+  r.rep = rnum(r.rep, 0, 0, 9999);
+  r.uid = Math.round(rnum(r.uid, 1, 1, 1e9));
+  if (!Array.isArray(r.queue)) r.queue = [];
+  r.queue = r.queue.filter(t => t && typeof t === 'object' && t.uid != null && TICKETS[t.id]);
+  if (r.plan && (typeof r.plan !== 'object' || !Array.isArray(r.plan.arrivals))) r.plan = null;
+  if (r.plan && !Array.isArray(r.plan.events)) r.plan.events = [];
   rngInit(r.seed, r.rng);
   run = { seed:r.seed, day:r.day, rung:r.rung, clock:r.clock, perfHist:r.perfHist,
     gateStreak:r.gateStreak, firedStreak:r.firedStreak, stress:r.stress,
@@ -14622,7 +14690,10 @@ function buyCert(k){
   const C = CERTS[k];
   if (!C || meta.certs.includes(k) || meta.rep < C.cost.rep) return false;
   const now = performance.now();
-  if (now - (G.lastCertBuy || 0) < 350) return false;   // the double-click, absorbed
+  /* the absorbed double-click is not silent: a click that spent nothing
+     still answers, or a player buying two certificates quickly loses one
+     to a refusal they never saw */
+  if (now - (G.lastCertBuy || 0) < 350){ sfx('err'); return false; }
   G.lastCertBuy = now;
   meta.certs.push(k); meta.rep -= C.cost.rep;
   saveGame(); sfx('promo');
@@ -14727,7 +14798,7 @@ function act(a){
         /* park before closing, same as every other exit: without it this
            button was a free re-roll on a bad board and a shredder for the
            event scene it happened to be clicked over */
-        if (G.modal){ parkModal(); closeModalToWork(); }
+        if (G.modal){ parkModal(false); closeModalToWork(); }
         openQueue();
       }
       break;
@@ -14816,7 +14887,7 @@ function paintPace(){
    going through closeModalToWork alone: an event scene died unreplayed and a
    botched board re-rolled fresh and uncapped, the exact exploit the abandon
    cap was measured and built to close. Every exit from a modal parks here. */
-function parkModal(){
+function parkModal(forPause){
   if (!run || !G.modal) return;
   /* Remember WHERE you were, not just which scene it was. Clicking away
      mid-briefing and coming back to Linda starting from her first line
@@ -14839,16 +14910,22 @@ function parkModal(){
          let you walk away with what you had earned — but the only words on
          screen were BACK TO WORK and SAVE & QUIT, neither of which mentions
          the board. A tester read that as "there is no way out", went back
-         in, and logged 570 mistakes on a five-cable rack. */
-      G.leftBoard = { name: MG_TITLES[MG.gid] || MG.gid.toUpperCase(),
-                      worth: Math.round((run.active.gameCap ?? 1) * 100) };
+         in, and logged 570 mistakes on a five-cable rack.
+         PAUSE ONLY: leftBoard is that card's message and resumePending is
+         resumeWork's cue. Set from the QUEUE path they had no consumer —
+         the card lied about a board whose ticket had since resolved, and a
+         plain pause/resume minutes later re-opened a minigame the player
+         did not have open. The queue's re-entry is startTicket, which
+         needs neither. */
+      if (forPause) G.leftBoard = { name: MG_TITLES[MG.gid] || MG.gid.toUpperCase(),
+                                    worth: Math.round((run.active.gameCap ?? 1) * 100) };
     }
-    run.resumePending = true;
+    if (forPause) run.resumePending = true;
   }
 }
 function pauseGame(){
   if (G.modal){
-    parkModal();
+    parkModal(true);
     closeModalToWork();
   }
   if (G.state !== 'work') return;
@@ -15636,7 +15713,11 @@ function selfTest(runSim){
     /* snapshot EVERYTHING, run the sim on a test career, restore. */
     const saved = {
       json: JSON.stringify({ meta, run: run ? serializeRun() : null }),
-      seed: RNG.seed, streams: rngState(), state: G.state, sfx: A.sfxVol, quiet: QUIET
+      seed: RNG.seed, streams: rngState(), state: G.state, sfx: A.sfxVol, quiet: QUIET,
+      /* the suite runs whole careers through the real screens: without this a
+         seed the player had TYPED came back as whatever the last test career
+         left in the box */
+      seedBox: (document.getElementById('seedbox') || {}).value
     };
     SAVE_SUSPEND = true; A.sfxVol = 0;
 
@@ -16401,7 +16482,11 @@ function selfTest(runSim){
       run.queue = [tb]; run.active = tb; run.resumePending = false;
       openGame('cable', 1, () => {});
       act('queue');                                  // the button, not Escape
-      const parkedBoard = run.resumePending === true && run.active.gameCap !== undefined;
+      /* the cap is parked; the pause-card plumbing is NOT — leftBoard and
+         resumePending set from here had no consumer and haunted the next
+         pause with a board whose ticket had since resolved */
+      const parkedBoard = run.active.gameCap !== undefined &&
+                          run.resumePending === false && !G.leftBoard;
       if (G.modal) closeModalToWork();
       run.pendingScenes = []; run.active = null; run.resumePending = false;
       const eid2 = Object.keys(EVENTS)[0], sid2 = EVENTS[eid2].scene;
@@ -16567,6 +16652,97 @@ function selfTest(runSim){
       ok('clicking your own character is not an instruction',
          took === false && !G.autoPath && !press.use,
          'took ' + took + ' path ' + !!G.autoPath + ' use ' + !!press.use);
+      run = null; G.state = 'title';
+    }
+    /* a say step moves nobody, so a goto's price must not depend on whether
+       one precedes it: from the desk the two agreed within a few tiles, from
+       the client site the difference was the real drive home against the
+       18-minute fallback — a triage row lying hardest exactly where triage
+       matters most */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('clientsite'); spawnPeople();
+      const pos = [player.tx, player.ty];
+      const bare = walkLegs([{ goto:'PRINTER' }], 0, pos).mins;
+      const said = walkLegs([{ say:'q' }, { goto:'PRINTER' }], 0, pos).mins;
+      ok('a say step does not change what the walk after it costs',
+         bare === said && bare > WALK_FALLBACK + LIFT_MIN,
+         'bare ' + bare + ' after-say ' + said);
+      /* and the row says drive home, not "upstairs, min walk" */
+      const hint = legHint({ id:'printer-toner', si:0 });
+      ok('an office errand from the client site reads as the drive it is',
+         hint.indexOf('drive') >= 0 && hint.indexOf('upstairs') < 0, hint);
+      loadMap('office1'); spawnPeople();
+      run = null; G.state = 'title';
+    }
+    /* a meeting dropped for spacing does not keep its slot: the ghost seat
+       turned away the slot's clear candidate on 8% of T2 days */
+    {
+      const bySlots = {};
+      for (const id in EVENTS){ const s = EVENTS[id].slot;
+        if (s) (bySlots[s] = bySlots[s] || []).push(id); }
+      const s2 = Object.keys(bySlots).find(s => bySlots[s].length >= 2);
+      const opener = Object.keys(EVENTS).find(id => !EVENTS[id].slot);
+      const [ea, eb] = bySlots[s2];
+      const kept = spaceEvents([{ id:opener, at:10 },
+                                { id:ea, at:10 + MEETING_GAP - 2 },
+                                { id:eb, at:10 + MEETING_GAP + 40 }]);
+      ok('a meeting dropped for spacing does not keep its slot',
+         kept.some(e => e.id === eb) && !kept.some(e => e.id === ea),
+         kept.map(e => e.id).join(','));
+    }
+    /* leave on a Friday keeps its weekend: the deeper carry and the burnout
+       relief live in endDay keyed on a PLAYED Friday, so skipping day 5
+       deleted the week's weekend outright */
+    {
+      QUIET = true;
+      const takeAt = day => {
+        rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+        run.burnout = LEAVE.offerAt + 30; run.leaveTaken = 0;
+        run.stress = 40; run.day = day;
+        takeLeave();
+        return run.burnout;
+      };
+      const midweek = takeAt(3), friday = takeAt(5);
+      ok('leave on a Friday keeps its weekend',
+         friday === Math.max(0, midweek - BURN.weekendRelief),
+         'friday ' + friday + ' midweek ' + midweek);
+      run = null; G.state = 'title';
+    }
+    /* a save is outside input: well-formed JSON with hostile types must clamp
+       on the way in, not half-load into a run that faults every frame (rung
+       99), or a clock that grows by string concatenation and can never end
+       the day */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const ser = serializeRun();
+      ser.rung = 99; ser.clock = 'noon'; ser.queue = {}; ser.stress = 'lots';
+      let threw = null;
+      try { resumeRun({ meta: JSON.parse(JSON.stringify(meta)),
+                        run: JSON.parse(JSON.stringify(ser)) }); }
+      catch(e){ threw = e.message; }
+      ok('a mangled save clamps instead of half-loading',
+         threw === null && run && run.rung >= 0 && run.rung < ROLES.length &&
+         typeof run.clock === 'number' && Array.isArray(run.queue),
+         threw || ('rung ' + (run && run.rung) + ' clock ' + (run && run.clock)));
+      run = null; G.state = 'title';
+    }
+    /* an ended career cannot end again: the second dispatch used to count the
+       career twice into meta.runsPlayed and then throw on the nulled run */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const mSnap2 = JSON.stringify(meta);
+      careerOver('fired');
+      const counted = meta.runsPlayed;
+      let threw2 = null;
+      try { careerOver('fired'); } catch(e){ threw2 = e.message; }
+      ok('the exit interview cannot be walked through twice',
+         threw2 === null && meta.runsPlayed === counted,
+         threw2 || ('counted ' + (meta.runsPlayed - counted) + ' extra'));
+      meta = normalizeMeta(JSON.parse(mSnap2));
       run = null; G.state = 'title';
     }
     /* A meeting that runs past 17:00 must not hold the shift open forever. */
@@ -17502,17 +17678,27 @@ function selfTest(runSim){
       /* AND THE MIRROR AGAIN: an estimate that is too BIG marks every row "too
          late" the moment it lands, which is the same column lying the other
          way. A ticket at its full window is never already lost. */
+      /* FROM THE CHAIR. The row is player-relative now (a say step no longer
+         hides the first walk), so a ticket genuinely CAN be born lost from
+         the far end of the estate — that is the row telling the truth. The
+         invariant here is about the terms the ticket offers, and those are
+         desk terms: measure standing at the rung's own desk. */
       const born = [];
+      if (W2.id !== 'office1'){ loadMap('office1'); spawnPeople(); }
+      const pSnap = player ? [player.tx, player.ty] : null;
       for (const id in TICKETS){
         const T = TICKETS[id];
         for (let r = T.tiers[0]; r <= T.tiers[1] && r < ROLES.length; r++){
           run.day = 2; run.rung = r;
+          const dp = anchorPos(ROLES[r].deskAnchor || 'TERMINAL');
+          if (dp && player){ player.tx = dp[0]; player.ty = dp[1]; }
           const a = makeArrival(id, 0, ROLES[r]);
           const need = workLeft({ id, si:0 });
           if (need >= a.sla) born.push(id + '@' + ROLES[r].id + ' needs ' +
                                        Math.round(need) + ' of ' + a.sla);
         }
       }
+      if (pSnap && player){ player.tx = pSnap[0]; player.ty = pSnap[1]; }
       ok('and no ticket arrives already marked too late to start',
          !born.length, born.length + ': ' + born.slice(0,3).join(' · '));
       run = savedRunW;
@@ -24247,6 +24433,8 @@ function selfTest(runSim){
       G.state = saved.state;
     }
     A.sfxVol = saved.sfx; QUIET = saved.quiet;
+    const sb0 = document.getElementById('seedbox');
+    if (sb0 && saved.seedBox !== undefined) sb0.value = saved.seedBox;
     /* nothing the test opened may survive it */
     dlg = null; MG = null; G.modal = null;
     document.getElementById('dlg').style.display = 'none';
