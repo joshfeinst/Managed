@@ -627,7 +627,10 @@ const press = { use:false, one:false, two:false, three:false, four:false, queue:
 addEventListener('keydown', e => {
   const playing = typeof G !== 'undefined' && G && (G.state === 'work' || G.state === 'modal');
   const a = playing ? KEYMAP[e.code] : null;
-  if (e.repeat){ if (a) e.preventDefault(); return; }
+  /* Tab is not in KEYMAP, so its REPEATS slipped past this guard while only
+     the first press was eaten below — holding Tab mid-day walked browser
+     focus onto the HUD buttons and painted a focus ring over the game. */
+  if (e.repeat){ if (a || (playing && e.code === 'Tab')) e.preventDefault(); return; }
   if (a){ held[a] = true; e.preventDefault();
           if (a==='up'||a==='down'||a==='left'||a==='right') dirPushed(a); }
   keys.add(e.code);
@@ -8325,6 +8328,16 @@ function normalizeMeta(m){
   if (typeof m.runsPlayed !== 'number') m.runsPlayed = 0;
   if (typeof m.carry !== 'number') m.carry = 0;
   if (!m.best || typeof m.best !== 'object') m.best = { days:0, rung:0 };
+  /* THE ONE META FIELD USED AS AN ARRAY INDEX WAS THE ONE NOBODY CLAMPED.
+     toTitle reads ROLES[meta.best.rung].title unguarded the moment
+     runsPlayed > 0, so best.rung 99 in a save threw at boot — s-boot stayed
+     up, s-title never showed, and the game was bricked on every load until
+     the save was cleared by hand. resumeRun clamps run.rung under "A SAVE IS
+     OUTSIDE INPUT"; meta.best gets the same courtesy. */
+  const bnum = (v, d, hi) => (typeof v === 'number' && isFinite(v))
+    ? Math.min(hi, Math.max(0, Math.round(v))) : d;
+  m.best.rung = bnum(m.best.rung, 0, ROLES.length - 1);
+  m.best.days = bnum(m.best.days, 0, 99999);
   if (m.pace !== null && !PACES.some(p => p.id === m.pace)) m.pace = null;
   if (!m.seenGames || typeof m.seenGames !== 'object') m.seenGames = {};
   const num = (v, d) => (typeof v === 'number' && v >= 0 && v <= 1) ? v : d;
@@ -9325,8 +9338,15 @@ function makeArrival(id, at, role){
      additive and zero for a profile that holds no such certificate, so this is
      the same arithmetic it always was until somebody has earned it. */
   const sla = Math.ceil(Math.max(window, workMin + MIN_SLACK)) + metaFx('sla');
+  /* THE PRICE TRAVELS WITH THE TICKET. resolveTicket used to re-derive
+     ticketWork as the last step landed, and the desk pricing answers by A*
+     on the loaded floor but flood-fill from anywhere else — "a tile or so
+     different" — so four templates scored promptness against a slack up to
+     two minutes off the one their deadline was built from, decided by which
+     building you finished in. The number the window was authored from is
+     the number the window is judged by. */
   return { at, id, uid: run.uid++, title: fill(T.title, fills), fills,
-           sla: sla, stress: T.stress };
+           sla: sla, work: workMin, stress: T.stress };
 }
 /* {token} substitutes the pool entry as written; {Token} capitalises it, for
    the start of a sentence. Pool entries carry their own articles, so the text
@@ -9656,7 +9676,7 @@ function arrivalsTick(){
     const a = P2.arrivals[P2.ai++];
     const T = TICKETS[a.id];
     run.queue.push({ uid:a.uid, id:a.id, title:a.title, fills:a.fills, at:a.at,
-      deadline:a.at + a.sla, sla:a.sla, stress:a.stress, si:0, bonus:0, spent:0,
+      deadline:a.at + a.sla, sla:a.sla, work:a.work, stress:a.stress, si:0, bonus:0, spent:0,
       gameScores:[], from:T.from || null });
     run.stress = Math.min(100, run.stress + 1);
     sfx('ticket');
@@ -10505,7 +10525,9 @@ function resolveTicket(t){
      was false in the direction that mattered, and the fastest way to a good
      promptness score was to duck the work. t.spent is what the forks charged,
      and it is credited back. */
-  const slack = Math.max(1, t.sla - ticketWork(TICKETS[t.id]));
+  /* the birth price when the ticket carries one (see makeArrival); a save
+     from before the field existed re-derives, exactly as it always did */
+  const slack = Math.max(1, t.sla - (t.work != null ? t.work : ticketWork(TICKETS[t.id])));
   const r = clamp((t.deadline - run.clock + (t.spent || 0)) / slack, 0, 1);
   const gameAvg = t.gameScores.length
     ? t.gameScores.reduce((a,b)=>a+b,0) / t.gameScores.length : .75;
@@ -11238,7 +11260,10 @@ function saveGame(wipeRun){
     if (s === 'future'){
       if (!G.futureWarned){
         G.futureWarned = true;
-        toast('A SAVE FROM A NEWER VERSION IS ON THIS MACHINE. NOTHING HERE WILL OVERWRITE IT.', 'alert', 7000);
+        /* 'red', which the palette holds — 'alert' fell through to the corp
+           grey, so the most alarming persistence message in the game was
+           styled as routine chatter */
+        toast('A SAVE FROM A NEWER VERSION IS ON THIS MACHINE. NOTHING HERE WILL OVERWRITE IT.', 'red', 7000);
       }
       return;
     }
@@ -11294,7 +11319,8 @@ function serializeRun(){
     pendingEnd: run.pendingEnd || null,
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
     queue: queue.map(t => ({ uid:t.uid, id:t.id, title:t.title, fills:t.fills, at:t.at,
-      deadline:t.deadline, sla:t.sla, stress:t.stress, si:t.si, bonus:t.bonus,
+      deadline:t.deadline, sla:t.sla, work: t.work === undefined ? null : t.work,
+      stress:t.stress, si:t.si, bonus:t.bonus,
       spent:t.spent || 0, gameScores:t.gameScores, from:t.from, gameCap:t.gameCap,
       paidStep: t.paidStep === undefined ? null : t.paidStep })),
     /* WHICH BUILDING YOU WERE IN. The save stored a position and not a map,
@@ -13174,7 +13200,12 @@ const GAMES = {
          from 90 at an eighteen-pixel pitch: six of them end at 198, clear of
          the submit button at 206. Everything here used to want the same band. */
       rowRect(i){ return [70, 90 + i*18, 340, 16]; },
-      tierRect(i, t){ return [236 + t*58, 84 + i*20, 54, 18]; },
+      /* THE SAME PITCH AS THE ROWS THEY SIT IN. The tier grid ran at a 20px
+         stride against the rows' 18 — row 0's cells sat under the column
+         headings, row 5's sagged into the submit band, and a click on the
+         seam changed one row's price while highlighting the next. The
+         comment above already promised the eighteen; the cells now keep it. */
+      tierRect(i, t){ return [236 + t*58, 90 + i*18, 54, 16]; },
       btns: [ { x:330, y:212, w:130, h:18, k:'send', cap:'E  SUBMIT QUOTE' } ],
       total(){ return this.rows.reduce((a, r) => a + r.cost[r.pick], 0); },
       act(k){ if (k === 'send') this.send(); },
@@ -15717,7 +15748,13 @@ function selfTest(runSim){
       /* the suite runs whole careers through the real screens: without this a
          seed the player had TYPED came back as whatever the last test career
          left in the box */
-      seedBox: (document.getElementById('seedbox') || {}).value
+      seedBox: (document.getElementById('seedbox') || {}).value,
+      /* AND IT NARRATES THEM ALL INTO THE SESSION LOG. slog is not gated on
+         QUIET, and one F4 from the title appended 34,000 lines — the
+         400-entry ring evicted the player's entire career and F1 showed
+         bot-policy noise where the log the pause card advertises used to be.
+         The log is the player's; the suite borrows it and gives it back. */
+      slog: SLOG.slice(), slogTotal: SLOG_TOTAL
     };
     SAVE_SUSPEND = true; A.sfxVol = 0;
 
@@ -16649,8 +16686,63 @@ function selfTest(runSim){
          'certs ' + JSON.stringify(meta.certs) + ' rep ' + meta.rep);
       ok('shop: a duplicate certificate in a save is deduped on the way in',
          normalizeMeta({ certs: [cheap[0], cheap[0]] }).certs.length === 1);
+      /* and the one meta field used as an array index cannot arrive out of
+         range: best.rung 99 threw at boot and bricked the title screen */
+      const nb = normalizeMeta({ runsPlayed: 3, best: { rung: 99, days: 'many' } }).best;
+      ok('a mangled best-rung clamps instead of bricking the boot',
+         nb.rung >= 0 && nb.rung < ROLES.length && typeof nb.days === 'number',
+         JSON.stringify(nb));
       meta.rep = mSnap.rep; meta.certs = mSnap.certs; G.lastCertBuy = mSnap.last;
       G.state = 'title';
+    }
+    /* the quote board's tier cells sit inside the rows they price (they ran
+       at a 20px stride against the rows' 18 and drifted off them), and the
+       rules card takes ANY tap — including the corner where the H=RULES
+       hotspot used to eat it */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const q6 = GAMES.quote.init(4);
+      const drift = [];
+      for (let i = 0; i < q6.rows.length; i++){
+        const rr = q6.rowRect(i);
+        for (let t3 = 0; t3 < 3; t3++){
+          const tr = q6.tierRect(i, t3);
+          if (tr[1] < rr[1] || tr[1] + tr[3] > rr[1] + rr[3]) drift.push(i + ':' + t3);
+        }
+      }
+      ok('quote: every tier cell sits inside the row it prices', !drift.length, drift.join(' '));
+      const tk = { uid:9902, id:'printer-toner', title:'x', fills:{}, at:0, deadline:240,
+                   sla:120, stress:3, si:1, bonus:0, spent:0, gameScores:[], from:null };
+      run.queue = [tk]; run.active = tk;
+      openGame('cable', 1, () => {});
+      MG.brief = { t: 9, first: false };            // the card, well past its grace
+      for (const k in press) press[k] = false;
+      const rv = view.getBoundingClientRect();
+      clickAdvance({ target: view, clientX: rv.left + 408 * rv.width / VW,
+                     clientY: rv.top + 35 * rv.height / VH });
+      ok('a tap on the rules-card corner still dismisses the card',
+         press.use === true, 'press.use ' + press.use);
+      for (const k in press) press[k] = false;
+      if (G.modal) closeModalToWork();
+      run = null; G.state = 'title';
+    }
+    /* the slack a ticket is scored against is the one it was born with, not
+       one re-derived off whatever floor happens to be loaded when the last
+       step lands */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const a2 = run.plan.arrivals[0];
+      ok('a ticket carries its birth price', typeof a2.work === 'number' && a2.work > 0,
+         JSON.stringify(a2.work));
+      const tw = { uid:9903, id:a2.id, title:'x', fills:{}, at:0, deadline:130, sla:300,
+                   stress:3, si:99, bonus:0, spent:0, gameScores:[], from:null, work:250 };
+      run.queue = [tw]; run.active = tw; run.clock = 100; run.speedSum = 0;
+      resolveTicket(tw);
+      ok('the slack a ticket is scored against is the one it was born with',
+         Math.abs(run.speedSum - 0.6) < .01, 'r ' + run.speedSum);
+      run = null; G.state = 'title';
     }
     /* a click-route is map-scoped: the floor changing is the definition of it
        being stale, and clicking your own character is not an instruction */
@@ -24453,6 +24545,11 @@ function selfTest(runSim){
     A.sfxVol = saved.sfx; QUIET = saved.quiet;
     const sb0 = document.getElementById('seedbox');
     if (sb0 && saved.seedBox !== undefined) sb0.value = saved.seedBox;
+    SLOG.length = 0; SLOG.push.apply(SLOG, saved.slog); SLOG_TOTAL = saved.slogTotal;
+    ok('the self test gives the session log back as it found it',
+       SLOG.length === saved.slog.length &&
+       (!SLOG.length || SLOG[SLOG.length-1] === saved.slog[saved.slog.length-1]),
+       SLOG.length + ' lines vs ' + saved.slog.length);
     /* nothing the test opened may survive it */
     dlg = null; MG = null; G.modal = null;
     document.getElementById('dlg').style.display = 'none';
@@ -24731,7 +24828,11 @@ function clickAdvance(ev){
            proving every board can be finished with taps alone, the one way
            back to the rules of the board you are stuck on needed a keyboard.
            The corner it is printed in is the corner it answers. */
-        if (pt && pt.x >= 396 && pt.x <= 420 && pt.y >= 28 && pt.y <= 42){
+        /* ...but not while the CARD is already up: briefReopen is a no-op
+           then, and returning here ate the tap — a 24x14 dead zone in the
+           exact corner a first-timer taps to close things, on a card whose
+           contract is "any tap dismisses". */
+        if (!MG.brief && pt && pt.x >= 396 && pt.x <= 420 && pt.y >= 28 && pt.y <= 42){
           briefReopen(); return;
         }
         MG.click = pt;
