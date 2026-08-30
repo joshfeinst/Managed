@@ -3,7 +3,7 @@
    it takes to reach Director and retire, if ever. */
 const { chromium } = require('playwright');
 const fs=require('fs'), path=require('path');
-const target=process.argv[2]||'/home/user/managed/index.html';
+const target=process.argv[2]||__dirname+'/../index.html';
 const PLAYERS=+(process.argv[3]||8), MAXCAREERS=+(process.argv[4]||14);
 const SKILL=+(process.argv[5]||0.85);
 /* TRIAGE IS THE AXIS THIS GAME HAS, AND THIS HARNESS COULD NOT VARY IT. Every

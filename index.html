@@ -7,7 +7,15 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- LOADED ASYNC, DELIBERATELY. As a plain stylesheet this line render-blocks
+     the whole page: on a first visit over a degraded network (before sw.js has
+     cached the fonts) the player stared at a blank screen for as long as the
+     CSS fetch took to fail — measured at 12.5s against 0.3s without it. The
+     media swap paints the game immediately in the fallback stack and upgrades
+     the type when the fonts arrive; every visit after the first is served by
+     the service worker either way. -->
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{
   --void:#14161a; --chrome:#1d2126; --line:#343b44;
@@ -619,7 +627,10 @@ const press = { use:false, one:false, two:false, three:false, four:false, queue:
 addEventListener('keydown', e => {
   const playing = typeof G !== 'undefined' && G && (G.state === 'work' || G.state === 'modal');
   const a = playing ? KEYMAP[e.code] : null;
-  if (e.repeat){ if (a) e.preventDefault(); return; }
+  /* Tab is not in KEYMAP, so its REPEATS slipped past this guard while only
+     the first press was eaten below — holding Tab mid-day walked browser
+     focus onto the HUD buttons and painted a focus ring over the game. */
+  if (e.repeat){ if (a || (playing && e.code === 'Tab')) e.preventDefault(); return; }
   if (a){ held[a] = true; e.preventDefault();
           if (a==='up'||a==='down'||a==='left'||a==='right') dirPushed(a); }
   keys.add(e.code);
@@ -6009,7 +6020,13 @@ const TICKETS = {
     steps:[{say:'t.sort.a'},{game:'ask',diff:1},{choice:'t.sort.b'}] },
   'raj-got-a-mailbox-ticket': { tiers:[0,0], weight:3, slaMult:2.4, pri:2, stress:5, from:'raj',
     title:'RAJ has been sent two things that are not RAJ\'s',
-    steps:[{say:'t.sort2.a'},{goto:'n2'},{game:'ask',diff:2},{say:'t.sort.b'}] },
+    /* choice, not say: the node carries options, and wiring it as `say`
+       rendered them while bypassing the ticket-fx pipeline — the good
+       option's 8 minutes were charged but never credited back through
+       t.spent (docking promptness for doing the right thing) and its
+       authored bonus could never be earned. The lint beside the suite's
+       other step checks holds the whole class down now. */
+    steps:[{say:'t.sort2.a'},{goto:'n2'},{game:'ask',diff:2},{choice:'t.sort.b'}] },
   'triage-before-eleven': { tiers:[0,0], weight:3, slaMult:1.9, pri:3, stress:6, from:'derek',
     title:'DEREK will ask at eleven what is in the overnight stack',
     steps:[{say:'t.pile.a'},{game:'ask',diff:2},{choice:'t.sort.b'}] },
@@ -7035,6 +7052,14 @@ const inMap = (x,y) => x>=0 && y>=0 && x<W2.W && y<W2.H;
 const solidAt = (x,y) => !inMap(x,y) || W2.solid[cellIx(x,y)] === 1;
 
 function loadMap(id){
+  /* A CLICK-ROUTE IS MAP-SCOPED DATA. G.autoPath held raw tile coordinates
+     and survived every scene change — ride the lift mid-route and the
+     character marched the rest of the route across the WRONG floor (toward
+     the front doors, on the probe that found it), fired its deferred E-press
+     at whatever sits at those coordinates downstairs, and a route pending at
+     17:00 was walked from the desk the NEXT MORNING. The floor changing is
+     the definition of the route being stale. */
+  if (typeof G !== 'undefined') G.autoPath = null;
   const M = MAPS[id];
   const rows = M.map;
   W2.H = rows.length; W2.W = rows[0].length; W2.name = M.name; W2.id = id;
@@ -8296,11 +8321,23 @@ let meta = { certs:[], rep:0, conn:0, runsPlayed:0, carry:0, best:{ days:0, rung
 function normalizeMeta(m){
   if (!m || typeof m !== 'object') m = {};
   if (!Array.isArray(m.certs)) m.certs = [];
+  /* a duplicate certificate, once saved, applied its metaFx twice forever */
+  m.certs = [...new Set(m.certs)];
   if (typeof m.rep !== 'number') m.rep = 0;
   if (typeof m.conn !== 'number') m.conn = 0;
   if (typeof m.runsPlayed !== 'number') m.runsPlayed = 0;
   if (typeof m.carry !== 'number') m.carry = 0;
   if (!m.best || typeof m.best !== 'object') m.best = { days:0, rung:0 };
+  /* THE ONE META FIELD USED AS AN ARRAY INDEX WAS THE ONE NOBODY CLAMPED.
+     toTitle reads ROLES[meta.best.rung].title unguarded the moment
+     runsPlayed > 0, so best.rung 99 in a save threw at boot — s-boot stayed
+     up, s-title never showed, and the game was bricked on every load until
+     the save was cleared by hand. resumeRun clamps run.rung under "A SAVE IS
+     OUTSIDE INPUT"; meta.best gets the same courtesy. */
+  const bnum = (v, d, hi) => (typeof v === 'number' && isFinite(v))
+    ? Math.min(hi, Math.max(0, Math.round(v))) : d;
+  m.best.rung = bnum(m.best.rung, 0, ROLES.length - 1);
+  m.best.days = bnum(m.best.days, 0, 99999);
   if (m.pace !== null && !PACES.some(p => p.id === m.pace)) m.pace = null;
   if (!m.seenGames || typeof m.seenGames !== 'object') m.seenGames = {};
   const num = (v, d) => (typeof v === 'number' && v >= 0 && v <= 1) ? v : d;
@@ -8365,6 +8402,25 @@ function newRun(seed){
    Split from takeLeave so the review screen and the headless career bots ask
    the same question -- a mechanic no harness can exercise is a mechanic whose
    balance nobody knows, and this file has been bitten by exactly that twice. */
+/* A DROPPED MEETING MUST NOT KEEP ITS SEAT. The slot was claimed BEFORE the
+   spacing check, so a meeting skipped for being too close to the previous one
+   still blocked its slot — and the slot's OTHER candidate, arriving with all
+   the clearance in the world, was then turned away by a ghost. Measured: 8%
+   of T2 days rolled two on-call candidates and held neither, on a rule whose
+   own comment says "a day holds one of each, and the first in the day wins".
+   Only a meeting that is actually KEPT claims anything now. Named, so the
+   suite can seat a calendar directly. */
+function spaceEvents(events){
+  const bySlot = new Set(), spaced = [];
+  for (const e of events){
+    const slot = EVENTS[e.id].slot;
+    if (slot && bySlot.has(slot)) continue;
+    if (spaced.length && e.at - spaced[spaced.length-1].at < MEETING_GAP) continue;
+    if (slot) bySlot.add(slot);
+    spaced.push(e);
+  }
+  return spaced;
+}
 function canTakeLeave(){
   return !!run && !run.pendingEnd &&
          (run.leaveTaken || 0) < LEAVE.perCareer &&
@@ -8388,6 +8444,18 @@ function takeLeave(){
   /* The day off is a day. It scores nothing, because you were not there to be
      scored -- no perfHist entry, so a promotion streak is not broken by a week
      you were not assessed in, which is both fair and how it actually works. */
+  /* A FRIDAY OFF IS STILL FOLLOWED BY A WEEKEND. The weekend's deeper stress
+     carry and burnout relief live in endDay, keyed on a PLAYED Friday — so
+     booking leave at a Thursday review consumed day 5, no Friday evening ever
+     ran, and the week's weekend simply never happened: the one leave day that
+     cost you the recovery the button exists to buy, decided by which weekday
+     you clicked it on. If the day being skipped is a Friday, the weekend it
+     leads into still counts. */
+  if (run.day % 5 === 0){
+    run.burnout = Math.max(0, run.burnout - BURN.weekendRelief);
+    run.stress = Math.round(run.stress *
+      Math.min(.92, BURN.weekend + (run.burnout / 100) * BURN.sleepless));
+  }
   run.day++;
   slog('ANNUAL LEAVE — one day, and the queue kept its own counsel');
   return true;
@@ -8405,8 +8473,14 @@ function rollDay(){
      real route at play time — two different numbers about the same walk, which
      is precisely the guesswork this pricing replaced. Parsing the map is
      cheap, idempotent and touches no RNG stream, so the day is planned against
-     the same office the player will walk. */
-  if (!W2.W) loadMap('office1');
+     the same office the player will walk.
+     AND THE SAME FLOOR EVERY TIME: the day can end with the car park or the
+     client site still loaded (endDay never reloads a map), so "a map exists"
+     was not enough — the next morning's desk legs were priced off another
+     floor's flood-fill table. (Yesterday's leftover occupancy was probed as a
+     determinism risk too — a 21-body ring around the desk — and moved no born
+     SLA, so the floor is the whole fix.) */
+  if (!W2.W || W2.id !== 'office1') loadMap('office1');
   const role = ROLES[run.rung];
   let elig = Object.keys(TICKETS).filter(id =>
     TICKETS[id].tiers[0] <= run.rung && run.rung <= TICKETS[id].tiers[1]);
@@ -8571,16 +8645,7 @@ function rollDay(){
      is the other half: you have to be able to physically get out of one room
      and into the next. */
   {
-    const bySlot = new Set(), spaced = [];
-    for (const e of events){
-      const slot = EVENTS[e.id].slot;
-      if (slot){
-        if (bySlot.has(slot)) continue;
-        bySlot.add(slot);
-      }
-      if (spaced.length && e.at - spaced[spaced.length-1].at < MEETING_GAP) continue;
-      spaced.push(e);
-    }
+    const spaced = spaceEvents(events);
     events.length = 0; events.push.apply(events, spaced);
   }
   /* YOUR AFTERNOON GETS CANCELLED, AND THANK GOD. Every rung ADDS meetings and
@@ -9043,7 +9108,20 @@ function walkLegs(steps, si, fromPos){
     const g = steps[i].goto;
     if (!g) continue;
     const home = floorOf(g) || floor;
-    const atPos = at || (i === si ? fromPos : null);
+    /* THE TRIP STARTS WHERE THE PLAYER IS, WHENEVER WE KNOW WHERE THAT IS.
+       This used to hand fromPos only to the leg that is the ticket's current
+       step, and price every other un-walked leg "from the desk" — but nearly
+       every ticket opens with a say, so an untouched ticket's first goto was
+       a desk price even when the queue asked from the player. On office1 the
+       two agree within a few tiles. Standing at the client site they do not:
+       the desk arithmetic ran against the WRONG MAP's exits, every edge came
+       back null, and the row quoted the 18-minute fallback about jobs that
+       really cost 70-88 minutes from out there — a triage screen lying
+       hardest exactly when triage matters most. A say step moves nobody, so
+       a goto's price must not depend on whether one precedes it; that
+       invariant is now in the suite. Birth pricing passes no fromPos and is
+       untouched. */
+    const atPos = at || (!atName ? fromPos : null);
     /* still in the chair: nothing has been walked and no position was given */
     const atDesk = !atName && !atPos;
     let m;
@@ -9260,8 +9338,15 @@ function makeArrival(id, at, role){
      additive and zero for a profile that holds no such certificate, so this is
      the same arithmetic it always was until somebody has earned it. */
   const sla = Math.ceil(Math.max(window, workMin + MIN_SLACK)) + metaFx('sla');
+  /* THE PRICE TRAVELS WITH THE TICKET. resolveTicket used to re-derive
+     ticketWork as the last step landed, and the desk pricing answers by A*
+     on the loaded floor but flood-fill from anywhere else — "a tile or so
+     different" — so four templates scored promptness against a slack up to
+     two minutes off the one their deadline was built from, decided by which
+     building you finished in. The number the window was authored from is
+     the number the window is judged by. */
   return { at, id, uid: run.uid++, title: fill(T.title, fills), fills,
-           sla: sla, stress: T.stress };
+           sla: sla, work: workMin, stress: T.stress };
 }
 /* {token} substitutes the pool entry as written; {Token} capitalises it, for
    the start of a sentence. Pool entries carry their own articles, so the text
@@ -9452,7 +9537,15 @@ const COMMUTE = {
       t:'You have been composing an email in your head since the roundabout. You will not send it.' },
     { if:r => r.rep >= 8,
       t:'Somebody from another team held a door for you and said your name. You have no idea who they are.' },
-    { if:r => r.rep <= -3,
+    /* WRITTEN, REFERENCED, UNREACHABLE: every write to run.rep floors it at
+       zero, so `<= -3` could never fire and the stairs line was lost content.
+       The state it describes is a goodwill-burner — a week in and nothing
+       banked, because every conversation was ducked or taken cynically —
+       and rep pinned to its floor past the first week is exactly that. One
+       weekday only, or it eats the whole card for that player: rep 0 is also
+       just an ordinary early-career state, and the breadth check below sweeps
+       it. */
+    { if:r => r.rep <= 0 && r.day > 5 && (r.day % 5) === 3,
       t:'You take the stairs today. The lift is a small room with people who have opinions about last week.' },
     /* fmtDate reads days[(d-1) % 5], so day 1 is Monday and day 5 is Friday —
        Monday is d % 5 === 1, not 0. Written as `5 % 5` first time out, which
@@ -9583,7 +9676,7 @@ function arrivalsTick(){
     const a = P2.arrivals[P2.ai++];
     const T = TICKETS[a.id];
     run.queue.push({ uid:a.uid, id:a.id, title:a.title, fills:a.fills, at:a.at,
-      deadline:a.at + a.sla, sla:a.sla, stress:a.stress, si:0, bonus:0, spent:0,
+      deadline:a.at + a.sla, sla:a.sla, work:a.work, stress:a.stress, si:0, bonus:0, spent:0,
       gameScores:[], from:T.from || null });
     run.stress = Math.min(100, run.stress + 1);
     sfx('ticket');
@@ -9640,6 +9733,13 @@ function openEvent(id){
   const f = sceneFills(E.scene); f.cost = minsText(E.fx.time || 0);
   openDlg(E.scene, f, null);
 }
+/* "BEGUN" IS PAID-FOR OR IN HAND, NOT "COMPLETED A STEP". si counts steps
+   FINISHED, so a ticket that died mid-first-step — twelve minutes charged, a
+   board entered, the player mid-walk to the server room — read si === 0 and
+   the review printed "never started" / "never picked up" about the ticket in
+   the player's hands. One definition, used by both the five-o'clock burn and
+   the breach ledger, so the two callers cannot drift apart again. */
+const begunTicket = t => t.si > 0 || t.paidStep != null || (run && run.active === t);
 function slaTick(){
   for (let i=run.queue.length-1; i>=0; i--){
     const t = run.queue[i];
@@ -9665,7 +9765,8 @@ function slaTick(){
       run.stress = clamp(run.stress + t.stress * (.30 + .25*pri), 0, 100);
       const pn = 5 - pri;
       /* what it was, so the evening can say what the day actually cost you */
-      (run.burnLog = run.burnLog || []).push({ t: t.title, p: pn, s: stakesOf(t.id), worked: t.si > 0 });
+      (run.burnLog = run.burnLog || []).push({ t: t.title, p: pn, s: stakesOf(t.id),
+                                              worked: begunTicket(t) });
       slog('BREACHED (P' + pn + '): ' + t.title);
       /* the first one of a career explains itself, once — a new player reads a
          breach as failure, and here it is the mechanic */
@@ -9776,6 +9877,12 @@ function walkToClick(vx, vy){
   const cx2 = Math.round(cam.x), cy2 = Math.round(cam.y);
   const tx = Math.floor((vx + cx2) / TILE), ty = Math.floor((vy + cy2) / TILE);
   if (tx < 0 || ty < 0 || tx >= W2.W || ty >= W2.H) return false;
+  /* clicking your own character is not an instruction. entAt() is true of the
+     player's own cell, so this fell into the blocked-target branch, walked
+     you one tile OFF the spot you were deliberately standing on (a goto
+     anchor, say) and pressed E back at where you had been — and on mobile
+     your own character is the most natural thing on screen to tap. */
+  if (tx === player.tx && ty === player.ty) return false;
   /* A THING YOU USE IS NOT ALWAYS A THING YOU CANNOT WALK ON. This asked
      solidAt() alone, which is true of every prop in the building — the lift
      doors, the coffee machine, the printer — and false of a door you walk
@@ -10217,16 +10324,22 @@ function legHint(t){
      car park shipped, and the estate would have inherited it. The row is the
      only place a player can see what an errand costs before taking it, so a
      direction it gets wrong is worse than one it omits. */
+  /* AND THE THIRD MAP INHERITED IT AFTER ALL: standing AT the client site,
+     an office errand crosses back the other way, and the catch-all called a
+     26-minute drive plus a lift "upstairs, ~X min walk". A trip that starts
+     off the campus is a drive home first, whichever floor it ends on. */
   const off = L.crossed.some(isOffSite);
+  const backFromSite = !off && W2.id === 'clientsite' && L.crossed.length > 0;
   const via = !L.crossed.length ? ''
     : off                                    ? ', out at the client'
+    : backFromSite                           ? ', back at the office'
     : floorOf(L.crossed[0]) === 'carpark'     ? ', outside'
     : floorOf(L.crossed[0]) === 'ground'      ? ', downstairs'
     : ', upstairs';
   const far = L.mins >= 25;
   return '<span class="leg" style="color:' + (far ? 'var(--alert)' : 'var(--corp)') + '">· ' +
          L.names.join(' then ').toLowerCase() + via + ', ~' + L.mins +
-         (off ? ' min drive' : ' min walk') + '</span>';
+         (off || backFromSite ? ' min drive' : ' min walk') + '</span>';
 }
 function renderQueue(){
   const list = document.getElementById('tix-list');
@@ -10412,7 +10525,9 @@ function resolveTicket(t){
      was false in the direction that mattered, and the fastest way to a good
      promptness score was to duck the work. t.spent is what the forks charged,
      and it is credited back. */
-  const slack = Math.max(1, t.sla - ticketWork(TICKETS[t.id]));
+  /* the birth price when the ticket carries one (see makeArrival); a save
+     from before the field existed re-derives, exactly as it always did */
+  const slack = Math.max(1, t.sla - (t.work != null ? t.work : ticketWork(TICKETS[t.id])));
   const r = clamp((t.deadline - run.clock + (t.spent || 0)) / slack, 0, 1);
   const gameAvg = t.gameScores.length
     ? t.gameScores.reduce((a,b)=>a+b,0) / t.gameScores.length : .75;
@@ -10485,9 +10600,11 @@ function endDay(){
        clock ran out on top of; it is the one they remember. The two flags are
        complements: `never` is untouched, `worked` is begun, and whether the
        casualty happened at five or at its own deadline is what still separates
-       "never started" from "never picked up". */
+       "never started" from "never picked up".
+       AND "BEGUN" IS NOT "COMPLETED A STEP" — see begunTicket. */
     (run.burnLog = run.burnLog || []).push({ t: t.title, p: 5 - (TICKETS[t.id].pri || 2),
-                                             s: stakesOf(t.id), worked: t.si > 0, never: t.si === 0 });
+                                             s: stakesOf(t.id),
+                                             worked: begunTicket(t), never: !begunTicket(t) });
   }
   run.queue = [];
   /* An oversubscribed day cannot be cleared, and grading the mean over every
@@ -10774,7 +10891,15 @@ function reviewScreen(dayPerf, eod, promo, ending){
       : speed + '% of each ticket\'s waiting room still unused — higher is better') + '</dd>' +
     '<dt>Craft</dt><dd>' + (qual === null ? 'nothing hands-on today'
       : qual + '% across ' + run.qualN + ' hands-on job' + (run.qualN === 1 ? '' : 's')) + '</dd>' +
-    '<dt>Performance</dt><dd><b>' + Math.round(dayPerf*100) + '%</b> — ' + perfName(dayPerf) +
+    /* THE DAY WAS PLAYED AT THE OLD DESK. The promotion is applied before the
+       review draws (deliberately — see endDay), so on a promotion evening
+       run.rung is already the new job, and banding dayPerf against the new
+       job's floor-to-bar span told a vCIO who had just won the Director's
+       chair that their winning day was DEVELOPING (HR word for struggling),
+       directly under the headline PROMOTED. Grade the day on the desk it was
+       worked at. */
+    '<dt>Performance</dt><dd><b>' + Math.round(dayPerf*100) + '%</b> — ' +
+      perfName(dayPerf, promo ? Math.max(0, run.rung - 1) : run.rung) +
       (dPrev === null ? '' : ' <span style="color:' + (dPrev >= 0 ? 'var(--ok)' : 'var(--alert)') +
         '">(' + (dPrev >= 0 ? '+' : '') + dPrev + ' on yesterday)</span>') + '</dd>' +
     (gate ? (() => { const gw = gateWindow(); run.gateWin = gw.win; run.gateAvg = gw.avg;
@@ -11012,9 +11137,22 @@ function reviewLine(p){
   return pool[((run.day || 1) * 5 + run.rung) % pool.length];
 }
 function careerOver(kind){
+  /* ONCE. The first call banks rep, counts the career and nulls the run; a
+     second dispatch of the same button (a touch ghost-click is the realistic
+     path) got past the soft `if (run)` below, counted the career AGAIN into
+     meta.runsPlayed, and then threw on run.rep. An ended career cannot end. */
+  if (G.state === 'over' && !run) return;
   slog('CAREER OVER: ' + kind);
   if (run) run.pendingEnd = null;
   G.state = 'over';
+  /* A NEW CAREER IS A NEW POSTING. actSetup rerolls the seed box only when it
+     is empty, and after an ending it still held the seed of the career that
+     just finished — so the no-touch NEW CAREER flow re-dealt the identical
+     posting, and at the same starting rung, the identical career. A player
+     who wants the same posting back can note it; a roguelite that quietly
+     re-deals yesterday is broken in a way nobody reports. */
+  const sb = document.getElementById('seedbox');
+  if (sb) sb.value = '';
   meta.runsPlayed++;
   meta.rep += Math.floor(run.rep / 2) + (kind === 'retired' ? 5 : kind === 'shortof' ? 2 : 0);
   meta.best.days = Math.max(meta.best.days, run.day);
@@ -11122,7 +11260,10 @@ function saveGame(wipeRun){
     if (s === 'future'){
       if (!G.futureWarned){
         G.futureWarned = true;
-        toast('A SAVE FROM A NEWER VERSION IS ON THIS MACHINE. NOTHING HERE WILL OVERWRITE IT.', 'alert', 7000);
+        /* 'red', which the palette holds — 'alert' fell through to the corp
+           grey, so the most alarming persistence message in the game was
+           styled as routine chatter */
+        toast('A SAVE FROM A NEWER VERSION IS ON THIS MACHINE. NOTHING HERE WILL OVERWRITE IT.', 'red', 7000);
       }
       return;
     }
@@ -11143,7 +11284,17 @@ function serializeRun(){
     speedSum:run.speedSum || 0, qualSum:run.qualSum || 0, qualN:run.qualN || 0,
     rungSince:run.rungSince || 0,
     resolved:run.resolved, aces:run.aces, daysAtTop:run.daysAtTop, queueDays:run.queueDays || 0,
-    satOn:run.satOn, promoted:run.promoted, pendingScenes:run.pendingScenes || [],
+    satOn:run.satOn, promoted:run.promoted,
+    /* A SCENE ON SCREEN IS PART OF THE SAVE. The heartbeat autosave fires in
+       'modal' too, and openEvent charges a meeting's minutes and stress the
+       moment it opens — so a crash after the save but mid-scene kept the cost
+       and lost the meeting (and its choices, the game's only free stress
+       relief). Only pauseGame parked dlg; the serializer never looked at it.
+       Park it here, at the front so it replays first. pauseGame's own save
+       cannot double-park: closeModalToWork nulls dlg before it saves. */
+    pendingScenes: (G.modal && typeof dlg !== 'undefined' && dlg && dlg.scene && !dlg.onDone)
+      ? [{ id: dlg.scene, li: dlg.li, fills: dlg.fills || null }].concat(run.pendingScenes || [])
+      : (run.pendingScenes || []),
     introDone: !!run.introDone, seen: run.seen || {}, burnLog: run.burnLog || [],
     reviewCard: run.reviewCard || null,
     /* THE FLAG THAT DECIDES WHICH ENDING YOU READ. Landing the Big Migration
@@ -11168,7 +11319,8 @@ function serializeRun(){
     pendingEnd: run.pendingEnd || null,
     plan: plan ? { ai:plan.ai, ei:plan.ei, arrivals:plan.arrivals, events:plan.events } : null,
     queue: queue.map(t => ({ uid:t.uid, id:t.id, title:t.title, fills:t.fills, at:t.at,
-      deadline:t.deadline, sla:t.sla, stress:t.stress, si:t.si, bonus:t.bonus,
+      deadline:t.deadline, sla:t.sla, work: t.work === undefined ? null : t.work,
+      stress:t.stress, si:t.si, bonus:t.bonus,
       spent:t.spent || 0, gameScores:t.gameScores, from:t.from, gameCap:t.gameCap,
       paidStep: t.paidStep === undefined ? null : t.paidStep })),
     /* WHICH BUILDING YOU WERE IN. The save stored a position and not a map,
@@ -11196,6 +11348,28 @@ function resumeRun(s){
   clearToasts();
   meta = normalizeMeta(s.meta);
   const r = s.run;
+  /* A SAVE IS OUTSIDE INPUT. loadGame refuses torn JSON, but well-formed JSON
+     with wrong types half-loaded into a run that could not be played OR
+     refused: rung 99 threw a TypeError per frame at hudUpdate; a string
+     clock grew by CONCATENATION every tick, so no SLA could breach and the
+     day could never end; a non-array queue faulted every render. meta gets
+     normalizeMeta on the way in; the run gets the same courtesy. Fields the
+     sim indexes or does arithmetic on are clamped, structures it iterates
+     are checked, and a plan that is not a plan re-rolls through the commute
+     rather than faulting forever. */
+  const rnum = (v, d, lo, hi) => (typeof v === 'number' && isFinite(v))
+    ? Math.min(hi, Math.max(lo, v)) : d;
+  r.rung = Math.round(rnum(r.rung, 0, 0, ROLES.length - 1));
+  r.clock = rnum(r.clock, 0, 0, DAY_MIN + DAY_OVERRUN + 60);
+  r.day = Math.round(rnum(r.day, 1, 1, 9999));
+  r.stress = rnum(r.stress, 0, 0, 100);
+  r.burnout = rnum(r.burnout, 0, 0, 100);
+  r.rep = rnum(r.rep, 0, 0, 9999);
+  r.uid = Math.round(rnum(r.uid, 1, 1, 1e9));
+  if (!Array.isArray(r.queue)) r.queue = [];
+  r.queue = r.queue.filter(t => t && typeof t === 'object' && t.uid != null && TICKETS[t.id]);
+  if (r.plan && (typeof r.plan !== 'object' || !Array.isArray(r.plan.arrivals))) r.plan = null;
+  if (r.plan && !Array.isArray(r.plan.events)) r.plan.events = [];
   rngInit(r.seed, r.rng);
   run = { seed:r.seed, day:r.day, rung:r.rung, clock:r.clock, perfHist:r.perfHist,
     gateStreak:r.gateStreak, firedStreak:r.firedStreak, stress:r.stress,
@@ -11239,8 +11413,16 @@ function resumeRun(s){
     startCommute(); return;
   }
   /* saved past closing time (a modal held the clock past 17:00, then a blur
-     autosave): score the day now rather than silently discarding it */
-  if (run.clock >= DAY_MIN){ loadMap('office1'); endDay(); return; }
+     autosave): score the day now rather than silently discarding it. UNLESS
+     the save sits inside the overrun window with interrupted work to reopen:
+     the sim gives a modal until DAY_OVERRUN past close to finish (see the
+     endDay gate in sim()), and the pause card promises going back to work
+     keeps what you had. Scoring here instead meant SAVE & QUIT at 17:03,
+     mid-board on a P1, came back as that P1 breached — quit-and-continue
+     forfeited the ticket that in-session pause/resume let you finish. */
+  if (run.clock >= DAY_MIN &&
+      !(run.clock < DAY_MIN + DAY_OVERRUN &&
+        (r.activeUid || run.pendingScenes.length))){ loadMap('office1'); endDay(); return; }
   /* saved at the commute screen: present the SAVED plan, don't re-roll */
   if (run.clock <= 0.001){ presentCommute(); return; }
   /* back where you were standing, on the floor you were standing on. A save
@@ -11297,7 +11479,8 @@ function toast(text, kind, ms){
   setTimeout(() => { d.style.transition='opacity .35s'; d.style.opacity='0';
     setTimeout(() => d.remove(), 400); }, dur);
 }
-function clearToasts(){ const w = document.getElementById('toasts'); if (w) w.textContent=''; }
+/* clearToasts lives with the toast machinery below — a second definition here
+   was shadowed by hoisting and dead the whole time it existed */
 function mkBtn(parent, label, fn, ghost){
   const b = document.createElement('button');
   b.className = 'btn' + (ghost ? ' ghost' : '');
@@ -11530,10 +11713,17 @@ function abandonScore(g){
   }
   if (g.kind === 'blast'){
     /* the best it could still finish at: everything left to find, found, and
-       nothing wrongly marked from here on — the marks already wrong stand */
+       nothing wrongly marked from here on — the marks already wrong stand,
+       AND THEY STAND AT THE PRICE THE FINISH CHARGES. When the flat .25 grew
+       into the OVERMARK ratio the finish scorer moved and this did not, so on
+       every board with fewer than six people in the blast (81% of them) the
+       ceiling for walking out sat ABOVE the best possible finish — mark the
+       wrong person, Escape, and the fresh board banked .75 where playing the
+       mistake out was worth .30. The one invariant this function exists to
+       hold, inverted by a retune two screens away. */
     const marked = g.all.filter(n => n.marked && !n.group);
     const over = Math.max(0, marked.length - marked.filter(n => n.hits).length - (g.forgive || 0));
-    return clamp(1 - over*.25, 0, 1);
+    return clamp(1 - over * (OVERMARK / Math.max(1, g.total)), 0, 1);
   }
   if (g.kind === 'subnet'){
     /* the best it could still finish at: every site left, sized right. The
@@ -11560,16 +11750,34 @@ function abandonScore(g){
                  Math.max(.001, g.best), 0, 1);
   }
   if (g.kind === 'keep'){
-    /* the meters as they stand: unplayed moves are not credit for anything */
-    const v = x => clamp((x - 3) / (g.goal - 3), 0, 1);
-    return (v(g.c) + v(g.t) + v(g.m)) / 3;
+    /* the best it could still finish at: the finest remaining plays from this
+       exact state, priced on the ground-made-up scale the finish uses. This
+       held the anchor-3 ramp the finish scorer was rebuilt to abolish (see
+       NOT CREDIT FOR THE CHAIR YOU SAT DOWN IN): it paid .667 for an
+       untouched board, so a blur-pause capped a clean retry at two thirds,
+       and it paid a botched mid-game state MORE to walk out of than playing
+       it to the end could ever score. The hand is at most eight cards, so
+       the true best finish is a 2^8 walk, done here. */
+    const u = (x, from) => clamp((x - from) / Math.max(.001, g.goal - from), -1, 1);
+    const rest = g.hand.filter(h => !h.done);
+    let best = clamp((u(g.c, g.c0) + u(g.t, g.t0) + u(g.m, g.m0)) / 3, 0, 1);
+    const walk = (i, left, c, t, m) => {
+      best = Math.max(best, clamp((u(c, g.c0) + u(t, g.t0) + u(m, g.m0)) / 3, 0, 1));
+      if (!left || i >= rest.length) return;
+      walk(i + 1, left - 1, c + rest[i].fx.c, t + rest[i].fx.t, m + rest[i].fx.m);
+      walk(i + 1, left, c, t, m);
+    };
+    walk(0, g.left, g.c, g.t, g.m);
+    return best;
   }
   if (g.kind === 'diagram'){
     /* the best it could still finish at: everything left, found, and nothing
-       further marked wrongly. Wrong marks already made stand. */
+       further marked wrongly. Wrong marks already made stand — at the
+       OVERMARK ratio the finish charges, not the flat quarter it retired; see
+       the blast branch above for what the drift cost. */
     const hit = [...g.marked].filter(i => g.spofs.includes(i)).length;
     const over = Math.max(0, g.marked.size - hit - (g.forgive || 0));
-    return clamp(1 - over * .25, 0, 1);
+    return clamp(1 - over * (OVERMARK / Math.max(1, g.spofs.length)), 0, 1);
   }
   if (g.kind === 'paper'){
     /* the best it could still finish at: every remaining question answered
@@ -11578,8 +11786,15 @@ function abandonScore(g){
     return clamp((g.credit + left) / g.qs.length - g.bluffed * .12, 0, 1);
   }
   if (g.kind === 'weekend'){
-    /* nothing is committed until the rota goes out, so an abandoned board is
-       worth what is on it — with the unassigned rows worth nothing */
+    /* nothing is committed until the rota goes out, and a job comes back off
+       a name as freely as it went on — so until submit the board is still
+       worth full marks, the same contract the restore call keeps: walking
+       away has cost nothing but the minutes. Pricing the standing
+       assignments made the OPENING state — every row unassigned — abandon at
+       ZERO: an OS focus-steal on the Big Migration (blur pauses, the pause
+       caps) zeroed the craft of the one ticket the whole career aims at,
+       before the player had touched anything. */
+    if (!g.submitted) return 1;
     let good = 0;
     const over = [];
     for (let p = 0; p <= g.staff.length; p++)
@@ -12985,7 +13200,12 @@ const GAMES = {
          from 90 at an eighteen-pixel pitch: six of them end at 198, clear of
          the submit button at 206. Everything here used to want the same band. */
       rowRect(i){ return [70, 90 + i*18, 340, 16]; },
-      tierRect(i, t){ return [236 + t*58, 84 + i*20, 54, 18]; },
+      /* THE SAME PITCH AS THE ROWS THEY SIT IN. The tier grid ran at a 20px
+         stride against the rows' 18 — row 0's cells sat under the column
+         headings, row 5's sagged into the submit band, and a click on the
+         seam changed one row's price while highlighting the next. The
+         comment above already promised the eighteen; the cells now keep it. */
+      tierRect(i, t){ return [236 + t*58, 90 + i*18, 54, 16]; },
       btns: [ { x:330, y:212, w:130, h:18, k:'send', cap:'E  SUBMIT QUOTE' } ],
       total(){ return this.rows.reduce((a, r) => a + r.cost[r.pick], 0); },
       act(k){ if (k === 'send') this.send(); },
@@ -13014,15 +13234,27 @@ const GAMES = {
         }
         if (press.up)   this.cur = (this.cur + this.rows.length - 1) % this.rows.length;
         if (press.down) this.cur = (this.cur + 1) % this.rows.length;
-        const set = t => { this.rows[this.cur].pick = t; this.touched = true; sfx('ui'); };
-        if (press.one) set(0); if (press.two) set(1); if (press.three) set(2);
+        /* ONE DOOR FOR BOTH HANDS. `touched` arms the abandon rule ("you
+           cannot walk out of a quote you have made a mess of"), and it was
+           set only on the keyboard path — a mouse player clicking every line
+           to PROPER walked out of an unsubmittable mess uncapped, while a
+           keyboard player whose keypress changed NOTHING (pressing 2 on a
+           line already at ADEQUATE) was armed and then capped at .15 by a
+           blur-pause on a board they never altered. A pick that does not
+           change is not a change, whichever hand made it. */
+        const set = (i, t) => {
+          this.cur = i;
+          if (this.rows[i].pick !== t){ this.rows[i].pick = t; this.touched = true; }
+          sfx('ui');
+        };
+        if (press.one) set(this.cur, 0); if (press.two) set(this.cur, 1); if (press.three) set(this.cur, 2);
         let go = press.use;
         if (this.click){
           const pt = this.click; this.click = null;
           for (let i = 0; i < this.rows.length; i++){
             if (inRect(pt, ...this.rowRect(i))) this.cur = i;
             for (let t = 0; t < 3; t++)
-              if (inRect(pt, ...this.tierRect(i, t))){ this.cur = i; this.rows[i].pick = t; sfx('ui'); }
+              if (inRect(pt, ...this.tierRect(i, t))) set(i, t);
           }
           for (const b of this.btns) if (inRect(pt, b.x - b.w/2, b.y, b.w, b.h)) go = true;
         }
@@ -14477,6 +14709,29 @@ const JOB_POSTING = [
   { pos:'Director of IT (£160,000, "own the function")',
     perk:'The above. Nobody has mentioned hours, which is how you know.' }
 ];
+/* THE SHELF SPENDS THE GAME'S SCARCEST CURRENCY AND HAD NO GUARDS AT ALL.
+   Buying re-lays the shelf sorted cheapest-first, so the NEXT certificate
+   slides up into the exact pixels just clicked — an ordinary accidental
+   double-click bought two different certificates, the second unseen, for
+   most of a career's banked rep. (ACCEPT OFFER, on the same screen, has a
+   700ms dwell built for exactly this; the shop had nothing.) And nothing
+   checked ownership, so the same certificate could be charged twice and
+   metaFx would apply its effect twice forever. Named, so a test can buy. */
+function buyCert(k){
+  const C = CERTS[k];
+  if (!C || meta.certs.includes(k) || meta.rep < C.cost.rep) return false;
+  const now = performance.now();
+  /* the absorbed double-click is not silent: a click that spent nothing
+     still answers, or a player buying two certificates quickly loses one
+     to a refusal they never saw */
+  if (now - (G.lastCertBuy || 0) < 350){ sfx('err'); return false; }
+  G.lastCertBuy = now;
+  meta.certs.push(k); meta.rep -= C.cost.rep;
+  saveGame(); sfx('promo');
+  toast('CERTIFIED. THE FRAME COSTS EXTRA.', 'ok', 3000);
+  actSetup();
+  return true;
+}
 function actSetup(){
   G.state = 'setup';
   disarmAbandon();
@@ -14506,13 +14761,7 @@ function actSetup(){
     row.className = 'certrow';
     const b = document.createElement('button');
     b.className = 'btn ghost certcard';
-    b.onclick = () => {
-      if (meta.rep < C.cost.rep) return;
-      meta.certs.push(k); meta.rep -= C.cost.rep;
-      saveGame(); sfx('promo');
-      toast('CERTIFIED. THE FRAME COSTS EXTRA.', 'ok', 3000);
-      actSetup();
-    };
+    b.onclick = () => buyCert(k);
     const top = document.createElement('span'); top.className = 'cc-top';
     const nm  = document.createElement('span'); nm.className  = 'cc-name';
     nm.textContent = (can ? 'STUDY: ' : 'LOCKED: ') + C.name;
@@ -14576,7 +14825,13 @@ function act(a){
        the only way in from across the room was a key. */
     case 'queue':
       if (G.modal && G.modal.kind === 'tix') closeModalToWork();
-      else if (run && (G.state === 'work' || G.modal)){ if (G.modal) closeModalToWork(); openQueue(); }
+      else if (run && (G.state === 'work' || G.modal)){
+        /* park before closing, same as every other exit: without it this
+           button was a free re-roll on a bad board and a shredder for the
+           event scene it happened to be clicked over */
+        if (G.modal){ parkModal(false); closeModalToWork(); }
+        openQueue();
+      }
       break;
     case 'newrun': actSetup(); break;
     case 'reroll':
@@ -14654,41 +14909,54 @@ function paintPace(){
     ' The shift is the same ' + numWord(dayHours()) + ' hours at every pace \u2014 ' +
     'same tickets, same deadlines, same score. Only how fast those hours pass in the real world changes.';
 }
+/* An interrupted modal must not orphan its work — through ANY door out.
+   Decide from the MODAL, not from run.active: an event scene (no onDone) is
+   queued to replay even while a ticket is active, and an abandoned minigame
+   is scored as played so F4/alt-tab cannot re-roll a bad board for free.
+   This lived inside pauseGame, which made Escape, blur and pagehide honest —
+   and left the HUD QUEUE button, which stays clickable over every modal,
+   going through closeModalToWork alone: an event scene died unreplayed and a
+   botched board re-rolled fresh and uncapped, the exact exploit the abandon
+   cap was measured and built to close. Every exit from a modal parks here. */
+function parkModal(forPause){
+  if (!run || !G.modal) return;
+  /* Remember WHERE you were, not just which scene it was. Clicking away
+     mid-briefing and coming back to Linda starting from her first line
+     again is the same conversation charged twice in attention, even now
+     that it is no longer charged twice in minutes. */
+  /* PARK THE FILLS TOO. A scene is opened with fills that sceneFills()
+     cannot re-derive: openEvent computes {cost} from the minutes it just
+     charged, and no FILLS pool holds it. Parking only the id meant a
+     one-to-one interrupted by Escape came back as "she asks how you are,
+     and she means it, and she has {cost}" — the raw token, on screen, in
+     the one place the game explains what a meeting just took off your
+     day. */
+  if (dlg && dlg.scene && !dlg.onDone)
+    (run.pendingScenes = run.pendingScenes || [])
+      .push({ id: dlg.scene, li: dlg.li, fills: dlg.fills || null });
+  if (run.active){
+    if (G.modal.kind === 'game' && MG){
+      run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
+      /* Say so on the pause card. Escape from a board you cannot solve DOES
+         let you walk away with what you had earned — but the only words on
+         screen were BACK TO WORK and SAVE & QUIT, neither of which mentions
+         the board. A tester read that as "there is no way out", went back
+         in, and logged 570 mistakes on a five-cable rack.
+         PAUSE ONLY: leftBoard is that card's message and resumePending is
+         resumeWork's cue. Set from the QUEUE path they had no consumer —
+         the card lied about a board whose ticket had since resolved, and a
+         plain pause/resume minutes later re-opened a minigame the player
+         did not have open. The queue's re-entry is startTicket, which
+         needs neither. */
+      if (forPause) G.leftBoard = { name: MG_TITLES[MG.gid] || MG.gid.toUpperCase(),
+                                    worth: Math.round((run.active.gameCap ?? 1) * 100) };
+    }
+    if (forPause) run.resumePending = true;
+  }
+}
 function pauseGame(){
   if (G.modal){
-    /* an interrupted modal must not orphan its work. Decide from the MODAL,
-       not from run.active: an event scene (no onDone) is queued to replay even
-       while a ticket is active, and an abandoned minigame is scored as played
-       so F4/alt-tab cannot re-roll a bad board for free. */
-    if (run){
-      /* Remember WHERE you were, not just which scene it was. Clicking away
-         mid-briefing and coming back to Linda starting from her first line
-         again is the same conversation charged twice in attention, even now
-         that it is no longer charged twice in minutes. */
-      /* PARK THE FILLS TOO. A scene is opened with fills that sceneFills()
-         cannot re-derive: openEvent computes {cost} from the minutes it just
-         charged, and no FILLS pool holds it. Parking only the id meant a
-         one-to-one interrupted by Escape came back as "she asks how you are,
-         and she means it, and she has {cost}" — the raw token, on screen, in
-         the one place the game explains what a meeting just took off your
-         day. */
-      if (dlg && dlg.scene && !dlg.onDone)
-        (run.pendingScenes = run.pendingScenes || [])
-          .push({ id: dlg.scene, li: dlg.li, fills: dlg.fills || null });
-      if (run.active){
-        if (G.modal.kind === 'game' && MG){
-          run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
-          /* Say so on the pause card. Escape from a board you cannot solve DOES
-             let you walk away with what you had earned — but the only words on
-             screen were BACK TO WORK and SAVE & QUIT, neither of which mentions
-             the board. A tester read that as "there is no way out", went back
-             in, and logged 570 mistakes on a five-cable rack. */
-          G.leftBoard = { name: MG_TITLES[MG.gid] || MG.gid.toUpperCase(),
-                          worth: Math.round((run.active.gameCap ?? 1) * 100) };
-        }
-        run.resumePending = true;
-      }
-    }
+    parkModal(true);
     closeModalToWork();
   }
   if (G.state !== 'work') return;
@@ -14730,7 +14998,17 @@ function resumeWork(){
 document.addEventListener('click', e => {
   audioInit();
   const b = e.target.closest('[data-act]');
-  if (b) act(b.dataset.act);
+  if (b){
+    act(b.dataset.act);
+    /* A CLICKED BUTTON KEEPS KEYBOARD FOCUS. After a mouse click on QUEUE the
+       browser leaves the button focused, so the next Space both latched
+       press.use (starting the selected ticket) AND re-clicked the button on
+       keyup (closing what it just opened and re-raising the queue) — and Enter
+       closed the panel the queue's own help promises it works. The game reads
+       the keyboard from the document; buttons must not keep a claim on it. */
+    b.blur();
+    if (G.state === 'work' || G.state === 'modal') view.focus();
+  }
 });
 function onKey(e){
   audioInit();
@@ -14750,6 +15028,11 @@ function onKey(e){
     const resume = G.overlayPaused && G.state === 'pause';
     G.overlayPaused = false;              // cleared whichever way this goes
     if (resume) resumeWork(); else show(screenForState());
+    /* spent: each open records its own return. testReturn in particular was
+       never cleared, so once F4 had been pressed at the title, every later
+       F1-close in the menu state resolved to that old screen instead of the
+       one the log was opened over. */
+    G.testReturn = G.logReturn = null;
   };
   if (e.code === 'Escape' && (G.showLog || G.showTests)){
     e.preventDefault(); closeOverlay(); return;
@@ -15027,6 +15310,20 @@ function simDay(skill, policy){
 function selfTest(runSim){
   const Rres = [];
   const ok = (name, pass, detail) => Rres.push({ name, pass:!!pass, detail:detail||'' });
+
+  /* F4 DURING A LIVE DAY MUST GIVE THE WORLD BACK. The lints below walk every
+     floor through loadMap and reseed the password draws with rngInit; the sim
+     branch restores all of that — but only when it runs, and a mid-day F4 runs
+     with runSim false (takePause has already made the state 'pause'). Without
+     this snapshot the player came back from the report standing on office1 at
+     another floor's coordinates, sometimes inside a wall, and every later
+     shuffle and board drew from the fixed JOB-TEST streams — the same state on
+     every press, which turned the report key into a board-fishing tool. */
+  const liveWorld = (run && !runSim)
+    ? { map: W2.id || 'office1',
+        px: player ? player.tx : null, py: player ? player.ty : null,
+        seed: RNG.seed, streams: rngState() }
+    : null;
 
   /* --- static content lints (always run) --- */
   {
@@ -15418,13 +15715,46 @@ function selfTest(runSim){
       ok('a password round never shows the same string twice', dupes === 0, dupes + ' rounds with a repeat');
     }
     ok('fill pools have variety', Object.values(FILLS).every(p => p.length >= 3));
+    /* A NODE THAT OFFERS OPTIONS IS A CHOICE. Wired as `say` the options
+       still render and the player still answers — but advanceStep's say
+       branch passes no ticket, so the fx pipeline (t.spent, t.bonus,
+       ticketOffers) never hears about it: minutes charged and not credited
+       back, an authored bonus that cannot be earned, and a step priced as a
+       say. One template shipped that way for a whole era of the intern day. */
+    {
+      const wired = [];
+      for (const id in TICKETS)
+        for (const st of TICKETS[id].steps)
+          if (st.say && DIALOGUE[st.say] && DIALOGUE[st.say].opts)
+            wired.push(id + ':' + st.say);
+      ok('every step that offers options is wired as a choice',
+         !wired.length, wired.join(' '));
+    }
+  }
+
+  /* see liveWorld above: the lints moved the floor and the streams; put both
+     back before the report goes up over a paused day */
+  if (liveWorld){
+    rngInit(liveWorld.seed, liveWorld.streams);
+    loadMap(liveWorld.map);
+    spawnPeople(run.clock, liveWorld.px !== null ? [liveWorld.px, liveWorld.py] : null);
   }
 
   if (runSim){
     /* snapshot EVERYTHING, run the sim on a test career, restore. */
     const saved = {
       json: JSON.stringify({ meta, run: run ? serializeRun() : null }),
-      seed: RNG.seed, streams: rngState(), state: G.state, sfx: A.sfxVol, quiet: QUIET
+      seed: RNG.seed, streams: rngState(), state: G.state, sfx: A.sfxVol, quiet: QUIET,
+      /* the suite runs whole careers through the real screens: without this a
+         seed the player had TYPED came back as whatever the last test career
+         left in the box */
+      seedBox: (document.getElementById('seedbox') || {}).value,
+      /* AND IT NARRATES THEM ALL INTO THE SESSION LOG. slog is not gated on
+         QUIET, and one F4 from the title appended 34,000 lines — the
+         400-entry ring evicted the player's entire career and F1 showed
+         bot-policy noise where the log the pause card advertises used to be.
+         The log is the player's; the suite borrows it and gives it back. */
+      slog: SLOG.slice(), slogTotal: SLOG_TOTAL
     };
     SAVE_SUSPEND = true; A.sfxVol = 0;
 
@@ -16133,6 +16463,397 @@ function selfTest(runSim){
       const wire = serializeRun();
       ok('save: an abandoned minigame stays capped across a reload',
          wire.queue[0].gameCap === .31, 'cap ' + wire.queue[0].gameCap);
+    }
+    /* A save written INSIDE the overrun window with a ticket in hand must come
+       back as that ticket, not as a scored day: SAVE & QUIT at 17:03 mid-board
+       forfeited the P1 the pause card had just promised you could finish. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const t = { uid:9090, id:'password-reset', title:'in hand', fills:{}, at:0,
+                  deadline:DAY_MIN + 60, sla:90, stress:4, si:1, bonus:0,
+                  gameScores:[], from:null, paidStep:0 };
+      run.queue = [t]; run.active = t;
+      run.clock = DAY_MIN + 5;                       // 17:05 — inside DAY_OVERRUN
+      const held0 = serializeRun();
+      resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(held0)) });
+      const held = run && G.state === 'work' && run.active && run.active.uid === 9090;
+      ok('save: a quit inside the overrun window keeps the ticket in hand',
+         held, 'state ' + G.state + ' active ' + (run && run.active && run.active.uid));
+      /* and past the window the day still scores rather than silently hanging */
+      run.clock = DAY_MIN + DAY_OVERRUN + 1;
+      const held1 = serializeRun();
+      resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(held1)) });
+      ok('save: past the overrun window a quit still scores the day',
+         !run || run.phase === 'review' || G.state === 'review' || G.state === 'over',
+         'state ' + G.state);
+      if (run) run.pendingEnd = null;
+      run = null; G.state = 'title';
+    }
+    /* The heartbeat autosave fires in 'modal' too: an open event scene has to
+       be IN the write, or a crash keeps the meeting's cost and loses the
+       meeting — and its choices, the game's one free stress relief. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.pendingScenes = [];
+      const eid = Object.keys(EVENTS)[0], sid = EVENTS[eid].scene;
+      openDlg(sid, sceneFills(sid), null);
+      const wire2 = serializeRun();
+      ok('save: a modal save carries the scene on screen',
+         wire2.pendingScenes.length === 1 && wire2.pendingScenes[0].id === sid &&
+         run.pendingScenes.length === 0,
+         JSON.stringify(wire2.pendingScenes));
+      closeModalToWork();
+      run = null; G.state = 'title';
+    }
+    /* The HUD QUEUE button stays clickable over every modal: it is a door out
+       and must park like one — resumePending and the cap for a board, the
+       scene queued to replay for a meeting — not a silent shredder. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const tb = { uid:9191, id:'password-reset', title:'board', fills:{}, at:0,
+                   deadline:240, sla:90, stress:4, si:1, bonus:0,
+                   gameScores:[], from:null };
+      run.queue = [tb]; run.active = tb; run.resumePending = false;
+      openGame('cable', 1, () => {});
+      act('queue');                                  // the button, not Escape
+      /* the cap is parked; the pause-card plumbing is NOT — leftBoard and
+         resumePending set from here had no consumer and haunted the next
+         pause with a board whose ticket had since resolved */
+      const parkedBoard = run.active.gameCap !== undefined &&
+                          run.resumePending === false && !G.leftBoard;
+      if (G.modal) closeModalToWork();
+      run.pendingScenes = []; run.active = null; run.resumePending = false;
+      const eid2 = Object.keys(EVENTS)[0], sid2 = EVENTS[eid2].scene;
+      openDlg(sid2, sceneFills(sid2), null);
+      act('queue');
+      const parkedScene = run.pendingScenes.length === 1 && run.pendingScenes[0].id === sid2;
+      if (G.modal) closeModalToWork();
+      ok('the QUEUE button parks the modal it interrupts', parkedBoard && parkedScene,
+         'board ' + parkedBoard + ' scene ' + parkedScene);
+      run = null; G.state = 'title';
+    }
+    /* F4 mid-day must give the world back: the static lints walk every floor
+       and reseed the password draws, and only the sim branch used to restore. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const mapBefore = W2.id, rngBefore = JSON.stringify(rngState());
+      selfTest(false);                               // what a mid-day F4 runs
+      ok('overlay: the F4 report leaves the floor and the streams as it found them',
+         W2.id === mapBefore && JSON.stringify(rngState()) === rngBefore,
+         'map ' + W2.id);
+      run = null; G.state = 'title';
+    }
+    /* THE TWO CONTRACTS OF abandonScore, held against the boards that broke
+       them: a clean walk-away costs nothing (an OS focus-steal is not a
+       mistake), and walking out of a botched board can never beat finishing
+       it. WHOSE SATURDAY opened at zero; BLAST RADIUS and THE DIAGRAM still
+       charged the flat quarter the finish scorer retired for the OVERMARK ratio;
+       KEEPING EVERYBODY held the abandoned anchor-3 scale on both counts. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const low = [];
+      /* the quote is priced as-it-stands by design (it opens near its best,
+         not at it), so it answers to a looser bar than the best-still-
+         reachable boards */
+      for (const [gid, bar] of [['weekend',.95],['keep',.95],['blast',.95],
+                                ['diagram',.95],['quote',.8]]){
+        const g = GAMES[gid].init(2); g.forgive = 0;
+        const a = abandonScore(g);
+        if (a < bar) low.push(gid + ' ' + a.toFixed(2));
+      }
+      ok('boards: an untouched board abandons at full marks', !low.length, low.join(' '));
+      /* AGAINST THE FINISH SCORER'S OWN OUTPUT, not a re-typed copy of its
+         formula. The first version of this asserted 1 - OVERMARK/k, which is
+         the implementation recomputed from the implementation's constant —
+         a mutant that drifted the FINISH scorer's charge (re-opening the
+         walk-out-beats-finishing exploit this exists to hold shut) passed
+         the whole suite. Now the same wrong mark is priced twice: once by
+         abandonScore, once by playing the board to its best finish, and the
+         two answers have to be the same number. */
+      const dg = GAMES.diagram.init(2); dg.forgive = 0;
+      const wrongD = dg.nodes.map((n, i) => i).find(i => i > 0 && !dg.spofs.includes(i));
+      dg.marked.add(wrongD);
+      const dA = abandonScore(dg);
+      for (const i of dg.spofs) dg.marked.add(i);
+      dg.submitted = true; dg.flash = 0; dg.step(0.016);
+      const bl = GAMES.blast.init(2); bl.forgive = 0;
+      const wrongB = bl.all.find(n => !n.group && !n.hits);
+      wrongB.marked = true;
+      const bA = abandonScore(bl);
+      for (const n of bl.all) if (!n.group && n.hits) n.marked = true;
+      bl.applied = true; bl.flash = 0; bl.step(0.016);
+      ok('boards: a wrong mark walks out at the price the finish charges',
+         Math.abs(dA - dg.score) < .001 && Math.abs(bA - bl.score) < .001,
+         'diagram ' + dA.toFixed(3) + ' vs finish ' + (dg.score ?? -1).toFixed(3) +
+         ' · blast ' + bA.toFixed(3) + ' vs finish ' + (bl.score ?? -1).toFixed(3));
+      const kA = abandonScore({ kind:'keep', hand:[], left:0, goal:6,
+                                c:3, t:4, m:5, c0:5, t0:5, m0:5 });
+      ok('boards: a wrecked hand with no moves left abandons at what it would score',
+         kA === 0, 'got ' + kA);
+      run = null; G.state = 'title';
+    }
+    /* the quote's abandon rule arms on a CHANGE, from either hand: the mouse
+       path never set `touched` (a clicked mess walked out uncapped) and the
+       keyboard path set it on a keypress that changed nothing */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      for (const k in press) press[k] = false;
+      const q = GAMES.quote.init(2); q.forgive = 0;
+      const [tx, ty] = q.tierRect(0, 0);
+      q.click = { x: tx + 2, y: ty + 2 }; q.step(0);
+      const mouseArms = q.touched === true && q.rows[0].pick === 0;
+      const q2 = GAMES.quote.init(2); q2.forgive = 0;
+      press.two = true; q2.step(0); press.two = false;   // every line opens at ADEQUATE
+      const noopUnarmed = !q2.touched;
+      ok('boards: the quote abandon rule arms on a change from either hand',
+         mouseArms && noopUnarmed, 'mouse ' + mouseArms + ' noop ' + noopUnarmed);
+      run = null; G.state = 'title';
+    }
+    /* the ticket in your hands is "begun", even mid-first-step: si counts
+       steps FINISHED, and the review called the ticket the clock ran out on
+       top of "never picked up" */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const t = { uid:903, id:'coffee-derek', title:'t', fills:{}, at:0, deadline:10,
+                  sla:10, stress:4, si:0, paidStep:0, bonus:0, gameScores:[], from:null };
+      run.queue = [t]; run.active = t; run.burnLog = [];
+      run.clock = t.deadline + ACTIVE_GRACE_MAX + 1;
+      slaTick();
+      const e = run.burnLog[0];
+      ok('review: the ticket in your hands is never "never picked up"',
+         e && e.worked === true, JSON.stringify(e || null));
+      run = null;
+    }
+    /* the day is priced on the working floor: ending the day in the car park
+       or at the client site re-priced the next morning's desk legs from
+       another floor's flood-fill table */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const born = run.plan.arrivals.map(a => a.sla).join(',');
+      const elsewhere = Object.keys(MAPS).find(m => m !== 'office1');
+      rngInit('JOB-TEST'); runInit('JOB-TEST');
+      if (elsewhere) loadMap(elsewhere);               // the wrong floor loaded overnight
+      rollDay();
+      ok('rollDay prices the day on the working floor', W2.id === 'office1', W2.id);
+      ok('the SLA a ticket is born with ignores where the last day ended',
+         run.plan.arrivals.map(a => a.sla).join(',') === born, 'differs from a clean roll');
+      run = null; G.state = 'title';
+    }
+    /* a promotion evening grades the day at the desk it was worked: the promo
+       is applied before the review draws (deliberately), and banding dayPerf
+       against the NEW rung's floor-to-bar span printed DEVELOPING (HR word
+       for struggling) directly under the headline PROMOTED */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.rung = ROLES.length - 1;               // the desk AFTER the promotion
+      run.lastScore = null;
+      reviewScreen(.5, 40, true, null);
+      const row = document.getElementById('r-stats').textContent;
+      const oldBand = perfName(.5, run.rung - 1), newBand = perfName(.5, run.rung);
+      ok('review: a promotion evening grades the day at the desk it was worked',
+         row.indexOf(oldBand) >= 0 && (oldBand === newBand || row.indexOf(newBand) < 0),
+         'bands old "' + oldBand + '" new "' + newBand + '"');
+      show(null); run = null; G.state = 'title';
+    }
+    /* the certificate shelf spends the scarcest currency: one certificate is
+       charged once, a shelf that re-lays under the pointer does not sell the
+       next row to the same double-click, and a duplicate smuggled into a save
+       does not apply its effect twice forever */
+    {
+      QUIET = true;
+      const mSnap = { rep: meta.rep, certs: meta.certs.slice(), last: G.lastCertBuy };
+      const cheap = Object.keys(CERTS).sort((a,b) => CERTS[a].cost.rep - CERTS[b].cost.rep);
+      meta.rep = 500; meta.certs = []; G.lastCertBuy = 0;
+      const first = buyCert(cheap[0]);
+      G.lastCertBuy = 0;                          // past the dwell: ownership alone must refuse
+      const again = buyCert(cheap[0]);
+      G.lastCertBuy = performance.now();          // inside the dwell: the slid row must wait
+      const slide = buyCert(cheap[1]);
+      ok('shop: a double-click buys one certificate, once',
+         first === true && again === false && slide === false &&
+         meta.certs.length === 1 && meta.rep === 500 - CERTS[cheap[0]].cost.rep,
+         'certs ' + JSON.stringify(meta.certs) + ' rep ' + meta.rep);
+      ok('shop: a duplicate certificate in a save is deduped on the way in',
+         normalizeMeta({ certs: [cheap[0], cheap[0]] }).certs.length === 1);
+      /* and the one meta field used as an array index cannot arrive out of
+         range: best.rung 99 threw at boot and bricked the title screen */
+      const nb = normalizeMeta({ runsPlayed: 3, best: { rung: 99, days: 'many' } }).best;
+      ok('a mangled best-rung clamps instead of bricking the boot',
+         nb.rung >= 0 && nb.rung < ROLES.length && typeof nb.days === 'number',
+         JSON.stringify(nb));
+      meta.rep = mSnap.rep; meta.certs = mSnap.certs; G.lastCertBuy = mSnap.last;
+      G.state = 'title';
+    }
+    /* the quote board's tier cells sit inside the rows they price (they ran
+       at a 20px stride against the rows' 18 and drifted off them), and the
+       rules card takes ANY tap — including the corner where the H=RULES
+       hotspot used to eat it */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const q6 = GAMES.quote.init(4);
+      const drift = [];
+      for (let i = 0; i < q6.rows.length; i++){
+        const rr = q6.rowRect(i);
+        for (let t3 = 0; t3 < 3; t3++){
+          const tr = q6.tierRect(i, t3);
+          if (tr[1] < rr[1] || tr[1] + tr[3] > rr[1] + rr[3]) drift.push(i + ':' + t3);
+        }
+      }
+      ok('quote: every tier cell sits inside the row it prices', !drift.length, drift.join(' '));
+      const tk = { uid:9902, id:'printer-toner', title:'x', fills:{}, at:0, deadline:240,
+                   sla:120, stress:3, si:1, bonus:0, spent:0, gameScores:[], from:null };
+      run.queue = [tk]; run.active = tk;
+      openGame('cable', 1, () => {});
+      MG.brief = { t: 9, first: false };            // the card, well past its grace
+      for (const k in press) press[k] = false;
+      const rv = view.getBoundingClientRect();
+      clickAdvance({ target: view, clientX: rv.left + 408 * rv.width / VW,
+                     clientY: rv.top + 35 * rv.height / VH });
+      ok('a tap on the rules-card corner still dismisses the card',
+         press.use === true, 'press.use ' + press.use);
+      for (const k in press) press[k] = false;
+      if (G.modal) closeModalToWork();
+      run = null; G.state = 'title';
+    }
+    /* the slack a ticket is scored against is the one it was born with, not
+       one re-derived off whatever floor happens to be loaded when the last
+       step lands */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const a2 = run.plan.arrivals[0];
+      ok('a ticket carries its birth price', typeof a2.work === 'number' && a2.work > 0,
+         JSON.stringify(a2.work));
+      const tw = { uid:9903, id:a2.id, title:'x', fills:{}, at:0, deadline:130, sla:300,
+                   stress:3, si:99, bonus:0, spent:0, gameScores:[], from:null, work:250 };
+      run.queue = [tw]; run.active = tw; run.clock = 100; run.speedSum = 0;
+      resolveTicket(tw);
+      ok('the slack a ticket is scored against is the one it was born with',
+         Math.abs(run.speedSum - 0.6) < .01, 'r ' + run.speedSum);
+      run = null; G.state = 'title';
+    }
+    /* a click-route is map-scoped: the floor changing is the definition of it
+       being stale, and clicking your own character is not an instruction */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      G.autoPath = { path: [[1,1]], use: null };
+      loadMap('office1');
+      ok('a click-route does not survive a floor change', G.autoPath === null,
+         JSON.stringify(G.autoPath));
+      spawnPeople();
+      for (const k in press) press[k] = false;
+      const vx = player.tx * TILE - Math.round(cam.x) + 4;
+      const vy = player.ty * TILE - Math.round(cam.y) + 4;
+      const took = walkToClick(vx, vy);
+      ok('clicking your own character is not an instruction',
+         took === false && !G.autoPath && !press.use,
+         'took ' + took + ' path ' + !!G.autoPath + ' use ' + !!press.use);
+      run = null; G.state = 'title';
+    }
+    /* a say step moves nobody, so a goto's price must not depend on whether
+       one precedes it: from the desk the two agreed within a few tiles, from
+       the client site the difference was the real drive home against the
+       18-minute fallback — a triage row lying hardest exactly where triage
+       matters most */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('clientsite'); spawnPeople();
+      const pos = [player.tx, player.ty];
+      const bare = walkLegs([{ goto:'PRINTER' }], 0, pos).mins;
+      const said = walkLegs([{ say:'q' }, { goto:'PRINTER' }], 0, pos).mins;
+      ok('a say step does not change what the walk after it costs',
+         bare === said && bare > WALK_FALLBACK + LIFT_MIN,
+         'bare ' + bare + ' after-say ' + said);
+      /* and the row says drive home, not "upstairs, min walk" */
+      const hint = legHint({ id:'printer-toner', si:0 });
+      ok('an office errand from the client site reads as the drive it is',
+         hint.indexOf('drive') >= 0 && hint.indexOf('upstairs') < 0, hint);
+      loadMap('office1'); spawnPeople();
+      run = null; G.state = 'title';
+    }
+    /* a meeting dropped for spacing does not keep its slot: the ghost seat
+       turned away the slot's clear candidate on 8% of T2 days */
+    {
+      const bySlots = {};
+      for (const id in EVENTS){ const s = EVENTS[id].slot;
+        if (s) (bySlots[s] = bySlots[s] || []).push(id); }
+      const s2 = Object.keys(bySlots).find(s => bySlots[s].length >= 2);
+      const opener = Object.keys(EVENTS).find(id => !EVENTS[id].slot);
+      const [ea, eb] = bySlots[s2];
+      const kept = spaceEvents([{ id:opener, at:10 },
+                                { id:ea, at:10 + MEETING_GAP - 2 },
+                                { id:eb, at:10 + MEETING_GAP + 40 }]);
+      ok('a meeting dropped for spacing does not keep its slot',
+         kept.some(e => e.id === eb) && !kept.some(e => e.id === ea),
+         kept.map(e => e.id).join(','));
+    }
+    /* leave on a Friday keeps its weekend: the deeper carry and the burnout
+       relief live in endDay keyed on a PLAYED Friday, so skipping day 5
+       deleted the week's weekend outright */
+    {
+      QUIET = true;
+      const takeAt = day => {
+        rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+        run.burnout = LEAVE.offerAt + 30; run.leaveTaken = 0;
+        run.stress = 40; run.day = day;
+        takeLeave();
+        return run.burnout;
+      };
+      const midweek = takeAt(3), friday = takeAt(5);
+      ok('leave on a Friday keeps its weekend',
+         friday === Math.max(0, midweek - BURN.weekendRelief),
+         'friday ' + friday + ' midweek ' + midweek);
+      run = null; G.state = 'title';
+    }
+    /* a save is outside input: well-formed JSON with hostile types must clamp
+       on the way in, not half-load into a run that faults every frame (rung
+       99), or a clock that grows by string concatenation and can never end
+       the day */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const ser = serializeRun();
+      ser.rung = 99; ser.clock = 'noon'; ser.queue = {}; ser.stress = 'lots';
+      let threw = null;
+      try { resumeRun({ meta: JSON.parse(JSON.stringify(meta)),
+                        run: JSON.parse(JSON.stringify(ser)) }); }
+      catch(e){ threw = e.message; }
+      ok('a mangled save clamps instead of half-loading',
+         threw === null && run && run.rung >= 0 && run.rung < ROLES.length &&
+         typeof run.clock === 'number' && Array.isArray(run.queue),
+         threw || ('rung ' + (run && run.rung) + ' clock ' + (run && run.clock)));
+      run = null; G.state = 'title';
+    }
+    /* an ended career cannot end again: the second dispatch used to count the
+       career twice into meta.runsPlayed and then throw on the nulled run */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const mSnap2 = JSON.stringify(meta);
+      careerOver('fired');
+      const counted = meta.runsPlayed;
+      let threw2 = null;
+      try { careerOver('fired'); } catch(e){ threw2 = e.message; }
+      ok('the exit interview cannot be walked through twice',
+         threw2 === null && meta.runsPlayed === counted,
+         threw2 || ('counted ' + (meta.runsPlayed - counted) + ' extra'));
+      meta = normalizeMeta(JSON.parse(mSnap2));
+      run = null; G.state = 'title';
     }
     /* A meeting that runs past 17:00 must not hold the shift open forever. */
     {
@@ -17067,17 +17788,27 @@ function selfTest(runSim){
       /* AND THE MIRROR AGAIN: an estimate that is too BIG marks every row "too
          late" the moment it lands, which is the same column lying the other
          way. A ticket at its full window is never already lost. */
+      /* FROM THE CHAIR. The row is player-relative now (a say step no longer
+         hides the first walk), so a ticket genuinely CAN be born lost from
+         the far end of the estate — that is the row telling the truth. The
+         invariant here is about the terms the ticket offers, and those are
+         desk terms: measure standing at the rung's own desk. */
       const born = [];
+      if (W2.id !== 'office1'){ loadMap('office1'); spawnPeople(); }
+      const pSnap = player ? [player.tx, player.ty] : null;
       for (const id in TICKETS){
         const T = TICKETS[id];
         for (let r = T.tiers[0]; r <= T.tiers[1] && r < ROLES.length; r++){
           run.day = 2; run.rung = r;
+          const dp = anchorPos(ROLES[r].deskAnchor || 'TERMINAL');
+          if (dp && player){ player.tx = dp[0]; player.ty = dp[1]; }
           const a = makeArrival(id, 0, ROLES[r]);
           const need = workLeft({ id, si:0 });
           if (need >= a.sla) born.push(id + '@' + ROLES[r].id + ' needs ' +
                                        Math.round(need) + ' of ' + a.sla);
         }
       }
+      if (pSnap && player){ player.tx = pSnap[0]; player.ty = pSnap[1]; }
       ok('and no ticket arrives already marked too late to start',
          !born.length, born.length + ': ' + born.slice(0,3).join(' · '));
       run = savedRunW;
@@ -23812,6 +24543,13 @@ function selfTest(runSim){
       G.state = saved.state;
     }
     A.sfxVol = saved.sfx; QUIET = saved.quiet;
+    const sb0 = document.getElementById('seedbox');
+    if (sb0 && saved.seedBox !== undefined) sb0.value = saved.seedBox;
+    SLOG.length = 0; SLOG.push.apply(SLOG, saved.slog); SLOG_TOTAL = saved.slogTotal;
+    ok('the self test gives the session log back as it found it',
+       SLOG.length === saved.slog.length &&
+       (!SLOG.length || SLOG[SLOG.length-1] === saved.slog[saved.slog.length-1]),
+       SLOG.length + ' lines vs ' + saved.slog.length);
     /* nothing the test opened may survive it */
     dlg = null; MG = null; G.modal = null;
     document.getElementById('dlg').style.display = 'none';
@@ -23986,8 +24724,12 @@ function render(){
     if (G.state !== 'pause') hudUpdate();
     autosaveTick(performance.now());
   } else if (W2.W){
-    /* menus idle over a slow pan of the office */
-    idleT += 1/60;
+    /* menus idle over a slow pan of the office — on the clock, not the frame
+       counter: += 1/60 per rAF assumed a 60Hz display, so a 144Hz laptop
+       panned the title office at 2.4x and a throttled 30fps tab at half,
+       the one animation in the game that moved with the refresh rate while
+       every other wobble reads performance.now() */
+    idleT = performance.now() * .001;
     cam.x = 40 + Math.sin(idleT*.1)*36 + 140;
     cam.y = 60 + Math.cos(idleT*.07)*30;
     drawWorld();
@@ -24023,9 +24765,16 @@ function fit(){
      available size went to margins and everything looked half a size too small.
      Quarters keep sprite edges on clean half-pixels and gain that back. */
   if (s >= 1) s = Math.floor(s * 4) / 4;
-  view.style.width = Math.floor(VW*s)+'px';
-  view.style.height = Math.floor(VH*s)+'px';
-  frameNarrow(Math.floor(VW*s));
+  /* THE SAME SCALE ON BOTH AXES. Flooring width and height separately made
+     the two disagree at x.25/x.75 steps — 480x1.75 is 840 but 270x1.75 is
+     472.5, floored to 472 — so sx was 1.75 while sy was 1.748, and under
+     pixelated nearest-neighbour that is a band of pixels one device-pixel
+     shorter than they are wide: exactly the misalignment the quarter comment
+     above says the stepping exists to prevent. CSS takes fractional pixels;
+     what it must not take is two different scales. */
+  view.style.width = (VW*s)+'px';
+  view.style.height = (VH*s)+'px';
+  frameNarrow(Math.round(VW*s));
 }
 /* The HUD's space is the frame, not the window — see the .narrow rules in the
    stylesheet. One function so the CSS and the thing that triggers it cannot
@@ -24037,6 +24786,12 @@ function frameNarrow(px){
   if (f) f.classList.toggle('narrow', px < HUD_NARROW);
 }
 addEventListener('resize', fit);
+/* fit() reads visualViewport but nothing ever told it the visual viewport
+   changed: the on-screen keyboard (the seed box is a real text field) and a
+   mobile pinch-zoom resize the visual viewport WITHOUT a window resize, so
+   the min() clamp above was dead weight and the frame stayed sized for a
+   screen the keyboard had just eaten half of. */
+if (window.visualViewport) visualViewport.addEventListener('resize', fit);
 
 /* Clicking a dialogue box to advance it is what every game with a dialogue box
    does, and the game only listened to the keyboard. A click anywhere over the
@@ -24073,7 +24828,11 @@ function clickAdvance(ev){
            proving every board can be finished with taps alone, the one way
            back to the rules of the board you are stuck on needed a keyboard.
            The corner it is printed in is the corner it answers. */
-        if (pt && pt.x >= 396 && pt.x <= 420 && pt.y >= 28 && pt.y <= 42){
+        /* ...but not while the CARD is already up: briefReopen is a no-op
+           then, and returning here ate the tap — a 24x14 dead zone in the
+           exact corner a first-timer taps to close things, on a card whose
+           contract is "any tap dismisses". */
+        if (!MG.brief && pt && pt.x >= 396 && pt.x <= 420 && pt.y >= 28 && pt.y <= 42){
           briefReopen(); return;
         }
         MG.click = pt;

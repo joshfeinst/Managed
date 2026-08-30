@@ -12,7 +12,7 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
 (async()=>{
   const b=await launch(); const p=await b.newPage();
   p.on('pageerror',e=>console.log('PAGEERROR',e.message));
-  await p.goto('file://'+(process.argv[2]||'/home/user/managed/index.html'));
+  await p.goto('file://'+(process.argv[2]||__dirname+'/../index.html'));
   await p.waitForFunction(()=>typeof G!=='undefined'&&typeof simDay==='function');
   const r = await p.evaluate(({N})=>{
     SAVE_SUSPEND=true; QUIET=true; A.sfxVol=0;
