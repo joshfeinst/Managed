@@ -8738,17 +8738,44 @@ function rollDay(){
    about errands a player could comfortably land, and said nothing about ones
    they could not — and errands are the high-priority tickets, so the whole
    top of the queue was triaged on invented numbers. */
-/* MEASURED, NOT CHOSEN — and it used to be neither. This constant is the only
-   number a player is given to plan an errand with, it feeds the queue row's
-   "too late" verdict, and it was 0.30 while a real player walks a tile in about
-   1.05 shift-minutes. Three and a half times optimistic, so a row reading "~9
-   min walk" was a thirty-two minute round trip and every triage decision made
-   from it was wrong. A tester measured 13 tiles in 13 game-minutes; driving the
-   real input path gives 6 tiles in 3.91 minutes at RELAXED (rate .62), which is
-   1.05 at standard. They agree.
-   The self-test below MEASURES this against real movement and fails if the two
-   drift, because a planning number that nobody re-derives is how it got to be
-   3.5x wrong in the first place. */
+/* TWO NUMBERS, AND THEY ARE NOT THE SAME NUMBER. Read this before you
+   "correct" the one below, because it looks wrong and is not.
+
+   WALK_TILES_PER_MIN is MECHANICS. entUpdate lands a tile when t reaches 1 at
+   `t += dt*speed`, and sim() hands the tween and the shift clock the same
+   dt*paceRate() — so continuous, perfectly-routed walking costs exactly
+   1/4.2 = 0.238 shift-minutes a tile, at any frame rate and any pace. That is
+   derivable, and it is a floor.
+
+   WALK_MIN_PER_TILE is BEHAVIOUR: what a trip actually takes off a person's
+   day. It is four times the floor because a player is not a pathfinder. They
+   stop to read the queue while the clock runs, they turn, they take the route
+   they remember rather than the one A* would, and they change their mind at
+   the lift. Measured on real play: 13 tiles in 13 game-minutes. It is
+   corroborated from the other end — with the bot charged the 0.238 floor, it
+   breached 2 tickets a day where the humans breached 15 and promoted in 12
+   seeds of 12 where no human had promoted once (see BOT_TILES_PER_MIN below).
+
+   This was tried. Setting this constant to the 0.238 floor, on the grounds
+   that the floor is provable and the behaviour is not, re-created that exact
+   failure inside an hour: every rung's bar was suddenly clearable by sloppy
+   play, good triage beat working-the-queue-in-order by one point instead of
+   twenty, and bars.js asked for the deal rate to be doubled at all ten rungs
+   to put the pressure back. The floor prices a robot. The queue is read by a
+   person, so the queue is priced for one.
+
+   What IS wrong here is the arithmetic that was written under it: "6 tiles in
+   3.91 minutes at RELAXED (rate .62), which is 1.05 at standard" divides by
+   the pace rate, and playerMove is already scaled by paceRate exactly so that
+   a tile costs the same game-minutes at every pace. The pace was counted
+   twice; read straight that sample is 0.65, not 1.05, and it never agreed
+   with the 13-in-13 sample the way the note claimed. The constant stands on
+   the 13-in-13 measurement and on the bot's breach counts, not on that
+   conversion. The invariant the suite can hold is the one that is actually
+   true: the planning price may never fall BELOW the mechanical floor, because
+   a queue that promises a walk faster than the game can move is lying in the
+   one direction a player cannot recover from. */
+const WALK_TILES_PER_MIN = 4.2, SPRINT_TILES_PER_MIN = 6.5;
 const WALK_MIN_PER_TILE = 1.05;
 /* What simDay charges a bot for the same tile. It was path.length/4.2 — 0.238
    a tile, FOUR AND A HALF TIMES faster than the player it is supposed to model
@@ -9854,7 +9881,9 @@ function crashTick(){
 
 /* ------------------------------ player input ------------------------------ */
 function playerMove(dt){
-  entUpdate(player, dt, held.sprint ? 6.5 : 4.2);
+  /* the same two numbers WALK_MIN_PER_TILE is derived from — one speed, one
+     price, so the queue can never again quote a walk the clock does not charge */
+  entUpdate(player, dt, held.sprint ? SPRINT_TILES_PER_MIN : WALK_TILES_PER_MIN);
   if (player.t < 1) return;
   /* freshest-pressed held direction wins; the rest queue behind it */
   const heldDirs = [];
@@ -18408,7 +18437,15 @@ function selfTest(runSim){
       const ids = Object.keys(TICKETS).filter(i => TICKETS[i].tiers[0] <= 0 && 0 <= TICKETS[i].tiers[1]);
       ids.sort((a3, b3) => ticketWork(TICKETS[a3]) - ticketWork(TICKETS[b3]));
       run.queue = [mk(ids[0], 8001), mk(ids[ids.length-1], 8002)];
-      run.clock = DAY_MIN - 40;                       // 16:20
+      /* THE CLOCK IS DERIVED FROM THE TWO TICKETS, not pinned at 16:20. The
+         fixed 40 minutes was really "longer than the longest intern job",
+         which stopped being true the moment the walk stopped being priced at
+         four times what it costs — the longest job came out at 39 and the
+         test failed on a build where the row was perfectly right. Stand the
+         clock between the two: the short one still fits, the long one cannot. */
+      const needShort = workLeft({ id: ids[0], si:0 });
+      const needLong  = workLeft({ id: ids[ids.length-1], si:0 });
+      run.clock = DAY_MIN - (needShort + needLong) / 2;
       G.state = 'modal'; G.modal = { kind:'tix', sel:0 };
       renderQueue();
       const cell = uid => {
@@ -18417,11 +18454,12 @@ function selfTest(runSim){
         return rowEl ? (rowEl.querySelector('.sla').textContent || '') : '(no row)';
       };
       const shortSays = cell(8001), longSays = cell(8002);
-      const longNeeds = workLeft({ id: ids[ids.length-1], si:0 });
+      const longNeeds = needLong;
       ok('the queue row counts the end of the day, not just the SLA',
-         longNeeds > 40 && /too late/.test(longSays) && !/too late/.test(shortSays),
+         longNeeds > needShort + 2 && /too late/.test(longSays) && !/too late/.test(shortSays),
          'the ' + Math.round(longNeeds) + '-minute one says "' + longSays +
-         '" at 16:20, the short one says "' + shortSays + '"');
+         '" with ' + Math.round(DAY_MIN - run.clock) + 'm left, the ' +
+         Math.round(needShort) + '-minute one says "' + shortSays + '"');
       G.state = 'work'; G.modal = null; run = savedRunQ;
     }
     /* AND THE STARTER CARD KNOWS WHERE THE CHECKLIST PUTS THE MAILBOX. It
@@ -21334,6 +21372,27 @@ function selfTest(runSim){
       ok('and the bot pays the same for a tile as the player does',
          Math.abs(1 / BOT_TILES_PER_MIN - WALK_MIN_PER_TILE) < 1e-9,
          'bot ' + (1 / BOT_TILES_PER_MIN).toFixed(3) + ' vs player ' + WALK_MIN_PER_TILE);
+      /* ...AND NEITHER PROMISES A WALK THE GAME CANNOT MOVE. The timing half
+         genuinely cannot be measured in here, but it does not need to be: a
+         tile is 1/WALK_TILES_PER_MIN shift-minutes of continuous optimal
+         walking by construction (see the note over the constants), and that
+         is a FLOOR, not the answer. The planning price sits above it on
+         purpose, because a player stops to read the queue while the clock
+         runs. What must never happen is the price falling below the floor —
+         a row promising a nine-minute walk the game physically cannot deliver
+         is wrong in the one direction a player cannot recover from. */
+      const floorMin = 1 / WALK_TILES_PER_MIN;
+      ok('the queue never promises a walk faster than the game can move',
+         WALK_MIN_PER_TILE >= floorMin - 1e-9,
+         'priced ' + WALK_MIN_PER_TILE + ' against a floor of ' + floorMin.toFixed(3));
+      /* and the mover reads the constant the floor is derived from, so the
+         two cannot drift apart in silence */
+      const moverSrc = playerMove.toString();
+      const moveCall = moverSrc.slice(moverSrc.indexOf('entUpdate'),
+                                      moverSrc.indexOf('entUpdate') + 90);
+      ok('...and the mover walks at the speed that floor is derived from',
+         moveCall.indexOf('WALK_TILES_PER_MIN') >= 0 && !/\d\.\d/.test(moveCall),
+         moveCall.split('\n')[0]);
       run = savedRun; G.state = savedState;
     }
     /* A PROMOTION SAYS SOMETHING. Nine gates could fire and not one of them
@@ -22795,7 +22854,17 @@ function selfTest(runSim){
         const need = ROLES[0].gates.nextAt;
         /* A window whose days are NOT all above the bar, but whose mean is —
            the exact case a streak rejects and an average passes. */
-        const lo = Math.max(0, need.perf - .25), hi = Math.min(1, need.perf + .25);
+        /* BUILT FROM THE LIVE BAR, not from a fixed spread around it. The
+           days were bar±0.25, which stops working the moment the bar is high
+           enough that the good days clamp at 1.0: at a 0.90 bar the window is
+           [0.65, 1, 1] and its mean is 0.88, so the test failed on a build
+           whose gate was behaving exactly as described. Solve for the low day
+           instead — a window whose mean clears by a hair and whose worst day
+           plainly does not. */
+        run.perfHist = new Array(need.days).fill(need.perf);
+        const bar0 = gateWindow().bar;
+        const hi = Math.min(1, bar0 + .06);
+        const lo = Math.max(0, need.days * (bar0 + .01) - (need.days - 1) * hi);
         run.perfHist = []; for (let i = 0; i < need.days; i++) run.perfHist.push(i ? hi : lo);
         const g = gateWindow();
         ok('a promotion is the window average, not a streak of good days',
