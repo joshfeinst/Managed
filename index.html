@@ -11201,6 +11201,11 @@ function careerOver(kind){
      re-deals yesterday is broken in a way nobody reports. */
   const sb = document.getElementById('seedbox');
   if (sb) sb.value = '';
+  /* the career is over: nothing of the day it ended in stays on the screen.
+     Every caller arrives from a screen where endDay already did this, so it
+     is belt and braces — but the exit interview is the wrong place to find a
+     stress bar and a modal flag from a run that no longer exists. */
+  G.modal = null; MG = null; dlg = null; hudShow(false);
   meta.runsPlayed++;
   meta.rep += Math.floor(run.rep / 2) + (kind === 'retired' ? 5 : kind === 'shortof' ? 2 : 0);
   meta.best.days = Math.max(meta.best.days, run.day);
@@ -14677,6 +14682,13 @@ function clearToasts(){
 }
 function toTitle(){
   clearToasts();
+  /* AND THE MODAL FLAG WITH IT. Every real route out of a modal parks and
+     closes first, so this is unreachable today — but G.modal surviving into
+     'title' arms act('pause'), whose `|| G.modal` branch calls pauseGame ->
+     closeModalToWork, which sets state to 'work' and then reads run.day off a
+     null run: a TypeError from the title screen. A screen with no game behind
+     it holds no modal. */
+  G.modal = null; MG = null; dlg = null;
   /* THE BOARD YOU WALKED OUT OF BELONGED TO A CAREER THAT IS OVER. G.leftBoard
      is what the pause card offers to send you back to, and only resumeWork
      ever cleared it -- not SAVE & QUIT, not the exit interview, not coming
@@ -15134,8 +15146,20 @@ function onKey(e){
     takePause();
     const sim = (G.state === 'title' || G.state === 'over' || G.state === 'menu');
     G.testReturn = G.screenId;          // show(null) below clears it otherwise
-    selfTest(sim);
-    G.showTests = true; show(null);
+    /* SAY SO BEFORE YOU FREEZE. From the title, the exit interview or the
+       menu, F4 runs the whole simulated-career suite on the main thread —
+       measured at 108 SECONDS — and the report is only painted after it
+       returns, so the tab held the last frame, answered nothing, and earned a
+       "Page unresponsive" dialog. F4 is printed as a control on the handbook
+       and options screens, so this is a thing players press: the screen it is
+       most likely to be pressed on is the one where it looks like a crash.
+       The notice is drawn, the browser is given a frame to paint it, and the
+       suite runs after that. */
+    G.showTests = true; G.testRunning = sim; show(null);
+    if (!sim){ selfTest(false); G.testRunning = false; return; }
+    requestAnimationFrame(() => setTimeout(() => {
+      try { selfTest(true); } finally { G.testRunning = false; }
+    }, 0));
     return;
   }
   if (G.showTests) return;
@@ -16313,6 +16337,17 @@ function selfTest(runSim){
        Force the overflow and prove the row is still on screen and still the
        thing a click lands on; a wrong z-index would put the panel on top and
        the button would be visible and dead. */
+    /* CLEAR THE STAGE FIRST. This un-hid the screen under test while the one
+       the player is actually on stayed displayed on top of it, so
+       elementFromPoint answered about the TITLE screen's button — and did so
+       only at some window sizes. Measured: false FAILs at 1024x768, 1100x760,
+       1200x800 and 1000x700, and none at 1280x720, which is the one size
+       tools/verify.js happens to use. A test that is green only on the CI
+       viewport is worse than no test: a real layout regression would arrive
+       inside noise the developer has learned to ignore. */
+    const allScreens = [...document.querySelectorAll('.screen')];
+    const screensWere = allScreens.map(s => s.hidden);
+    allScreens.forEach(s => { s.hidden = true; });
     for (const sid of ['s-setup', 's-review', 's-over', 's-pause', 's-controls', 's-options']){
       const sc = document.getElementById(sid);
       const row = sc && sc.querySelector(':scope > .row');
@@ -16337,6 +16372,7 @@ function selfTest(runSim){
       sc.removeChild(pad); row.innerHTML = keptHTML;
       sc.scrollTop = keptTop; sc.hidden = wasHidden;
     }
+    allScreens.forEach((s, i) => { s.hidden = screensWere[i]; });
     /* THE ARROW AND THE LINE BESIDE IT HAVE TO AGREE, AND THE ARROW HAS TO GO
        OUT WHEN YOU GET THERE. A player walked to the day-one arrow and it
        stayed lit for the rest of the day: it was armed by run.queue.length, so
@@ -16416,8 +16452,13 @@ function selfTest(runSim){
          no max-height still fits and this test passed while proving nothing —
          the same hole that let the bug ship. The box is sized in % of #frame,
          which is #view's box, so shrinking the canvas shrinks the frame. */
-      const keepW = view.style.width, keepH = view.style.height;
-      view.style.width = '400px'; view.style.height = '225px';
+      /* AT THE FRAME THE GAME ACTUALLY HAS. This forced the canvas to 400x225
+         while the box's own type still sized off the real viewport — a
+         combination that occurs in no window anywhere, and which reported
+         three dialogue nodes as overflowing at 1366x768, 1440x900 and
+         1920x1080 on a build where all three measure clean. Every real window
+         is a consistent geometry; the small ones are swept by the harnesses
+         that can actually resize a window. */
       const worst = {};
       for (const k in FILLS) worst[k] = FILLS[k].slice()
         .sort((x, y) => String(y).length - String(x).length)[0];
@@ -16443,7 +16484,7 @@ function selfTest(runSim){
       dlgEl.style.display = wasDisp; dlgEl.scrollTop = 0;
       document.getElementById('d-opts').innerHTML = '';
       document.body.classList.toggle('panelopen', wasPanel);
-      view.style.width = keepW; view.style.height = keepH; fit();
+      fit();
       ok('ui: no dialogue box grows outside the frame', !escaped.length,
          escaped.length + ': ' + escaped.slice(0, 3).join(', '));
       ok('ui: every dialogue option stays reachable inside its box', !unreachable.length,
@@ -16734,6 +16775,25 @@ function selfTest(runSim){
       }
       ok('the small print on the screens is readable against the screens',
          !dim.length, dim.join(' '));
+    }
+    /* A screen with no game behind it holds no modal, and the exit interview
+       is the wrong place to find a stress bar from a run that no longer
+       exists. Both are unreachable through play today; both are one future
+       path away from a TypeError thrown at the title. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      G.modal = { kind:'tix' }; hudShow(true);
+      toTitle();
+      const titleClean = !G.modal && !MG && !dlg;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      G.modal = { kind:'game' }; hudShow(true);
+      careerOver('fired');
+      const overClean = !G.modal && !MG && !dlg &&
+                        document.getElementById('hud').style.display === 'none';
+      ok('leaving a career leaves no piece of it on the screen',
+         titleClean && overClean, 'title ' + titleClean + ' over ' + overClean);
+      run = null; G.state = 'title';
     }
     /* A PINCH IS NOT A KEYBOARD. fit() clamps to the visual viewport so the
        on-screen keyboard can shrink the frame — but the visual viewport also
@@ -24782,6 +24842,15 @@ function drawSessionLog(){
   txt('F1 CLOSES', VW-8, VH-8, '#8b93a0', 6, 'right');
 }
 function drawTestReport(){
+  /* the frame the suite is given to paint before it seizes the thread */
+  if (G.testRunning){
+    ctx.fillStyle = 'rgba(10,12,15,.94)'; ctx.fillRect(0,0,VW,VH);
+    txt('RUNNING THE SELF TEST', VW/2, VH/2 - 8, '#4ade80', 8, 'center');
+    txt('IT PLAYS WHOLE CAREERS. THIS TAKES ABOUT A MINUTE, AND THE',
+        VW/2, VH/2 + 8, '#8b93a0', 6, 'center');
+    txt('TAB WILL NOT ANSWER WHILE IT DOES.', VW/2, VH/2 + 18, '#8b93a0', 6, 'center');
+    return;
+  }
   const Rt = G.tests; if (!Rt) return;
   const fails = Rt.filter(r => !r.pass).length;
   ctx.fillStyle = 'rgba(10,12,15,.94)'; ctx.fillRect(0,0,VW,VH);
