@@ -36,7 +36,7 @@ the `main` build. Every cycle ends with the full battery green and a push.
 
 ## Standing numbers
 
-- Self-tests: **564** (F4 in-game, `tools/verify.js` headless)
+- Self-tests: **573** (F4 in-game, `tools/verify.js` headless)
 - Battery: verify · visual · smoke · exploits · npc · marathon · timing · playtest · dials · ceiling · templates · burn · meta · trace
 - Triage spread **0.014 → 0.128** · skill spread **0.057 → 0.138** · template luck **0.245 → 0.145**
 - Retirement: unreachable → **6/6 expert sequences in ~9.3 careers**; a weak player 2/6, otherwise stalling at Solutions Architect

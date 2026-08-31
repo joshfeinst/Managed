@@ -190,8 +190,14 @@ const MIN_TAP = 44;
   /* 7. can a finger hit the things it has to hit? */
   const small = await page.evaluate((min) => {
     const out = [];
+    /* INPUTS TOO. This list and the body.touch min-height rule in the page
+       were written from each other, so the controls the rule forgot were
+       exactly the ones this could not report: the two volume sliders shipped
+       16px tall and the seed field 34px, on a game that ships a harness to
+       prove it plays with taps alone. */
     for (const el of document.querySelectorAll(
-        '#tix .row, #tix header .x, #hud #h-pause, .btn, .mi, .opt')){
+        '#tix .row, #tix header .x, #hud #h-pause, .btn, .mi, .opt, ' +
+        'input[type=range], input[type=text]')){
       const st = getComputedStyle(el);
       if (st.display === 'none' || st.visibility === 'hidden') continue;
       const r = el.getBoundingClientRect();

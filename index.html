@@ -21,6 +21,13 @@
   --void:#14161a; --chrome:#1d2126; --line:#343b44;
   --paper:#e8e4da; --ink:#23241f; --dim:#8b93a0;
   --corp:#2f7fbe; --corp2:#1d5c96; --amber:#ffb02e; --alert:#d64541; --ok:#4ade80;
+  /* THE SAME BLUE, LIT ENOUGH TO READ. --corp is 4.23:1 on the screen ground,
+     under the 4.5:1 line — and it is the colour of every screen's eyebrow and
+     of the ten bold lead-ins in the handbook, which is the only place the
+     scoring rules are written down. It stays exactly as it is everywhere it
+     sits on a lighter panel or draws a border (all of those measure clean);
+     this is for the two places it is small text on the dark. */
+  --corp-lit:#4a9fdc;
   --pix:"Press Start 2P", ui-monospace, monospace;
   --body:"Chakra Petch", "Segoe UI", sans-serif;
 }
@@ -108,6 +115,19 @@ body.panelopen #obj, body.screenopen #obj{display:none !important}
 #hud .meter.warn i{background:var(--amber)} #hud .meter.bad i{background:var(--alert)}
 #hud .meter.burn i{background:#8a6bb5} #hud .meter.burn.warn i{background:var(--amber)}
 #hud .meter.burn.bad i{background:var(--alert)}
+/* WINDOWS HIGH CONTRAST PAINTED BOTH METERS WHITE ON WHITE. forced-colors
+   replaces every background with the system palette, so the stress and burnout
+   fills and the tracks behind them came out at 1.00:1 — the two readouts a
+   career is managed by, invisible, with the amber and red warning states
+   erased along with them. The system palette has semantic slots for exactly
+   this; borders keep the track visible and Highlight fills it. */
+@media (forced-colors: active){
+  #hud .meter{border:1px solid CanvasText; background:Canvas; forced-color-adjust:none}
+  #hud .meter i{background:Highlight; forced-color-adjust:none}
+  #hud .meter.warn i, #hud .meter.bad i,
+  #hud .meter.burn i, #hud .meter.burn.warn i, #hud .meter.burn.bad i{background:CanvasText}
+  #hud .meter.bad, #hud .meter.burn.bad{outline:2px solid CanvasText}
+}
 #hud #h-queue{color:var(--amber)} #hud #h-queue.breach{color:var(--alert)}
 
 /* The box is bottom-anchored and grows UPWARDS, and nothing stopped it at the
@@ -260,7 +280,7 @@ body.screenopen .toastwrap{display:none}
   height:clamp(16px,3.2vh,30px); pointer-events:none;
   background:linear-gradient(180deg, rgba(13,15,19,0), rgba(13,15,19,.99));}
 .screen[hidden]{display:none}
-.eyebrow{font-family:var(--pix); font-size:clamp(7px,1.15vh,10px); letter-spacing:.18em; color:var(--corp); text-transform:uppercase}
+.eyebrow{font-family:var(--pix); font-size:clamp(7px,1.15vh,10px); letter-spacing:.18em; color:var(--corp-lit); text-transform:uppercase}
 h1.logo{font-family:var(--pix); margin:0; line-height:1.3; font-size:clamp(22px,5vh,46px); color:var(--paper);
   text-shadow:0 3px 0 #10314e, 0 0 26px #2f7fbe44;}
 h1.logo small{display:block; font-size:.34em; color:var(--dim); text-shadow:none; margin-top:.8em; letter-spacing:.08em}
@@ -311,7 +331,7 @@ h2.ttl{font-family:var(--pix); font-size:clamp(11px,2.1vh,17px); margin:0; color
    the one screen a confused player opens on purpose. Ragged right, like a
    page. */
 .prose{text-align:left}
-.hint b{color:var(--corp)} kbd{font-family:var(--pix); font-size:.72em; background:#181d23; border:1px solid var(--line); padding:3px 5px; color:var(--paper)}
+.hint b{color:var(--corp-lit)} kbd{font-family:var(--pix); font-size:.72em; background:#181d23; border:1px solid var(--line); padding:3px 5px; color:var(--paper)}
 input[type=text]{font-family:var(--pix); font-size:12px; background:#10141a; color:var(--amber);
   border:1px solid var(--line); padding:9px 10px; letter-spacing:.08em; width:100%; text-transform:uppercase}
 input[type=range]{accent-color:var(--corp); width:150px}
@@ -334,6 +354,13 @@ body.touch #hud #h-pause, body.touch #hud #h-queue-btn{
   min-height:44px; min-width:44px; display:flex; align-items:center; justify-content:center;}
 body.touch #tix .row{display:grid}
 body.touch #d-opts .opt, body.touch .mi{justify-content:flex-start}
+/* THE INPUTS WERE THE ONLY CONTROLS THE 44px RULE NEVER NAMED — and because
+   tools/touch.js measures the same selector list, the two it missed were
+   exactly the two no guard could report: the volume sliders shipped 16px tall
+   (2.5mm on a phone) and the job-posting field 34px. A rule and its harness
+   reading one list is the point; the list has to hold every control. */
+body.touch input[type=range]{min-height:44px}
+body.touch input[type=text]{min-height:44px; box-sizing:border-box}
 /* The two controls leave the HUD on a touch device and become a fixed pair in
    the bottom corner, which is where a thumb already is in both orientations —
    in the HUD they were either overlaying a quarter of the world in landscape
@@ -415,7 +442,7 @@ body.touch #tix .row:active{filter:brightness(1.3)}
       <div id="tix-list"></div>
     </div>
 
-    <div class="toastwrap" id="toasts"></div>
+    <div class="toastwrap" id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
 
     <!-- BOOT -->
     <div class="screen" id="s-boot">
@@ -456,7 +483,7 @@ body.touch #tix .row:active{filter:brightness(1.3)}
              about the plan, and two players at the same rung on the same ID get
              the same arrivals, the same calendar and the same dialogue. -->
         <p class="hint" style="margin:12px 0 6px">Job posting ID — the same ID deals the same days to the same desk. Where you start depends on the careers behind you. Share it.</p>
-        <input type="text" id="seedbox" maxlength="18" spellcheck="false">
+        <input type="text" id="seedbox" maxlength="18" spellcheck="false" aria-label="Job posting ID">
         <p class="hint" id="abandon-warn" style="margin:10px 0 0;color:var(--alert);display:none">
           A career is already in progress. Accepting this offer abandons it — click ACCEPT OFFER again to confirm.</p>
       </div>
@@ -542,8 +569,8 @@ body.touch #tix .row:active{filter:brightness(1.3)}
       <div class="eyebrow">it configures the it simulator</div>
       <h2 class="ttl">OPTIONS</h2>
       <div class="grid2 panel">
-        <div class="ctl"><span>Sound effects</span><span><input type="range" id="o-sfx" min="0" max="100" value="70"></span></div>
-        <div class="ctl"><span>Music</span><span><input type="range" id="o-mus" min="0" max="100" value="35"></span></div>
+        <div class="ctl"><span>Sound effects</span><span><input type="range" id="o-sfx" min="0" max="100" value="70" aria-label="Sound effects volume"></span></div>
+        <div class="ctl"><span>Music</span><span><input type="range" id="o-mus" min="0" max="100" value="35" aria-label="Music volume"></span></div>
         <div class="ctl"><span>Text speed</span><span><button class="btn ghost" id="o-tspd" data-act="textspeed" style="padding:4px 9px;font-size:8px">NORMAL</button></span></div>
         <div class="ctl"><span>Shift pace</span><span><button class="btn ghost" id="o-pace" data-act="pace" style="padding:4px 9px;font-size:8px">RELAXED</button></span></div>
         <div class="ctl"><span>Music (M)</span><span><button class="btn ghost" id="o-mute" data-act="mute" style="padding:4px 9px;font-size:8px">ON</button></span></div>
@@ -8410,14 +8437,35 @@ function newRun(seed){
    own comment says "a day holds one of each, and the first in the day wins".
    Only a meeting that is actually KEPT claims anything now. Named, so the
    suite can seat a calendar directly. */
+/* AND THE GAP IS FROM WHEN THE LAST ONE ENDS. It was measured start to start,
+   while openEvent charges a meeting's whole length to the clock the instant it
+   opens — so a forty-minute board meeting at 9:12 put the clock at 9:52 in one
+   step, straight over the twelve-minute notice window of the 9:38 meeting
+   behind it. That meeting then opened on the very next tick, unannounced, on
+   top of the one just closed. Measured over 1,000 rolled days: 5.5% of all
+   meetings arrived with NO notice, rising with seniority to one day in two at
+   vCIO — at exactly the desks the calendar was written for, and against the
+   promise the calendar exists to make ("you get to finish what is in your
+   hands first"). The gap comment already said what it meant: you have to be
+   able to get out of one room and into the next.
+   A meeting too close is DELAYED, not dropped: the day slips it, the way a
+   real calendar does. Dropping cost 9-11 meeting minutes a day at the senior
+   rungs (a 14% lighter desk the ladder was never tuned for); slipping costs
+   +1.4 to +2.6, still inside every rung's budget, and loses no content. */
 function spaceEvents(events){
   const bySlot = new Set(), spaced = [];
-  for (const e of events){
+  let prevEnd = -1e9;
+  for (const e0 of events){
+    const e = { at:e0.at, id:e0.id };
     const slot = EVENTS[e.id].slot;
     if (slot && bySlot.has(slot)) continue;
-    if (spaced.length && e.at - spaced[spaced.length-1].at < MEETING_GAP) continue;
+    if (spaced.length && e.at - prevEnd < MEETING_GAP){
+      e.at = prevEnd + MEETING_GAP;
+      if (e.at >= DAY_MIN) continue;          // slipped past the end of the day
+    }
     if (slot) bySlot.add(slot);
     spaced.push(e);
+    prevEnd = e.at + ((EVENTS[e.id].fx && EVENTS[e.id].fx.time) || 0);
   }
   return spaced;
 }
@@ -11840,16 +11888,32 @@ function gameDiff(diff){
 }
 function openGame(id, diff, onDone){
   G.state = 'modal'; G.modal = { kind:'game' };
-  MG = GAMES[id].init(gameDiff(diff));
+  /* THE BOARD YOU WALKED OUT OF IS THE BOARD YOU COME BACK TO. Every entry
+     dealt a fresh one, and the step is already paid — so Escape and re-enter
+     was an unlimited, free re-roll on every hands-on ticket in the game.
+     Measured: five escapes on BLAST RADIUS drew boards of 14, 25, 20, 29 and
+     29 people for zero minutes and no cap, and best-of-ten averaged 11.7
+     people against a first-draw 18.2 — a 36% easier board for the price of
+     tapping Escape. The abandon cap was built to stop exactly this and could
+     not see it: an untouched board is honestly worth 1.0, so capping at what
+     you had earned costs nothing when you had earned everything.
+     Walking out still keeps what you earned, which is the promise; what it
+     no longer buys is a different rack. The stash is memory-only and dies
+     with the tab, which is the one door left and costs a page load per
+     attempt rather than a keypress. */
+  const held = run && run.active && run.active.board;
+  const same = held && held.gid === id && held.si === run.active.si;
+  MG = same ? held.mg : GAMES[id].init(gameDiff(diff));
   document.body.classList.add('panelopen');
   document.body.classList.add('gameopen');
   /* on the easiest games there is no difficulty left to remove, so the cert
      pays out as one forgiven slip instead of doing nothing at all */
-  MG.forgive = metaFx('gameDiff') < 0 ? 1 : 0;
+  if (!same) MG.forgive = metaFx('gameDiff') < 0 ? 1 : 0;
   MG.gid = id; MG.onDone = onDone;
   /* Held open on first sight, one keypress away forever after. The clock is
-     paused behind it either way: reading the rules is not the shift. */
-  MG.brief = GAME_BRIEF[id] ? { t:0, first: !meta.seenGames[id] } : null;
+     paused behind it either way: reading the rules is not the shift. A board
+     you are returning to has already had its card. */
+  if (!same) MG.brief = GAME_BRIEF[id] ? { t:0, first: !meta.seenGames[id] } : null;
   /* the board draws on the canvas; a leftover DOM prose box would sit on top */
   document.getElementById('dlg').style.display = 'none';
 }
@@ -14937,6 +15001,8 @@ function parkModal(forPause){
   if (run.active){
     if (G.modal.kind === 'game' && MG){
       run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
+      /* and the board itself is parked with it — see openGame */
+      run.active.board = { gid: MG.gid, si: run.active.si, mg: MG };
       /* Say so on the pause card. Escape from a board you cannot solve DOES
          let you walk away with what you had earned — but the only words on
          screen were BACK TO WORK and SAVE & QUIT, neither of which mentions
@@ -16598,6 +16664,100 @@ function selfTest(runSim){
          kA === 0, 'got ' + kA);
       run = null; G.state = 'title';
     }
+    /* WALKING OUT KEEPS WHAT YOU EARNED; IT DOES NOT BUY A DIFFERENT RACK.
+       Every entry used to deal a fresh board and the step is already paid, so
+       Escape-and-return was an unlimited free re-roll — best-of-ten on BLAST
+       RADIUS drew boards 36% easier than the first deal, for nothing. The
+       abandon cap could not see it: an untouched board is honestly worth 1.0. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const shape = g => [g.gid,
+        (g.all || g.rows || g.items || g.tasks || g.nodes || g.hand ||
+         g.qs || g.rounds || g.sites || g.lines || g.qa || []).length,
+        g.total, g.budget, g.goal, g.par, g.probes,
+        (g.spofs || []).join('.')].join('/');
+      const rerolled = [];
+      for (const gid of ['blast','cable','keep','weekend','diagram','subnet']){
+        const t = { uid:9950, id:'password-reset', title:'b', fills:{}, at:0, deadline:240,
+                    sla:120, stress:3, si:1, bonus:0, spent:0, gameScores:[], from:null };
+        run.queue = [t]; run.active = t; run.resumePending = false; G.leftBoard = null;
+        openGame(gid, 3, () => {});
+        const before = shape(MG);
+        parkModal(true); closeModalToWork();        // Escape out of it
+        openGame(gid, 3, () => {});                 // ...and walk back in
+        const after = shape(MG);
+        if (before !== after) rerolled.push(gid + ' ' + before + ' -> ' + after);
+        if (G.modal) closeModalToWork();
+      }
+      ok('a board you walked out of is the board you come back to',
+         !rerolled.length, rerolled.slice(0,2).join(' · '));
+      G.leftBoard = null; run = null; G.state = 'title';
+    }
+    /* A CONTROL A SCREEN READER CANNOT NAME IS A CONTROL IT CANNOT OFFER.
+       Every button in the game carries its own text; the three inputs carried
+       nothing at all and were announced as "edit, blank" and "slider" — the
+       job-posting field and both volume sliders. And the toast stack is the
+       game's whole notification channel with no live region on it, so a
+       breach, a promotion and a calendar warning were all silent. */
+    {
+      const unnamed = [];
+      for (const el of document.querySelectorAll('input, select, textarea')){
+        const name = el.getAttribute('aria-label') ||
+                     (el.labels && el.labels.length ? el.labels[0].textContent : '') ||
+                     el.getAttribute('title') || '';
+        if (!String(name).trim()) unnamed.push(el.id || el.type);
+      }
+      ok('every form control has a name something can read out', !unnamed.length,
+         unnamed.join(' '));
+      const tw = document.getElementById('toasts');
+      ok('the toast stack announces itself',
+         !!tw && (tw.getAttribute('aria-live') || tw.getAttribute('role')),
+         tw ? 'no live region' : 'no toast stack');
+      /* AND THE SMALL TEXT ON THE DARK HAS TO CLEAR 4.5:1. Measured from the
+         computed colours, not from the hex in the palette, so a retheme
+         cannot quietly drop it back under the line. */
+      const lum = c => {
+        const [r,g,b] = c.match(/\d+/g).slice(0,3).map(v => {
+          const s = v/255; return s <= .03928 ? s/12.92 : Math.pow((s+.055)/1.055, 2.4); });
+        return .2126*r + .7152*g + .0722*b;
+      };
+      const ratio = (a,b) => { const l1 = lum(a), l2 = lum(b);
+        return (Math.max(l1,l2) + .05) / (Math.min(l1,l2) + .05); };
+      const ground = getComputedStyle(document.body).backgroundColor;
+      const dim = [];
+      for (const sel of ['.eyebrow', '.hint b']){
+        const el = document.querySelector(sel); if (!el) continue;
+        const r = ratio(getComputedStyle(el).color, ground);
+        if (r < 4.5) dim.push(sel + ' ' + r.toFixed(2) + ':1');
+      }
+      ok('the small print on the screens is readable against the screens',
+         !dim.length, dim.join(' '));
+    }
+    /* A PINCH IS NOT A KEYBOARD. fit() clamps to the visual viewport so the
+       on-screen keyboard can shrink the frame — but the visual viewport also
+       shrinks on a pinch-zoom, and clamping there re-laid the frame out
+       smaller by exactly the factor the compositor was about to magnify it:
+       measured 390 -> 156 CSS px at 2.5x for no change in apparent size and a
+       quarter of the resolution. scale tells the two apart. */
+    {
+      const realVV = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+      const fake = (w, h, scale) => Object.defineProperty(window, 'visualViewport',
+        { value: { width:w, height:h, scale, addEventListener(){}, removeEventListener(){} },
+          configurable: true });
+      const wide = Math.max(innerWidth, 800), tall = Math.max(innerHeight, 600);
+      fake(wide, tall, 1);            fit(); const plain = view.style.width;
+      fake(wide/2.5, tall/2.5, 2.5);  fit(); const pinched = view.style.width;
+      fake(wide, tall/2, 1);          fit(); const keyboard = view.style.height;
+      if (realVV) Object.defineProperty(window, 'visualViewport', realVV);
+      else delete window.visualViewport;
+      fit();
+      ok('a pinch-zoom does not shrink the frame out from under it',
+         pinched === plain, 'plain ' + plain + ' pinched ' + pinched);
+      ok('...but the on-screen keyboard still does',
+         parseFloat(keyboard) < parseFloat(view.style.height) + 1e-6, 'kbd ' + keyboard);
+    }
     /* the quote's abandon rule arms on a CHANGE, from either hand: the mouse
        path never set `touched` (a clicked mess walked out uncapped) and the
        keyboard path set it on a keypress that changed nothing */
@@ -16786,21 +16946,38 @@ function selfTest(runSim){
       loadMap('office1'); spawnPeople();
       run = null; G.state = 'title';
     }
-    /* a meeting dropped for spacing does not keep its slot: the ghost seat
-       turned away the slot's clear candidate on 8% of T2 days */
+    /* THE CALENDAR SLIPS, IT DOES NOT SHRED. A meeting too close to the one
+       before it is moved to a clear gap AFTER that meeting ends — measured
+       from the end, because the clock is charged the whole length the instant
+       it opens. Only a meeting slipped past the end of the day is lost, and a
+       lost one never claims its slot (the ghost seat turned away the slot's
+       clear candidate on 8% of T2 days). */
     {
       const bySlots = {};
       for (const id in EVENTS){ const s = EVENTS[id].slot;
         if (s) (bySlots[s] = bySlots[s] || []).push(id); }
+      const dur = id => (EVENTS[id].fx && EVENTS[id].fx.time) || 0;
       const s2 = Object.keys(bySlots).find(s => bySlots[s].length >= 2);
       const opener = Object.keys(EVENTS).find(id => !EVENTS[id].slot);
       const [ea, eb] = bySlots[s2];
       const kept = spaceEvents([{ id:opener, at:10 },
                                 { id:ea, at:10 + MEETING_GAP - 2 },
                                 { id:eb, at:10 + MEETING_GAP + 40 }]);
-      ok('a meeting dropped for spacing does not keep its slot',
-         kept.some(e => e.id === eb) && !kept.some(e => e.id === ea),
-         kept.map(e => e.id).join(','));
+      const late = kept.find(e => e.id === ea);
+      ok('a meeting too close to the last one is slipped, not shredded',
+         !!late && late.at >= 10 + dur(opener) + MEETING_GAP,
+         kept.map(e => e.id + '@' + e.at).join(' '));
+      /* one of each slot still, and the slipped one is the one holding it */
+      ok('...and it is the one holding the slot',
+         !kept.some(e => e.id === eb), kept.map(e => e.id).join(' '));
+      /* slipped past five o'clock is the one case that still drops — and a
+         dropped meeting leaves nothing behind, not even its seat */
+      const off = spaceEvents([{ id:opener, at:DAY_MIN - dur(opener) - 1 },
+                               { id:ea, at:DAY_MIN - 1 }]);
+      ok('a meeting slipped past the end of the day is dropped',
+         off.length === 1 && off[0].id === opener &&
+         off.every(e => e.at < DAY_MIN),
+         off.map(e => e.id + '@' + e.at).join(' '));
     }
     /* leave on a Friday keeps its weekend: the deeper carry and the burnout
        relief live in endDay keyed on a PLAYED Friday, so skipping day 5
@@ -18613,6 +18790,28 @@ function selfTest(runSim){
       }
       ok('a meeting announces itself before it starts', !ev || warned,
          ev ? 'no calendar warning for ' + ev.id : 'no events today');
+      /* EVERY meeting, not just the day's first — which is the one that by
+         construction has nothing in front of it to eat its notice. A meeting
+         is charged to the clock atomically, so the day has to be replayed the
+         way the clock actually moves: the previous meeting's whole length,
+         then the gap. Any meeting already due when the one before it closes
+         opened with no warning at all, which was 5.5% of them and one vCIO
+         day in two. */
+      const mute = [];
+      for (let rung = 0; rung < ROLES.length; rung++){
+        for (let s = 0; s < 12; s++){
+          rngInit('CAL-' + s); runInit('CAL-' + s);
+          run.rung = rung; run.day = 3; rollDay();
+          let clock = 0;
+          for (const e of run.plan.events){
+            if (e.at - clock <= 0) mute.push(ROLES[rung].id + '/' + e.id);
+            clock = Math.max(clock, e.at) +
+                    ((EVENTS[e.id].fx && EVENTS[e.id].fx.time) || 0);
+          }
+        }
+      }
+      ok('...and so does every meeting behind it', !mute.length,
+         mute.length + ' unannounced, e.g. ' + mute.slice(0,3).join(' '));
       run = null;
     }
     /* Ducking the work must not be a way to outlive the people who do it. The
@@ -24755,9 +24954,18 @@ function autosaveTick(now){
   G.lastAuto = now; saveGame(); return true;
 }
 function fit(){
+  /* NOT WHILE THEY ARE PINCHING. The visual viewport shrinks for two very
+     different reasons: the on-screen keyboard (which this clamp exists for)
+     and a pinch-zoom (which it must ignore). Clamping on a pinch re-laid the
+     frame out smaller by exactly the factor the compositor was about to
+     magnify it — measured at 2.5x: the canvas went 390 -> 156 CSS px and the
+     apparent size did not change at all, so the only magnifier a low-vision
+     player has on a phone bought them nothing but a quarter of the render
+     resolution. scale tells the two apart: the keyboard leaves it at 1. */
   const vv = window.visualViewport;
-  const w = Math.min(innerWidth || 1e9, vv && vv.width || 1e9);
-  const h = Math.min(innerHeight || 1e9, vv && vv.height || 1e9);
+  const live = vv && !(vv.scale > 1.01);
+  const w = Math.min(innerWidth || 1e9, live ? vv.width : 1e9);
+  const h = Math.min(innerHeight || 1e9, live ? vv.height : 1e9);
   let s = Math.min(w/VW, h/VH);
   /* Quarter steps, not whole ones. Flooring to an integer threw away most of a
      scale step on any window that is not an exact multiple of 480x270 — a
