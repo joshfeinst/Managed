@@ -124,8 +124,11 @@ body.panelopen #obj, body.screenopen #obj{display:none !important}
 @media (forced-colors: active){
   #hud .meter{border:1px solid CanvasText; background:Canvas; forced-color-adjust:none}
   #hud .meter i{background:Highlight; forced-color-adjust:none}
-  #hud .meter.warn i, #hud .meter.bad i,
-  #hud .meter.burn i, #hud .meter.burn.warn i, #hud .meter.burn.bad i{background:CanvasText}
+  #hud .meter.warn i, #hud .meter.bad i, #hud .meter.burn.warn i{background:CanvasText}
+  /* the burnout meter has three states like the stress one, so it needs three
+     appearances: painting warn and normal alike erased one of the warnings */
+  #hud .meter.burn i{background:GrayText}
+  #hud .meter.burn.bad i{background:CanvasText}
   #hud .meter.bad, #hud .meter.burn.bad{outline:2px solid CanvasText}
 }
 #hud #h-queue{color:var(--amber)} #hud #h-queue.breach{color:var(--alert)}
@@ -729,7 +732,14 @@ const A = { ctx:null, master:null, sfx:null, mus:null, noise:null,
 function audioInit(){
   if (A.ctx){ if (A.ctx.state === 'suspended') A.ctx.resume(); return; }
   const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-  A.ctx = new AC();
+  /* IT CAN THROW, AND EVERY CLICK AND KEYPRESS IN THE GAME GOES THROUGH HERE
+     FIRST. Chrome throws NotSupportedError when there is no output device or
+     the per-page context limit is reached, and neither listener sits inside
+     the loop's try/catch — so the throw escaped into the event handler and
+     killed it. Measured: the title screen renders perfectly and then nothing,
+     every key and every click, forever, with no toast and no FAULT banner.
+     The game is silent without audio; it must not be dead without it. */
+  try { A.ctx = new AC(); } catch(_){ A.ctx = null; return; }
   A.lim = A.ctx.createDynamicsCompressor();
   A.lim.threshold.value = -8; A.lim.knee.value = 4; A.lim.ratio.value = 10;
   A.lim.attack.value = .003; A.lim.release.value = .2;
@@ -1806,7 +1816,12 @@ const NPCS = {
      that took you out there; see npcRole(). */
   bev:     { name:'BEV', role:'{client} · was not told you were coming',
     look:{skin:2,hair:4,shirt:'#6b4a72',hairLong:true},
-    sched:[[0,'SITEDESK'],[150,'SITEFLOOR'],[190,'SITEDESK'],[330,'SITESTORE'],[360,'SITEDESK']],
+    /* SITEFLOOR is one tile and Dennis stands on it from 170. Bev arriving at
+       150 held it until 190, so Dennis spent his leg waiting a tile off his
+       mark — 21 minutes late against a 6-minute median, every single day, on
+       the floor errands are sent to. She goes to the store instead; the desk
+       leg she used to walk back to is where she already is. */
+    sched:[[0,'SITEDESK'],[150,'SITESTORE'],[190,'SITEDESK'],[330,'SITESTORE'],[360,'SITEDESK']],
     talk:'sm.bev' },
   dennis:  { name:'DENNIS', role:'{client} · "we have a guy". He is the guy.',
     look:{skin:0,hair:5,shirt:'#4a5a3f',glasses:true},
@@ -7383,6 +7398,14 @@ function npcUpdate(e, dt, clockMin){
 /* Ten seconds of getting nowhere. If we are already next to where we were
    headed, the leg is close enough — park, and stop trying, or a player parked
    on a desk tile makes its owner hop back and forth across it forever. */
+/* Is this tile inside what the player can actually see? Used to keep the
+   stuck-NPC recovery honest: bookkeeping that would look like a body
+   teleporting through a wall is fine as long as nobody is watching it. A
+   two-tile margin keeps a body from blinking in at the very edge. */
+function onScreen(tx, ty){
+  const px = tx*TILE - cam.x, py = ty*TILE - cam.y, m = TILE*2;
+  return px > -m && px < VW + m && py > -m && py < VH + m;
+}
 function npcStuck(e, goal, dt){
   if (e.waitT <= 10) return;
   e.waitT = 0;
@@ -7397,9 +7420,19 @@ function npcStuck(e, goal, dt){
     const nx2 = goal[0]+dx, ny2 = goal[1]+dy;
     if (!solidAt(nx2,ny2) && !entAt(nx2,ny2)){ land = [nx2,ny2]; break; }
   }
-  if (land){
+  /* NOT WHILE THEY ARE BEING WATCHED. This relocation has no distance limit
+     and no walls test, and the thing that strands an NPC is almost always the
+     player standing in a doorway — so the player is by construction right
+     beside the body when it blinks. Measured with the player parked on each
+     articulation tile: 50 teleports a day on office1, 82 on the ground floor,
+     the worst a 38-tile jump straight through the row-13 wall, every one of
+     them on screen. Off screen it is invisible bookkeeping and stays; on
+     screen the NPC waits instead, which is what a person doing does when
+     someone is in the doorway. */
+  if (land && !onScreen(land[0], land[1]) && !onScreen(e.tx, e.ty)){
     occ.delete(okey(e.tx,e.ty));
     e.x = e.tx = land[0]; e.y = e.ty = land[1]; e.t = 1;
+    e.carry = 0;
     occ.add(okey(e.tx,e.ty));
     e.teleports++;
   }
@@ -9725,7 +9758,12 @@ function commuteLine(){
   if (hard) return hard.t;
   const pool = COMMUTE.when.filter(w => w.soft && test(w)).map(w => w.t)
                  .concat(COMMUTE.any);
-  return pool[(run.day * 7 + run.rung * 3) % pool.length];
+  /* COEFFICIENT ONE ON THE DAY, so the index walks every entry whatever the
+     pool happens to be. Stepping by 7 is only coprime with SOME lengths, and
+     this pool is the soft matches plus COMMUTE.any, which lands on 21 more
+     often than not: gcd(7,21) is 7, so the day term collapsed to three values
+     and a mid-ladder player still saw about half the pool. */
+  return pool[(run.day + run.rung * 3) % pool.length];
 }
 /* The salary, and what it is worth saying about it. An internship pays
    nothing and everyone involved knows it; a promotion is worth naming as a
@@ -9862,12 +9900,16 @@ function eventsTick(){
 }
 function openEvent(id){
   const E = EVENTS[id];
-  slog('event: ' + id + (E.fx.time ? ' (-' + E.fx.time + ' min)' : ''));
-  run.clock += E.fx.time || 0;                       // meetings eat the day, atomically
-  if (E.fx.stress) run.stress = clamp(run.stress + E.fx.stress, 0, 100);
+  /* every other reader in the file writes (X.fx && X.fx.time), including the
+     bot's copy of this same loop; these three assumed fx exists, and the
+     EVENTS lint only checks the scene */
+  const fx = E.fx || {};
+  slog('event: ' + id + (fx.time ? ' (-' + fx.time + ' min)' : ''));
+  run.clock += fx.time || 0;                         // meetings eat the day, atomically
+  if (fx.stress) run.stress = clamp(run.stress + fx.stress, 0, 100);
   /* the scene states the meeting's length with {cost}, filled from the number
      charged three lines above, so the prose cannot outlive the balance */
-  const f = sceneFills(E.scene); f.cost = minsText(E.fx.time || 0);
+  const f = sceneFills(E.scene); f.cost = minsText(fx.time || 0);
   openDlg(E.scene, f, null);
 }
 /* "BEGUN" IS PAID-FOR OR IN HAND, NOT "COMPLETED A STEP". si counts steps
@@ -10003,6 +10045,21 @@ function autoWalk(){
        Re-plan AROUND people; wait a beat if there is genuinely no way past
        (they are on a schedule and will move); only give up after that. */
     ap.blocked = (ap.blocked || 0) + 1;
+    /* PATIENCE FIRST, AND IT RUNS OUT WHATEVER THE RE-PLAN SAYS. This test
+       lived below the re-plan, and astar deliberately exempts the GOAL cell
+       from the occupancy check — so when the body is standing on the
+       destination itself, the re-plan succeeds every single time, returns
+       here, and the give-up below was unreachable. Measured: 3,408 blocked
+       frames, 113 shift-minutes stood on the spot with no toast and no sound,
+       ending only if the player touched a key. It is not a contrived case:
+       click a colleague's empty desk while they are away from it — which is
+       where the errand arrows point — and they win the race back to it. */
+    if (ap.blocked >= 120){                             // ~4s of patience
+      G.autoPath = null;
+      toast('SOMEBODY IS IN THE WAY. WALK IT YOURSELF.', 'corp', 2200);
+      sfx('err');
+      return;
+    }
     if (ap.blocked % 12 !== 1) return;                  // let them walk out of it
     const goal = ap.path[ap.path.length - 1];
     const around = astar(player.tx, player.ty, goal[0], goal[1], true);
@@ -10010,10 +10067,6 @@ function autoWalk(){
       G.autoPath = { path: around, use: ap.use, blocked: ap.blocked };
       return;
     }
-    if (ap.blocked < 120) return;                       // ~4s of patience
-    G.autoPath = null;
-    toast('SOMEBODY IS IN THE WAY. WALK IT YOURSELF.', 'corp', 2200);
-    sfx('err');
   } else {
     /* CONSUME THE NODE AS YOU STEP ONTO IT. It used to be shifted on the
        FOLLOWING frame, by the head-equals-position check above — a whole
@@ -10038,7 +10091,15 @@ function autoWalk(){
    and re-opened the queue you were trying to shut. The walk still finishes;
    only the press it was carrying is dropped, because the click that asked for
    it has already been answered. */
-function spendRoute(){ if (G.autoPath) G.autoPath.use = null; }
+function spendRoute(){
+  /* ...ONLY IF THE WALK IS OVER. Spending it unconditionally cancelled the
+     press for a route with twenty-four tiles still to go, so opening the
+     queue mid-errand — one of the most common things a player does, and what
+     the HUD button is for — walked them all the way to the thing they had
+     clicked and then just stood there. The press is stale only when it has
+     been sitting on an empty path waiting for the world to tick again. */
+  if (G.autoPath && !G.autoPath.path.length) G.autoPath.use = null;
+}
 function walkToClick(vx, vy){
   if (!W2.W || !player) return false;
   const cx2 = Math.round(cam.x), cy2 = Math.round(cam.y);
@@ -10072,7 +10133,12 @@ function walkToClick(vx, vy){
       const pth = astar(player.tx, player.ty, ax, ay, true) || astar(player.tx, player.ty, ax, ay);
       if (pth && (!best || pth.length < best.length)) best = pth;
     }
-    if (!best) return false;
+    if (!best){
+      /* every side of it is taken — say so rather than swallowing the click */
+      toast('SOMEBODY IS STANDING WHERE YOU WOULD HAVE TO STAND.', 'corp', 2200);
+      sfx('err');
+      return false;
+    }
     G.autoPath = { path: best, use: [tx, ty] };
     return true;
   }
@@ -10763,8 +10829,16 @@ function endDay(){
      explainer did the same, arriving next morning about a ticket from a day
      already scored. Cleared here rather than in startCommute because the
      promotion scene is queued further down this function and is the one
-     scene that is MEANT to cross the boundary. */
-  run.pendingScenes = [];
+     scene that is MEANT to cross the boundary.
+     ...AND ONLY THE ONES THIS DAY ALREADY PAID FOR. A scene parked mid-play
+     is an object ({id, li, fills}) whose minutes and stress were charged when
+     it opened — that is the double-billing this removes. A scene merely
+     QUEUED is a plain id: an explainer or the promotion, never opened and
+     never charged. Wiping those too destroyed once-per-career content for
+     good, because i.firstbreach and i.firstticket latch their seen-flags when
+     they are QUEUED rather than when they are read, so the flag claimed the
+     player had seen a scene that had just been thrown away. */
+  run.pendingScenes = (run.pendingScenes || []).filter(sc => typeof sc === 'string');
   /* crashes still pending at 17:00 come due tonight — a 4:45pm cup was free
      otherwise, since the day ends before its crash ever lands */
   if (run.crashes.length) run.stress = clamp(run.stress + run.crashes.length * BURN.crashStress, 0, 100);
@@ -11319,7 +11393,7 @@ function reviewLine(p){
      comment above records this being fixed for the four-line version; the
      lines were written and the picker still could not reach them. Step by a
      number coprime with both pool lengths (5 and 6). */
-  return pool[((run.day || 1) * 7 + run.rung * 3) % pool.length];
+  return pool[((run.day || 1) + run.rung * 3) % pool.length];   // see commuteLine
 }
 function careerOver(kind){
   /* ONCE. The first call banks rep, counts the career and nulls the run; a
@@ -11343,6 +11417,7 @@ function careerOver(kind){
      is belt and braces — but the exit interview is the wrong place to find a
      stress bar and a modal flag from a run that no longer exists. */
   G.modal = null; MG = null; dlg = null; hudShow(false);
+  for (const c of ['panelopen','gameopen','queueopen']) document.body.classList.remove(c);
   meta.runsPlayed++;
   meta.rep += Math.floor(run.rep / 2) + (kind === 'retired' ? 5 : kind === 'shortof' ? 2 : 0);
   meta.best.days = Math.max(meta.best.days, run.day);
@@ -11461,7 +11536,17 @@ function saveGame(wipeRun){
     if (!run && !wipeRun && s && s.run) carried = s.run;
     const data = { v:SAVE_V, meta, run: run ? serializeRun() : carried };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-  } catch(_){}
+    G.saveOk = true;
+  } catch(_){
+    /* SILENCE HERE COSTS THE PLAYER THE CAREER. Wrapping the write so a full
+       or blocked store cannot crash the game is right; never mentioning it is
+       not. SAVE & QUIT returned to the title exactly as a good save does, and
+       the run was simply gone. Say it once. */
+    if (!G.saveWarned){
+      G.saveWarned = true;
+      toast('THIS MACHINE WILL NOT LET THE GAME SAVE. NOTHING IS BEING KEPT.', 'red', 8000);
+    }
+  }
 }
 function serializeRun(){
   const { plan, queue } = run;
@@ -11566,7 +11651,16 @@ function resumeRun(s){
     coffee:r.coffee, crashes:r.crashes, burnout:r.burnout, rep:r.rep,
     siteClient:r.siteClient || null,
     queue:r.queue || [], plan:r.plan, uid:r.uid, active:null, marker:null,
-    pendingEvents:[], pendingScenes:r.pendingScenes || [], introDone:!!r.introDone,
+    pendingEvents:[],
+    /* A SAVE IS OUTSIDE INPUT, and this was the one field that came through
+       raw: a string here made eventsTick's .shift() throw on every frame for
+       the rest of the day — 166 faults and climbing, the clock still running,
+       and no scene, meeting or event ever opening again. The filter the day
+       rollover already uses, applied where the data actually arrives. */
+    pendingScenes: (Array.isArray(r.pendingScenes) ? r.pendingScenes : [])
+      .filter(sc => typeof sc === 'string' ||
+                    (sc && typeof sc === 'object' && typeof sc.id === 'string')),
+    introDone:!!r.introDone,
     warned: r.warned || {}, taughtQueue: !!r.taughtQueue, lastChat: r.lastChat || {},
     burnLog: r.burnLog || [],
     reviewCard: r.reviewCard || null,
@@ -12029,6 +12123,13 @@ function gameDiff(diff){
   return Math.max(1, d);
 }
 function openGame(id, diff, onDone){
+  /* BEFORE TAKING THE SCREEN. This set G.state='modal' and only then called
+     GAMES[id].init, so an id with no board behind it threw with the modal
+     already claimed and MG null: sim faulted every frame, the clock froze,
+     and pause/resume threw straight back into it — a dead run behind a
+     perfectly normal-looking office. The content lint covers the shipped
+     tables; this covers the day somebody adds a step without running them. */
+  if (!GAMES[id]){ fault('openGame', new Error('no board named ' + id)); return; }
   spendRoute();
   G.state = 'modal'; G.modal = { kind:'game' };
   /* THE BOARD YOU WALKED OUT OF IS THE BOARD YOU COME BACK TO. Every entry
@@ -15101,7 +15202,17 @@ function act(a){
     }
     case 'back': disarmAbandon(); toTitle(); break;
     case 'resume': resumeWork(); break;
-    case 'quitsave': saveGame(); toTitle(); break;
+    case 'quitsave':
+      G.saveOk = false; saveGame();
+      /* a quit that could not save is a quit that loses the career: hold the
+         player here rather than walking them out of it */
+      if (!G.saveOk){
+        toast('IT DID NOT SAVE. NOTHING WOULD BE HERE WHEN YOU CAME BACK.', 'red', 6000);
+        sfx('err');
+        break;
+      }
+      toTitle();
+      break;
     case 'textspeed': {
       G.textSpeed = meta.textSpeed = (G.textSpeed + 1) % 3;
       document.getElementById('o-tspd').textContent = ['SLOW','NORMAL','LUDICROUS'][G.textSpeed];
@@ -16942,6 +17053,101 @@ function selfTest(runSim){
          titleClean && overClean, 'title ' + titleClean + ' over ' + overClean);
       run = null; G.state = 'title';
     }
+    /* THINGS THAT GO WRONG MUST NOT TAKE THE RUN WITH THEM. Each of these
+       cost the player everything in a way that looked like nothing: a screen
+       that renders perfectly and answers no key, a quit that reports success
+       and keeps nothing, a save field that faults every frame for the rest of
+       the day, a board id that freezes the clock behind a normal-looking
+       office. */
+    {
+      QUIET = true;
+      /* an AudioContext that throws must not eat the input layer */
+      const realAC = window.AudioContext, realWK = window.webkitAudioContext;
+      const realCtx = A.ctx;
+      A.ctx = null;
+      const boom = function(){ throw new Error('no output device'); };
+      try {
+        Object.defineProperty(window, 'AudioContext', { value: boom, configurable: true });
+        Object.defineProperty(window, 'webkitAudioContext', { value: boom, configurable: true });
+        let threw = null;
+        try { audioInit(); } catch(e){ threw = e.message; }
+        ok('a broken sound card does not take the keyboard with it', !threw, threw);
+      } finally {
+        if (realAC) Object.defineProperty(window, 'AudioContext', { value: realAC, configurable: true });
+        if (realWK) Object.defineProperty(window, 'webkitAudioContext', { value: realWK, configurable: true });
+        A.ctx = realCtx;
+      }
+      /* a board id with nothing behind it must not claim the screen */
+      const st0 = G.state, md0 = G.modal;
+      G.state = 'work'; G.modal = null;
+      let gThrew = null;
+      /* the guard reports through fault(), which is the right channel for it
+         and the wrong thing to print during a test that asks for it */
+      const realFault = window.fault;
+      window.fault = function(){};
+      try { openGame('no-such-board', 1, function(){}); } catch(e){ gThrew = e.message; }
+      finally { window.fault = realFault; }
+      ok('a board that does not exist does not freeze the day behind a modal',
+         !gThrew && G.state !== 'modal' && !G.modal,
+         gThrew || ('state ' + G.state + ' modal ' + !!G.modal));
+      G.state = st0; G.modal = md0;
+      /* a meeting with no fx is a meeting, not a fault */
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      const evId = Object.keys(EVENTS)[0], realFx = EVENTS[evId].fx;
+      let eThrew = null;
+      try { delete EVENTS[evId].fx; openEvent(evId); } catch(e){ eThrew = e.message; }
+      finally { EVENTS[evId].fx = realFx; }
+      if (G.modal) closeModalToWork();
+      ok('an event with no cost written on it still opens', !eThrew, eThrew);
+      /* and a save cannot smuggle a scene list the day will trip over */
+      const wire = serializeRun();
+      wire.pendingScenes = 'x';
+      resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(wire)) });
+      let tThrew = null;
+      try { eventsTick(); } catch(e){ tThrew = e.message; }
+      if (G.modal) closeModalToWork();
+      ok('a mangled scene list in a save does not fault the day',
+         Array.isArray(run.pendingScenes) && !tThrew, tThrew || typeof run.pendingScenes);
+      run = null; G.state = 'title';
+    }
+    /* A ROUTE THAT CANNOT FINISH HAS TO SAY SO. astar exempts the goal cell
+       from the occupancy check, so when the body is standing on the
+       destination the re-plan succeeds forever and the give-up was
+       unreachable: 113 shift-minutes stood still, silently. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople(0);
+      G.state = 'work';
+      const me = [player.tx, player.ty];
+      const goal = [me[0], me[1] + 1];
+      occ.add(okey(goal[0], goal[1]));            // a body sitting on the target
+      G.autoPath = { path: [goal.slice()], use: null };
+      let frames = 0;
+      while (G.autoPath && frames < 600){ autoWalk(); frames++; }
+      ok('a route blocked on its own destination gives up and says so',
+         !G.autoPath && frames < 400, 'still walking after ' + frames + ' frames');
+      occ.delete(okey(goal[0], goal[1]));
+      G.autoPath = null; run = null; G.state = 'title';
+    }
+    /* and a body is never seen to teleport: the recovery exists, but not in
+       front of the player, who is by construction standing right next to it */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      loadMap('office1'); spawnPeople(0);
+      const who = Object.keys(npcs)[0], e = npcs[who];
+      cam.x = e.tx * TILE - VW / 2; cam.y = e.ty * TILE - VH / 2;
+      const from = [e.tx, e.ty];
+      const far = ['SERVERS','CONF','PRINTER','KITCHEN'].map(anchorPos).find(a =>
+        a && Math.abs(a[0] - from[0]) + Math.abs(a[1] - from[1]) > 8);
+      e.waitT = 999; e.anchor = far ? far.join(',') : null;
+      if (far) npcStuck(e, far);
+      const moved = e.tx !== from[0] || e.ty !== from[1];
+      ok('a body in shot is never teleported out of it', !moved,
+         moved ? who + ' jumped ' + from + ' -> ' + [e.tx, e.ty] : 'stayed put');
+      run = null; G.state = 'title';
+    }
     /* THE DAY'S LEFTOVERS DO NOT FOLLOW YOU INTO TOMORROW. A scene queued and
        not played was charged against the day that queued it and then charged
        AGAIN against the next morning; the client site kept yesterday's company
@@ -16950,15 +17156,22 @@ function selfTest(runSim){
     {
       QUIET = true;
       rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
-      run.pendingScenes = [{ id:'i.firstbreach', li:0, fills:null }];
+      run.pendingScenes = [{ id:'e.standup', li:2, fills:null }, 'i.firstbreach'];
       run.siteClient = 'Meridian Freight';
       run.queue = []; run.crashes = []; run.clock = DAY_MIN + 1;
       const promoted = run.promoted;
       endDay();
-      const sceneGone = !run.pendingScenes.some(x => (x && x.id || x) === 'i.firstbreach');
+      const sceneGone = !run.pendingScenes.some(x => x && x.id === 'e.standup');
+      const keptId = run.pendingScenes.indexOf('i.firstbreach') >= 0;
       if (run) run.pendingEnd = null;
       startCommute();
       ok('a scene left over at five o clock does not open tomorrow', sceneGone,
+         JSON.stringify(run && run.pendingScenes));
+      /* ...but a QUEUED explainer is not a leftover. It has never been opened
+         and cost nothing, and its seen-flag latches when it is queued, so
+         wiping it destroyed once-per-career content while claiming the player
+         had read it. Parked objects go; plain ids stay. */
+      ok('...and a queued explainer survives to be read', keptId,
          JSON.stringify(run && run.pendingScenes));
       ok('and the client site is not still yesterdays client',
          !run || run.siteClient === null, run && run.siteClient);
@@ -17176,14 +17389,28 @@ function selfTest(runSim){
          the terminal you had walked to and re-opening the queue you had just
          closed */
       for (const k in press) press[k] = false;
-      G.autoPath = { path: [[player.tx, player.ty]], use: [player.tx, player.ty + 1] };
+      /* the STALE case is an empty path whose press has been sitting frozen
+         behind a panel — that is the one that fired into a world that had
+         moved on. A route still walking is not stale, and spending its press
+         stranded the player at the thing they had clicked. */
+      G.autoPath = { path: [], use: [player.tx, player.ty + 1] };
       openQueue();
       const spent = !G.autoPath.use;
       closeModalToWork();
       for (let f = 0; f < 4 && G.autoPath; f++) autoWalk();
+      const quiet = !press.use;
+      for (const k in press) press[k] = false;
+      /* ...and a route with walking left to do keeps its press */
+      const far = [player.tx, player.ty + 1];
+      G.autoPath = { path: [[player.tx, player.ty + 1], [player.tx, player.ty + 2]],
+                     use: far };
+      openQueue();
+      const kept = !!G.autoPath.use;
+      closeModalToWork();
       ok('a click-route does not press E again on the way out of a panel',
-         spent && !press.use, 'use ' + (spent ? 'dropped' : 'kept') +
-         ' press ' + !!press.use);
+         spent && quiet && kept,
+         'stale ' + (spent ? 'dropped' : 'kept') + ' press ' + !quiet +
+         ' · mid-walk ' + (kept ? 'kept' : 'lost'));
       for (const k in press) press[k] = false;
       G.autoPath = null;
       run = null; G.state = 'title';
