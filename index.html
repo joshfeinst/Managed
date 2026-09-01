@@ -2252,7 +2252,7 @@ const DIALOGUE = {
            {t:'Write "All the best" and pass it on', fx:{time:2, bonus:1, stress:1}},
            {t:'Pass it on unsigned', fx:{time:1, rep:-1, stress:2}} ] },
   'x.own.a':   { who:'sys', t:['Your laptop is four years old and due a refresh.',
-    'The request needs sign-off from the Head of IT. You are the Head of IT. The system will not let you approve your own request, and the only person who can override that is the Head of IT.'] },
+    'The request needs sign-off from the Director of IT. You are the Director of IT. The system will not let you approve your own request, and the only person who can override that is the Director of IT.'] },
   'x.own.b':   { who:'sys', t:['Somebody built this rule to prevent exactly one kind of fraud, years ago.'],
     opts:[ {t:'Route it through Finance and document the gap', fx:{time:10, rep:2, bonus:1, stress:3}},
            {t:'Keep the four-year-old laptop', fx:{time:1, bonus:1, stress:2}},
@@ -4261,7 +4261,7 @@ const DIALOGUE = {
     'There is a line in it you are required to say that is not true on Tuesdays. Everyone has spotted this. It goes live Monday.'] },
   'e.h.oncall':{ who:'derek', t:['On-call handover. Two people were on call last night and both thought it was the other one.',
     'Nothing happened, which is being treated as evidence that the arrangement works.'] },
-  'e.h.cab':   { who:'sys', t:['Change advisory board. Your first one. You are here to observe.',
+  'e.h.cab':   { who:'sys', t:['Change advisory board. You are here to observe, which is not the same as being here to agree.',
     'A change is approved that nobody in the room understands, on the grounds that the person who wrote it is very confident. A change is rejected because its form had the wrong date format.'] },
   'e.h.escal': { who:'linda', t:['Escalation review. Six tickets that went past T2, and why.',
     'Four of them went past T2 because T2 was in this meeting.'] },
@@ -5145,8 +5145,13 @@ const TICKETS = {
   'birthday-card-going-round': { tiers:[5,9], weight:3, slaMult:2.5, pri:1, stress:2,
     title:'The card is going round. You do not know whose it is.',
     steps:[{say:'x.card.a'},{goto:'COOLER'},{choice:'x.card.b'}] },
-  'approve-your-own-laptop': { tiers:[6,9], weight:3, slaMult:2.6, pri:1, stress:3,
-    title:'Your laptop refresh needs sign-off from the Head of IT',
+  'approve-your-own-laptop': { tiers:[9,9], weight:3, slaMult:2.6, pri:1, stress:3,
+    /* [9,9]: the joke is that the only person who can override you is you,
+       which is true at one desk. At Relationship Manager, Solutions Architect
+       and vCIO it asserted a job the player does not hold, on a rung the HUD
+       names. "Head of IT" was also the only place in the file with that name
+       for it; ROLES, the promotion scene and the endings all say Director. */
+    title:'Your laptop refresh needs sign-off from the Director of IT',
     steps:[{say:'x.own.a'},{choice:'x.own.b'}] },
   'bake-off-judge': { tiers:[5,9], weight:3, slaMult:2.7, pri:1, stress:2,
     title:'You have been volunteered as a judge for the charity bake-off',
@@ -5327,7 +5332,7 @@ const TICKETS = {
      work outlives the day, the dates were promised by somebody who has never
      done the work, and the queue you came from is still running underneath
      you eating the hours you costed. Priorities here are dates, not fires.
-     pri is INVERTED in this table: pri:4 renders P1 and is worth 7. */
+     pri is INVERTED in this table: pri:4 renders P1 and is worth STAKES[4]. */
   /* The opener for a career that did NOT start at the bottom. Restricting the
      tutorial ticket to rung 0 left everybody else with no first day at all,
      and a returning senior hire has a better joke available anyway. */
@@ -5373,7 +5378,12 @@ const TICKETS = {
     title:'Nineteen switches are in customs and go-live is a week Monday',
     steps:[{say:'p.customs.a'},{choice:'p.customs.b'}] },
 
-  'first-day-back': { tiers:[1,9], weight:1, slaMult:2.0, pri:2, stress:5,
+  /* opener ONLY. Its scene opens "First day. Not your first day in this
+     industry..." and tells you your group is called Temp — true on the first
+     morning of a carried career, and nonsense on day four, which is where the
+     normal eligibility filter kept dealing it (11 arrivals on days 2-8 across
+     25 careers). rollDay force-feeds it by id; nothing else may. */
+  'first-day-back': { tiers:[1,9], opener:1, weight:1, slaMult:2.0, pri:2, stress:5,
     title:'Your accounts were set up by somebody who has never met you',
     steps:[{say:'t.back.a'},{goto:'TERMINAL'},{choice:'t.back.b'}] },
   /* ---------------- MORE OF THE THREE RUNGS PEOPLE ACTUALLY LIVE ON --------
@@ -5393,7 +5403,11 @@ const TICKETS = {
     title:'The clock in the meeting room is eleven minutes fast',
     steps:[{say:'j.clock.a'},{choice:'j.clock.b'}] },
   'name-in-the-address-book': { tiers:[1,6], weight:4, slaMult:2.4, pri:1, stress:3,
-    title:'{User} got married and is still in the address book as {user}',
+    /* {User} and {user} are the SAME token — fillKey only lowercases the
+       first character to look it up — so the joke rendered as "Janet got
+       married and is still in the address book as Janet". Its own scene says
+       what it meant: "still in the address book under their old name". */
+    title:'{User} got married and is still in the address book under their old name',
     steps:[{say:'j.name.a'},{choice:'j.name.b'}] },
   'make-the-font-bigger': { tiers:[1,5], weight:4, slaMult:2.3, pri:1, stress:2,
     title:'"Can you make it bigger?" — no further detail',
@@ -5998,7 +6012,17 @@ const TICKETS = {
   /* Its own meeting pool. Drawing from the shared one, the first ticket of a
      brand-new intern's first day read "Coffee for DEREK before the QBR" — a
      meeting nobody at rung zero has ever been near. */
-  'coffee-derek': { tiers:[0,0], weight:3, slaMult:1.4, pri:4, stress:4, from:'derek',
+  /* P3, LIKE EVERY OTHER FETCH-AN-ITEM ERRAND. pri is inverted here, so this
+     read pri:4 = P1 = 14 stakes — the joint-highest in the game, level with
+     the Big Migration — for walking to the coffee machine. It is also the one
+     P1 in the table with no board and no choice, so there is nothing to grade
+     it on: resolveTicket scores it out of promptness alone and hands a flat
+     1.00 to any pickup with half its slack left. It is force-dealt on the
+     first morning, so a fifth to a third of a new player's first day score
+     was a free 14 out of 14 — on the day the review screen teaches them that
+     "closing one P1 beats closing thirteen P4s. That is the whole job."
+     donut-run, the identical errand, is pri:2. */
+  'coffee-derek': { tiers:[0,0], weight:3, slaMult:1.4, pri:2, stress:4, from:'derek',
     fills:{ mtg:['the standup','the client call','a "quick sync"'] },
     title:'Coffee for DEREK before {mtg}',
     steps:[{say:'t.cof.a'},{goto:'COFFEE'},{say:'t.cof.b'},{goto:'n1'},{say:'t.cof.c'}] },
@@ -6278,7 +6302,7 @@ const TICKETS = {
      out of six a vCIO was working somebody else's queue in a better chair.
      Nothing here is broken. Everything here is a decision with a number on it
      and a three-year consequence, taken by someone who will not be in the room
-     when it arrives. pri is INVERTED: pri:4 renders P1 and is worth 7. */
+     when it arrives. pri is INVERTED: pri:4 renders P1 and is worth STAKES[4]. */
   'vcio-insurance-question-14': { tiers:[8,8], weight:4, slaMult:1.9, pri:3, stress:9,
     title:'Cyber insurance renewal: question 14 has two boxes',
     steps:[{say:'vx.insur.a'},{choice:'vx.insur.b'}] },
@@ -7150,7 +7174,7 @@ const okey = (x,y) => x + y*1000;
 function entAt(x,y){ return occ.has(okey(x,y)); }
 
 function makeEnt(x, y, look){
-  return { x, y, tx:x, ty:y, t:1, dir:'down', walkT:0, look,
+  return { x, y, tx:x, ty:y, t:1, carry:0, dir:'down', walkT:0, look,
            frames:bakePerson(look), path:null, pi:0, anchor:null, waitT:0, teleports:0 };
 }
 function entPix(e){
@@ -7163,15 +7187,31 @@ function tryStep(e, dx, dy){
   if (solidAt(nx,ny) || entAt(nx,ny)) return false;
   occ.delete(okey(e.tx,e.ty));
   e.x = e.tx; e.y = e.ty;
-  e.tx = nx; e.ty = ny; e.t = 0;
+  e.tx = nx; e.ty = ny; e.t = e.carry || 0; e.carry = 0;   // see entUpdate
   occ.add(okey(nx,ny));
   return true;
 }
+/* CARRY THE OVERSHOOT, OR THE PACE DIAL IS A DIFFICULTY DIAL. A tile used to
+   cost a whole number of frames: the tween clamped at 1 and threw the excess
+   away, so the real price was ceil(1/(speed*STEP*paceRate)) frames — and
+   because sim() is stepped at a fixed REAL 1/30s while the walk is scaled by
+   paceRate, the size of that rounding quantum depends on the pace. Measured on
+   one 26-tile route: sprinting cost 0.187 shift-minutes a tile at RELAXED and
+   0.252 at CRUNCH, 35% more for the same walk, and about nine minutes of a
+   day's errands. The options screen sells that dial as "the same tickets, the
+   same deadlines, the same score. Only how fast those hours pass in the real
+   world changes" — so this was the one screen in the game whose promise the
+   engine contradicted. Keeping the remainder makes a tile cost the same
+   fraction of a minute at any pace and any frame rate. t itself stays clamped
+   because entPix lerps on it, and a sprite must not overshoot its own tile. */
 function entUpdate(e, dt, speed){
   if (e.t < 1){
-    e.t = Math.min(1, e.t + dt*speed);
+    e.t += dt*speed;
     e.walkT += dt*speed;
-    if (e.t >= 1){ e.x = e.tx; e.y = e.ty; }
+    if (e.t >= 1){
+      e.carry = Math.min(e.t - 1, .999);
+      e.t = 1; e.x = e.tx; e.y = e.ty;
+    }
   }
 }
 
@@ -8531,6 +8571,7 @@ function rollDay(){
   if (!W2.W || W2.id !== 'office1') loadMap('office1');
   const role = ROLES[run.rung];
   let elig = Object.keys(TICKETS).filter(id =>
+    !TICKETS[id].opener &&
     TICKETS[id].tiers[0] <= run.rung && run.rung <= TICKETS[id].tiers[1]);
   /* Beyond the authored frontier (v0.1 writes intern-T2 deeply) the queue
      starts repeating itself. Career-accurate, honestly. */
@@ -9493,6 +9534,10 @@ function startCommute(){
   run.clock = 0; run.queue = []; run.active = null; run.marker = null;
   run.scores = []; run.breaches = 0; run.resolved = 0; run.aces = 0;
   run.burned = []; run.earned = 0; run.stakesDone = 0; run.warned = {};
+  /* which client the site belongs to is decided by the onsite ticket you are
+     dealt, so it cannot outlive the day that dealt it — both site NPCs kept
+     yesterday's company on their nameplates forever otherwise */
+  run.siteClient = null;
   /* The ledger is about TODAY. Every other counter on this line was reset and
      this one was not, so it accumulated for the whole career and the review's
      "What it cost you" block printed day one's three worst tickets every
@@ -9595,7 +9640,7 @@ const COMMUTE = {
       t:'First day at a new place, which at this point you have done enough times to have a routine for.' },
     { if:r => r.burnout > 75,
       t:'You sat in the car for eleven minutes after the engine stopped. You are not sure what happened in them.' },
-    { if:r => r.burnout > 50,
+    { soft:1, if:r => r.burnout > 50,
       t:'You have started taking the long way in. You have told yourself it is about the traffic.' },
     /* THE MORNING AFTER, NOT EVERY MORNING AFTER. run.promoted is set at the
        gate and nothing ever set it back, so from a player's first promotion
@@ -9608,9 +9653,9 @@ const COMMUTE = {
        that follows a promotion. */
     { if:r => r.promoted && r.perfHist.length === r.rungSince,
       t:'Same drive, same exit, same barrier that only reads your badge on the second try. Different job.' },
-    { if:r => r.stress > 70,
+    { soft:1, if:r => r.stress > 70,
       t:'You have been composing an email in your head since the roundabout. You will not send it.' },
-    { if:r => r.rep >= 8,
+    { soft:1, if:r => r.rep >= 8,
       t:'Somebody from another team held a door for you and said your name. You have no idea who they are.' },
     /* WRITTEN, REFERENCED, UNREACHABLE: every write to run.rep floors it at
        zero, so `<= -3` could never fire and the stairs line was lost content.
@@ -9620,22 +9665,22 @@ const COMMUTE = {
        weekday only, or it eats the whole card for that player: rep 0 is also
        just an ordinary early-career state, and the breadth check below sweeps
        it. */
-    { if:r => r.rep <= 0 && r.day > 5 && (r.day % 5) === 3,
+    { soft:1, if:r => r.rep <= 0 && r.day > 5 && (r.day % 5) === 3,
       t:'You take the stairs today. The lift is a small room with people who have opinions about last week.' },
     /* fmtDate reads days[(d-1) % 5], so day 1 is Monday and day 5 is Friday —
        Monday is d % 5 === 1, not 0. Written as `5 % 5` first time out, which
        is zero, which is Friday, which then shadowed the Friday line below it. */
-    { if:r => (r.day % 5) === 1 && r.day > 1,
+    { soft:1, if:r => (r.day % 5) === 1 && r.day > 1,
       t:'Monday. The queue has been quietly filling itself since Friday afternoon like a bath nobody turned off.' },
-    { if:r => (r.day % 5) === 0,
+    { soft:1, if:r => (r.day % 5) === 0,
       t:'Friday. Nothing bad has ever happened on a Friday afternoon, and everyone here has learned to say that quietly.' },
-    { if:r => r.rung >= 8,
+    { soft:1, if:r => r.rung >= 8,
       t:'There is a space with your name on it now. Somebody parks in it once a week and you have decided to be fine about that.' },
-    { if:r => r.rung >= 6,
+    { soft:1, if:r => r.rung >= 6,
       t:'You are on a call before you have parked. You will be on it while you walk in. It is about a thing that was decided last month.' },
-    { if:r => r.rung >= 4,
+    { soft:1, if:r => r.rung >= 4,
       t:'Your calendar loaded before your email did, which tells you what sort of day is waiting.' },
-    { if:r => r.rung <= 1,
+    { soft:1, if:r => r.rung <= 1,
       t:'The car park is full of cars nicer than yours. They belong to sales.' }
   ],
   any: [
@@ -9659,10 +9704,27 @@ const COMMUTE = {
     'The whiteboard by the door still has last quarter\'s numbers on it and a drawing of a cat.'
   ]
 };
+/* A STATE THAT IS TRUE EVERY MORNING MUST NOT OWN EVERY MORNING. The list is
+   scanned in order and the first match won outright, so the moment goodwill
+   passed eight — which it does on day two of every career, because rep only
+   ever accumulates — that one line became the card for the rest of the run
+   and everything under it was unreachable: the weekday lines, all four rung
+   lines, and the whole eighteen-line general pool. Measured over six careers:
+   five distinct mornings in forty-eight, and `any` fired zero times, so a
+   rung-8 player never once read "There is a space with your name on it now",
+   the line written to pay off the entire climb.
+   This is the same shape as the run.promoted bug fixed one entry above it, so
+   it is fixed as a class rather than a case. A HARD condition is a morning
+   that is genuinely different — your first day, a burnout you cannot walk off,
+   the morning after a promotion — and it still wins outright. Everything else
+   is flavour: true for weeks at a time, worth saying sometimes, and marked
+   `soft`, which puts its line INTO the rotation instead of in front of it. */
 function commuteLine(){
-  const hit = COMMUTE.when.find(w => { try { return w.if(run); } catch(_){ return false; } });
-  if (hit) return hit.t;
-  const pool = COMMUTE.any;
+  const test = w => { try { return w.if(run); } catch(_){ return false; } };
+  const hard = COMMUTE.when.find(w => !w.soft && test(w));
+  if (hard) return hard.t;
+  const pool = COMMUTE.when.filter(w => w.soft && test(w)).map(w => w.t)
+                 .concat(COMMUTE.any);
   return pool[(run.day * 7 + run.rung * 3) % pool.length];
 }
 /* The salary, and what it is worth saying about it. An internship pays
@@ -9924,6 +9986,11 @@ function autoWalk(){
     G.autoPath = null;
     return;
   }
+  /* A NODE YOU ARE ALREADY STANDING ON IS NOT A STEP. Shifting it and
+     returning spent a whole frame going nowhere, once per tile — the other
+     half of the pace-dependent walk price, and it fell on exactly the players
+     who never touch the arrow keys: every pointer and touch route, and every
+     errand the game walks for you. */
   const [nx,ny] = ap.path[0];
   if (nx === player.tx && ny === player.ty){ ap.path.shift(); return; }
   const dx = Math.sign(nx - player.tx), dy = Math.sign(ny - player.ty);
@@ -9947,8 +10014,31 @@ function autoWalk(){
     G.autoPath = null;
     toast('SOMEBODY IS IN THE WAY. WALK IT YOURSELF.', 'corp', 2200);
     sfx('err');
-  } else ap.blocked = 0;
+  } else {
+    /* CONSUME THE NODE AS YOU STEP ONTO IT. It used to be shifted on the
+       FOLLOWING frame, by the head-equals-position check above — a whole
+       frame per tile spent standing still. Because sim() is stepped at a
+       fixed REAL 1/30s while the walk is scaled by paceRate, that idle frame
+       is a pace-sized lump of shift-minutes, so the same route cost 0.187
+       minutes a tile at RELAXED and 0.252 at CRUNCH: a pace dial the options
+       screen sells as comfort-only, quietly charging CRUNCH players 35% more
+       for every walk. Shifting it here removes the idle frame without moving
+       WHEN the route finishes — the arrival, and the deferred E-press that
+       goes with it, still land on their own frame, which is what the rest of
+       the input layer expects. */
+    ap.path.shift();
+    ap.blocked = 0;
+  }
 }
+/* A CLICK-ROUTE'S DEFERRED PRESS IS SPENT THE MOMENT A PANEL OPENS. The route
+   remembers "walk here, then press E", and it fires that press on the frame
+   its path empties — but if a panel opens first, the world stops ticking and
+   the press waits there. Close the panel and it fires into a world that has
+   moved on: closing the service queue re-used the terminal you had walked to
+   and re-opened the queue you were trying to shut. The walk still finishes;
+   only the press it was carrying is dropped, because the click that asked for
+   it has already been answered. */
+function spendRoute(){ if (G.autoPath) G.autoPath.use = null; }
 function walkToClick(vx, vy){
   if (!W2.W || !player) return false;
   const cx2 = Math.round(cam.x), cy2 = Math.round(cam.y);
@@ -10350,6 +10440,7 @@ function gotoCheck(){
 
 /* -------------------------------- tickets --------------------------------- */
 function openQueue(){
+  spendRoute();
   G.state = 'modal';
   G.modal = { kind:'tix', sel:0 };
   document.body.classList.add('panelopen');
@@ -10663,6 +10754,17 @@ function resolveTicket(t){
 function endDay(){
   if (G.modal) closeModalToWork();
   hudShow(false);
+  /* A SCENE BELONGS TO THE DAY THAT QUEUED IT. pendingScenes was the one
+     per-day list nothing reset, so a meeting you escaped out of at 16:40 —
+     already charged its sixteen minutes and its stress against today — opened
+     again at 9:00 tomorrow and charged its option's twelve minutes and its
+     goodwill against TOMORROW: one meeting billed to two days, with the
+     reputation landing in the wrong evening's gate window. The first-breach
+     explainer did the same, arriving next morning about a ticket from a day
+     already scored. Cleared here rather than in startCommute because the
+     promotion scene is queued further down this function and is the one
+     scene that is MEANT to cross the boundary. */
+  run.pendingScenes = [];
   /* crashes still pending at 17:00 come due tonight — a 4:45pm cup was free
      otherwise, since the day ends before its crash ever lands */
   if (run.crashes.length) run.stress = clamp(run.stress + run.crashes.length * BURN.crashStress, 0, 100);
@@ -11211,7 +11313,13 @@ function reviewLine(p){
   if (band === 'great' && run.rung >= 7)
     return 'A day where the only difficult things were the ones only you could do. There are not many of those.';
   const pool = REVIEW_LINES[band];
-  return pool[((run.day || 1) * 5 + run.rung) % pool.length];
+  /* NOT day*5 AGAINST A POOL OF FIVE. Three of the four bands hold exactly
+     five lines, so the day term cancelled to zero and the index was rung%5 —
+     one fixed sentence per rung, every evening, for the whole rung. The
+     comment above records this being fixed for the four-line version; the
+     lines were written and the picker still could not reach them. Step by a
+     number coprime with both pool lengths (5 and 6). */
+  return pool[((run.day || 1) * 7 + run.rung * 3) % pool.length];
 }
 function careerOver(kind){
   /* ONCE. The first call banks rep, counts the career and nulls the run; a
@@ -11921,6 +12029,7 @@ function gameDiff(diff){
   return Math.max(1, d);
 }
 function openGame(id, diff, onDone){
+  spendRoute();
   G.state = 'modal'; G.modal = { kind:'game' };
   /* THE BOARD YOU WALKED OUT OF IS THE BOARD YOU COME BACK TO. Every entry
      dealt a fresh one, and the step is already paid — so Escape and re-enter
@@ -15037,8 +15146,13 @@ function parkModal(forPause){
      the one place the game explains what a meeting just took off your
      day. */
   if (dlg && dlg.scene && !dlg.onDone)
+    /* UNSHIFT, matching serializeRun: the scene you were standing in when you
+       were interrupted is the one to finish first. Appending here meant
+       Escape-then-resume replayed a queued explainer before the meeting you
+       were halfway through, while save-then-continue replayed the meeting
+       first — the same interruption, two different orders. */
     (run.pendingScenes = run.pendingScenes || [])
-      .push({ id: dlg.scene, li: dlg.li, fills: dlg.fills || null });
+      .unshift({ id: dlg.scene, li: dlg.li, fills: dlg.fills || null });
   if (run.active){
     if (G.modal.kind === 'game' && MG){
       run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
@@ -15572,8 +15686,12 @@ function selfTest(runSim){
       /* Every key any of the 361 rows actually carries, and nothing else. A
          new field belongs here only once the engine reads it — adding the
          name to this list is the moment somebody has to check that it does. */
+      /* `opener` is read by rollDay's eligibility filter: a ticket carrying it
+         is force-fed by id on the first morning and dealt no other way, because
+         its scene says "First day" and the normal filter was serving that on
+         day four. */
       const KNOWN = new Set(['tiers','weight','slaMult','pri','stress',
-                             'title','steps','from','fills']);
+                             'title','steps','from','fills','opener']);
       const stray = [];
       for (const id in TICKETS)
         for (const k in TICKETS[id]) if (!KNOWN.has(k)) stray.push(id + ':' + k);
@@ -16824,6 +16942,48 @@ function selfTest(runSim){
          titleClean && overClean, 'title ' + titleClean + ' over ' + overClean);
       run = null; G.state = 'title';
     }
+    /* THE DAY'S LEFTOVERS DO NOT FOLLOW YOU INTO TOMORROW. A scene queued and
+       not played was charged against the day that queued it and then charged
+       AGAIN against the next morning; the client site kept yesterday's company
+       on its nameplates forever. The promotion scene is the one that is meant
+       to cross, and it is queued after the sweep. */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.pendingScenes = [{ id:'i.firstbreach', li:0, fills:null }];
+      run.siteClient = 'Meridian Freight';
+      run.queue = []; run.crashes = []; run.clock = DAY_MIN + 1;
+      const promoted = run.promoted;
+      endDay();
+      const sceneGone = !run.pendingScenes.some(x => (x && x.id || x) === 'i.firstbreach');
+      if (run) run.pendingEnd = null;
+      startCommute();
+      ok('a scene left over at five o clock does not open tomorrow', sceneGone,
+         JSON.stringify(run && run.pendingScenes));
+      ok('and the client site is not still yesterdays client',
+         !run || run.siteClient === null, run && run.siteClient);
+      run = null; G.state = 'title'; void promoted;
+    }
+    /* an interrupted scene replays first whichever door you left by: the pause
+       path parked it at the back while the save path put it at the front */
+    {
+      QUIET = true;
+      rngInit('JOB-TEST'); runInit('JOB-TEST'); rollDay();
+      run.pendingScenes = [{ id:'i.firstbreach', li:0, fills:null }];
+      const eid = Object.keys(EVENTS)[0], sid = EVENTS[eid].scene;
+      openDlg(sid, sceneFills(sid), null);
+      parkModal(true);
+      const parkedFirst = run.pendingScenes[0] && run.pendingScenes[0].id === sid;
+      if (G.modal) closeModalToWork();
+      openDlg(sid, sceneFills(sid), null);
+      const wire = serializeRun();
+      const savedFirst = wire.pendingScenes[0] && wire.pendingScenes[0].id === sid;
+      if (G.modal) closeModalToWork();
+      ok('the scene you were interrupted in is the one you come back to',
+         parkedFirst && savedFirst,
+         'pause ' + parkedFirst + ' save ' + savedFirst);
+      run = null; G.state = 'title';
+    }
     /* A PINCH IS NOT A KEYBOARD. fit() clamps to the visual viewport so the
        on-screen keyboard can shrink the frame — but the visual viewport also
        shrinks on a pinch-zoom, and clamping there re-laid the frame out
@@ -17011,6 +17171,21 @@ function selfTest(runSim){
       ok('clicking your own character is not an instruction',
          took === false && !G.autoPath && !press.use,
          'took ' + took + ' path ' + !!G.autoPath + ' use ' + !!press.use);
+      /* and a route's deferred press does not survive a panel: it used to sit
+         there while the world was frozen and fire on the way out, re-using
+         the terminal you had walked to and re-opening the queue you had just
+         closed */
+      for (const k in press) press[k] = false;
+      G.autoPath = { path: [[player.tx, player.ty]], use: [player.tx, player.ty + 1] };
+      openQueue();
+      const spent = !G.autoPath.use;
+      closeModalToWork();
+      for (let f = 0; f < 4 && G.autoPath; f++) autoWalk();
+      ok('a click-route does not press E again on the way out of a panel',
+         spent && !press.use, 'use ' + (spent ? 'dropped' : 'kept') +
+         ' press ' + !!press.use);
+      for (const k in press) press[k] = false;
+      G.autoPath = null;
       run = null; G.state = 'title';
     }
     /* a say step moves nobody, so a goto's price must not depend on whether
@@ -21393,6 +21568,47 @@ function selfTest(runSim){
       ok('...and the mover walks at the speed that floor is derived from',
          moveCall.indexOf('WALK_TILES_PER_MIN') >= 0 && !/\d\.\d/.test(moveCall),
          moveCall.split('\n')[0]);
+      /* THE PACE DIAL IS COMFORT, NOT DIFFICULTY. The options screen promises
+         "the same tickets, the same deadlines, the same score. Only how fast
+         those hours pass in the real world changes." sim() is stepped at a
+         fixed REAL 1/30s while the walk is scaled by paceRate, so any part of
+         a step that gets rounded away is rounded in a pace-sized quantum:
+         with the tween's overshoot discarded and a frame burned per route
+         node, the same 26-tile walk cost 0.187 minutes a tile at RELAXED and
+         0.252 at CRUNCH. Walk it at all three and hold them to each other. */
+      {
+        const startAt = [player.tx, player.ty];
+        const goal = anchorPos('COFFEE');
+        const savedPace = meta.pace;
+        const cost = [];
+        let walked = 0;
+        for (const pid of ['relaxed','standard','crunch']){
+          meta.pace = pid;
+          spawnPeople(0, startAt);
+          /* a body would re-route the walk, and a body's CELL still blocks
+             tryStep after the body is gone, so clear the claims too */
+          for (const k in npcs) delete npcs[k];
+          occ.clear(); occ.add(okey(player.tx, player.ty));
+          /* and an arrival or a meeting mid-route stalls the walk behind a
+             modal, which measures a walk that never happened */
+          run.plan.arrivals = []; run.plan.events = [];
+          run.queue = []; run.active = null; run.crashes = [];
+          run.clock = 60;
+          const route = astar(player.tx, player.ty, goal[0], goal[1], false);
+          G.autoPath = { path: route.slice(), use:null };
+          G.state = 'work';
+          const c0 = run.clock;
+          for (let f = 0; f < 4000 && G.autoPath; f++) sim(1/30);
+          if (!G.autoPath) walked++;
+          cost.push((run.clock - c0) / Math.max(1, route.length));
+        }
+        meta.pace = savedPace; G.autoPath = null;
+        const lo = Math.min.apply(null, cost), hi = Math.max.apply(null, cost);
+        ok('a walk costs the same shift-minutes at every pace',
+           walked === 3 && lo > 0 && (hi - lo) / hi < .05,
+           cost.map(c => c.toFixed(4)).join(' / ') +
+           (walked === 3 ? '' : ' (only ' + walked + '/3 routes finished)'));
+      }
       run = savedRun; G.state = savedState;
     }
     /* A PROMOTION SAYS SOMETHING. Nine gates could fire and not one of them

@@ -70,7 +70,7 @@ that only the triage rule differs, the two strategies that work are
 *protect the big ones* (73.8%) and *close what you can actually finish*
 (71.3%) — three points apart, so there is no single right answer, which is the
 point. Two things lose you the most: doing the least important thing first
-(50.8%), and **working the queue in the order it arrived** (59.9%). Going in
+(50.8%), and **working the queue in the order it arrived** (58.0%). Going in
 order costs you well over half of what choosing badly does, and it feels like
 diligence the whole time you are doing it.
 
@@ -120,7 +120,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 576 in-game self-tests |
+| `verify.js` | boots it and runs the 581 in-game self-tests |
 | `claims.js` | re-derives every number the README and this file state from the built game |
 | `dead.js` | finds data, state, functions and dialogue that are written and never read |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
