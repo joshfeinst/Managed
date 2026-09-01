@@ -68,8 +68,8 @@ You cannot clear the queue. That's deliberate: about fourteen tickets arrive
 against a day a flawless triager gets through five or six of, so deciding what
 to let burn is the game. It gets harsher as you climb, not gentler — an intern
 works nine of fifteen, a Procurement Specialist four of fifteen — because the
-work gets bigger and the calendar gets fuller. An intern loses five per cent of
-the day to meetings; a vCIO loses sixteen.
+work gets bigger and the calendar gets fuller. An intern loses six per cent of
+the day to meetings; a vCIO loses eighteen.
 
 Every ticket has a priority, P1 through P4, on its queue row, and it's the
 office's priority rather than the technically correct one. The account manager's
