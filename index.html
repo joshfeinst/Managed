@@ -599,7 +599,7 @@ ctx.imageSmoothingEnabled = false;
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
 const lerp  = (a,b,t) => a+(b-a)*t;
 /* Cosmetic randomness ONLY (particles, sfx detune). Gameplay must never touch
-   this — the F4 sim stubs Math.random to throw to enforce it. */
+   this — the F4 sim stubs Math.random, counts every call, and requires zero. */
 const rnd = (a=1) => Math.random()*a;
 const rr  = (a,b) => a+Math.random()*(b-a);
 
@@ -619,7 +619,7 @@ function xmur3(str){
     return (h ^= h>>>16) >>> 0;
   };
 }
-const RNG = { seed:'', streams:Object.create(null), guard:false };
+const RNG = { seed:'', streams:Object.create(null) };
 function rngInit(seed, states){
   RNG.seed = String(seed);
   RNG.streams = Object.create(null);
@@ -631,7 +631,6 @@ function rngState(){
   return out;
 }
 function R(name){
-  if (RNG.guard) throw new Error('seeded roll during a guarded section: '+name);
   let st = RNG.streams[name];
   if (!st) st = RNG.streams[name] = { s: xmur3(RNG.seed + ':' + name)() };
   st.s = st.s + 0x6D2B79F5 | 0;
@@ -653,9 +652,16 @@ const KEYMAP = {
   ShiftLeft:'sprint', ShiftRight:'sprint'
 };
 /* Latched single-press actions the sim consumes once per frame. */
-const press = { use:false, one:false, two:false, three:false, four:false, queue:false, back:false, up:false, down:false };
+const press = { use:false, one:false, two:false, three:false, four:false, queue:false, up:false, down:false };
 addEventListener('keydown', e => {
   const playing = typeof G !== 'undefined' && G && (G.state === 'work' || G.state === 'modal');
+  /* A CHORD IS THE BROWSER'S. macOS delivers no keyup for a key released while
+     Cmd is down, so Cmd+D during play armed held.right, ate the bookmark
+     dialog, and walked the player into the east wall until they pressed D
+     again — and resyncInput re-armed it after every modal from the stale
+     keys set. Nothing in KEYMAP wants a modifier; let the shortcut through
+     and never latch it. */
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
   const a = playing ? KEYMAP[e.code] : null;
   /* Tab is not in KEYMAP, so its REPEATS slipped past this guard while only
      the first press was eaten below — holding Tab mid-day walked browser
@@ -730,7 +736,10 @@ document.addEventListener('visibilitychange', () => {
 const A = { ctx:null, master:null, sfx:null, mus:null, noise:null,
             sfxVol:.7, musVol:.35, musOn:true, step:0, next:0, timer:0 };
 function audioInit(){
-  if (A.ctx){ if (A.ctx.state === 'suspended') A.ctx.resume(); return; }
+  /* not only 'suspended': iOS parks the context in a non-standard 'interrupted'
+     after a phone call, Siri or a backgrounded PWA, and every later tap came
+     through here and did nothing — a session silent for good */
+  if (A.ctx){ if (A.ctx.state !== 'running') A.ctx.resume(); return; }
   const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
   /* IT CAN THROW, AND EVERY CLICK AND KEYPRESS IN THE GAME GOES THROUGH HERE
      FIRST. Chrome throws NotSupportedError when there is no output device or
@@ -946,7 +955,7 @@ function bakeAtlas(pad){
     Rt(g,3,14,10,1,'#0a0c10'); });
   /* ------------------------------ OUTSIDE ---------------------------------
      The first tiles in the game that are not carpet, lino or a server room
-     floor. Slots 33-37 of forty; 0-32 were the building. */
+     floor. Slots 33 onward of ATLAS_N; 0-32 were the building. */
   /* 33 tarmac, with the white line of a bay down its left edge */
   T(33, g=>{ Rt(g,0,0,16,16,'#3f434a');
     for (let i=0;i<9;i++) Rt(g,(i*7.1)%16,(i*4.7)%16,1,1,'#474b53');
@@ -1032,8 +1041,9 @@ function bakeAtlas(pad){
      whose entire subject is the clock. drawWorld paints live hands over it. */
   T(28, g=>{ Rt(g,0,0,16,16,'#c9c0ad'); Rt(g,0,0,16,3,'#8d857a');
     g.fillStyle='#f2efe9'; g.beginPath(); g.arc(8,8,5,0,7); g.fill();
-    g.fillStyle='#c9c0ad'; g.beginPath(); g.arc(8,8,5,0,7); g.stroke();
-    g.fillStyle='#8d857a'; Rt(g,8,3.5,.6,1); Rt(g,8,11.9,.6,1); Rt(g,3.5,8,1,.6); Rt(g,11.9,8,1,.6);
+    g.strokeStyle='#c9c0ad'; g.beginPath(); g.arc(8,8,5,0,7); g.stroke();
+    /* whole pixels: Rt truncates, and a 0.6px tick is no tick at all */
+    Rt(g,8,3,1,1,'#8d857a'); Rt(g,8,12,1,1,'#8d857a'); Rt(g,3,8,1,1,'#8d857a'); Rt(g,12,8,1,1,'#8d857a');
     Rt(g,0,13,16,3,'#b1a894'); });
   /* 29 sad motivational poster */
   T(29, g=>{ Rt(g,0,0,16,16,'#c9c0ad'); Rt(g,0,0,16,3,'#8d857a');
@@ -4316,7 +4326,7 @@ const DIALOGUE = {
   'e.onboard':{ who:'linda', t:['New starter today. Nobody told anybody. They are in reception with a lanyard and a hopeful expression.'] },
   'e.sales':  { who:'mackenzie', t:['Quick one — I may have told Riverbend we already do that. We do do that, right? Broadly? I have put it in writing.'],
     opts:[ {t:'Explain, in writing, what we actually do', fx:{time:8, rep:2, stress:3}},
-           {t:'"We will make it work."', fx:{stress:5, bonus:1}},
+           {t:'"We will make it work."', fx:{stress:5}},
            {t:'Forward it to Linda without comment', fx:{stress:-2, rep:-1}} ] },
   'e.printerq':{ who:'sys', t:['A queue has formed at the printer. Not for the printer — for you. Three people are holding pieces of paper and eye contact.'] },
   'e.outage': { who:'sys', t:['Half the internet is down — some cloud region has fallen over. Every phone lights up. None of it is yours to fix, and all of it is your problem.'] },
@@ -4330,13 +4340,13 @@ const DIALOGUE = {
     'A tab per client. One column is coloured and one is not, and the colours mean something. Kayla knows what they mean. The man who chose them left before the lease was renewed.',
     'Kayla asks if that is all clear. Raj says it is.'],
     opts:[ {t:'Say it is clear, and work the colours out when one of them matters', fx:{time:5, rep:-1, stress:6}},
-           {t:'Ask the room what amber means', fx:{time:14, rep:3, bonus:1, stress:6}},
-           {t:'Ask Kayla afterwards, then put the key at the top of the tab', fx:{time:12, rep:1, bonus:1, stress:3}} ] },
+           {t:'Ask the room what amber means', fx:{time:14, rep:3, stress:6}},
+           {t:'Ask Kayla afterwards, then put the key at the top of the tab', fx:{time:12, rep:1, stress:3}} ] },
   'e.pit.leaving': { who:'sys', t:['The kitchen at two. There is a card going round and a supermarket cake with somebody\'s name on it in icing gel.',
     'It is Priya, from Finance, after eleven years. You have not met Priya. She is the one who checks the licence counts against what the clients are billed, and she has always done it from memory.',
     'The speeches run {cost}. Two people say she is the reason anything works. Nobody says who does it from Monday.'],
-    opts:[ {t:'Ask Priya to show you the licence check before she goes, and write it down', fx:{time:14, rep:3, bonus:1, stress:4}},
-           {t:'Put it to Linda afterwards that nobody has been named', fx:{time:9, rep:2, bonus:1, stress:7}},
+    opts:[ {t:'Ask Priya to show you the licence check before she goes, and write it down', fx:{time:14, rep:3, stress:4}},
+           {t:'Put it to Linda afterwards that nobody has been named', fx:{time:9, rep:2, stress:7}},
            {t:'Sign the card in the four inches left, take a slice, go back to the queue', fx:{time:4, rep:-1, stress:3}} ] },
   'e.pit.cupboard': { who:'brenda', t:['You have been drinking the machine coffee since you got here. The machine is for clients, and for people who have not asked.',
     'The cafetiere is mine, so it stays my side of the sink. The cups on the left are the good ones. If Raj asks, you do not know where any of this is.',
@@ -4349,8 +4359,8 @@ const DIALOGUE = {
     'The call runs four minutes. The fault is fixed by minute two. The agent did not use the caller\'s name three times, did not signpost the hold, and did not offer the branded close.',
     'It scores sixty-one. The room is asked whether it agrees.'],
     opts:[ {t:'Agree the score and write the three phrases on a card for the top of your monitor', fx:{time:12, rep:-1, stress:6}},
-           {t:'Say the fault was fixed at minute two, and ask which of the other thirty-nine points the caller noticed', fx:{time:23, rep:3, bonus:1, stress:8}},
-           {t:'Agree the score in the room, then offer to draft a fourth scored line for whether the fault was fixed', fx:{time:26, rep:2, bonus:1, stress:4}} ] },
+           {t:'Say the fault was fixed at minute two, and ask which of the other thirty-nine points the caller noticed', fx:{time:23, rep:3, stress:8}},
+           {t:'Agree the score in the room, then offer to draft a fourth scored line for whether the fault was fixed', fx:{time:26, rep:2, stress:4}} ] },
   'e.hd1.shortcuts': { who:'kayla', t:['{Cost}, and you can stop escalating password resets.',
     'Three things. You can reset from the console without raising a ticket. Ctrl-Shift-N skips the four screens nobody reads. You can close a call from the keypad without going back to the desktop.',
     'It is ninety seconds a call. I have worked out what that comes to over a week. I have not told anyone upstairs and I am not going to.'] },
@@ -4361,9 +4371,9 @@ const DIALOGUE = {
   'e.hd2.matrix': { who:'sys', t:['Escalation workshop. The triage matrix is up on the screen. Four quadrants, drawn in 2021. A laminated copy is still stuck to a monitor that was replaced in March.',
     'Everyone agrees it is a good matrix. T1 escalate on the phrase "the user is quite senior", which is not one of the quadrants. T3 send things back with "T2 can do this", which is also not one of the quadrants.',
     'Linda asks who would like to own the refresh.'],
-    opts:[ {t:'Take it, and rebuild it from last month\'s actual escalations', fx:{time:18, rep:4, bonus:1, stress:5}},
+    opts:[ {t:'Take it, and rebuild it from last month\'s actual escalations', fx:{time:18, rep:4, stress:5}},
            {t:'Say the matrix is fine and the problem is that nobody reads it', fx:{time:5, rep:-2, stress:4}},
-           {t:'Offer an hour a week sitting with T1 instead of a document', fx:{time:12, rep:3, bonus:1, stress:6}} ] },
+           {t:'Offer an hour a week sitting with T1 instead of a document', fx:{time:12, rep:3, stress:6}} ] },
   'e.hd2.filter': { who:'kayla', t:['You\'re working the whole queue. Don\'t. Eleven of those are waiting on the client, and one is waiting on a licence nobody can buy until Thursday, because the person with the company card is on leave.',
     'I have made you a view. It drops anything where the last update was ours. It is saved under your name, so it is there tomorrow.',
     'That is twelve gone. They are still open. They are just not yours this afternoon.'] },
@@ -4371,8 +4381,8 @@ const DIALOGUE = {
   'e.hd3.blameless': { who:'sys', t:['Post-incident review for Tuesday. Nine people, {cost} in the calendar, and the timeline up on the screen.',
     'At 14:06 the service was restarted by hand. The timeline does not say by whom. Linda gets to the end of the slide and leaves it there.',
     'It was you. It was the correct thing to do at 14:06, and it is a different sort of question at half ten on a Thursday.'],
-    opts:[ {t:'Say it was you, and take the room through what 14:06 looked like at the time', fx:{time:14, rep:3, bonus:1, stress:7}},
-           {t:'Ask to rebuild the timeline from the logs before anyone answers', fx:{time:24, rep:3, bonus:1, stress:3}},
+    opts:[ {t:'Say it was you, and take the room through what 14:06 looked like at the time', fx:{time:14, rep:3, stress:7}},
+           {t:'Ask to rebuild the timeline from the logs before anyone answers', fx:{time:24, rep:3, stress:3}},
            {t:'Let the pause run until Linda moves to the next slide', fx:{time:4, rep:-2, stress:9}} ] },
   'e.hd3.amnesty': { who:'sys', t:['Knowledge amnesty. {Cost} in which nothing undocumented is anyone\'s fault. Derek has brought a mug and a notebook with a rubber band round it.',
     'He starts with the scheduler. The service account was his and is now nobody\'s, and the password is in an envelope in the safe in his handwriting. It is correct. He gets through eight more things without opening a laptop.',
@@ -7139,7 +7149,12 @@ function loadMap(id){
     const ch = rows[y][x], c = cellIx(x,y);
     if (ch >= '1' && ch <= '9'){ W2.base[c] = 255; autoFloor.push(c); W2.anchors['n'+ch] = [x,y]; continue; }
     const L = LEGEND[ch];
-    if (!L){ W2.base[c] = 1; continue; }
+    /* A TYPO IS A WALL, NOT A DOOR. An unknown glyph used to become walkable
+       carpet with no act and no anchor, so one wrong letter in a wall row
+       opened a hole through the building that the reachability tests could
+       not see — they check that places can be reached, not that walls stand.
+       Solid is the failure that gets noticed; the boot lint names the glyph. */
+    if (!L){ W2.base[c] = LEGEND['#'].w; W2.solid[c] = 1; continue; }
     if (L.w !== undefined){ W2.base[c] = L.w; W2.solid[c] = 1; continue; }
     if (L.o !== undefined){
       W2.base[c] = 255; autoFloor.push(c);
@@ -7228,6 +7243,12 @@ function entUpdate(e, dt, speed){
       e.t = 1; e.x = e.tx; e.y = e.ty;
     }
   }
+  /* AND ONLY FOR THE NEXT CONTINUOUS STEP. The remainder is owed when the
+     walk carries straight on; a frame spent standing still has already spent
+     it. Left in place it made the first tile after a rest start a third of
+     the way in — a sprite popping five pixels into its tile after a minute
+     at the desk, and one frame cheaper than every tile that followed. */
+  else e.carry = 0;
 }
 
 /* A* on the tiny grid — NPCs only, so occupancy of OTHER npcs is soft
@@ -7465,7 +7486,7 @@ function drawWorld(){
      of this day is left", readable from across the room. */
   if (clocks.length){
     const mins = run ? run.clock : 475;                 // 4:55pm, the eternal almost-five
-    const hr = ((9 + mins/60) % 12) / 12 * 6.2832 - 1.5708;
+    const hr = ((DAY_START_HOUR + mins/60) % 12) / 12 * 6.2832 - 1.5708;
     const mn = ((mins % 60) / 60) * 6.2832 - 1.5708;
     ctx.lineCap = 'butt';
     for (const [bx, by] of clocks){
@@ -7545,9 +7566,9 @@ function drawWorld(){
        what we are pointing at. */
     const lift = markerLift(mx, my);
     const tx0 = mx*TILE - cx + 8, ty0 = my*TILE - cy + 8 - lift;
-    const onScreen = tx0 > 6 && tx0 < VW-6 && ty0 > 14 && ty0 < VH-6;
+    const markerOn = tx0 > 6 && tx0 < VW-6 && ty0 > 14 && ty0 < VH-6;
     const bob = Math.sin(performance.now()/180)*2;
-    if (onScreen){
+    if (markerOn){
       const sy2 = ty0 - 14 + bob;
       ctx.fillStyle = '#0b0d10';
       ctx.beginPath(); ctx.moveTo(tx0, sy2+7); ctx.lineTo(tx0-6, sy2-2); ctx.lineTo(tx0+6, sy2-2);
@@ -7626,8 +7647,8 @@ function markerExit(){
   let L = (run.markerVia || {})[W2.id];
   if (L && W2.anchors[L]) return L;
   if (!run.markerAnchor || !player) return null;
-  const rr = routeVia(W2.id, A => tilesBetween([player.tx, player.ty], A), run.markerAnchor);
-  L = (rr && rr.via) ? rr.via[W2.id] : null;
+  const rv = routeVia(W2.id, A => tilesBetween([player.tx, player.ty], A), run.markerAnchor);
+  L = (rv && rv.via) ? rv.via[W2.id] : null;
   if (L && W2.anchors[L]){
     run.markerVia = run.markerVia || {};
     run.markerVia[W2.id] = L;            // decided once here too
@@ -8600,7 +8621,9 @@ function rollDay(){
      was not enough — the next morning's desk legs were priced off another
      floor's flood-fill table. (Yesterday's leftover occupancy was probed as a
      determinism risk too — a 21-body ring around the desk — and moved no born
-     SLA, so the floor is the whole fix.) */
+     SLA. A full ring makes the avoiding pass fail and fall back to the blind
+     path, which is why it measured clean; ONE body two tiles down the only
+     corridor moved ten of thirty-seven prices. ticketWork prices blind now.) */
   if (!W2.W || W2.id !== 'office1') loadMap('office1');
   const role = ROLES[run.rung];
   let elig = Object.keys(TICKETS).filter(id =>
@@ -9388,7 +9411,20 @@ function ticketOffers(id){
   }
   return (OFFERS[id] = { game, bonus });
 }
+/* NOBODY IS STANDING IN THE CORRIDOR WHEN A TICKET IS PRICED. The SLA a ticket
+   is born with must be a function of the seed, and A* steps around occupied
+   cells — so whoever was left standing where the day ended (the player, two
+   tiles west of the intern desk at 17:00, on the only way out) re-routed ten
+   of thirty-seven desk-to-anchor plans on the next morning's roll, and the
+   same seed dealt different SLAs after NEXT DAY than after quit-and-CONTINUE,
+   which reprices from the boot-time positions. resolveTicket re-derives this
+   number too, so it is blind at both ends and agrees with itself. */
 function ticketWork(T){
+  const keep = [...occ]; occ.clear();
+  try { return ticketWorkOn(T); }
+  finally { for (const k of keep) occ.add(k); }
+}
+function ticketWorkOn(T){
   /* leg N starts where leg N-1 ended, not back at the desk — and on whichever
      floor leg N-1 ended on, which is walkLegs's job. This kept its own copy of
      the walk and its own copy of the bug. */
@@ -9640,7 +9676,7 @@ function presentCommute(){
           ? 'one meeting did not fit and has been cancelled'
           : numWord(run.cancelled) + ' meetings did not fit and have been cancelled') + '</dd>'
       : '') +
-    '<dt>Job posting</dt><dd>' + run.seed + '</dd>';
+    '<dt>Job posting</dt><dd>' + escHtml(run.seed) + '</dd>';
   document.getElementById('r-note').textContent = run.day === 1
     ? 'Orientation is a PDF nobody sent you. Your badge photo is already unflattering. Good luck in there.'
     : lastDayAtTop()
@@ -10700,9 +10736,9 @@ function advanceStep(){
        meant the arrow pointed at the lift, you rode it, and on the far side it
        pointed at the lift again. Decided once, here, because an arrow that
        swapped ends every few steps would be worse than a wrong one. */
-    const rr = a.floor !== W2.id
+    const rv = a.floor !== W2.id
       ? routeVia(W2.id, L => tilesBetween([player.tx, player.ty], L), st.goto) : null;
-    run.markerVia = rr ? rr.via : null;
+    run.markerVia = rv ? rv.via : null;
     run.markerAnchor = st.goto;          // so the way out can be re-derived
     if (G.modal) closeModalToWork();
     const away = a.floor !== W2.id;
@@ -11614,7 +11650,10 @@ function loadGame(){
   if (!raw) return null;
   let s;
   try { s = JSON.parse(raw); } catch(_){ return null; }
-  if (typeof s.v !== 'number') return null;
+  /* "null" parses. So does "7". Reading .v off either threw out of boot()
+     before the loop was ever requested: a boot screen, no canvas, no game. */
+  if (!s || typeof s !== 'object' || Array.isArray(s) || typeof s.v !== 'number') return null;
+  if (s.run != null && (typeof s.run !== 'object' || Array.isArray(s.run))) s.run = null;
   if (s.v > SAVE_V) return 'future';
   while (s.v < SAVE_V){ const m = MIGRATIONS[s.v]; if (!m) return null; m(s); s.v++; }
   return s;
@@ -11645,6 +11684,17 @@ function resumeRun(s){
   r.queue = r.queue.filter(t => t && typeof t === 'object' && t.uid != null && TICKETS[t.id]);
   if (r.plan && (typeof r.plan !== 'object' || !Array.isArray(r.plan.arrivals))) r.plan = null;
   if (r.plan && !Array.isArray(r.plan.events)) r.plan.events = [];
+  if (r.plan){
+    /* the queue is filtered against TICKETS above; the plan was not, and
+       templates and events are renamed between builds without a SAVE_V bump.
+       A stale arrival threw in arrivalsTick and was then silently lost. */
+    r.plan.arrivals = r.plan.arrivals.filter(a => a && typeof a === 'object' && TICKETS[a.id]);
+    r.plan.events = r.plan.events.filter(e => e && typeof e === 'object' && EVENTS[e.id]);
+    r.plan.ai = Math.round(rnum(r.plan.ai, 0, 0, r.plan.arrivals.length));
+    r.plan.ei = Math.round(rnum(r.plan.ei, 0, 0, r.plan.events.length));
+  }
+  for (const k of ['perfHist', 'scores', 'crashes', 'burned'])
+    if (!Array.isArray(r[k])) r[k] = [];
   rngInit(r.seed, r.rng);
   run = { seed:r.seed, day:r.day, rung:r.rung, clock:r.clock, perfHist:r.perfHist,
     gateStreak:r.gateStreak, firedStreak:r.firedStreak, stress:r.stress,
@@ -11731,6 +11781,11 @@ function resumeRun(s){
    S6 UI — dialogue engine, queue panel, minigames, HUD, screens, toasts.
    ========================================================================== */
 let QUIET = false;                    // headless sims silence the DOM chatter
+/* THE POSTING IS TYPED. Every other place that shows the seed uses
+   textContent; the pause card and the morning review built it into innerHTML,
+   so a posting of <MARQUEE>JOB-1 — which the setup screen invites you to
+   share — rendered as markup on every pause and every morning. */
+const escHtml = v => String(v).replace(/[&<>]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[c]));
 const TOASTC = { amber:'var(--amber)', corp:'var(--corp)', red:'var(--alert)', ok:'var(--ok)' };
 /* WHAT THE GAME ACTUALLY SAID. A line that is written, referenced and
    unreachable breaks no invariant — it simply stops existing, which is how
@@ -12144,8 +12199,16 @@ function openGame(id, diff, onDone){
      Walking out still keeps what you earned, which is the promise; what it
      no longer buys is a different rack. The stash is memory-only and dies
      with the tab, which is the one door left and costs a page load per
-     attempt rather than a keypress. */
-  const held = run && run.active && run.active.board;
+     attempt rather than a keypress.
+     AND IT LIVES ON G, NOT ON THE TICKET. run.active.board was parked on the
+     live ticket object and serializeRun does not write it — so SAVE & QUIT
+     then CONTINUE, three clicks and no page load, rebuilt the ticket from the
+     save and dealt a fresh rack. The same door, keyed by career, ticket and
+     step, held in memory the save cannot reach. */
+  const stashKey = run && run.active ? run.seed + ':' + run.active.uid + ':' + run.active.si : null;
+  const stashed = stashKey && G.boardStash && G.boardStash[stashKey];
+  const held = run && run.active &&
+    (run.active.board || (stashed ? { gid: stashed.gid, si: run.active.si, mg: stashed } : null));
   const same = held && held.gid === id && held.si === run.active.si;
   MG = same ? held.mg : GAMES[id].init(gameDiff(diff));
   document.body.classList.add('panelopen');
@@ -12174,7 +12237,7 @@ function gameTick(dt){
     MG.brief.t += dt;
     /* a short grace, or the same keypress that opened the ticket closes the
        card before it has finished appearing */
-    if (MG.brief.t > .3 && (press.use || press.one || press.two || press.three || press.back)){
+    if (MG.brief.t > .3 && (press.use || press.one || press.two || press.three)){
       if (MG.brief.first){ meta.seenGames[MG.gid] = true; saveGame(); }
       MG.brief = null; MG.click = null; clearInput(); sfx('ui');
     }
@@ -14832,6 +14895,10 @@ function wrapTxt(s, cx, y, w, col, size){
 /* --------------------------------- modal hub ------------------------------ */
 function modalTick(dt){
   if (!G.modal) { G.state = 'work'; return; }
+  /* the handbook says Tab opens the queue from anywhere in the building, and
+     the HUD button did — the key was consumed only on the floor and inside
+     the panel itself, so mid-dialogue it was dead */
+  if (press.queue && G.modal.kind !== 'tix'){ press.queue = false; act('queue'); return; }
   if (G.modal.kind === 'dlg') dlgTick(dt);
   else if (G.modal.kind === 'tix') tixTick(dt);
   else if (G.modal.kind === 'game') gameTick(dt);
@@ -14840,25 +14907,34 @@ function modalTick(dt){
 /* ----------------------------------- HUD ---------------------------------- */
 function hudShow(on){
   document.getElementById('hud').style.display = on ? 'flex' : 'none';
+  for (const k in HUD_LAST) delete HUD_LAST[k];   // the DOM is about to disagree with the cache
   if (!on){
     document.getElementById('obj').style.display = 'none';
     document.getElementById('keyhint').style.display = 'none';
   }
 }
+/* WRITE ONLY WHAT CHANGED. This runs every frame, and it rewrote the clock's
+   innerHTML (a fresh <b> each time), a dozen textContents and two widths, then
+   read hud.offsetHeight — which forces layout, because the tree had just been
+   dirtied — for values that move once a game-minute at most. A synchronous
+   reflow thirty times a second on a phone is the HUD warming the battery. */
+const HUD_LAST = {};
+const hudSet = (k, el, prop, v) => { if (HUD_LAST[k] !== v){ HUD_LAST[k] = v; el[prop] = v; } };
 function hudUpdate(){
   if (!run) return;
   const h = Math.floor(run.clock/60) + DAY_START_HOUR;
   const m = Math.floor(run.clock % 60);
   const hh = h > 12 ? h - 12 : h;
-  document.getElementById('h-clock').innerHTML = '<b>' + hh + ':' + (m<10?'0':'') + m + '</b> ' + (h >= 12 ? 'PM' : 'AM');
-  document.getElementById('h-day').textContent = run.day;
-  document.getElementById('h-role').textContent = ROLES[run.rung].title;
+  hudSet('clock', document.getElementById('h-clock'), 'innerHTML',
+    '<b>' + hh + ':' + (m<10?'0':'') + m + '</b> ' + (h >= 12 ? 'PM' : 'AM'));
+  hudSet('day', document.getElementById('h-day'), 'textContent', String(run.day));
+  hudSet('role', document.getElementById('h-role'), 'textContent', ROLES[run.rung].title);
   const q = document.getElementById('h-queue');
   const breaching = run.queue.some(t => t.deadline - run.clock < 5);
-  q.textContent = 'QUEUE ' + run.queue.length;
-  q.className = breaching ? 'breach' : '';
+  hudSet('queue', q, 'textContent', 'QUEUE ' + run.queue.length);
+  hudSet('queueC', q, 'className', breaching ? 'breach' : '');
   const sm = document.getElementById('h-stressm');
-  sm.firstElementChild.style.width = Math.round(run.stress) + '%';
+  hudSet('stressW', sm.firstElementChild.style, 'width', Math.round(run.stress) + '%');
   /* BOTH TURNS ARE THRESHOLDS THE SIM ACTUALLY USES. The amber one always
      was — BURN.thresh is the line above which tonight converts into burnout
      you keep — and the red one was thresh + 20, which is exactly the round
@@ -14867,22 +14943,24 @@ function hudUpdate(){
      hands stop cooperating and every board gets a step harder. That is what
      red means now, and both numbers come from the record rather than from
      arithmetic on it. */
-  sm.className = 'meter' + (run.stress > BURN.frayed ? ' bad'
-                          : run.stress > BURN.thresh ? ' warn' : '');
+  hudSet('stressC', sm, 'className', 'meter' + (run.stress > BURN.frayed ? ' bad'
+                                             : run.stress > BURN.thresh ? ' warn' : ''));
   const bm = document.getElementById('h-burnm');
-  bm.firstElementChild.style.width = Math.round(run.burnout) + '%';
-  bm.className = 'meter burn' + (run.burnout > 75 ? ' bad' : run.burnout > 50 ? ' warn' : '');
-  document.getElementById('h-coffee').textContent = '☕' + run.coffee;
-  /* the banner is placed from this, so it has to be measured, not assumed */
+  hudSet('burnW', bm.firstElementChild.style, 'width', Math.round(run.burnout) + '%');
+  hudSet('burnC', bm, 'className', 'meter burn' + (run.burnout > 75 ? ' bad' : run.burnout > 50 ? ' warn' : ''));
+  hudSet('coffee', document.getElementById('h-coffee'), 'textContent', '☕' + run.coffee);
+  /* the banner is placed from this, so it has to be measured, not assumed —
+     and with nothing written above, the read is a cached layout, not a reflow */
   const hudEl = document.getElementById('hud');
-  if (hudEl.offsetHeight) document.getElementById('frame').style.setProperty('--hudh', hudEl.offsetHeight + 'px');
+  const hudH = hudEl.offsetHeight;
+  if (hudH && HUD_LAST.h !== hudH){ HUD_LAST.h = hudH; document.getElementById('frame').style.setProperty('--hudh', hudH + 'px'); }
   const ot = objectiveText();
   const obj = document.getElementById('obj');
-  document.getElementById('obj-t').textContent = ot;
-  obj.style.display = ot ? 'flex' : 'none';
+  hudSet('obj', document.getElementById('obj-t'), 'textContent', ot);
+  hudSet('objD', obj.style, 'display', ot ? 'flex' : 'none');
   /* the controls stay up for the first two days, then get out of the way */
   const kh = document.getElementById('keyhint');
-  kh.style.display = (run.day <= 2 && G.state === 'work') ? 'flex' : 'none';
+  hudSet('khD', kh.style, 'display', (run.day <= 2 && G.state === 'work') ? 'flex' : 'none');
   /* AND THEY ARE THE CONTROLS THE DEVICE HAS. This line is the first thing the
      game teaches, and it named WASD, SHIFT, E, TAB and ESC to everybody. The
      only rule that hid it was scoped to (pointer:coarse) AND portrait -- so in
@@ -14891,9 +14969,9 @@ function hudUpdate(){
      it never once named the QUEUE and PAUSE buttons that body.touch puts on
      screen precisely so a finger has them. */
   const kt = kh.firstElementChild;
-  if (kt) kt.textContent = document.body.classList.contains('touch')
+  if (kt) hudSet('kt', kt, 'textContent', document.body.classList.contains('touch')
     ? 'TAP THE FLOOR TO WALK · TAP A MACHINE OR A PERSON TO USE THEM · QUEUE AND PAUSE, TOP RIGHT'
-    : 'CLICK TO WALK, USE AND TALK · WASD MOVE · SHIFT RUN · E USE · TAB QUEUE · ESC PAUSE';
+    : 'CLICK TO WALK, USE AND TALK · WASD MOVE · SHIFT RUN · E USE · TAB QUEUE · ESC PAUSE');
 }
 
 /* --------------------------------- screens -------------------------------- */
@@ -14967,8 +15045,13 @@ function toTitle(){
       ', day ' + saved.day + ' — posting ' + saved.seed + '. Press CONTINUE.'
     : '';
   document.getElementById('t-meta').textContent =
-    [inProgress, lived].filter(Boolean).join('  ·  ') ||
-    'No careers on file. The industry awaits, unenthusiastically.';
+    s === 'future'
+      /* an old cached build against a newer save: the first line used to say
+         there were no careers on file, and the only explanation was a toast
+         that fired on the next save */
+      ? 'A career is on file from a newer version of the game. This build cannot open it; reload to update.'
+      : [inProgress, lived].filter(Boolean).join('  ·  ') ||
+        'No careers on file. The industry awaits, unenthusiastically.';
   /* what Enter/Space should do here. The line above tells a returning player
      to press CONTINUE, so Enter must not instead start a fresh career over
      the top of the one they were told about. */
@@ -14976,7 +15059,6 @@ function toTitle(){
   menu.querySelectorAll('[data-primary]').forEach(x => x.removeAttribute('data-primary'));
   (saved ? btn : menu.querySelector('[data-act="newrun"]')).setAttribute('data-primary', '');
   show('s-title');
-  clearToasts();
 }
 /* How long a confirmation to destroy a career stays good for. Long enough to
    read the sentence, short enough that it cannot be sitting armed when you
@@ -15269,6 +15351,7 @@ function parkModal(forPause){
       run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
       /* and the board itself is parked with it — see openGame */
       run.active.board = { gid: MG.gid, si: run.active.si, mg: MG };
+      (G.boardStash = G.boardStash || {})[run.seed + ':' + run.active.uid + ':' + run.active.si] = MG;
       /* Say so on the pause card. Escape from a board you cannot solve DOES
          let you walk away with what you had earned — but the only words on
          screen were BACK TO WORK and SAVE & QUIT, neither of which mentions
@@ -15283,7 +15366,13 @@ function parkModal(forPause){
       if (forPause) G.leftBoard = { name: MG_TITLES[MG.gid] || MG.gid.toUpperCase(),
                                     worth: Math.round((run.active.gameCap ?? 1) * 100) };
     }
-    if (forPause) run.resumePending = true;
+    /* AND ONLY WHEN THE MODAL WAS THE STEP. Pausing over Raj's small talk, or
+       over the queue panel, with a board parked from an earlier QUEUE exit,
+       set this too — and BACK TO WORK re-opened a rack out of a chat the
+       player had walked into on purpose. A board, or a dialogue that owns the
+       ticket's onDone, is the step; anything else is somewhere you went. */
+    if (forPause && (G.modal.kind === 'game' || (G.modal.kind === 'dlg' && dlg && dlg.onDone)))
+      run.resumePending = true;
   }
 }
 function pauseGame(){
@@ -15300,7 +15389,7 @@ function pauseGame(){
     '<dt>Open tickets</dt><dd>' + run.queue.length + '</dd>' +
     '<dt>Stress</dt><dd>' + Math.round(run.stress) + '%</dd>' +
     '<dt>Burnout</dt><dd>' + Math.round(run.burnout) + '%</dd>' +
-    '<dt>Job posting</dt><dd>' + run.seed + '</dd>' +
+    '<dt>Job posting</dt><dd>' + escHtml(run.seed) + '</dd>' +
     '<dt>Pace</dt><dd>' + pace().label.toLowerCase() + '</dd>' +
     (G.leftBoard
       ? '<dt>' + G.leftBoard.name + '</dt><dd>left at ' + G.leftBoard.worth +
@@ -15930,9 +16019,17 @@ function selfTest(runSim){
        walked node.t and not node.opts, so a token written into a choice was
        never resolved, and the same bug has already shipped once in scenes. */
     {
-      const savedRunF = run;
-      QUIET = true; rngInit('FILL-DRIVE'); runInit('FILL-DRIVE');
+      const savedRunF = run, savedQuiet = QUIET;
       const raw = [];
+      /* RESTORED ON EVERY PATH. This set QUIET and never gave it back: boot
+         runs these lints, so from the title screen on every toast in the
+         session — NEW TICKET, the FAULT banner, "this machine will not let
+         the game save" — was counted and dropped. The battery stayed green
+         because verify snapshots QUIET after boot and the toast tests set it
+         themselves. And a throw in here left the FILL-DRIVE career as `run`,
+         which the next pause would have saved over the real one. */
+      try {
+      QUIET = true; rngInit('FILL-DRIVE'); runInit('FILL-DRIVE');
       for (const tid in TICKETS){
         let a = null;
         try { a = makeArrival(tid, 0, ROLES[TICKETS[tid].tiers[0]] || ROLES[0]); }
@@ -15950,9 +16047,10 @@ function selfTest(runSim){
             break;
           }
       }
-      run = savedRunF;
+      } finally { run = savedRunF; QUIET = savedQuiet; }
       ok('no ticket can put an unresolved {token} on the screen',
          !raw.length, raw.slice(0, 3).join(' · '));
+      ok('the content lints give QUIET back as they found it', QUIET === savedQuiet);
     }
     /* "every ticket fits its SLA at every rung that deals it" stood here and
        could not fail — see the notice-window guard in the sim block, which is
@@ -15962,6 +16060,23 @@ function selfTest(runSim){
     for (const id in EVENTS) if (!DIALOGUE[EVENTS[id].scene]) bad.push(id);
     ok('every NPC and event has its dialogue', !bad.length, bad.join(' '));
     ok('the ladder has all 10 rungs', ROLES.length === 10);
+    bad = [];
+    for (const mid in MAPS)
+      for (const row of MAPS[mid].map)
+        for (const ch of row)
+          if (!LEGEND[ch] && !(ch >= '1' && ch <= '9')) bad.push(mid + ' "' + ch + '"');
+    ok('every glyph on every map is in the legend', !bad.length, bad.slice(0, 4).join(' '));
+    /* applyFx pays fx.bonus into the TICKET in hand, and a meeting has none:
+       eleven options across six scenes charged fourteen minutes and eight
+       stress for a quality bonus that was thrown away on the way out. The
+       dominance guard below counted that bonus as a live axis, so it was
+       reasoning about a trade that did not exist. */
+    bad = [];
+    for (const eid in EVENTS){
+      const node = DIALOGUE[EVENTS[eid].scene];
+      for (const o of (node && node.opts) || []) if (o.fx && o.fx.bonus) bad.push(eid);
+    }
+    ok('no meeting option promises a bonus that nothing pays', !bad.length, bad.join(' '));
     /* "THERE IS NO RIGHT ANSWER, ONLY CONSEQUENCES." That sentence is printed
        under every choice the game ever offers, so it is a claim about all 356
        of them — and on three it was false. An option that is at least as good
@@ -21199,10 +21314,10 @@ function selfTest(runSim){
         const wrong = [];
         for (const target of ['SITECOMMS', 'SITEFLOOR', 'YOURCAR', 'POST', 'ACCOUNTS']){
           const home = floorOf(target); if (!home || home === W2.id) continue;
-          const rr = routeVia(W2.id, L => tilesBetween([player.tx, player.ty], L), target);
-          const leg = (rr && rr.via) ? rr.via[W2.id] : null;
+          const rv = routeVia(W2.id, L => tilesBetween([player.tx, player.ty], L), target);
+          const leg = (rv && rv.via) ? rv.via[W2.id] : null;
           run.marker = [0, 0]; run.markerFloor = home;
-          run.markerVia = rr ? rr.via : null;
+          run.markerVia = rv ? rv.via : null;
           run.markerLabel = ANCHOR_NAMES[target] || target;
           const said = objectiveText(), want = ANCHOR_NAMES[leg];
           if (want && said.indexOf(want) < 0)
@@ -23525,6 +23640,24 @@ function selfTest(runSim){
       const a = planOf(false), b = planOf(true);
       ok('travel: distance pricing did not break seeded SLAs', a === b,
          a === b ? '' : 'plan diverged with the map preloaded');
+      /* and not on who was left standing in the corridor at 17:00: one body
+         on the first tile out of the desk re-routed ten of thirty-seven
+         prices, so NEXT DAY and quit-then-CONTINUE dealt different SLAs */
+      const planWith = body => {
+        QUIET = true; rngInit('DET-O'); runInit('DET-O');
+        loadMap('office1'); spawnPeople(); occ.clear();
+        if (body){
+          const d = anchorPos(ROLES[0].deskAnchor || 'TERMINAL'), c = anchorPos('COFFEE');
+          const p = d && c && astar(d[0], d[1], c[0], c[1]);
+          if (p && p[1]) occ.add(okey(p[1][0], p[1][1]));
+        }
+        rollDay();
+        return run.plan.arrivals.map(x => x.id + ':' + x.sla).join('|');
+      };
+      const c0 = planWith(false), c1 = planWith(true);
+      ok('travel: born SLAs ignore whoever is standing in the corridor', c0 === c1,
+         c0 === c1 ? '' : 'a body on the way out re-priced the day');
+      spawnPeople();
       run = null; G.state = 'title';
     }
 
@@ -25601,6 +25734,10 @@ function inRect(pt, x, y, w, h){
   return !!pt && pt.x >= x && pt.x <= x + w && pt.y >= y && pt.y <= y + h;
 }
 function clickAdvance(ev){
+  /* the primary button, the primary finger: a right-click walked the player
+     and opened the context menu on top of it, and the second finger of the
+     pinch that fit() tolerates re-routed the walk or pressed E */
+  if (ev.button > 0 || ev.isPrimary === false) return;
   const t = ev.target;
   if (t && t.closest && t.closest('button, .row, .opt, a, input, select')) return;
   if (G.state === 'modal' && G.modal){
@@ -25683,7 +25820,10 @@ function boot(){
   const s = loadGame();
   if (s && s !== 'future' && s.meta) meta = normalizeMeta(s.meta);
   applySettings();
-  selfTest(false);                          // content lints, loudly, every boot
+  /* content lints, loudly, every boot — and caught, because an exception in
+     four hundred lines of lint used to escape boot() before the loop was
+     requested: a boot screen, no canvas, no game, over a typo in a template */
+  try { selfTest(false); } catch (err) { fault('lint', err); }
   const bl = document.getElementById('bootline');
   bootT = setInterval(() => {
     bl.textContent = BOOTLINES[bootI] || '';
