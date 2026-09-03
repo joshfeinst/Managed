@@ -8559,9 +8559,21 @@ function spaceEvents(events){
     }
     if (slot) bySlot.add(slot);
     spaced.push(e);
-    prevEnd = e.at + ((EVENTS[e.id].fx && EVENTS[e.id].fx.time) || 0);
+    /* THE OPTION IS PART OF THE MEETING. fx.time is what the room costs before
+       you say anything; the option you pick carries its own minutes, charged
+       inside the modal. Spaced on fx.time alone, a fourteen-minute answer
+       walked the clock straight past the next meeting's start, and it opened
+       on top of this one with no CALENDAR notice — the ambush the gap exists
+       to prevent. The longest answer is the one to leave room for. */
+    prevEnd = e.at + ((EVENTS[e.id].fx && EVENTS[e.id].fx.time) || 0) + eventOptMax(e.id);
   }
   return spaced;
+}
+function eventOptMax(id){
+  const node = DIALOGUE[EVENTS[id].scene];
+  let m = 0;
+  for (const o of (node && node.opts) || []) m = Math.max(m, (o.fx && o.fx.time) || 0);
+  return m;
 }
 function canTakeLeave(){
   return !!run && !run.pendingEnd &&
@@ -9455,6 +9467,11 @@ function makeArrival(id, at, role){
     const lines = node.t.concat((node.opts || []).map(o => o.t));
     for (const line of lines)
       for (const m of (String(line).match(/\{(\w+)\}/g) || [])) need.push(fillKey(m.slice(1,-1)));
+    /* THE CAPTION IS PROSE TOO. whoOf names the caller from fills.client, and
+       a client node whose lines never say {client} was never dealt one — so
+       sixty tickets were captioned "CLIENT · on line 2" beside siblings that
+       said RIVERBEND LOGISTICS. */
+    if (node.who === 'client') need.push('client');
   }
   for (const tok of new Set(need)){
     const pool = (T.fills && T.fills[tok]) || FILLS[tok];
@@ -10761,8 +10778,8 @@ function advanceStep(){
      save/continues. A player who tabbed away mid-puzzle watched the clock jump
      twelve minutes with the board still on screen. */
   if (t.paidStep !== t.si){ t.paidStep = t.si; run.clock += stepCost(st); }
-  if (st.say){ openDlg(st.say, t.fills, () => { t.si++; advanceStep(); }); return; }
-  if (st.choice){ openDlg(st.choice, t.fills, () => { t.si++; advanceStep(); }, null, t); return; }
+  if (st.say){ openDlg(st.say, t.fills, () => { t.si++; advanceStep(); }); restoreDlgAt(t); return; }
+  if (st.choice){ openDlg(st.choice, t.fills, () => { t.si++; advanceStep(); }, null, t); restoreDlgAt(t); return; }
   if (st.game){
     /* the call board opens with a handset ringing, which is what `phone` was
        written for and had never been used for */
@@ -11527,6 +11544,27 @@ function careerOver(kind){
 
 /* ------------------------------- save / load ------------------------------ */
 const SAVE_KEY = 'managed.save', SAVE_V = 2;
+/* WHICH TAB WROTE IT. Two tabs on the same career each autosaved every
+   twenty-five seconds and neither knew about the other: play twenty minutes
+   in the second tab, go back to the first, BACK TO WORK, and its next
+   heartbeat wrote a twenty-minute-old run over the newer one. Whichever tab
+   last blurred won, and the player watched progress vanish with no message.
+   The save carries the id of the tab that wrote it; a `storage` event (which
+   only ever fires in OTHER tabs) carrying somebody else's id means this tab
+   is no longer the one playing this career. No Math.random: the F4 sim
+   counts every call to it. */
+const TAB_ID = Date.now().toString(36) + '-' + String(performance.now()).replace('.', '');
+addEventListener('storage', e => {
+  if (e.key !== SAVE_KEY || !e.newValue) return;
+  let who = null;
+  try { who = JSON.parse(e.newValue).tab; } catch(_){ return; }
+  if (who === TAB_ID) return;
+  if (typeof G === 'undefined' || typeof run === 'undefined' || !run) return;
+  if (G.foreignSave) return;
+  G.foreignSave = true;
+  if (G.state === 'work' || G.state === 'modal') pauseGame();
+  toast('THIS CAREER IS OPEN IN ANOTHER TAB. THIS TAB WILL NOT SAVE OVER IT — CONTINUE THERE, OR RELOAD HERE.', 'red', 9000);
+});
 const MIGRATIONS = {
   /* v1 -> v2: the day score became stakes-weighted. A v1 save has quality
      scores but no stakes ledger, so rebuild one at the neutral weight — the
@@ -11568,9 +11606,12 @@ function saveGame(wipeRun){
       }
       return;
     }
+    /* another tab has taken this career: nothing written from here is newer
+       than what is on disk, so nothing is written from here */
+    if (G.foreignSave && run) return;
     let carried = null;
     if (!run && !wipeRun && s && s.run) carried = s.run;
-    const data = { v:SAVE_V, meta, run: run ? serializeRun() : carried };
+    const data = { v:SAVE_V, tab:TAB_ID, meta, run: run ? serializeRun() : carried };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     G.saveOk = true;
   } catch(_){
@@ -11633,7 +11674,8 @@ function serializeRun(){
       deadline:t.deadline, sla:t.sla, work: t.work === undefined ? null : t.work,
       stress:t.stress, si:t.si, bonus:t.bonus,
       spent:t.spent || 0, gameScores:t.gameScores, from:t.from, gameCap:t.gameCap,
-      paidStep: t.paidStep === undefined ? null : t.paidStep })),
+      paidStep: t.paidStep === undefined ? null : t.paidStep,
+      dlgAt: t.dlgAt || null })),
     /* WHICH BUILDING YOU WERE IN. The save stored a position and not a map,
        and resumeRun unconditionally loaded office1, so SAVE & QUIT in the post
        room came back in the lift lobby upstairs — and not even at the saved
@@ -11696,6 +11738,7 @@ function resumeRun(s){
   for (const k of ['perfHist', 'scores', 'crashes', 'burned'])
     if (!Array.isArray(r[k])) r[k] = [];
   rngInit(r.seed, r.rng);
+  G.foreignSave = false;                 // what is on disk is what we just loaded
   run = { seed:r.seed, day:r.day, rung:r.rung, clock:r.clock, perfHist:r.perfHist,
     gateStreak:r.gateStreak, firedStreak:r.firedStreak, stress:r.stress,
     coffee:r.coffee, crashes:r.crashes, burnout:r.burnout, rep:r.rep,
@@ -11860,6 +11903,27 @@ function npcRole(id){
   const top = (typeof run !== 'undefined' && run && !ROLES[run.rung].gates.nextAt);
   const r = (top && ROLE_AT_TOP[id]) || (NPCS[id] || {}).role || '';
   return r.indexOf('{client}') < 0 ? r : r.split('{client}').join(siteClient());
+}
+/* WHERE YOU WERE IN IT, AND IN WHICH ORDER. Scenes park {li} and come back
+   on the line that was read; a ticket's say or choice was re-created from the
+   step and typed out again from the top, with its options re-shuffled off the
+   dialogue stream — so Escape mid-choice and resume showed 1, 2, 3 in a
+   different order from the one the player had just read. The parked order is
+   matched by text, so a save from a build that reworded an option simply
+   falls back to the fresh shuffle. */
+function restoreDlgAt(t){
+  const at = t.dlgAt; t.dlgAt = null;
+  if (!at || typeof at !== 'object' || !dlg || at.si !== t.si) return;
+  if (Array.isArray(at.order) && dlg.opts && at.order.length === dlg.opts.length){
+    const byText = new Map(dlg.opts.map(o => [o.t, o]));
+    if (at.order.every(x => byText.has(x)) && new Set(at.order).size === at.order.length)
+      dlg.opts = at.order.map(x => byText.get(x));
+  }
+  if (at.li > 0){
+    dlg.li = Math.min(at.li | 0, dlg.lines.length - 1);
+    dlg.reveal = dlg.lines[dlg.li].length;
+    dlgPaint();
+  }
 }
 function openDlg(nodeId, fills, onDone, custom, ticket){
   const node = custom ? null : DIALOGUE[nodeId];
@@ -15347,6 +15411,9 @@ function parkModal(forPause){
     (run.pendingScenes = run.pendingScenes || [])
       .unshift({ id: dlg.scene, li: dlg.li, fills: dlg.fills || null });
   if (run.active){
+    if (G.modal.kind === 'dlg' && dlg && dlg.onDone)
+      run.active.dlgAt = { si: run.active.si, li: dlg.li,
+                           order: dlg.opts ? dlg.opts.map(o => o.t) : null };
     if (G.modal.kind === 'game' && MG){
       run.active.gameCap = Math.min(run.active.gameCap ?? 1, abandonScore(MG));
       /* and the board itself is parked with it — see openGame */
@@ -17108,6 +17175,52 @@ function selfTest(runSim){
       ok('a board you walked out of is the board you come back to',
          !rerolled.length, rerolled.slice(0,2).join(' · '));
       G.leftBoard = null; run = null; G.state = 'title';
+    }
+    /* and a dialogue you walked out of is the dialogue you come back to: the
+       same line, the options in the order you had just read them */
+    {
+      QUIET = true; rngInit('DLG-BACK'); runInit('DLG-BACK'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      const moved = [];
+      for (let k = 0; k < 3; k++){
+        const t = { uid:9960 + k, id:'password-reset', title:'b', fills:{}, at:0, deadline:240,
+                    sla:120, stress:3, si:2, bonus:0, spent:0, gameScores:[], from:null, paidStep:2 };
+        run.queue = [t]; run.active = t; run.resumePending = false;
+        advanceStep();                                 // opens the choice
+        const li0 = dlg.lines.length - 1;
+        dlg.li = li0; dlg.reveal = dlg.lines[li0].length; dlgPaint();
+        const order0 = dlg.opts.map(o => o.t).join('|');
+        parkModal(true); closeModalToWork();           // Escape
+        run.resumePending = false; advanceStep();      // BACK TO WORK
+        const order1 = dlg ? dlg.opts.map(o => o.t).join('|') : 'no dialogue';
+        if (!dlg || dlg.li !== li0 || order1 !== order0) moved.push('li ' + (dlg && dlg.li) + '/' + li0 + ' ' + order1.slice(0, 40));
+        if (G.modal) closeModalToWork();
+      }
+      ok('a dialogue you walked out of is the dialogue you come back to',
+         !moved.length, moved.slice(0, 2).join(' · '));
+      run = null; G.state = 'title';
+    }
+    /* another tab writing this career locks this one out of the save */
+    {
+      QUIET = true; rngInit('TAB-T'); runInit('TAB-T'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work'; G.foreignSave = false;
+      dispatchEvent(new StorageEvent('storage', { key: SAVE_KEY,
+        newValue: JSON.stringify({ v:SAVE_V, tab:'somebody-else', meta:{}, run:null }) }));
+      ok('a save written by another tab pauses this one and locks its saves',
+         G.foreignSave === true && G.state === 'pause',
+         'foreignSave=' + G.foreignSave + ' state=' + G.state);
+      G.foreignSave = false; show(null); run = null; G.state = 'title';
+    }
+    /* the next meeting is spaced past the longest answer to this one */
+    {
+      const e1 = Object.keys(EVENTS).find(id => eventOptMax(id) > 0);
+      const e2 = Object.keys(EVENTS).find(id => id !== e1 &&
+        (!EVENTS[id].slot || EVENTS[id].slot !== EVENTS[e1].slot));
+      const sp = e1 && e2 ? spaceEvents([{ at:100, id:e1 }, { at:101, id:e2 }]) : [];
+      const need = 100 + ((EVENTS[e1] && EVENTS[e1].fx && EVENTS[e1].fx.time) || 0) + eventOptMax(e1) + MEETING_GAP;
+      ok('a meeting is spaced past the longest answer to the one before it',
+         sp.length === 2 && sp[1].at >= need,
+         sp.length === 2 ? sp[1].at + ' < ' + need + ' after ' + e1 : 'spacing dropped an event');
     }
     /* A CONTROL A SCREEN READER CANNOT NAME IS A CONTROL IT CANNOT OFFER.
        Every button in the game carries its own text; the three inputs carried
