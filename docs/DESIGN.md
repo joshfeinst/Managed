@@ -67,16 +67,16 @@ Architect. A signature is a peak, not a presence.
 
 Measured across 16 seeds and six days each, with every board played perfectly so
 that only the triage rule differs, the two strategies that work are
-*protect the big ones* (73.8%) and *close what you can actually finish*
-(71.3%) — three points apart, so there is no single right answer, which is the
+*protect the big ones* (73.0%) and *close what you can actually finish*
+(68.4%) — five points apart, so there is no single right answer, which is the
 point. Two things lose you the most: doing the least important thing first
-(50.8%), and **working the queue in the order it arrived** (58.0%). Going in
+(48.8%), and **working the queue in the order it arrived** (55.8%). Going in
 order costs you well over half of what choosing badly does, and it feels like
 diligence the whole time you are doing it.
 
 Skill at the minigames matters and judgement matters more: fumbling every
-board against acing them is 10.5 points, and the best triage rule against the
-worst is 23.3. Hands are worth having; they will not save a day you triaged
+board against acing them is 12.5 points, and the best triage rule against the
+worst is 24.2. Hands are worth having; they will not save a day you triaged
 badly.
 
 ### How far apart good and bad triage sit, by rung
@@ -120,7 +120,7 @@ with the fetch refspec missing, which makes `origin/main` a fossil and every
 
 | | |
 |---|---|
-| `verify.js` | boots it and runs the 592 in-game self-tests |
+| `verify.js` | boots it and runs the 595 in-game self-tests |
 | `claims.js` | re-derives every number the README and this file state from the built game |
 | `dead.js` | finds data, state, functions and dialogue that are written and never read |
 | `firstday.js` | plays the first day through real key events and clicks, and reads only what is on screen |
