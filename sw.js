@@ -1,6 +1,6 @@
 /* Managed service worker — network-first shell with offline fallback, plus
    stale-while-revalidate for the Google Fonts. Bump CACHE per release. */
-const CACHE = 'managed-v0.2';
+const CACHE = 'managed-v0.3';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'
@@ -50,16 +50,23 @@ self.addEventListener('fetch', e => {
                        : p.endsWith('/')           ? p + 'index.html'
                        : null;
             const copy = r.clone(), twinCopy = twin ? r.clone() : null;
-            caches.open(CACHE).then(c => {
-              c.put(e.request, copy);
-              if (twin) c.put(twin, twinCopy);
-            });
+            /* HELD OPEN. A put fired and forgotten can be cut off when the
+               browser retires the worker after respondWith settles -- on a
+               phone, with a file this size, often enough that the offline
+               twin stayed at whatever last finished writing. */
+            e.waitUntil(caches.open(CACHE).then(c => Promise.all([
+              c.put(e.request, copy),
+              twin ? c.put(twin, twinCopy) : null
+            ])));
           }
           return r;
         })
         .catch(() =>
           caches.match(e.request, { ignoreSearch: true })
-            .then(m => m || caches.match('./index.html')))
+            /* the document is the fallback for a DOCUMENT: handing index.html
+               to a manifest or icon request offline broke the install/update
+               path with a parse error instead of a plain miss */
+            .then(m => m || (e.request.mode === 'navigate' ? caches.match('./index.html') : Response.error())))
     );
     return;
   }
@@ -74,11 +81,12 @@ self.addEventListener('fetch', e => {
                a font, and a cached one of those means no text for good */
             if (r && (r.ok || r.type === 'opaque')) {
               const copy = r.clone();
-              caches.open(CACHE).then(c => c.put(e.request, copy));
+              e.waitUntil(caches.open(CACHE).then(c => c.put(e.request, copy)));
             }
             return r;
           })
-          .catch(() => m);
+          /* nothing cached and no network: a real error, not respondWith(undefined) */
+          .catch(() => m || Response.error());
         return m || net;
       })
     );
