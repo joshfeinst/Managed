@@ -2,6 +2,9 @@
 <title>Managed</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14161a">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -17,6 +20,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
+html{color-scheme:dark}   /* native scrollbars and range tracks in the dark scheme, not a white strip down a dark panel */
 :root{
   --void:#14161a; --chrome:#1d2126; --line:#343b44;
   --paper:#e8e4da; --ink:#23241f; --dim:#8b93a0;
@@ -295,7 +299,7 @@ h2.ttl{font-family:var(--pix); font-size:clamp(11px,2.1vh,17px); margin:0; color
   border:2px solid var(--corp); border-right:0; border-bottom:0; opacity:.9}
 .panel::after{content:""; position:absolute; right:-1px; bottom:-1px; width:9px; height:9px;
   border:2px solid var(--corp); border-left:0; border-top:0; opacity:.9}
-.menu{display:flex; flex-direction:column; gap:6px; width:min(520px,92vw)}
+.menu{display:flex; flex-direction:column; gap:6px; width:min(520px,100%)}
 .mi{font-family:var(--pix); font-size:clamp(8px,1.45vh,12px); letter-spacing:.05em; color:var(--paper);
   background:#161b21; border:1px solid #333b46; padding:11px 14px; text-align:left; cursor:pointer;
   display:flex; justify-content:space-between; align-items:center; gap:12px; transition:transform .08s, background .12s;}
@@ -315,7 +319,7 @@ h2.ttl{font-family:var(--pix); font-size:clamp(11px,2.1vh,17px); margin:0; color
    is the screen where a career's whole reputation gets spent and it could not
    be scanned. One width, name left, price right, what it does underneath, and
    the whole card is the button, which also makes it a target a thumb can hit. */
-.certrow{width:min(520px,92vw)}
+.certrow{width:min(520px,100%)}
 .certcard{display:block; width:100%; text-align:left; padding:8px 10px; line-height:1.5}
 .certcard .cc-top{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
 .certcard .cc-name{font-size:8px}
@@ -338,7 +342,12 @@ h2.ttl{font-family:var(--pix); font-size:clamp(11px,2.1vh,17px); margin:0; color
 input[type=text]{font-family:var(--pix); font-size:12px; background:#10141a; color:var(--amber);
   border:1px solid var(--line); padding:9px 10px; letter-spacing:.08em; width:100%; text-transform:uppercase}
 input[type=range]{accent-color:var(--corp); width:150px}
-.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px 22px; text-align:left; width:min(720px,92vw)}
+/* 100%, NOT 92vw: the screens live inside #frame, which fit() sizes off the
+   SHORTER axis — on a wide, short window (a phone in landscape) 92vw was
+   wider than the frame, and a centred overflow hangs half its width off
+   the left edge where no scroll can reach it. The Walk label and the left
+   of the handbook prose were gone at 844x390. */
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px 22px; text-align:left; width:min(720px,100%)}
 .ctl{display:flex; justify-content:space-between; gap:10px; font-size:clamp(11px,1.6vh,14px); border-bottom:1px dotted #2a313a; padding:5px 0}
 .ctl span:last-child{color:var(--dim); text-align:right}
 
@@ -355,6 +364,11 @@ body.touch .btn, body.touch .mi, body.touch #d-opts .opt,
 body.touch #tix .row, body.touch #tix header .x,
 body.touch #hud #h-pause, body.touch #hud #h-queue-btn{
   min-height:44px; min-width:44px; display:flex; align-items:center; justify-content:center;}
+/* the cert card is a .btn too, and the flex above put its price row and its
+   description side by side in a 101px column: "STUDY: / ITIL / FOUNDATION"
+   three-deep at the left with the blurb beside it. The card lays out
+   name-and-price over description, on every device. */
+body.touch .certcard{display:block}
 body.touch #tix .row{display:grid}
 body.touch #d-opts .opt, body.touch .mi{justify-content:flex-start}
 /* THE INPUTS WERE THE ONLY CONTROLS THE 44px RULE NEVER NAMED — and because
@@ -395,6 +409,9 @@ body.touch #tix .row:active{filter:brightness(1.3)}
   #hud{top:auto; bottom:0; background:linear-gradient(180deg, rgba(8,10,13,.86), rgba(8,10,13,.96));
        border-top:1px solid var(--line)}
   #obj{top:auto; bottom:calc(var(--hudh, 44px) + 4px); margin-top:0}
+  /* the HUD lives in the frame's bottom padding here, and a bottom-anchored
+     dialogue box was drawn straight over the clock and the queue count */
+  #dlg{bottom:calc(var(--hudh, 44px) + 6px); max-height:calc(92% - var(--hudh, 44px))}
   #keyhint{display:none !important}
   #rotate{display:flex}
 }
@@ -421,7 +438,7 @@ body.touch #tix .row:active{filter:brightness(1.3)}
         <span><span class="lab">stress</span> <span class="meter" id="h-stressm"><i style="width:0%"></i></span></span>
         <span><span class="lab">burnout</span> <span class="meter burn" id="h-burnm"><i style="width:0%"></i></span></span>
         <span><span class="lab">coffee</span> <b id="h-coffee">☕0</b></span>
-        <button id="h-queue-btn" data-act="queue" aria-label="Open the service queue" title="Service queue">QUEUE</button>
+        <button id="h-queue-btn" data-act="queue" aria-label="Service queue" aria-expanded="false" title="Service queue">QUEUE</button>
         <button id="h-pause" data-act="pause" aria-label="Pause, or save and quit" title="Pause · save and quit">PAUSE</button>
       </div>
     </div>
@@ -458,7 +475,7 @@ body.touch #tix .row:active{filter:brightness(1.3)}
     <div class="screen" id="s-title" hidden>
       <div class="eyebrow">an msp life simulator</div>
       <h1 class="logo">MANAGED<small>YOU'LL GO FAR. EVENTUALLY.</small></h1>
-      <div class="menu" role="menu" id="titlemenu">
+      <div class="menu" id="titlemenu">
         <button class="mi" data-act="newrun">APPLY FOR A JOB <span class="k">▶</span></button>
         <button class="mi" data-act="continue" id="b-continue" disabled>CONTINUE CAREER <span class="k">▶</span></button>
         <button class="mi" data-act="controls">EMPLOYEE HANDBOOK <span class="k">▶</span></button>
@@ -471,7 +488,7 @@ body.touch #tix .row:active{filter:brightness(1.3)}
     <div class="screen" id="s-setup" hidden>
       <div class="eyebrow">careers portal</div>
       <h2 class="ttl">JOB POSTING</h2>
-      <div class="panel" style="width:min(520px,92vw)">
+      <div class="panel" style="width:min(520px,100%)">
         <dl class="dl">
           <dt>Position</dt><dd id="job-pos">IT Intern (unpaid, "great exposure")</dd>
           <dt>Company</dt><dd>Proactive IT Partners — Managed IT Services</dd>
@@ -486,7 +503,7 @@ body.touch #tix .row:active{filter:brightness(1.3)}
              about the plan, and two players at the same rung on the same ID get
              the same arrivals, the same calendar and the same dialogue. -->
         <p class="hint" style="margin:12px 0 6px">Job posting ID — the same ID deals the same days to the same desk. Where you start depends on the careers behind you. Share it.</p>
-        <input type="text" id="seedbox" maxlength="18" spellcheck="false" aria-label="Job posting ID">
+        <input type="text" id="seedbox" maxlength="18" spellcheck="false" autocapitalize="characters" autocomplete="off" enterkeyhint="go" aria-label="Job posting ID">
         <p class="hint" id="abandon-warn" style="margin:10px 0 0;color:var(--alert);display:none">
           A career is already in progress. Accepting this offer abandons it — click ACCEPT OFFER again to confirm.</p>
       </div>
@@ -501,8 +518,8 @@ body.touch #tix .row:active{filter:brightness(1.3)}
     <div class="screen" id="s-pause" hidden>
       <div class="eyebrow">on a break — the office will keep, briefly</div>
       <h2 class="ttl" id="p-title">PAUSED</h2>
-      <div class="panel" style="width:min(520px,92vw)"><dl class="dl" id="p-meta"></dl></div>
-      <div class="grid2 panel" style="width:min(520px,92vw)">
+      <div class="panel" style="width:min(520px,100%)"><dl class="dl" id="p-meta"></dl></div>
+      <div class="grid2 panel" style="width:min(520px,100%)">
         <div class="ctl"><span>Walk</span><span>WASD · Arrows · click the floor</span></div>
         <div class="ctl"><span>Run</span><span>Hold Shift</span></div>
         <div class="ctl"><span>Talk / use / advance</span><span>E · Space · Enter · click</span></div>
@@ -523,7 +540,7 @@ body.touch #tix .row:active{filter:brightness(1.3)}
     <div class="screen" id="s-review" hidden>
       <div class="eyebrow" id="r-eyebrow">end of day</div>
       <h2 class="ttl" id="r-title">DAILY PERFORMANCE REVIEW</h2>
-      <div class="panel" style="width:min(560px,92vw)"><dl class="dl" id="r-stats"></dl></div>
+      <div class="panel" style="width:min(560px,100%)"><dl class="dl" id="r-stats"></dl></div>
       <p class="hint" id="r-note"></p>
       <div class="row" id="r-actions"></div>
     </div>
@@ -532,7 +549,7 @@ body.touch #tix .row:active{filter:brightness(1.3)}
     <div class="screen" id="s-over" hidden>
       <div class="eyebrow" id="o-eyebrow">exit interview</div>
       <h1 class="logo" id="o-title" style="font-size:clamp(18px,3.6vh,34px)"></h1>
-      <div class="panel" style="width:min(560px,92vw)"><dl class="dl" id="o-stats"></dl></div>
+      <div class="panel" style="width:min(560px,100%)"><dl class="dl" id="o-stats"></dl></div>
       <p class="hint" id="o-note"></p>
       <div class="row" id="o-actions"></div>
     </div>
@@ -549,7 +566,7 @@ body.touch #tix .row:active{filter:brightness(1.3)}
         <div class="ctl"><span>Service queue</span><span>Tab · <b>or click your terminal</b> · ✕ or Esc to close</span></div>
         <div class="ctl"><span>Minigames</span><span>keys shown on the card · or click the answer</span></div>
         <div class="ctl"><span>How to play this minigame</span><span>H (while it is open)</span></div>
-        <div class="ctl"><span>Pause · save and quit</span><span>Esc · <b>or PAUSE, top right</b></span></div>
+        <div class="ctl"><span>Pause · save and quit</span><span>Esc · <b>or the PAUSE button</b></span></div>
         <div class="ctl"><span>Mute music</span><span>M</span></div>
         <div class="ctl"><span>Session log (for feedback)</span><span>F1</span></div>
         <div class="ctl"><span>Run self test</span><span>F4</span></div>
@@ -7774,7 +7791,9 @@ function objectiveText(){
     const head = run.queue.length +
       (run.queue.length === 1 ? ' TICKET WAITING' : ' TICKETS WAITING');
     return head + (atTerminal() ? ' — CLICK THE GREEN SCREEN, OR PRESS TAB'
-                                : ' — TAB, OR QUEUE, TOP RIGHT');
+                                : document.body.classList.contains('touch')
+                                  ? ' — TAP QUEUE, BOTTOM RIGHT'        // where body.touch pins it
+                                  : ' — TAB, OR QUEUE, TOP RIGHT');
   }
   /* AND DO NOT SEND THEM FOR A CUP THE GAME HAS ALREADY WARNED THEM OFF.
      This read "TALK TO PEOPLE, GET A COFFEE, BREATHE" at every cup count. On
@@ -8444,9 +8463,9 @@ function normalizeMeta(m){
   if (!Array.isArray(m.certs)) m.certs = [];
   /* a duplicate certificate, once saved, applied its metaFx twice forever */
   m.certs = [...new Set(m.certs)];
-  if (typeof m.rep !== 'number') m.rep = 0;
-  if (typeof m.conn !== 'number') m.conn = 0;
-  if (typeof m.runsPlayed !== 'number') m.runsPlayed = 0;
+  if (typeof m.rep !== 'number' || !isFinite(m.rep)) m.rep = 0;
+  if (typeof m.conn !== 'number' || !isFinite(m.conn)) m.conn = 0;
+  if (typeof m.runsPlayed !== 'number' || !isFinite(m.runsPlayed)) m.runsPlayed = 0;
   if (typeof m.carry !== 'number') m.carry = 0;
   if (!m.best || typeof m.best !== 'object') m.best = { days:0, rung:0 };
   /* THE ONE META FIELD USED AS AN ARRAY INDEX WAS THE ONE NOBODY CLAMPED.
@@ -8458,6 +8477,10 @@ function normalizeMeta(m){
   const bnum = (v, d, hi) => (typeof v === 'number' && isFinite(v))
     ? Math.min(hi, Math.max(0, Math.round(v))) : d;
   m.best.rung = bnum(m.best.rung, 0, ROLES.length - 1);
+  /* and carry is the OTHER index: startingRung clamps its range and not its
+     shape, so 2.5 dealt ROLES[2.5] and the first morning of every career
+     threw on the same undefined desk */
+  m.carry = bnum(m.carry, 0, ROLES.length - 2);
   m.best.days = bnum(m.best.days, 0, 99999);
   if (m.pace !== null && !PACES.some(p => p.id === m.pace)) m.pace = null;
   if (!m.seenGames || typeof m.seenGames !== 'object') m.seenGames = {};
@@ -8499,6 +8522,11 @@ function startingRung(){
 }
 function runInit(seed){
   rngInit(seed);
+  /* a new career in a locked tab is this tab's to save; and the boards
+     parked from the last career must not be dealt into this one — same
+     posting, same uid, same step, and a finished rack came back at its old
+     score on the first frame */
+  G.foreignSave = false; G.boardStash = null;
   run = { seed, day:1, rung:startingRung(), clock:0, perfHist:[], gateStreak:0, firedStreak:0,
           /* GOODWILL YOU ARRIVE WITH IS A PERK, AND ONLY A PERK. This read
              `meta.certs.length ? 1 : 0` — holding any certificate at all
@@ -8555,7 +8583,10 @@ function spaceEvents(events){
     if (slot && bySlot.has(slot)) continue;
     if (spaced.length && e.at - prevEnd < MEETING_GAP){
       e.at = prevEnd + MEETING_GAP;
-      if (e.at >= DAY_MIN) continue;          // slipped past the end of the day
+      if (e.at >= DAY_MIN){                   // slipped past the end of the day
+        if (typeof run !== 'undefined' && run) run.cancelled = (run.cancelled || 0) + 1;
+        continue;
+      }
     }
     if (slot) bySlot.add(slot);
     spaced.push(e);
@@ -10562,13 +10593,33 @@ function openQueue(){
   spendRoute();
   G.state = 'modal';
   G.modal = { kind:'tix', sel:0 };
+  const qb = document.getElementById('h-queue-btn'); if (qb) qb.setAttribute('aria-expanded', 'true');
   document.body.classList.add('panelopen');
   document.body.classList.add('queueopen');
   renderQueue();
   document.getElementById('tix').style.display = 'block';
 }
+/* THE QUEUE IS A PANEL OVER YOUR WORK, NOT A WAY OUT OF IT. Tab or the HUD
+   button over a ticket's own line parked that line (parkModal) and opened the
+   panel — and closing the panel went straight to the floor: the ticket still
+   in hand, no arrow, no dialogue, the banner counting it as "waiting", the
+   clock and its SLA running, and the only way back a second pick from the
+   queue that restarted the conversation. A tester's coffee errand breached
+   that way. Every door out of the panel comes through here, and if the step
+   it was opened over is parked, the step comes back. Picking a ticket does
+   not: startTicket has its own re-entry. */
+function closeQueue(){
+  closeModalToWork();
+  const t = run && run.active;
+  const st = t && TICKETS[t.id] && TICKETS[t.id].steps[t.si];
+  if (!st) return;
+  const parkedDlg = (st.say || st.choice) && t.dlgAt && t.dlgAt.si === t.si;
+  const parkedBoard = st.game && t.board && t.board.si === t.si;
+  if (parkedDlg || parkedBoard) advanceStep();
+}
 function closeModalToWork(){
   G.modal = null; G.state = 'work';
+  const qb = document.getElementById('h-queue-btn'); if (qb) qb.setAttribute('aria-expanded', 'false');
   document.body.classList.remove('panelopen');
   document.body.classList.remove('queueopen');
   document.body.classList.remove('gameopen');
@@ -10729,6 +10780,15 @@ function startTicket(t){
 function advanceStep(){
   const t = run.active;
   if (!t) return;
+  /* THE FORK YOU JUST TOOK MAY HAVE SPENT THE GRACE. applyFx moves the clock
+     and dlgFinish comes straight here, ahead of the next slaTick — so a
+     fourteen-minute answer past the deadline opened the ticket's next rack,
+     and the very next tick breached the ticket underneath it: a breach toast
+     behind a full-screen board, played to the end for a ticket scored 0. */
+  if (run.clock > t.deadline + clamp(workLeft(t), ACTIVE_GRACE, ACTIVE_GRACE_MAX)){
+    slaTick();
+    if (run.active !== t) return;
+  }
   if (t.si >= TICKETS[t.id].steps.length){ resolveTicket(t); return; }
   const st = TICKETS[t.id].steps[t.si];
   if (st.goto){
@@ -10764,7 +10824,7 @@ function advanceStep(){
        car park is reached through a door and the estate through a car, so the
        first instruction a player got for either was to take a lift. routeVia
        has already decided which exit to use from here; say that one. */
-    const leg = (rr && rr.via) ? rr.via[W2.id] : null;
+    const leg = (rv && rv.via) ? rv.via[W2.id] : null;
     toast('GO TO: ' + (ANCHOR_NAMES[st.goto] || st.goto) +
           (away ? ' — TAKE ' + (ANCHOR_NAMES[leg] || 'THE LIFT')
                 : ' — FOLLOW THE AMBER ARROW'), 'corp', 2600);
@@ -11554,13 +11614,29 @@ const SAVE_KEY = 'managed.save', SAVE_V = 2;
    is no longer the one playing this career. No Math.random: the F4 sim
    counts every call to it. */
 const TAB_ID = Date.now().toString(36) + '-' + String(performance.now()).replace('.', '');
+function foreignWrite(their){
+  if (!run) return false;
+  const tr = their.run;
+  if (tr && typeof tr === 'object')
+    return !(tr.seed === run.seed && (tr.day < run.day ||
+             (tr.day === run.day && (tr.clock || 0) <= run.clock + 1e-9)));
+  return !!G.saveOk;                    // gone — unless nothing of ours was on disk yet to be wiped
+}
 addEventListener('storage', e => {
   if (e.key !== SAVE_KEY || !e.newValue) return;
-  let who = null;
-  try { who = JSON.parse(e.newValue).tab; } catch(_){ return; }
-  if (who === TAB_ID) return;
+  let their = null;
+  try { their = JSON.parse(e.newValue); } catch(_){ return; }
+  if (!their || typeof their !== 'object' || their.tab === TAB_ID) return;
+  if (typeof SAVE_SUSPEND !== 'undefined' && SAVE_SUSPEND) return;   // the self test's careers are not ours
   if (typeof G === 'undefined' || typeof run === 'undefined' || !run) return;
   if (G.foreignSave) return;
+  /* SOMEBODY ELSE PLAYING IT, NOT SOMEBODY ELSE'S SETTINGS. A title-screen
+     save in another tab — pressing M, moving a slider — carries the run it
+     found on disk straight back, re-stamped with that tab's id. That run is
+     ours, at or behind our own clock, and locking on it froze the only tab
+     that was playing. A career is foreign when it is a different posting,
+     a later day, a later minute, or gone (the other tab ended it). */
+  if (!foreignWrite(their)) return;
   G.foreignSave = true;
   if (G.state === 'work' || G.state === 'modal') pauseGame();
   toast('THIS CAREER IS OPEN IN ANOTHER TAB. THIS TAB WILL NOT SAVE OVER IT — CONTINUE THERE, OR RELOAD HERE.', 'red', 9000);
@@ -11608,7 +11684,9 @@ function saveGame(wipeRun){
     }
     /* another tab has taken this career: nothing written from here is newer
        than what is on disk, so nothing is written from here */
-    if (G.foreignSave && run) return;
+    /* — and that includes the wipe careerOver sends with run already nulled,
+       which would have deleted the other tab's newer career */
+    if (G.foreignSave && (run || wipeRun)) return;
     let carried = null;
     if (!run && !wipeRun && s && s.run) carried = s.run;
     const data = { v:SAVE_V, tab:TAB_ID, meta, run: run ? serializeRun() : carried };
@@ -11730,11 +11808,23 @@ function resumeRun(s){
     /* the queue is filtered against TICKETS above; the plan was not, and
        templates and events are renamed between builds without a SAVE_V bump.
        A stale arrival threw in arrivalsTick and was then silently lost. */
-    r.plan.arrivals = r.plan.arrivals.filter(a => a && typeof a === 'object' && TICKETS[a.id]);
-    r.plan.events = r.plan.events.filter(e => e && typeof e === 'object' && EVENTS[e.id]);
-    r.plan.ai = Math.round(rnum(r.plan.ai, 0, 0, r.plan.arrivals.length));
-    r.plan.ei = Math.round(rnum(r.plan.ei, 0, 0, r.plan.events.length));
+    const keepA = a => a && typeof a === 'object' && TICKETS[a.id];
+    const keepE = e => e && typeof e === 'object' && EVENTS[e.id];
+    /* the cursor counts KEPT rows: dropping a stale row below it used to
+       shift every later row down one, and the ticket that was next to
+       arrive read as already delivered */
+    const ai0 = Math.round(rnum(r.plan.ai, 0, 0, r.plan.arrivals.length));
+    const ei0 = Math.round(rnum(r.plan.ei, 0, 0, r.plan.events.length));
+    r.plan.ai = r.plan.arrivals.slice(0, ai0).filter(keepA).length;
+    r.plan.ei = r.plan.events.slice(0, ei0).filter(keepE).length;
+    r.plan.arrivals = r.plan.arrivals.filter(keepA);
+    r.plan.events = r.plan.events.filter(keepE);
   }
+  /* the counters that decide endings came through raw: a missing daysAtTop
+     made a Director who could never retire, a missing firedStreak a T1 who
+     could never be fired, and the card printed NaN for both */
+  for (const k of ['firedStreak', 'gateStreak', 'daysAtTop', 'resolved', 'breaches', 'aces', 'coffee'])
+    r[k] = Math.round(rnum(r[k], 0, 0, 1e6));
   for (const k of ['perfHist', 'scores', 'crashes', 'burned'])
     if (!Array.isArray(r[k])) r[k] = [];
   rngInit(r.seed, r.rng);
@@ -12054,7 +12144,7 @@ function tixTick(dt){
     const view = queueView();
     startTicket(view[Math.min(m.sel, view.length-1)]); return;
   }
-  if (press.queue){ closeModalToWork(); return; }
+  if (press.queue){ closeQueue(); return; }
   if (tixRepaint <= 0){ tixRepaint = .3; renderQueue(); }
 }
 
@@ -12149,8 +12239,9 @@ function abandonScore(g){
        you have made a mess of and come back clean, so it wants a quote you
        have actually changed. */
     if (g.touched && g.total() > g.budget) return .15;
-    return clamp(g.rows.reduce((a, r) => a + quoteLineValue(r), 0) /
-                 Math.max(.001, g.best), 0, 1);
+    let sum = g.rows.reduce((a, r) => a + quoteLineValue(r), 0);
+    if (g.forgive && g.rows.some(r => r.must && r.pick === 2)) sum += .7;   // as the finish pays it
+    return clamp(sum / Math.max(.001, g.best), 0, 1);
   }
   if (g.kind === 'keep'){
     /* the best it could still finish at: the finest remaining plays from this
@@ -12163,9 +12254,23 @@ function abandonScore(g){
        the true best finish is a 2^8 walk, done here. */
     const u = (x, from) => clamp((x - from) / Math.max(.001, g.goal - from), -1, 1);
     const rest = g.hand.filter(h => !h.done);
-    let best = clamp((u(g.c, g.c0) + u(g.t, g.t0) + u(g.m, g.m0)) / 3, 0, 1);
+    /* WITH THE CERT THE FINISH APPLIES. The finish lifts the lowest meter to
+       the line when a forgiveness is held; this ceiling did not, so a
+       blur-pause with the cert capped the payout below what the board was
+       about to score — the invariant this function exists to hold. */
+    const val = (c, t, m) => {
+      let v = clamp((u(c, g.c0) + u(t, g.t0) + u(m, g.m0)) / 3, 0, 1);
+      if (g.forgive && (c < g.goal || t < g.goal || m < g.goal)){
+        const lo = Math.min(c, t, m);
+        const c2 = c === lo ? g.goal : c, t2 = c !== lo && t === lo ? g.goal : t,
+              m2 = c !== lo && t !== lo ? g.goal : m;
+        v = Math.max(v, clamp((u(c2, g.c0) + u(t2, g.t0) + u(m2, g.m0)) / 3, 0, 1));
+      }
+      return v;
+    };
+    let best = val(g.c, g.t, g.m);
     const walk = (i, left, c, t, m) => {
-      best = Math.max(best, clamp((u(c, g.c0) + u(t, g.t0) + u(m, g.m0)) / 3, 0, 1));
+      best = Math.max(best, val(c, t, m));
       if (!left || i >= rest.length) return;
       walk(i + 1, left - 1, c + rest[i].fx.c, t + rest[i].fx.t, m + rest[i].fx.m);
       walk(i + 1, left, c, t, m);
@@ -12206,6 +12311,7 @@ function abandonScore(g){
       if (t.to < 0 || !g.canDo(t.to, t) || over.includes(t.to)) continue;
       good += t.to >= g.staff.length ? .6 : 1;
     }
+    if (g.forgive && good < g.tasks.length) good += .4;                     // as the finish pays it
     return clamp(good / Math.max(1, g.tasks.length), 0, 1);
   }
   if (g.kind === 'script'){
@@ -12270,7 +12376,8 @@ function openGame(id, diff, onDone){
      save and dealt a fresh rack. The same door, keyed by career, ticket and
      step, held in memory the save cannot reach. */
   const stashKey = run && run.active ? run.seed + ':' + run.active.uid + ':' + run.active.si : null;
-  const stashed = stashKey && G.boardStash && G.boardStash[stashKey];
+  const stashed0 = stashKey && G.boardStash && G.boardStash[stashKey];
+  const stashed = stashed0 && !stashed0.finished ? stashed0 : null;
   const held = run && run.active &&
     (run.active.board || (stashed ? { gid: stashed.gid, si: run.active.si, mg: stashed } : null));
   const same = held && held.gid === id && held.si === run.active.si;
@@ -12316,6 +12423,7 @@ function gameTick(dt){
   if (MG.finished){
     const cap = run && run.active ? (run.active.gameCap ?? 1) : 1;
     const score = Math.min(MG.score, cap), done = MG.onDone;
+    if (G.boardStash) for (const k in G.boardStash) if (G.boardStash[k] === MG) delete G.boardStash[k];
     MG = null;
     closeModalToWork();
     if (done) done(score);
@@ -13072,11 +13180,13 @@ const GAMES = {
         }
         if (pick !== null){
           const correct = (pick === it.ok);
+          let forgiven = false;
           if (correct){ this.right++; sfx('ui'); }
-          else if (this.forgive){ this.forgive--; this.right++; sfx('ui'); }
+          else if (this.forgive){ this.forgive--; this.right++; forgiven = true; sfx('ui'); }
           else sfx('err');
           this.flash = .8;
-          this.flashTxt = correct ? 'CORRECT' : ('NOPE — ' + (it.ok ? 'that one was fine' : it.why));
+          this.flashTxt = correct ? 'CORRECT' : forgiven ? 'LET THAT ONE GO'
+                        : ('NOPE — ' + (it.ok ? 'that one was fine' : it.why));
           this.at++;
         }
       },
@@ -13641,7 +13751,7 @@ const GAMES = {
          seam changed one row's price while highlighting the next. The
          comment above already promised the eighteen; the cells now keep it. */
       tierRect(i, t){ return [236 + t*58, 90 + i*18, 54, 16]; },
-      btns: [ { x:330, y:212, w:130, h:18, k:'send', cap:'E  SUBMIT QUOTE' } ],
+      btns: [ { x:330, y:204, w:130, h:18, k:'send', cap:'E  SUBMIT QUOTE' } ],   // clear of the flash at 226-232
       total(){ return this.rows.reduce((a, r) => a + r.cost[r.pick], 0); },
       act(k){ if (k === 'send') this.send(); },
       send(){
@@ -13786,7 +13896,7 @@ const GAMES = {
       flash:0, flashTxt:'', flashOk:false, click:null,
       obj:'THREE PEOPLE. ' + picks + ' MOVES. NOBODY GETS EVERYTHING.',
       hint:'UP/DOWN A MOVE · E PLAYS IT · YOU CANNOT UNPLAY ONE',
-      rowRect(i){ return [70, 118 + i*15, 340, 13]; },
+      rowRect(i){ return [70, 112 + i*14, 340, 13]; },   // eight rows end at 223, clear of the flash at 232
       act(k){ if (k === 'play') this.play(); },
       play(){
         if (this.left <= 0) return;
@@ -14223,7 +14333,7 @@ const GAMES = {
          board the entire career is aimed at, and on a phone it was the end of
          the run. The people are drawn as columns at 72 + i*86; that column is
          the target, exactly as the quote board's tiers are. */
-      personRect(i){ return [72 + i*86, 63, 74, 28]; },
+      personRect(i){ return [72 + i*86, 76, 74, 28]; },   // over the name, the bar and the load
       loadOf(p){ return this.tasks.reduce((a, t) => a + (t.to === p ? t.w : 0), 0); },
       capOf(p){ return p < this.staff.length ? this.staff[p].cap : this.you.cap; },
       nameOf(p){ return p < 0 ? '—' : p < this.staff.length ? this.staff[p].name : this.you.name; },
@@ -14332,7 +14442,11 @@ const GAMES = {
         /* one hop in four is something other than plain membership, and the
            odds of that rise with the difficulty */
         const roll = Ri('game', 10);
-        const tag = roll < (4 + diff) ? (roll % 3 === 0 ? 'deny' : roll % 3 === 1 ? 'stale' : 'link') : 'member';
+        /* capped where the tree width is capped: at gameDiff 6 (a diff-3
+           ticket, a third coffee, frayed and wrecked) roll < 10 was always
+           true, so no hop was ever plain membership, nothing was in the
+           blast, and APPLY with nothing marked paid 1.0 on every board */
+        const tag = roll < (4 + Math.min(diff, 2)) ? (roll % 3 === 0 ? 'deny' : roll % 3 === 1 ? 'stale' : 'link') : 'member';
         const mine = live && BR_TAGS[tag].hits;
         const node = { id:'n'+(uid++), depth, tag,
                        name: group && gN.length ? take(gN) : (lN.length ? take(lN) : 'user-' + uid),
@@ -14824,7 +14938,7 @@ function drawBrief(g){
      pulses rather than blinking off the screen entirely */
   const on = (performance.now() % 1200) < 800;
   txt('PRESS E OR CLICK TO START', CX, 244, on ? '#4ade80' : '#2f6b45', 7, 'center');
-  txt('H reopens this', R - PAD, 256, '#5c646e', 6, 'right');
+  txt('H reopens this · Esc closes it', R - PAD, 256, '#5c646e', 6, 'right');
 }
 const MG_TITLES = { cable:'CABLE MANAGEMENT', pw:'PASSWORD TRIAGE',
   starter:'NEW STARTER CHECKLIST',
@@ -15034,7 +15148,7 @@ function hudUpdate(){
      screen precisely so a finger has them. */
   const kt = kh.firstElementChild;
   if (kt) hudSet('kt', kt, 'textContent', document.body.classList.contains('touch')
-    ? 'TAP THE FLOOR TO WALK · TAP A MACHINE OR A PERSON TO USE THEM · QUEUE AND PAUSE, TOP RIGHT'
+    ? 'TAP THE FLOOR TO WALK · TAP A MACHINE OR A PERSON TO USE THEM · QUEUE AND PAUSE, BOTTOM RIGHT'
     : 'CLICK TO WALK, USE AND TALK · WASD MOVE · SHIFT RUN · E USE · TAB QUEUE · ESC PAUSE');
 }
 
@@ -15043,6 +15157,9 @@ const SCREENS = ['s-boot','s-title','s-setup','s-pause','s-review','s-over','s-c
 function show(id){
   G.screenId = id;
   for (const s of SCREENS){ const el = document.getElementById(s); if (el) el.hidden = (s !== id); }
+  /* the canvas is not a tab stop under a full-screen menu: the first Tab
+     used to land on an invisible element behind the overlay */
+  const v = document.getElementById('view'); if (v) v.tabIndex = id ? -1 : 0;
   document.body.classList.toggle('screenopen', !!id);   // toasts stay off full screens
 }
 function screenForState(){
@@ -15279,13 +15396,13 @@ function actSetup(){
 }
 function act(a){
   switch(a){
-    case 'closequeue': if (G.modal && G.modal.kind === 'tix') closeModalToWork(); break;
+    case 'closequeue': if (G.modal && G.modal.kind === 'tix') closeQueue(); break;
     /* the HUD's only clickable thing: Escape by mouse, and with it SAVE & QUIT */
     case 'pause': if (G.state === 'work' || G.modal) pauseGame(); break;
     /* TAB has no finger. The queue is the game's one indispensable panel and
        the only way in from across the room was a key. */
     case 'queue':
-      if (G.modal && G.modal.kind === 'tix') closeModalToWork();
+      if (G.modal && G.modal.kind === 'tix') closeQueue();
       else if (run && (G.state === 'work' || G.modal)){
         /* park before closing, same as every other exit: without it this
            button was a free re-roll on a bad board and a shredder for the
@@ -15504,7 +15621,10 @@ function onKey(e){
      and Escape must dismiss autofill, not abandon the screen */
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)){
-    if (e.code !== 'F4') return;
+    /* Enter falls through to the primary button: typing a posting and
+       pressing Enter did nothing, and the only way on was to leave the
+       field and click */
+    if (e.code !== 'F4' && e.key !== 'Enter') return;
   }
   /* Closing an overlay puts you back where you were: three playtesters found
      that F4 always dumped them on the pause menu (the overlay force-pauses on
@@ -15603,7 +15723,14 @@ function onKey(e){
   }
   if (e.code === 'Escape'){
     if (G.state === 'work') pauseGame();
-    else if (G.state === 'modal' && G.modal && G.modal.kind === 'tix') closeModalToWork();
+    else if (G.state === 'modal' && G.modal && G.modal.kind === 'tix') closeQueue();
+    /* the rules card closes like a card, not like the board under it: Escape
+       on a card reopened with H used to pause and park the board, and the
+       card was still up on the way back in */
+    else if (G.state === 'modal' && G.modal && G.modal.kind === 'game' && MG && MG.brief && MG.brief.t > .3){
+      if (MG.brief.first){ meta.seenGames[MG.gid] = true; saveGame(); }
+      MG.brief = null; MG.click = null; clearInput(); sfx('ui');
+    }
     else if (G.state === 'modal') pauseGame();      // dialogue or minigame: still a way out
     else if (G.state === 'pause') resumeWork();
     else if (G.state === 'menu') act('back');
@@ -16275,6 +16402,7 @@ function selfTest(runSim){
     const saved = {
       json: JSON.stringify({ meta, run: run ? serializeRun() : null }),
       seed: RNG.seed, streams: rngState(), state: G.state, sfx: A.sfxVol, quiet: QUIET,
+      foreign: G.foreignSave, stash: G.boardStash,
       /* the suite runs whole careers through the real screens: without this a
          seed the player had TYPED came back as whatever the last test career
          left in the box */
@@ -17200,16 +17328,171 @@ function selfTest(runSim){
          !moved.length, moved.slice(0, 2).join(' · '));
       run = null; G.state = 'title';
     }
-    /* another tab writing this career locks this one out of the save */
+    /* another tab PLAYING this career locks this one out of the save; another
+       tab merely saving its settings at the title carries our run back at or
+       behind our clock, and that must not */
     {
       QUIET = true; rngInit('TAB-T'); runInit('TAB-T'); rollDay();
-      loadMap('office1'); spawnPeople(); G.state = 'work'; G.foreignSave = false;
-      dispatchEvent(new StorageEvent('storage', { key: SAVE_KEY,
-        newValue: JSON.stringify({ v:SAVE_V, tab:'somebody-else', meta:{}, run:null }) }));
-      ok('a save written by another tab pauses this one and locks its saves',
-         G.foreignSave === true && G.state === 'pause',
-         'foreignSave=' + G.foreignSave + ' state=' + G.state);
-      G.foreignSave = false; show(null); run = null; G.state = 'title';
+      loadMap('office1'); spawnPeople(); run.clock = 200;
+      const mine = serializeRun();
+      const behind = JSON.parse(JSON.stringify(mine)); behind.clock = 150;
+      const ahead = JSON.parse(JSON.stringify(mine)); ahead.clock = 260;
+      const nextDay = JSON.parse(JSON.stringify(mine)); nextDay.day = run.day + 1; nextDay.clock = 0;
+      const other = JSON.parse(JSON.stringify(mine)); other.seed = 'JOB-ELSE';
+      const saveOk0 = G.saveOk;
+      G.saveOk = true;
+      const bad = [];
+      if (foreignWrite({ run: behind })) bad.push('settings save with our run locked us');
+      if (foreignWrite({ run: mine }))   bad.push('our own state locked us');
+      if (!foreignWrite({ run: ahead })) bad.push('a later minute did not');
+      if (!foreignWrite({ run: nextDay })) bad.push('a later day did not');
+      if (!foreignWrite({ run: other })) bad.push('another posting did not');
+      if (!foreignWrite({ run: null }))  bad.push('the career being ended elsewhere did not');
+      G.saveOk = false;
+      if (foreignWrite({ run: null }))   bad.push('a title save before our first save locked us');
+      G.saveOk = saveOk0;
+      ok('another tab playing this career locks this one; another tab saving its settings does not',
+         !bad.length, bad.join(' · '));
+      run = null; G.state = 'title';
+    }
+    /* the GO TO toast names the exit the route picked, not always the lift */
+    {
+      QUIET = true; rngInit('GOTO-T'); runInit('GOTO-T'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      /* standing somewhere that is NOT the office — the car park, the ground
+         floor, the client site — with an errand back upstairs: the way out
+         is a door or a car, and the fallback wording says lift */
+      let said = '', via = null, tried = 0;
+      for (const mid of Object.keys(MAPS).filter(m => m !== 'office1')){
+        loadMap(mid); spawnPeople();
+        for (const id in TICKETS){
+          const st = TICKETS[id].steps;
+          for (let i = 0; i < st.length; i++){
+            if (!(st[i].goto && floorOf(st[i].goto) === 'office1')) continue;
+            const t = { uid:9970 + tried, id, title:'x', fills:{}, at:0, deadline:900, sla:400, stress:2,
+                        si:i, bonus:0, spent:0, gameScores:[], from:null, paidStep:i };
+            run.queue = [t]; run.active = t; tried++;
+            advanceStep();
+            if (G.modal) closeModalToWork();
+            said = TOAST_LOG[TOAST_LOG.length - 1] || '';
+            via = run.markerVia && run.markerVia[W2.id];
+            run.active = null; run.marker = null;
+            if (via && ANCHOR_NAMES[via] && ANCHOR_NAMES[via] !== 'THE LIFT') break;
+            via = null;
+          }
+          if (via) break;
+        }
+        if (via) break;
+      }
+      loadMap('office1'); spawnPeople();
+      ok('the GO TO toast names the exit the route picked',
+         !!via && said.indexOf(ANCHOR_NAMES[via]) >= 0, said + ' / via ' + via + ' after ' + tried);
+      if (G.modal) closeModalToWork();
+      run = null; G.state = 'title';
+    }
+    /* a fork that spent the grace breaches before the next board opens */
+    {
+      QUIET = true; rngInit('GRACE-T'); runInit('GRACE-T'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      const t = { uid:9980, id:'password-reset', title:'x', fills:{}, at:0, deadline:100, sla:100, stress:3,
+                  si:1, bonus:0, spent:0, gameScores:[], from:null, paidStep:1 };
+      run.queue = [t]; run.active = t; run.clock = 100 + ACTIVE_GRACE_MAX + 1;
+      advanceStep();
+      ok('a fork that spent the grace breaches before the next board opens',
+         !G.modal && run.active !== t && run.queue.indexOf(t) < 0,
+         'modal=' + (G.modal && G.modal.kind) + ' active=' + (run.active === t));
+      if (G.modal) closeModalToWork();
+      run = null; G.state = 'title';
+    }
+    /* a stale plan row dropped on resume does not skip the next arrival */
+    {
+      QUIET = true; rngInit('PLAN-T'); runInit('PLAN-T'); rollDay();
+      loadMap('office1'); spawnPeople();
+      const s1 = serializeRun(); const want = s1.plan.arrivals.length;
+      s1.plan.arrivals.unshift({ id:'no-such-template', at:0, uid:1, sla:1, work:1, stress:1, title:'x', fills:{} });
+      s1.plan.ai = 1;
+      resumeRun({ meta: JSON.parse(JSON.stringify(meta)), run: JSON.parse(JSON.stringify(s1)) });
+      ok('resume: a dropped plan row does not skip the next arrival',
+         run.plan.ai === 0 && run.plan.arrivals.length === want,
+         'ai=' + run.plan.ai + ' rows=' + run.plan.arrivals.length + '/' + want);
+      if (G.modal) closeModalToWork();
+      run = null; G.state = 'title';
+    }
+    /* closing the queue over a ticket's own line brings the line back */
+    {
+      QUIET = true; rngInit('QCLOSE'); runInit('QCLOSE'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      const t = { uid:9990, id:'password-reset', title:'x', fills:{}, at:0, deadline:900, sla:400, stress:3,
+                  si:0, bonus:0, spent:0, gameScores:[], from:null, paidStep:0 };
+      run.queue = [t]; run.active = t;
+      advanceStep();                                  // the opening line
+      const opened = !!(G.modal && G.modal.kind === 'dlg');
+      act('queue');                                   // Tab over it
+      const panel = !!(G.modal && G.modal.kind === 'tix');
+      closeQueue();                                   // and Esc / ✕ / Tab again
+      const back = !!(G.modal && G.modal.kind === 'dlg' && dlg && dlg.onDone);
+      ok('closing the queue over a ticket\'s line brings the line back',
+         opened && panel && back, 'opened=' + opened + ' panel=' + panel + ' back=' + back);
+      if (G.modal) closeModalToWork();
+      run = null; G.state = 'title';
+    }
+    /* a click off the canvas is not a press of E */
+    {
+      QUIET = true; rngInit('MARGIN'); runInit('MARGIN'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work'; G.modal = null;
+      press.use = false;
+      clickAdvance({ target: document.body, clientX: -40, clientY: -40, button: 0 });
+      ok('a click on the margin outside the frame does nothing', press.use === false);
+      press.use = false; run = null; G.state = 'title';
+    }
+    /* Escape on the rules card closes the card, not the board */
+    {
+      QUIET = true; rngInit('CARD'); runInit('CARD'); rollDay();
+      loadMap('office1'); spawnPeople(); G.state = 'work';
+      const t = { uid:9991, id:'password-reset', title:'x', fills:{}, at:0, deadline:900, sla:400, stress:3,
+                  si:1, bonus:0, spent:0, gameScores:[], from:null, paidStep:1 };
+      run.queue = [t]; run.active = t;
+      openGame('pw', 1, () => {});
+      MG.brief = { t: 1, first: false };
+      onKey({ code:'Escape', key:'Escape', target:null, preventDefault(){} });
+      ok('Escape on the rules card closes the card and keeps the board',
+         G.state === 'modal' && !!MG && !MG.brief, 'state=' + G.state + ' brief=' + !!(MG && MG.brief));
+      if (G.modal) closeModalToWork();
+      run = null; G.state = 'title'; show(null);
+    }
+    ok('meta: carry is an integer index', Number.isInteger(normalizeMeta({ carry: 2.5 }).carry) &&
+       normalizeMeta({ carry: NaN }).carry === 0 && normalizeMeta({ carry: 99 }).carry === ROLES.length - 2);
+    /* BLAST RADIUS at the hardest difficulty still has somebody in the blast */
+    {
+      let thin = 0;
+      for (let i = 0; i < 30; i++){ rngInit('BL-' + i); const g = GAMES.blast.init(6); if (!(g.total >= 2)) thin++; }
+      ok('blast: the hardest board still has more than one person in the blast', thin === 0, thin + ' of 30 thin');
+    }
+    /* the abandon ceiling honours the cert the finish honours, on every board */
+    {
+      const under = [];
+      const finish = g => { let n = 0; while (!g.finished && n++ < 200) g.step(.5); return g.score; };
+      rngInit('CAP-K'); { const g = GAMES.keep.init(2); g.forgive = 1; g.left = 0;
+        const cap = abandonScore(g), sc = finish(g); if (sc > cap + 1e-9) under.push('keep ' + sc.toFixed(3) + ' > ' + cap.toFixed(3)); }
+      rngInit('CAP-Q'); { const g = GAMES.quote.init(2); g.forgive = 1; g.rows.forEach(r => { r.pick = 2; }); g.touched = true; g.send();
+        const cap = abandonScore(g), sc = finish(g); if (g.submitted && sc > cap + 1e-9) under.push('quote ' + sc.toFixed(3) + ' > ' + cap.toFixed(3)); }
+      rngInit('CAP-W'); { const g = GAMES.weekend.init(2); g.forgive = 1; g.submitted = true;
+        const cap = abandonScore(g), sc = finish(g); if (sc > cap + 1e-9) under.push('weekend ' + sc.toFixed(3) + ' > ' + cap.toFixed(3)); }
+      ok('boards: the abandon ceiling with a forgiveness is never below the finish', !under.length, under.join(' · '));
+    }
+    /* board geometry: hit-boxes over what is drawn, flashes clear of the rows */
+    {
+      rngInit('GEO'); const bad = [];
+      const w = GAMES.weekend.init(2); const [, py, , ph] = w.personRect(0);
+      if (!(py <= 87 && py + ph >= 94)) bad.push('saturday hit-box ' + py + '-' + (py + ph));
+      const k = GAMES.keep.init(2); const [, ry, , rh] = k.rowRect(k.hand.length - 1);
+      if (ry + rh > 226) bad.push('keep last row ends ' + (ry + rh));
+      const q = GAMES.quote.init(2); if (q.btns[0].y + q.btns[0].h > 226) bad.push('quote button ends ' + (q.btns[0].y + q.btns[0].h));
+      ok('boards: hit-boxes sit over what is drawn and nothing prints across a row', !bad.length, bad.join(' · '));
+      const p = GAMES.pw.init(1); p.forgive = 1;
+      const it = p.items[p.at]; const b = p.btns.find(x => x.ok !== it.ok);
+      p.click = { x: b.x + 2, y: b.y + 2 }; p.step(.01);
+      ok('pw: a forgiven slip is not told NOPE', !/^NOPE/.test(p.flashTxt), p.flashTxt);
     }
     /* the next meeting is spaced past the longest answer to this one */
     {
@@ -25560,6 +25843,7 @@ function selfTest(runSim){
       G.state = saved.state;
     }
     A.sfxVol = saved.sfx; QUIET = saved.quiet;
+    G.foreignSave = saved.foreign; G.boardStash = saved.stash;
     const sb0 = document.getElementById('seedbox');
     if (sb0 && saved.seedBox !== undefined) sb0.value = saved.seedBox;
     SLOG.length = 0; SLOG.push.apply(SLOG, saved.slog); SLOG_TOTAL = saved.slogTotal;
@@ -25903,7 +26187,10 @@ function clickAdvance(ev){
   }
   if (G.state === 'work'){
     const pt = canvasPoint(ev);
-    if (pt && typeof walkToClick === 'function' && walkToClick(pt.x, pt.y)) return;
+    /* off the canvas is off the world: a click on the black margin beside
+       the frame used to fall through to E and buy a coffee */
+    if (!pt) return;
+    if (typeof walkToClick === 'function' && walkToClick(pt.x, pt.y)) return;
     press.use = true;
   }
 }
