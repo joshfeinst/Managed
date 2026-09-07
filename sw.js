@@ -1,6 +1,6 @@
 /* Managed service worker — network-first shell with offline fallback, plus
    stale-while-revalidate for the Google Fonts. Bump CACHE per release. */
-const CACHE = 'managed-v0.3';
+const CACHE = 'managed-v0.4';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'
@@ -72,23 +72,28 @@ self.addEventListener('fetch', e => {
   }
 
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    /* THE REVALIDATE IS HELD OPEN FROM THE START. Calling waitUntil inside
+       the network .then is too late on the cached path: respondWith has
+       already settled with the cached font, the event is no longer active,
+       and waitUntil throws -- so the refresh that gives this branch its
+       name was exactly as unheld as before. The network chain is built
+       first and extended synchronously; the response picks cache or net. */
+    const net = fetch(e.request)
+      .then(r => {
+        /* a font comes back opaque from another origin, so `basic` is the
+           wrong test here -- but a portal's redirect or error is still not
+           a font, and a cached one of those means no text for good */
+        if (r && (r.ok || r.type === 'opaque')) {
+          const copy = r.clone();
+          return caches.open(CACHE).then(c => c.put(e.request, copy)).then(() => r);
+        }
+        return r;
+      });
+    e.waitUntil(net.catch(() => {}));
     e.respondWith(
-      caches.match(e.request).then(m => {
-        const net = fetch(e.request)
-          .then(r => {
-            /* a font comes back opaque from another origin, so `basic` is the
-               wrong test here -- but a portal's redirect or error is still not
-               a font, and a cached one of those means no text for good */
-            if (r && (r.ok || r.type === 'opaque')) {
-              const copy = r.clone();
-              e.waitUntil(caches.open(CACHE).then(c => c.put(e.request, copy)));
-            }
-            return r;
-          })
-          /* nothing cached and no network: a real error, not respondWith(undefined) */
-          .catch(() => m || Response.error());
-        return m || net;
-      })
+      caches.match(e.request).then(m =>
+        /* nothing cached and no network: a real error, not respondWith(undefined) */
+        m || net.catch(() => Response.error()))
     );
   }
 });
