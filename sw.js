@@ -1,6 +1,8 @@
 /* Managed service worker — network-first shell with offline fallback, plus
    stale-while-revalidate for the Google Fonts. Bump CACHE per release. */
-const CACHE = 'managed-v0.4';
+/* kept in lockstep with VERSION in index.html — tools/verify.js fails if the
+   two drift, because a stale cache name is how an old build outlives a release */
+const CACHE = 'managed-v1.0.0';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'
@@ -85,7 +87,9 @@ self.addEventListener('fetch', e => {
            a font, and a cached one of those means no text for good */
         if (r && (r.ok || r.type === 'opaque')) {
           const copy = r.clone();
-          return caches.open(CACHE).then(c => c.put(e.request, copy)).then(() => r);
+          /* a put that fails (quota: Chrome pads every opaque font to ~7MB;
+             blocked storage) must not fail the font the network delivered */
+          return caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {}).then(() => r);
         }
         return r;
       });

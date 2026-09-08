@@ -240,7 +240,10 @@ async function launch() {
     stall: window.__M.stallTicks, modalTicks: window.__M.modalTicks,
     // occupancy integrity: no two bodies in one cell, every body reserved
     occOk: (() => {
-      if (!player) return 'no player';
+      /* THIS WAS A STRING, and the verdict below reads `occOk && !occOk.dup &&
+         !occOk.missing` — which a string passes on all three counts, so a
+         career that ended with no player at all printed MARATHON OK. */
+      if (!player) return { dup: 1, missing: 1, bodies: 0, occSize: 0, noPlayer: true };
       const seen = new Set(); let dup = 0, missing = 0;
       const bodies = [player, ...Object.values(npcs).filter(e => !e.hidden)];
       for (const b of bodies){

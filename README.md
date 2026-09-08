@@ -66,7 +66,7 @@ how much room you get and nothing else. A profile that hasn't finished a career
 yet starts on Relaxed.
 
 You cannot clear the queue. That's deliberate: about fourteen tickets arrive
-against a day a flawless triager gets through five or six of, so deciding what
+against a day a flawless triager gets through six or seven of, so deciding what
 to let burn is the game. It gets harsher as you climb, not gentler — an intern
 works nine of fifteen, a Procurement Specialist four of fifteen — because the
 work gets bigger and the calendar gets fuller. An intern loses six per cent of

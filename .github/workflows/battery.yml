@@ -1,0 +1,37 @@
+# THE BATTERY RUNS SOMEWHERE OTHER THAN A LAPTOP. Every round of this project
+# ends "the full battery green", and until now that sentence was only ever
+# true on whichever machine last typed it: the one workflow in here deploys
+# the page and never opens it. A build that fails 616 self-tests deployed
+# exactly as happily as one that passes them.
+name: Battery
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  battery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # no package.json in the repo: the game has no dependencies and the
+      # harnesses have exactly one
+      - run: npm init -y && npm i --no-save playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      # verify first and on its own: it is the one that boots the page, runs
+      # the self tests, and reads the source for duplicate keys
+      - name: verify
+        run: node tools/verify.js "$PWD/index.html"
+      - name: the rest of the standing battery
+        run: |
+          set -e
+          for t in boards save timing templates keys touch trace clock stale dead audit claims visual; do
+            echo "== $t"
+            node "tools/$t.js" "$PWD/index.html"
+          done

@@ -31,7 +31,8 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
 (async () => {
   const browser = await launch();
   const page = await browser.newPage();
-  page.on('pageerror', e => console.log('PAGEERROR ' + e.message));
+  const errs = [];
+  page.on('pageerror', e => { errs.push(e.message); console.log('PAGEERROR ' + e.message); });
   await page.goto('file://' + target);
   await page.waitForFunction(() => typeof GAMES !== 'undefined');
 
@@ -448,5 +449,6 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   }
   console.log(bad ? '\n' + bad + ' BOARD(S) NEED WORK' : '\nALL BOARDS DISCRIMINATE');
   await browser.close();
-  process.exit(bad ? 1 : 0);
+  if (errs.length) console.log('page errors: ' + errs.length);
+  process.exit(bad || errs.length ? 1 : 0);
 })();
