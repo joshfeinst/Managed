@@ -85,7 +85,9 @@ self.addEventListener('fetch', e => {
            a font, and a cached one of those means no text for good */
         if (r && (r.ok || r.type === 'opaque')) {
           const copy = r.clone();
-          return caches.open(CACHE).then(c => c.put(e.request, copy)).then(() => r);
+          /* a put that fails (quota: Chrome pads every opaque font to ~7MB;
+             blocked storage) must not fail the font the network delivered */
+          return caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {}).then(() => r);
         }
         return r;
       });
