@@ -14892,8 +14892,12 @@ const GAMES = {
           ctx.strokeStyle = i === this.cur ? '#ffb02e' : '#343b44';
           ctx.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
           txt(('-' + p.age + 'H').padStart(5), rx + 8, ry + 10, '#c9c4b8', 6);
-          txt(p.ok ? 'COMPLETE' : p.tag, rx + 46, ry + 10, p.ok ? '#4ade80' : '#d64541', 6);
-          txt(fitPx(p.note, 200, 6), rx + 118, ry + 10, '#8d8778', 6);
+          /* the tag column is as wide as the widest tag there is —
+             'STILL RUNNING' and 'VERIFY FAILED' are both thirteen characters,
+             which is 78px of the 6px face the game actually ships, and the
+             note used to start at rx+118, six pixels inside them */
+          txt(fitPx(p.ok ? 'COMPLETE' : p.tag, 84, 6), rx + 46, ry + 10, p.ok ? '#4ade80' : '#d64541', 6);
+          txt(fitPx(p.note, 172, 6), rx + 136, ry + 10, '#8d8778', 6);
         });
         if (this.flash > 0 && this.done)
           txt(this.ok ? 'BACK, AND NOBODY LOST A DAY'
@@ -25436,11 +25440,19 @@ function selfTest(runSim){
           closeModalToWork();
         }
       } finally { window.txt = real; }
+      /* AND SAY WHICH FONT IT MEASURED. Every width here comes from
+         ctx.measureText, so this test is only about the game people see when
+         the shipped face is loaded. On a machine with no network it silently
+         measures the fallback instead — which is how a six-pixel collision on
+         the restore board passed here for months and failed the first time CI
+         ran it with the real font. */
+      const shipped = document.fonts && document.fonts.check('6px "Press Start 2P"');
       ok('boards: every line and button lands once, inside the panel, on its own pixels',
          !smear.length && lines > 300,
-         smear.length ? smear.slice(0, 5).join(' · ')
-                      : 'only ' + lines + ' strings seen across ' +
-                        Object.keys(GAMES).length + ' boards — the probe is not watching');
+         (smear.length ? smear.slice(0, 5).join(' · ')
+                       : 'only ' + lines + ' strings seen across ' +
+                         Object.keys(GAMES).length + ' boards — the probe is not watching') +
+         (shipped ? '' : ' [measured in the FALLBACK font: the shipped face did not load, so this run did not check the layout players get]'));
       run = null; G.state = 'title';
     }
 

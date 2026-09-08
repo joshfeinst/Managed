@@ -11,27 +11,99 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write        # the release job tags the commit it just proved
+
 jobs:
-  battery:
+  # verify boots the page, runs the self tests, and reads the source for
+  # duplicate keys. It is the long one, so it runs on its own.
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # it measured 9m18s on its first real run and was still going at 30 on its
+    # second, on the same code — runner variance, not the suite, which times
+    # the same on both builds here. Headroom rather than a coin toss.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       # no package.json in the repo: the game has no dependencies and the
       # harnesses have exactly one
       - run: npm init -y && npm i --no-save playwright@1.62.1
       - run: npx playwright install --with-deps chromium
-      # verify first and on its own: it is the one that boots the page, runs
-      # the self tests, and reads the source for duplicate keys
-      - name: verify
-        run: node tools/verify.js "$PWD/index.html"
-      - name: the rest of the standing battery
+      - run: node tools/verify.js "$PWD/index.html"
+
+  # ONE RUNNER EACH, because thirteen browsers in series is how a battery
+  # becomes something people skip. A failure names its own harness in the
+  # checks list rather than being one line inside a half-hour log.
+  harness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        tool: [boards, save, timing, templates, keys, touch, trace, clock,
+               stale, dead, audit, claims, visual]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm init -y && npm i --no-save playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - run: node "tools/${{ matrix.tool }}.js" "$PWD/index.html"
+
+  # A VERSION THAT IS ONLY A STRING IN A FILE IS NOT A RELEASE. index.html
+  # carries VERSION and sw.js names its cache after it (verify fails if they
+  # drift); this turns that pair into a tag on the commit that proved itself,
+  # and only ever after the battery is green. Ordinary commits to main do not
+  # tag: bumping VERSION is what asks for one, and re-running on a version
+  # already tagged is a no-op rather than a failure.
+  release:
+    needs: [verify, harness]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # tags, so an existing one can be recognised
+      - name: read the version out of the game
+        id: ver
         run: |
           set -e
-          for t in boards save timing templates keys touch trace clock stale dead audit claims visual; do
-            echo "== $t"
-            node "tools/$t.js" "$PWD/index.html"
-          done
+          v=$(sed -n "s/^const VERSION = '\\(.*\\)';$/\\1/p" index.html)
+          if [ -z "$v" ]; then echo "index.html has no VERSION"; exit 1; fi
+          # the same pairing verify.js enforces, checked here too: this job is
+          # what publishes the name, so it does not take it on trust
+          grep -q "const CACHE = 'managed-v$v';" sw.js || {
+            echo "sw.js cache name does not match VERSION $v"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: tag it, once
+        env:
+          V: ${{ steps.ver.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          if git rev-parse -q --verify "refs/tags/v$V" >/dev/null; then
+            echo "v$V is already tagged; nothing to do."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$V" -m "Managed v$V" "$GITHUB_SHA"
+          git push origin "refs/tags/v$V"
+          # the release notes are the night log's newest row, which is where
+          # every round of this project already writes down what it changed,
+          # unpicked from its table cells into prose
+          row=$(grep -m1 '^| [0-9]* |' <(tac NIGHT_LOG.md) || true)
+          if [ -n "$row" ]; then
+            printf '%s\n' "$row" \
+              | sed 's/^| *[0-9]* *| *//; s/ *|[[:space:]]*$//' \
+              | awk -F' \\| ' '{printf "## What changed\n\n%s\n\n## Evidence it was needed\n\n%s\n\n## Verified by\n\n%s\n", $1, $2, $3}' \
+              > notes.md
+          else
+            echo 'See NIGHT_LOG.md.' > notes.md
+          fi
+          gh release create "v$V" --title "Managed v$V" --notes-file notes.md \
+            || echo "tag pushed; release creation skipped"
