@@ -11,7 +11,8 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   throw e; } }
 (async()=>{
   const b=await launch(); const p=await b.newPage();
-  p.on('pageerror',e=>console.log('PAGEERROR',e.message));
+  const errs=[];
+  p.on('pageerror',e=>{errs.push(e.message);console.log('PAGEERROR',e.message);});
   await p.goto('file://'+(process.argv[2]||__dirname+'/../index.html'));
   await p.waitForFunction(()=>typeof G!=='undefined'&&typeof simDay==='function');
   const r = await p.evaluate(({N})=>{
@@ -51,4 +52,6 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   const avgs=rows.map(([,v])=>v.avg);
   console.log(`\ntemplates ${rows.length} · best ${Math.max(...avgs).toFixed(3)} · worst ${Math.min(...avgs).toFixed(3)} · SPREAD ${(Math.max(...avgs)-Math.min(...avgs)).toFixed(3)}`);
   await b.close();
+  if (errs.length) console.log('page errors: ' + errs.length);
+  process.exit(errs.length ? 1 : 0);
 })().catch(e=>{console.error(e);process.exit(1);});

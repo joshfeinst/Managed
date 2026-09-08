@@ -26,7 +26,8 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
 (async () => {
   const browser = await launch();
   const page = await browser.newPage();
-  page.on('pageerror', e => console.log('PAGEERROR ' + e.message));
+  const errs = [];
+  page.on('pageerror', e => { errs.push(e.message); console.log('PAGEERROR ' + e.message); });
   await page.goto('file://' + target);
   await page.waitForFunction(() => typeof simDay === 'function' && typeof TICKETS !== 'undefined');
 
@@ -193,5 +194,6 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   show('nothing cheap is punishingly stressful', R.mad, false);
   console.log('\n' + (bad ? bad + ' PROBLEM(S)' : 'AUDIT CLEAN'));
   await browser.close();
-  process.exit(bad ? 1 : 0);
+  if (errs.length) console.log('page errors: ' + errs.length);
+  process.exit(bad || errs.length ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

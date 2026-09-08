@@ -25,6 +25,12 @@ async function launch() {
   });
   await page.goto('file://' + process.argv[2]);
   await page.waitForFunction(() => typeof G !== 'undefined' && typeof selfTest === 'function', { timeout: 15000 });
+  /* THE SUITE MUST GIVE THE GAME BACK AS IT FOUND IT. QUIET is the one the
+     suite writes forty times and used to restore five, so a boot left the
+     real game with its toast rail switched off — and the in-page guard for
+     it could only ever compare a value to the line that had just set it.
+     Out here it is not circular. */
+  const quietBefore = await page.evaluate(() => QUIET);
   await page.waitForTimeout(400);
 
   /* NO TIMED WALK CHECK HERE, DELIBERATELY. The walk is mispriced — the queue
@@ -43,6 +49,17 @@ async function launch() {
      are priced off one constant instead of two. */
   const tests = await page.evaluate(() => selfTest(true).map(r => ({ name:r.name, pass:r.pass, detail:r.detail })));
   const fails = tests.filter(t => !t.pass);
+  /* the service worker's cache name is the release name: if they drift, an
+     upgraded build keeps serving the old one out of the old cache */
+  const ver = await page.evaluate(() => (typeof VERSION === 'string' ? VERSION : null));
+  const swSrc = fs.readFileSync(path.join(path.dirname(process.argv[2]), 'sw.js'), 'utf8');
+  if (!ver) errors.push('the build has no VERSION');
+  else if (swSrc.indexOf("'managed-v" + ver + "'") < 0)
+    errors.push('sw.js cache name does not match VERSION ' + ver);
+  const quietAfter = await page.evaluate(() => QUIET);
+  if (quietBefore !== false || quietAfter !== false){
+    errors.push('the self test left the game muted: QUIET before=' + quietBefore + ' after=' + quietAfter);
+  }
   console.log('SELFTEST ' + (tests.length - fails.length) + '/' + tests.length + ' passed');
   fails.forEach(f => console.log('  FAIL ' + f.name + '  ' + f.detail));
 

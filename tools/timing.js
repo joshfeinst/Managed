@@ -14,7 +14,8 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   throw e; } }
 (async()=>{
   const b=await launch(); const p=await b.newPage({viewport:{width:960,height:540}});
-  p.on('pageerror',e=>console.log('ERR',e.message));
+  const errs=[];
+  p.on('pageerror',e=>{errs.push(e.message);console.log('ERR',e.message);});
   await p.goto('file://' + (process.argv[2] || '/home/user/managed/index.html'));
   await p.waitForFunction(()=>typeof G!=='undefined'&&typeof selfTest==='function');
   await p.keyboard.press('Space'); await p.waitForTimeout(200);
@@ -133,5 +134,6 @@ async function launch(){ try { return await chromium.launch(); } catch(e){
   console.log(`\n${verdicts.length} tickets · ${broken.length} unplayable · ${tight.length} tight`);
   console.log(broken.length ? 'TIMING FAILED: ' + broken.map(v=>v.id).join(', ') : 'TIMING OK');
   await b.close();
-  process.exit(broken.length ? 1 : 0);
+  if (errs.length) console.log('page errors: ' + errs.length);
+  process.exit(broken.length || errs.length ? 1 : 0);
 })().catch(e=>{ console.error('HARNESS ERROR', e); process.exit(2); });

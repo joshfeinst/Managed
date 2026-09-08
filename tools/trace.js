@@ -32,7 +32,8 @@ async function launch() {
 (async () => {
   const browser = await launch();
   const page = await browser.newPage();
-  page.on('pageerror', e => console.log('PAGEERROR ' + e.message));
+  const errs = [];
+  page.on('pageerror', e => { errs.push(e.message); console.log('PAGEERROR ' + e.message); });
   await page.goto('file://' + target);
   await page.waitForFunction(() => typeof G !== 'undefined' && typeof simDay === 'function');
 
@@ -127,4 +128,6 @@ async function launch() {
     }
   }
   await browser.close();
+  if (errs.length) console.log('page errors: ' + errs.length);
+  process.exit(errs.length ? 1 : 0);
 })().catch(e => { console.error('HARNESS ERROR', e); process.exit(2); });

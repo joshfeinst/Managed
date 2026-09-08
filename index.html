@@ -485,6 +485,7 @@ body.touch #tix .row:active{filter:brightness(1.3)}
         <button class="mi" data-act="options">OPTIONS <span class="k">▶</span></button>
       </div>
       <p class="hint" id="t-meta"></p>
+      <p class="hint" id="t-ver"></p>
     </div>
 
     <!-- RUN SETUP -->
@@ -11697,6 +11698,12 @@ function careerOver(kind){
 }
 
 /* ------------------------------- save / load ------------------------------ */
+/* THE BUILD, BY NAME. A single-file game gets downloaded, installed as a PWA,
+   forked and emailed around, and every report about it said "the current
+   one". VERSION is printed under the title and on the pause card, it is what
+   the service worker names its cache (verify.js keeps the two in lockstep),
+   and it is what a tag in the repository points at. */
+const VERSION = '1.0.0';
 const SAVE_KEY = 'managed.save', SAVE_V = 2;
 /* WHICH TAB WROTE IT. Two tabs on the same career each autosaved every
    twenty-five seconds and neither knew about the other: play twenty minutes
@@ -12109,6 +12116,22 @@ function restoreDlgAt(t){
     dlgPaint();
   }
 }
+/* ONE SHUFFLE, AND THE BOT PAYS FOR IT TOO. This lived inside openDlg, so the
+   headless bot — which is where every balance number in the docs is measured —
+   read node.opts in the order they were authored and drew nothing from the
+   dialogue stream. Its "always the second option" policy was therefore always
+   the AUTHORED second option, the one thing the shuffle exists to defeat, and
+   every seeded stream downstream of a conversation diverged bot from player on
+   the same posting. Both doors go through here. */
+function dlgOptOrder(opts){
+  if (!opts || opts.length < 2) return opts;
+  const out = opts.slice();
+  for (let i = out.length - 1; i > 0; i--){
+    const j = Ri('dlg', i + 1);
+    const tmp = out[i]; out[i] = out[j]; out[j] = tmp;
+  }
+  return out;
+}
 function openDlg(nodeId, fills, onDone, custom, ticket){
   const node = custom ? null : DIALOGUE[nodeId];
   if (!node && !custom){ if (onDone) onDone(); return; }
@@ -12120,12 +12143,7 @@ function openDlg(nodeId, fills, onDone, custom, ticket){
      player can learn without ever reading a line. Seeded, so the same posting
      still deals the same conversation twice. */
   let opts = (!custom && node.opts)
-    ? node.opts.map(o => ({ t: fill(o.t, fills || {}), fx: o.fx || {} })) : null;
-  if (opts && opts.length > 1)
-    for (let i = opts.length - 1; i > 0; i--){
-      const j = Ri('dlg', i + 1);
-      const tmp = opts[i]; opts[i] = opts[j]; opts[j] = tmp;
-    }
+    ? dlgOptOrder(node.opts.map(o => ({ t: fill(o.t, fills || {}), fx: o.fx || {} }))) : null;
   const [who, role] = whoOf(node || {}, fills || {}, custom);
   dlg = { lines, li:0, reveal:0, opts, onDone, ticket, scene:nodeId, done:false, fills: fills || null };
   document.getElementById('tix').style.display = 'none';   // never stack over the queue panel
@@ -15322,6 +15340,8 @@ function toTitle(){
     ? 'Saved career: ' + (ROLES[saved.rung] ? ROLES[saved.rung].title : 'INTERN') +
       ', day ' + saved.day + ' — posting ' + saved.seed + '. Press CONTINUE.'
     : '';
+  const tv = document.getElementById('t-ver');
+  if (tv) tv.textContent = 'v' + VERSION;
   document.getElementById('t-meta').textContent =
     s === 'future'
       /* an old cached build against a newer save: the first line used to say
@@ -15684,6 +15704,7 @@ function pauseGame(){
     '<dt>Burnout</dt><dd>' + Math.round(run.burnout) + '%</dd>' +
     '<dt>Job posting</dt><dd>' + escHtml(run.seed) + '</dd>' +
     '<dt>Pace</dt><dd>' + pace().label.toLowerCase() + '</dd>' +
+    '<dt>Build</dt><dd>v' + VERSION + '</dd>' +
     (G.leftBoard
       ? '<dt>' + G.leftBoard.name + '</dt><dd>left at ' + G.leftBoard.worth +
         '% — leave it and the ticket takes that and moves on; go back and it is where you left it</dd>'
@@ -15908,6 +15929,8 @@ function botJitter(){
 }
 function botPick(node, policy){
   if (!node || !node.opts || !node.opts.length) return null;
+  /* the same order the player is shown, drawn off the same stream */
+  node = { opts: dlgOptOrder(node.opts) };
   const p = policy && policy.pick;
   const val = o => [((o.fx&&o.fx.bonus)||0), ((o.fx&&o.fx.rep)||0), -((o.fx&&o.fx.stress)||0)];
   const cmp = (a,b) => { const x=val(a), y=val(b);
@@ -15925,6 +15948,7 @@ function simDay(skill, policy){
   QUIET = true;
   if (!W2.W) loadMap('office1');
   let pos = W2.spawn.slice(), botFloor = W2.id, botAt = null;
+  let botFloorMin = 0;
   const walkTo = (a) => {
     /* An anchor that does not resolve is a map problem, not a reason to take
        the whole day down with a null dereference two thousand lines from the
@@ -15932,7 +15956,7 @@ function simDay(skill, policy){
        reported a TypeError instead of the map invariant that knows why. */
     if (!a) return;
     const path = astar(pos[0], pos[1], a[0], a[1]);
-    run.clock += (path ? path.length : 24) / BOT_TILES_PER_MIN;
+    { const m = (path ? path.length : 24) / BOT_TILES_PER_MIN; run.clock += m; botFloorMin += m; }
     pos = a.slice();
   };
   /* By NAME, so it can notice the anchor is on the other floor. Given a
@@ -15944,7 +15968,7 @@ function simDay(skill, policy){
     if (home === botFloor){
       if (botFloor === W2.id){ walkTo(anchorPos(name)); return; }
       const n = floorDist(botFloor, botAt || 'ELEV', name);
-      run.clock += (n === null ? 24 : n) / BOT_TILES_PER_MIN;
+      { const m = (n === null ? 24 : n) / BOT_TILES_PER_MIN; run.clock += m; botFloorMin += m; }
       botAt = name; return;
     }
     /* out to the lift, down, and along at the far end */
@@ -15952,24 +15976,30 @@ function simDay(skill, policy){
       ? (astar(pos[0], pos[1], (anchorPos('ELEV')||pos)[0], (anchorPos('ELEV')||pos)[1]) || {length:24}).length
       : (floorDist(botFloor, botAt || 'ELEV', 'ELEV') || 0);
     const inn = tilesFromLift(name);
-    run.clock += (out + (inn === null ? 24 : inn)) / BOT_TILES_PER_MIN + LIFT_MIN;
+    { const m = (out + (inn === null ? 24 : inn)) / BOT_TILES_PER_MIN + LIFT_MIN; run.clock += m; botFloorMin += m; }
     botFloor = home; botAt = name;
     if (botFloor === W2.id) pos = (anchorPos(name) || pos).slice();
   };
   G.state = 'work';
-  let guard = 0, lastC = run.clock;
+  let guard = 0, lastC = 0;
   while (run.clock < DAY_MIN && guard++ < 500){
-    /* the same passive drift real play applies, over however much clock the
-       previous iteration consumed — the bot and the player age identically */
-    const el = run.clock - lastC; lastC = run.clock;
+    /* THE DRIFT IS A FLOOR DRIFT. sim() applies it only in 'work' — behind a
+       panel the clock is frozen and nothing drifts — but this charged it over
+       ALL the clock the last iteration burned, and most of a ticket's minutes
+       are the modal lumps stepCost bills for a say, a choice or a board. The
+       bot was quietly relieved (or, above a queue of eight, quietly punished)
+       for every minute the player spends reading. Only floor minutes here. */
+    const el = botFloorMin - lastC; lastC = botFloorMin;
     if (el > 0) run.stress = clamp(run.stress - el*0.02*(1 - run.queue.length*0.12), 0, 100);
     arrivalsTick(); crashTick(); slaTick();
     const P2 = run.plan;
     while (P2.ei < P2.events.length && run.clock >= P2.events[P2.ei].at){
       const eid = P2.events[P2.ei++].id, E = EVENTS[eid];
-      slog('event: ' + eid + (E.fx.time ? ' (-' + E.fx.time + ' min)' : ''));
-      run.clock += E.fx.time || 0;
-      if (E.fx.stress) run.stress = clamp(run.stress + E.fx.stress, 0, 100);
+      /* (E.fx && …), as openEvent's comment already claims this loop does */
+      const efx = E.fx || {};
+      slog('event: ' + eid + (efx.time ? ' (-' + efx.time + ' min)' : ''));
+      run.clock += efx.time || 0;
+      if (efx.stress) run.stress = clamp(run.stress + efx.stress, 0, 100);
       /* an event scene with choices is a decision the player makes; the bot
          takes its policy pick and records it the same way */
       const node = DIALOGUE[E.scene];
@@ -15990,7 +16020,7 @@ function simDay(skill, policy){
       run.stress = Math.max(0, run.stress - .4);
       continue;
     }
-    if (policy.slack){ run.clock += 14; slaTick(); continue; }   // "looking into it"
+    if (policy.slack){ run.clock += 14; botFloorMin += 14; slaTick(); continue; }   // "looking into it" — floor minutes
     /* Which ticket to work next is the player's main standing decision, so it
        has to be measurable: policy.order names the triage rule under test. */
     const pri = t => TICKETS[t.id].pri || 2;
@@ -16066,6 +16096,14 @@ function simDay(skill, policy){
 
 /* --------------------------------- self test ------------------------------ */
 function selfTest(runSim){
+  /* THE SUITE MUTES THE GAME AND USED TO LEAVE IT THAT WAY. QUIET is set true
+     in forty-odd blocks and put back in five, so everything after the first
+     one ran muted and — because boot runs this too — the GAME ran muted after
+     it. Round 27 fixed one block of that and wrote a guard that could not see
+     the rest: it compared QUIET to the value the same line had just restored.
+     Held here instead, where it covers every block, and checked from outside
+     by tools/verify.js, which is the only place the check is not circular. */
+  const quiet0 = QUIET;
   const Rres = [];
   const ok = (name, pass, detail) => Rres.push({ name, pass:!!pass, detail:detail||'' });
 
@@ -16345,6 +16383,7 @@ function selfTest(runSim){
        never resolved, and the same bug has already shipped once in scenes. */
     {
       const savedRunF = run, savedQuiet = QUIET;
+      let leaked = null;
       const raw = [];
       /* RESTORED ON EVERY PATH. This set QUIET and never gave it back: boot
          runs these lints, so from the title screen on every toast in the
@@ -16372,10 +16411,16 @@ function selfTest(runSim){
             break;
           }
       }
-      } finally { run = savedRunF; QUIET = savedQuiet; }
+      /* READ BEFORE THE RESTORE, or the assertion is x === x: this used to sit
+         under the finally that had just put QUIET back, so it could only ever
+         catch the deletion of that line — not the leak it was written for. */
+      } finally { leaked = QUIET; run = savedRunF; QUIET = savedQuiet; }
       ok('no ticket can put an unresolved {token} on the screen',
          !raw.length, raw.slice(0, 3).join(' · '));
-      ok('the content lints give QUIET back as they found it', QUIET === savedQuiet);
+      /* the lints did mute themselves; that the suite gives the mute back is
+         asserted from outside, in tools/verify.js, because in here the check
+         would be reading the value the line above it had just written */
+      ok('the content lints mute themselves while they run', leaked === true, 'inside=' + leaked);
     }
     /* "every ticket fits its SLA at every rung that deals it" stood here and
        could not fail — see the notice-window guard in the sim block, which is
@@ -17503,9 +17548,10 @@ function selfTest(runSim){
             const t = { uid:9970 + tried, id, title:'x', fills:{}, at:0, deadline:900, sla:400, stress:2,
                         si:i, bonus:0, spent:0, gameScores:[], from:null, paidStep:i };
             run.queue = [t]; run.active = t; tried++;
+            TOAST_LOG.length = 0;              // "the last toast" must be this errand's
             advanceStep();
             if (G.modal) closeModalToWork();
-            said = TOAST_LOG[TOAST_LOG.length - 1] || '';
+            said = TOAST_LOG[TOAST_LOG.length - 1] || '';   // cleared before advanceStep, below
             via = run.markerVia && run.markerVia[W2.id];
             run.active = null; run.marker = null;
             if (via && ANCHOR_NAMES[via] && ANCHOR_NAMES[via] !== 'THE LIFT') break;
@@ -17723,17 +17769,39 @@ function selfTest(runSim){
       for (let i = 0; i < 30; i++){ rngInit('BL-' + i); const g = GAMES.blast.init(6); if (!(g.total >= 2)) thin++; }
       ok('blast: the hardest board still has more than one person in the blast', thin === 0, thin + ' of 30 thin');
     }
-    /* the abandon ceiling honours the cert the finish honours, on every board */
+    /* THE ABANDON CEILING, ON EVERY BOARD THERE IS. This named three of
+       sixteen and called itself "every board", and one of the three could
+       drop out of its own accord (the quote check hung on g.submitted, which
+       a refactor of send() would quietly switch off). Walking every id in
+       GAMES means a seventeenth board is covered the day it is written, and
+       a board that cannot be driven from here has to say so out loud. */
     {
-      const under = [];
-      const finish = g => { let n = 0; while (!g.finished && n++ < 200) g.step(.5); return g.score; };
-      rngInit('CAP-K'); { const g = GAMES.keep.init(2); g.forgive = 1; g.left = 0;
-        const cap = abandonScore(g), sc = finish(g); if (sc > cap + 1e-9) under.push('keep ' + sc.toFixed(3) + ' > ' + cap.toFixed(3)); }
-      rngInit('CAP-Q'); { const g = GAMES.quote.init(2); g.forgive = 1; g.rows.forEach(r => { r.pick = 2; }); g.touched = true; g.send();
-        const cap = abandonScore(g), sc = finish(g); if (g.submitted && sc > cap + 1e-9) under.push('quote ' + sc.toFixed(3) + ' > ' + cap.toFixed(3)); }
-      rngInit('CAP-W'); { const g = GAMES.weekend.init(2); g.forgive = 1; g.submitted = true;
-        const cap = abandonScore(g), sc = finish(g); if (sc > cap + 1e-9) under.push('weekend ' + sc.toFixed(3) + ' > ' + cap.toFixed(3)); }
-      ok('boards: the abandon ceiling with a forgiveness is never below the finish', !under.length, under.join(' · '));
+      const under = [], notRun = [];
+      const finish = g => { let n = 0; while (!g.finished && n++ < 400) g.step(.5); return g.finished ? g.score : null; };
+      /* drive each board to a finishable state with a forgiveness in hand */
+      const arm = { keep: g => { g.left = 0; },
+                    quote: g => { g.rows.forEach(r => { r.pick = 2; }); g.touched = true; g.send(); },   // every line at its cheapest fits the budget
+                    weekend: g => { g.submitted = true; },
+                    restore: g => { g.done = true; g.score = g.score ?? 0; },
+                    logs: g => { g.done = true; g.score = g.score ?? 0; } };
+      for (const gid of Object.keys(GAMES)){
+        rngInit('CAP-' + gid);
+        let g = null;
+        try { g = GAMES[gid].init(2); } catch (_){ notRun.push(gid + ' (init threw)'); continue; }
+        g.forgive = 1; g.kind = g.kind || gid;
+        if (arm[gid]) arm[gid](g);
+        const cap = abandonScore(g);
+        const sc = finish(g);
+        if (sc === null){ notRun.push(gid + ' (never finished)'); continue; }
+        if (sc > cap + 1e-9) under.push(gid + ' ' + sc.toFixed(3) + ' > ' + cap.toFixed(3));
+      }
+      ok('boards: the abandon ceiling with a forgiveness is never below the finish, on every board',
+         !under.length, under.join(' · '));
+      /* the boards this cannot drive are named, so the list cannot quietly grow */
+      const EXPECT_SKIPPED = ['blast','cable','diagram','subnet','script','starter','notes','paper','ask','jargon','pw','calls'];
+      const surprises = notRun.map(x => x.split(' ')[0]).filter(g => !EXPECT_SKIPPED.includes(g));
+      ok('boards: the ceiling check names every board it could not drive',
+         !surprises.length, 'undeclared: ' + surprises.join(' ') + ' · skipped: ' + notRun.join(' '));
     }
     /* board geometry: hit-boxes over what is drawn, flashes clear of the rows */
     {
@@ -17755,7 +17823,12 @@ function selfTest(runSim){
       const e2 = Object.keys(EVENTS).find(id => id !== e1 &&
         (!EVENTS[id].slot || EVENTS[id].slot !== EVENTS[e1].slot));
       const sp = e1 && e2 ? spaceEvents([{ at:100, id:e1 }, { at:101, id:e2 }]) : [];
-      const need = 100 + ((EVENTS[e1] && EVENTS[e1].fx && EVENTS[e1].fx.time) || 0) + eventOptMax(e1) + MEETING_GAP;
+      /* from the scene, not from eventOptMax: computing both sides with the
+         function under test moves them together under any mutation of it */
+      const opts1 = (e1 && DIALOGUE[EVENTS[e1].scene] && DIALOGUE[EVENTS[e1].scene].opts) || [];
+      let worst = 0;
+      for (const o of opts1) worst = Math.max(worst, (o.fx && o.fx.time) || 0);
+      const need = 100 + ((EVENTS[e1] && EVENTS[e1].fx && EVENTS[e1].fx.time) || 0) + worst + MEETING_GAP;
       ok('a meeting is spaced past the longest answer to the one before it',
          sp.length === 2 && sp[1].at >= need,
          sp.length === 2 ? sp[1].at + ' < ' + need + ' after ' + e1 : 'spacing dropped an event');
@@ -19264,6 +19337,10 @@ function selfTest(runSim){
         /* the last line the machine said, NOT a slice from a remembered
            length — TOAST_LOG caps at 24 and shifts, so on a full log a slice
            from the old length is empty and every cup reads as silent */
+        /* cleared first: "the last toast" is only the last toast of THIS
+           action if nothing earlier can still be sitting there — an action
+           that says nothing otherwise inherits the previous test's line */
+        TOAST_LOG.length = 0;
         interact('coffee');
         const said = TOAST_LOG[TOAST_LOG.length - 1] || '';
         const claims = /JITTERS \(HARDER/.test(said);
@@ -19324,6 +19401,7 @@ function selfTest(runSim){
       /* ...and the cup lasts as long as the machine says it does. */
       {
         run.coffee = 0; run.stress = 50; run.crashes = []; run.clock = 100;
+        TOAST_LOG.length = 0;
         interact('coffee');
         const said = /IN (\d+) MIN/.exec(TOAST_LOG[TOAST_LOG.length - 1] || '');
         const due = run.crashes.length ? run.crashes[0] - run.clock : -1;
@@ -19336,6 +19414,7 @@ function selfTest(runSim){
       for (const cups of [1, COFFEE_MAX]){
         run.coffee = cups; run.stress = 0;
         run.crashes = [run.clock];                    // one, due now
+        TOAST_LOG.length = 0;
         crashTick();
         const said = TOAST_LOG[TOAST_LOG.length - 1] || '';
         const claims = /JITTERS/.test(said);
@@ -21962,7 +22041,7 @@ function selfTest(runSim){
         const keep = run;
         rngInit('OBJX'); runInit('OBJX'); run.rung = 5; loadMap('office1');
         spawnPeople(0, anchorPos(ROLES[5].deskAnchor));
-        const wrong = [];
+        const wrong = []; let checked = 0;
         for (const target of ['SITECOMMS', 'SITEFLOOR', 'YOURCAR', 'POST', 'ACCOUNTS']){
           const home = floorOf(target); if (!home || home === W2.id) continue;
           const rv = routeVia(W2.id, L => tilesBetween([player.tx, player.ty], L), target);
@@ -21970,13 +22049,18 @@ function selfTest(runSim){
           run.marker = [0, 0]; run.markerFloor = home;
           run.markerVia = rv ? rv.via : null;
           run.markerLabel = ANCHOR_NAMES[target] || target;
-          const said = objectiveText(), want = ANCHOR_NAMES[leg];
+          const said = objectiveText(), want = leg ? takeName(leg) : null;
+          if (want) checked++;
           if (want && said.indexOf(want) < 0)
             wrong.push(target + ' via ' + leg + ': banner said "' + said + '"');
         }
         run = keep;
-        ok('the banner names the way out the route picked', !wrong.length,
-           wrong.slice(0, 2).join(' · '));
+        /* AND IT HAS TO HAVE CHECKED SOMETHING. Every push was inside `if
+           (want)`, so a routeVia that answered nothing for all five targets —
+           the shipped bug this was written for — left the list empty and
+           printed OK. */
+        ok('the banner names the way out the route picked', !wrong.length && checked === 5,
+           wrong.slice(0, 2).join(' · ') || 'checked ' + checked + ' of 5');
       }
       /* EVERY WAY OUT NEEDS ITS OWN WORDS. exitLine handled 'outside' and then
          fell through to the lift's copy for everything else, so the day the
@@ -23315,7 +23399,8 @@ function selfTest(runSim){
         ok('scenes: clicking away and back resumes the line you were on',
            !!dlg && dlg.li === total - 1,
            'came back at ' + (dlg ? dlg.li : 'nothing') + ' of ' + total);
-      } else ok('scenes: clicking away and back resumes the line you were on', true, 'single line');
+      } else ok('scenes: clicking away and back resumes the line you were on', false,
+                'the scene picked has one line — pick one with more, do not pass by default');
       /* and a save written before scenes remembered their place still opens */
       if (G.modal) closeModalToWork();
       G.state = 'work'; run.pendingScenes = ['i.day1'];
@@ -25702,13 +25787,10 @@ function selfTest(runSim){
        ticket the clock ran out on top of, the one the player remembers, was
        printed back to them as one they never started. */
     {
-      const opened = { t:'A JOB YOU HAD STARTED', p:2, s:4, worked:true,  never:false };
-      const cold   = { t:'A JOB YOU HAD NOT',     p:2, s:4, worked:false, never:true  };
-      const say = w => w.never ? 'never started' : w.worked ? 'part-way in' : 'never picked up';
-      ok('review: a ticket you were part-way into is not reported as one you never started',
-         say(opened) === 'part-way in' && say(cold) === 'never started',
-         say(opened) + ' / ' + say(cold));
-      /* and the ledger endDay actually writes agrees with that */
+      /* A HAND-BUILT COPY OF THE RULE IS NOT A TEST OF THE RULE. Two literals
+         and a re-typed one-liner stood here and could not fail on any build,
+         least of all on the bug the comment above describes. What endDay
+         actually writes is the only thing worth asserting. */
       QUIET = true;
       rngInit('BURN-1'); runInit('BURN-1'); rollDay();
       run.clock = DAY_MIN + 1; run.burnLog = [];
@@ -26115,6 +26197,7 @@ function selfTest(runSim){
     hudShow(G.state === 'work' || G.state === 'modal');
   }
 
+  QUIET = quiet0;
   G.tests = Rres;
   const fails = Rres.filter(r => !r.pass);
   console.log('[managed self-test] ' + (Rres.length - fails.length) + '/' + Rres.length + ' passed');
