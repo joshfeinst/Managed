@@ -15,29 +15,41 @@ permissions:
   contents: write        # the release job tags the commit it just proved
 
 jobs:
-  battery:
+  # verify boots the page, runs the self tests, and reads the source for
+  # duplicate keys. It is the long one, so it runs on its own.
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       # no package.json in the repo: the game has no dependencies and the
       # harnesses have exactly one
       - run: npm init -y && npm i --no-save playwright@1.62.1
       - run: npx playwright install --with-deps chromium
-      # verify first and on its own: it is the one that boots the page, runs
-      # the self tests, and reads the source for duplicate keys
-      - name: verify
-        run: node tools/verify.js "$PWD/index.html"
-      - name: the rest of the standing battery
-        run: |
-          set -e
-          for t in boards save timing templates keys touch trace clock stale dead audit claims visual; do
-            echo "== $t"
-            node "tools/$t.js" "$PWD/index.html"
-          done
+      - run: node tools/verify.js "$PWD/index.html"
+
+  # ONE RUNNER EACH, because thirteen browsers in series is how a battery
+  # becomes something people skip. A failure names its own harness in the
+  # checks list rather than being one line inside a half-hour log.
+  harness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        tool: [boards, save, timing, templates, keys, touch, trace, clock,
+               stale, dead, audit, claims, visual]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm init -y && npm i --no-save playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - run: node "tools/${{ matrix.tool }}.js" "$PWD/index.html"
 
   # A VERSION THAT IS ONLY A STRING IN A FILE IS NOT A RELEASE. index.html
   # carries VERSION and sw.js names its cache after it (verify fails if they
@@ -46,7 +58,7 @@ jobs:
   # tag: bumping VERSION is what asks for one, and re-running on a version
   # already tagged is a no-op rather than a failure.
   release:
-    needs: battery
+    needs: [verify, harness]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
