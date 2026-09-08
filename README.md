@@ -48,7 +48,8 @@ Nothing needs the keyboard except typing a job posting ID.
 
 **On a phone it works out that it's a phone.** Every control grows to at least
 44px, QUEUE and PAUSE float where a thumb already is, and a tap on the world is
-a move rather than a zoom. Landscape is the better way to hold it. Installed
+a move rather than a zoom. Landscape is the better way to hold it, and
+portrait works too, with the HUD under the picture. Installed
 from *Add to Home Screen*, it launches fullscreen and works offline.
 
 ## A day at Proactive

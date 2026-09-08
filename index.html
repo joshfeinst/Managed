@@ -8614,6 +8614,12 @@ function canTakeLeave(){
 function takeLeave(){
   if (!canTakeLeave()) return false;
   run.leaveTaken = (run.leaveTaken || 0) + 1;
+  /* A DAY OFF IS NOT A DAY UNDER THE BAR, AND IT IS NOT A DAY ABOVE IT EITHER.
+     The review card promises "two in a row"; under, leave, under is not that.
+     The promotion streak is left alone on purpose (a week you were not
+     assessed in does not break it), and the firing streak gets the same
+     reading: a day you were not there for is not the day that ends you. */
+  run.firedStreak = 0;
   run.burnout = Math.max(0, run.burnout - LEAVE.relief);
   run.backlog = LEAVE.backlog;
   /* AND IT COSTS GOODWILL, WHICH IS THE WHOLE POINT OF THE TRADE. Measured
@@ -11507,6 +11513,24 @@ function reviewLine(p){
      lines were written and the picker still could not reach them. Step by a
      number coprime with both pool lengths (5 and 6). */
   return pool[((run.day || 1) + run.rung * 3) % pool.length];   // see commuteLine
+}
+/* WALKING OUT ONE BAD DAY FROM THE CONVERSATION IS THE CONVERSATION. Accepting
+   a new posting over a live career went straight to newRun: no careerOver, so
+   the one penalty in the game that walks backwards — being let go costs a peg
+   of what the industry thinks you are worth — could be dodged by reading "one
+   more and Linda has the conversation" on the review card and applying
+   somewhere else that evening. A career abandoned with a day already under
+   the bar, past the grace period, is let go: it costs the peg and it counts
+   as a career lived. One abandoned clean costs nothing but the career. */
+function abandonCareer(live){
+  if (!live || typeof live !== 'object') return false;
+  const day = Math.round(Number(live.day) || 1), streak = Math.round(Number(live.firedStreak) || 0);
+  if (!(streak >= 1 && day > FIRE_GRACE)) return false;
+  meta.runsPlayed = (meta.runsPlayed || 0) + 1;
+  meta.carry = Math.max(0, (meta.carry || 0) - 1);
+  saveGame();
+  toast('YOU LEFT ONE DAY AHEAD OF BEING LET GO. THE INDUSTRY HEARD IT THE OTHER WAY ROUND.', 'red', 6000);
+  return true;
 }
 function careerOver(kind){
   /* ONCE. The first call banks rep, counts the career and nulls the run; a
@@ -15434,9 +15458,11 @@ function act(a){
         const who = (ROLES[live.rung] ? ROLES[live.rung].title : 'INTERN') +
                     ', day ' + live.day + ' — posting ' + live.seed;
         if (w){
+          const risky = (live.firedStreak || 0) >= 1 && live.day > FIRE_GRACE;
           w.textContent = 'This abandons your career in progress (' + who +
-            '). It cannot be undone. Click ACCEPT OFFER again within ' +
-            Math.round(ABANDON_WINDOW/1000) + ' seconds to confirm.';
+            '). It cannot be undone.' +
+            (risky ? ' A day under the bar already: leaving now counts as being let go, and costs the peg.' : '') +
+            ' Click ACCEPT OFFER again within ' + Math.round(ABANDON_WINDOW/1000) + ' seconds to confirm.';
           w.style.display = 'block';
         }
         toast(armed ? 'READ IT FIRST. ACCEPT AGAIN IN A MOMENT TO CONFIRM.'
@@ -15446,6 +15472,7 @@ function act(a){
         break;
       }
       disarmAbandon();
+      abandonCareer(live);
       newRun(v || 'JOB-1337');
       break;
     }
@@ -17459,6 +17486,28 @@ function selfTest(runSim){
          G.state === 'modal' && !!MG && !MG.brief, 'state=' + G.state + ' brief=' + !!(MG && MG.brief));
       if (G.modal) closeModalToWork();
       run = null; G.state = 'title'; show(null);
+    }
+    /* leave breaks the firing streak, as the card's "two in a row" promises */
+    {
+      QUIET = true; rngInit('LEAVE-F'); runInit('LEAVE-F'); rollDay();
+      run.firedStreak = 1; run.burnout = LEAVE.offerAt; run.day = FIRE_GRACE + 2;
+      const took = takeLeave();
+      ok('leave: a day off is not the second day under the bar', took && run.firedStreak === 0,
+         'took=' + took + ' streak=' + run.firedStreak);
+      run = null; G.state = 'title';
+    }
+    /* abandoning a career one bad day from a firing costs what the firing would */
+    {
+      const m0 = JSON.parse(JSON.stringify(meta));
+      meta.carry = 3; meta.runsPlayed = 4;
+      const clean = abandonCareer({ day: FIRE_GRACE + 2, firedStreak: 0, rung: 3 });
+      const early = abandonCareer({ day: FIRE_GRACE, firedStreak: 1, rung: 3 });
+      const c1 = meta.carry, r1 = meta.runsPlayed;
+      const risky = abandonCareer({ day: FIRE_GRACE + 2, firedStreak: 1, rung: 3 });
+      ok('abandoning a career one bad day from a firing costs the peg; a clean one does not',
+         !clean && !early && c1 === 3 && r1 === 4 && risky && meta.carry === 2 && meta.runsPlayed === 5,
+         'clean=' + clean + ' early=' + early + ' risky=' + risky + ' carry=' + meta.carry);
+      meta = normalizeMeta(m0);
     }
     ok('meta: carry is an integer index', Number.isInteger(normalizeMeta({ carry: 2.5 }).carry) &&
        normalizeMeta({ carry: NaN }).carry === 0 && normalizeMeta({ carry: 99 }).carry === ROLES.length - 2);
