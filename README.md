@@ -32,6 +32,11 @@ arcade cabinet is in the break room.
 Every run is seeded. A job posting ID deals the same career twice, so you can
 hand one to somebody else and compare how it went.
 
+The build you are playing is printed under the title and on the pause card. A
+push to `main` runs the whole test battery, and only if it comes back green
+does it tag that commit with the version the game is carrying — so a tag is
+always a build that passed, and the offline cache is named after it.
+
 ## Controls
 
 Walk with WASD or the arrow keys. Talk, use, and advance dialogue with E, Space,
